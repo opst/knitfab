@@ -1,0 +1,7 @@
+*
+!model/*.py
+!poetry.lock
+!pyproject.toml
+!train.py
+!validation.py
+!README.md

@@ -1,0 +1,14 @@
+# Install Docker and its dependent components
+---
+- hosts: all
+  become: true
+  roles:
+    - "k8s-worker"
+    - role: nfs
+      when: is_nfs
+  tasks:
+    - name: Configure node label
+      lineinfile:
+        path: /etc/default/kubelet
+        line: LABELS="--node-labels='knit/node=node'"
+        create: yes

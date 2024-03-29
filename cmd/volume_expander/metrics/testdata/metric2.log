@@ -1,0 +1,1432 @@
+# HELP apiserver_audit_event_total [ALPHA] Counter of audit events generated and sent to the audit backend.
+# TYPE apiserver_audit_event_total counter
+apiserver_audit_event_total 0
+# HELP apiserver_audit_requests_rejected_total [ALPHA] Counter of apiserver requests rejected due to an error in audit logging backend.
+# TYPE apiserver_audit_requests_rejected_total counter
+apiserver_audit_requests_rejected_total 0
+# HELP apiserver_client_certificate_expiration_seconds [ALPHA] Distribution of the remaining lifetime on the certificate used to authenticate a request.
+# TYPE apiserver_client_certificate_expiration_seconds histogram
+apiserver_client_certificate_expiration_seconds_bucket{le="0"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="1800"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="3600"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="7200"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="21600"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="43200"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="86400"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="172800"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="345600"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="604800"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="2.592e+06"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="7.776e+06"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="1.5552e+07"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="3.1104e+07"} 0
+apiserver_client_certificate_expiration_seconds_bucket{le="+Inf"} 0
+apiserver_client_certificate_expiration_seconds_sum 0
+apiserver_client_certificate_expiration_seconds_count 0
+# HELP apiserver_envelope_encryption_dek_cache_fill_percent [ALPHA] Percent of the cache slots currently occupied by cached DEKs.
+# TYPE apiserver_envelope_encryption_dek_cache_fill_percent gauge
+apiserver_envelope_encryption_dek_cache_fill_percent 0
+# HELP apiserver_storage_data_key_generation_duration_seconds [ALPHA] Latencies in seconds of data encryption key(DEK) generation operations.
+# TYPE apiserver_storage_data_key_generation_duration_seconds histogram
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="5e-06"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="1e-05"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="2e-05"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="4e-05"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="8e-05"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.00016"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.00032"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.00064"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.00128"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.00256"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.00512"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.01024"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.02048"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="0.04096"} 0
+apiserver_storage_data_key_generation_duration_seconds_bucket{le="+Inf"} 0
+apiserver_storage_data_key_generation_duration_seconds_sum 0
+apiserver_storage_data_key_generation_duration_seconds_count 0
+# HELP apiserver_storage_data_key_generation_failures_total [ALPHA] Total number of failed data encryption key(DEK) generation operations.
+# TYPE apiserver_storage_data_key_generation_failures_total counter
+apiserver_storage_data_key_generation_failures_total 0
+# HELP apiserver_storage_envelope_transformation_cache_misses_total [ALPHA] Total number of cache misses while accessing key decryption key(KEK).
+# TYPE apiserver_storage_envelope_transformation_cache_misses_total counter
+apiserver_storage_envelope_transformation_cache_misses_total 0
+# HELP apiserver_webhooks_x509_missing_san_total [ALPHA] Counts the number of requests to servers missing SAN extension in their serving certificate OR the number of connection failures due to the lack of x509 certificate SAN extension missing (either/or, based on the runtime environment)
+# TYPE apiserver_webhooks_x509_missing_san_total counter
+apiserver_webhooks_x509_missing_san_total 0
+# HELP get_token_count [ALPHA] Counter of total Token() requests to the alternate token source
+# TYPE get_token_count counter
+get_token_count 0
+# HELP get_token_fail_count [ALPHA] Counter of failed Token() requests to the alternate token source
+# TYPE get_token_fail_count counter
+get_token_fail_count 0
+# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.
+# TYPE go_gc_duration_seconds summary
+go_gc_duration_seconds{quantile="0"} 5.3362e-05
+go_gc_duration_seconds{quantile="0.25"} 6.5758e-05
+go_gc_duration_seconds{quantile="0.5"} 0.000102408
+go_gc_duration_seconds{quantile="0.75"} 0.000183413
+go_gc_duration_seconds{quantile="1"} 0.008116685
+go_gc_duration_seconds_sum 1.532969851
+go_gc_duration_seconds_count 9218
+# HELP go_goroutines Number of goroutines that currently exist.
+# TYPE go_goroutines gauge
+go_goroutines 253
+# HELP go_info Information about the Go environment.
+# TYPE go_info gauge
+go_info{version="go1.17.6"} 1
+# HELP go_memstats_alloc_bytes Number of bytes allocated and still in use.
+# TYPE go_memstats_alloc_bytes gauge
+go_memstats_alloc_bytes 2.2498784e+07
+# HELP go_memstats_alloc_bytes_total Total number of bytes allocated, even if freed.
+# TYPE go_memstats_alloc_bytes_total counter
+go_memstats_alloc_bytes_total 9.7782625e+10
+# HELP go_memstats_buck_hash_sys_bytes Number of bytes used by the profiling bucket hash table.
+# TYPE go_memstats_buck_hash_sys_bytes gauge
+go_memstats_buck_hash_sys_bytes 3.15617e+06
+# HELP go_memstats_frees_total Total number of frees.
+# TYPE go_memstats_frees_total counter
+go_memstats_frees_total 8.42824036e+08
+# HELP go_memstats_gc_cpu_fraction The fraction of this program's available CPU time used by the GC since the program started.
+# TYPE go_memstats_gc_cpu_fraction gauge
+go_memstats_gc_cpu_fraction 0.0003556810289418311
+# HELP go_memstats_gc_sys_bytes Number of bytes used for garbage collection system metadata.
+# TYPE go_memstats_gc_sys_bytes gauge
+go_memstats_gc_sys_bytes 6.270136e+06
+# HELP go_memstats_heap_alloc_bytes Number of heap bytes allocated and still in use.
+# TYPE go_memstats_heap_alloc_bytes gauge
+go_memstats_heap_alloc_bytes 2.2498784e+07
+# HELP go_memstats_heap_idle_bytes Number of heap bytes waiting to be used.
+# TYPE go_memstats_heap_idle_bytes gauge
+go_memstats_heap_idle_bytes 5.169152e+06
+# HELP go_memstats_heap_inuse_bytes Number of heap bytes that are in use.
+# TYPE go_memstats_heap_inuse_bytes gauge
+go_memstats_heap_inuse_bytes 2.527232e+07
+# HELP go_memstats_heap_objects Number of allocated objects.
+# TYPE go_memstats_heap_objects gauge
+go_memstats_heap_objects 149210
+# HELP go_memstats_heap_released_bytes Number of heap bytes released to OS.
+# TYPE go_memstats_heap_released_bytes gauge
+go_memstats_heap_released_bytes 3.670016e+06
+# HELP go_memstats_heap_sys_bytes Number of heap bytes obtained from system.
+# TYPE go_memstats_heap_sys_bytes gauge
+go_memstats_heap_sys_bytes 3.0441472e+07
+# HELP go_memstats_last_gc_time_seconds Number of seconds since 1970 of last garbage collection.
+# TYPE go_memstats_last_gc_time_seconds gauge
+go_memstats_last_gc_time_seconds 1.6522258824022732e+09
+# HELP go_memstats_lookups_total Total number of pointer lookups.
+# TYPE go_memstats_lookups_total counter
+go_memstats_lookups_total 0
+# HELP go_memstats_mallocs_total Total number of mallocs.
+# TYPE go_memstats_mallocs_total counter
+go_memstats_mallocs_total 8.42973246e+08
+# HELP go_memstats_mcache_inuse_bytes Number of bytes in use by mcache structures.
+# TYPE go_memstats_mcache_inuse_bytes gauge
+go_memstats_mcache_inuse_bytes 2400
+# HELP go_memstats_mcache_sys_bytes Number of bytes used for mcache structures obtained from system.
+# TYPE go_memstats_mcache_sys_bytes gauge
+go_memstats_mcache_sys_bytes 16384
+# HELP go_memstats_mspan_inuse_bytes Number of bytes in use by mspan structures.
+# TYPE go_memstats_mspan_inuse_bytes gauge
+go_memstats_mspan_inuse_bytes 315384
+# HELP go_memstats_mspan_sys_bytes Number of bytes used for mspan structures obtained from system.
+# TYPE go_memstats_mspan_sys_bytes gauge
+go_memstats_mspan_sys_bytes 360448
+# HELP go_memstats_next_gc_bytes Number of heap bytes when next garbage collection will take place.
+# TYPE go_memstats_next_gc_bytes gauge
+go_memstats_next_gc_bytes 2.43776e+07
+# HELP go_memstats_other_sys_bytes Number of bytes used for other system allocations.
+# TYPE go_memstats_other_sys_bytes gauge
+go_memstats_other_sys_bytes 765574
+# HELP go_memstats_stack_inuse_bytes Number of bytes in use by the stack allocator.
+# TYPE go_memstats_stack_inuse_bytes gauge
+go_memstats_stack_inuse_bytes 3.11296e+06
+# HELP go_memstats_stack_sys_bytes Number of bytes obtained from system for stack allocator.
+# TYPE go_memstats_stack_sys_bytes gauge
+go_memstats_stack_sys_bytes 3.11296e+06
+# HELP go_memstats_sys_bytes Number of bytes obtained from system.
+# TYPE go_memstats_sys_bytes gauge
+go_memstats_sys_bytes 4.4123144e+07
+# HELP go_threads Number of OS threads created.
+# TYPE go_threads gauge
+go_threads 17
+# HELP kubelet_certificate_manager_client_expiration_renew_errors [ALPHA] Counter of certificate renewal errors.
+# TYPE kubelet_certificate_manager_client_expiration_renew_errors counter
+kubelet_certificate_manager_client_expiration_renew_errors 0
+# HELP kubelet_certificate_manager_client_ttl_seconds [ALPHA] Gauge of the TTL (time-to-live) of the Kubelet's client certificate. The value is in seconds until certificate expiry (negative if already expired). If client certificate is invalid or unused, the value will be +INF.
+# TYPE kubelet_certificate_manager_client_ttl_seconds gauge
+kubelet_certificate_manager_client_ttl_seconds 2.8440742e+07
+# HELP kubelet_cgroup_manager_duration_seconds [ALPHA] Duration in seconds for cgroup manager operations. Broken down by method.
+# TYPE kubelet_cgroup_manager_duration_seconds histogram
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="0.005"} 2876
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="0.01"} 2882
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="0.025"} 2884
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="0.05"} 2885
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="0.1"} 2885
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="0.25"} 2886
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="0.5"} 2886
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="1"} 2886
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="2.5"} 2886
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="5"} 2886
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="10"} 2886
+kubelet_cgroup_manager_duration_seconds_bucket{operation_type="update",le="+Inf"} 2886
+kubelet_cgroup_manager_duration_seconds_sum{operation_type="update"} 3.6447971050000096
+kubelet_cgroup_manager_duration_seconds_count{operation_type="update"} 2886
+# HELP kubelet_container_log_filesystem_used_bytes [ALPHA] Bytes used by the container's logs on the filesystem.
+# TYPE kubelet_container_log_filesystem_used_bytes gauge
+kubelet_container_log_filesystem_used_bytes{container="controller",namespace="ingress-nginx",pod="ingress-nginx-controller-cc8496874-jzkq6",uid="e1069132-f4fc-45c1-b8fe-c6fb1c890ecd"} 36864
+kubelet_container_log_filesystem_used_bytes{container="coredns",namespace="kube-system",pod="coredns-64897985d-zkks2",uid="d99b7e77-ef03-4f64-ba40-681ac8253e37"} 28672
+kubelet_container_log_filesystem_used_bytes{container="etcd",namespace="kube-system",pod="etcd-minikube",uid="74532e06f67e119ce1a5dc3ee7d2206b"} 176128
+kubelet_container_log_filesystem_used_bytes{container="kube-apiserver",namespace="kube-system",pod="kube-apiserver-minikube",uid="155a824721f5c67724f3218465dd9080"} 65536
+kubelet_container_log_filesystem_used_bytes{container="kube-controller-manager",namespace="kube-system",pod="kube-controller-manager-minikube",uid="587a73e23652b9545f6dd4342aff032b"} 65536
+kubelet_container_log_filesystem_used_bytes{container="kube-proxy",namespace="kube-system",pod="kube-proxy-hfd4l",uid="a300533c-f8dc-4e51-8151-32e727a8765c"} 28672
+kubelet_container_log_filesystem_used_bytes{container="kube-scheduler",namespace="kube-system",pod="kube-scheduler-minikube",uid="be132fe5c6572cb34d93f5e05ce2a540"} 28672
+kubelet_container_log_filesystem_used_bytes{container="nfs-subdir-external-provisioner",namespace="default",pod="nfs-subdir-external-provisioner-c7db86b5c-n7kjw",uid="97c2879b-9a78-43c7-960e-176612b701e2"} 28672
+kubelet_container_log_filesystem_used_bytes{container="nginx",namespace="default",pod="nfs-nginx-t6p7l",uid="e6c50a6e-75d9-439d-b246-bd4e6daf33a1"} 28672
+kubelet_container_log_filesystem_used_bytes{container="storage-provisioner",namespace="kube-system",pod="storage-provisioner",uid="f905d322-1067-4c0d-9eef-8bad194956b9"} 28672
+# HELP kubelet_containers_per_pod_count [ALPHA] The number of containers per pod.
+# TYPE kubelet_containers_per_pod_count histogram
+kubelet_containers_per_pod_count_bucket{le="1"} 12
+kubelet_containers_per_pod_count_bucket{le="2"} 12
+kubelet_containers_per_pod_count_bucket{le="4"} 12
+kubelet_containers_per_pod_count_bucket{le="8"} 12
+kubelet_containers_per_pod_count_bucket{le="16"} 12
+kubelet_containers_per_pod_count_bucket{le="+Inf"} 12
+kubelet_containers_per_pod_count_sum 12
+kubelet_containers_per_pod_count_count 12
+# HELP kubelet_docker_operations_duration_seconds [ALPHA] Latency in seconds of Docker operations. Broken down by operation type.
+# TYPE kubelet_docker_operations_duration_seconds histogram
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="0.005"} 0
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="0.01"} 0
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="0.025"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="0.05"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="0.1"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="0.25"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="0.5"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="1"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="2.5"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="5"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="10"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="info",le="+Inf"} 1
+kubelet_docker_operations_duration_seconds_sum{operation_type="info"} 0.014366128
+kubelet_docker_operations_duration_seconds_count{operation_type="info"} 1
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="0.005"} 34
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="0.01"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="0.025"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="0.05"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="0.1"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="0.25"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="0.5"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="1"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="2.5"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="5"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="10"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_container",le="+Inf"} 36
+kubelet_docker_operations_duration_seconds_sum{operation_type="inspect_container"} 0.046950780000000004
+kubelet_docker_operations_duration_seconds_count{operation_type="inspect_container"} 36
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="0.005"} 207
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="0.01"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="0.025"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="0.05"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="0.1"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="0.25"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="0.5"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="1"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="2.5"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="5"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="10"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="inspect_image",le="+Inf"} 211
+kubelet_docker_operations_duration_seconds_sum{operation_type="inspect_image"} 0.2958515780000002
+kubelet_docker_operations_duration_seconds_count{operation_type="inspect_image"} 211
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="0.005"} 194736
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="0.01"} 209089
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="0.025"} 211390
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="0.05"} 211450
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="0.1"} 211468
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="0.25"} 211479
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="0.5"} 211481
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="1"} 211481
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="2.5"} 211481
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="5"} 211481
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="10"} 211481
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_containers",le="+Inf"} 211481
+kubelet_docker_operations_duration_seconds_sum{operation_type="list_containers"} 673.0684079409924
+kubelet_docker_operations_duration_seconds_count{operation_type="list_containers"} 211481
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="0.005"} 2550
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="0.01"} 7525
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="0.025"} 7852
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="0.05"} 7863
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="0.1"} 7864
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="0.25"} 7865
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="0.5"} 7866
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="1"} 7866
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="2.5"} 7866
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="5"} 7866
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="10"} 7866
+kubelet_docker_operations_duration_seconds_bucket{operation_type="list_images",le="+Inf"} 7866
+kubelet_docker_operations_duration_seconds_sum{operation_type="list_images"} 45.926983277999895
+kubelet_docker_operations_duration_seconds_count{operation_type="list_images"} 7866
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="0.005"} 0
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="0.01"} 2094
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="0.025"} 16909
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="0.05"} 17121
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="0.1"} 17131
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="0.25"} 17135
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="0.5"} 17135
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="1"} 17135
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="2.5"} 17135
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="5"} 17135
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="10"} 17135
+kubelet_docker_operations_duration_seconds_bucket{operation_type="version",le="+Inf"} 17135
+kubelet_docker_operations_duration_seconds_sum{operation_type="version"} 236.71137904700004
+kubelet_docker_operations_duration_seconds_count{operation_type="version"} 17135
+# HELP kubelet_docker_operations_total [ALPHA] Cumulative number of Docker operations by operation type.
+# TYPE kubelet_docker_operations_total counter
+kubelet_docker_operations_total{operation_type="info"} 1
+kubelet_docker_operations_total{operation_type="inspect_container"} 36
+kubelet_docker_operations_total{operation_type="inspect_image"} 211
+kubelet_docker_operations_total{operation_type="list_containers"} 211481
+kubelet_docker_operations_total{operation_type="list_images"} 7866
+kubelet_docker_operations_total{operation_type="version"} 17135
+# HELP kubelet_http_inflight_requests [ALPHA] Number of the inflight http requests
+# TYPE kubelet_http_inflight_requests gauge
+kubelet_http_inflight_requests{long_running="false",method="GET",path="metrics",server_type="readonly"} 1
+# HELP kubelet_http_requests_duration_seconds [ALPHA] Duration in seconds to serve http requests
+# TYPE kubelet_http_requests_duration_seconds histogram
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="0.005"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="0.01"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="0.025"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="0.05"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="0.1"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="0.25"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="0.5"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="1"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="2.5"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="5"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="10"} 4
+kubelet_http_requests_duration_seconds_bucket{long_running="false",method="GET",path="metrics",server_type="readonly",le="+Inf"} 4
+kubelet_http_requests_duration_seconds_sum{long_running="false",method="GET",path="metrics",server_type="readonly"} 1.2033e-05
+kubelet_http_requests_duration_seconds_count{long_running="false",method="GET",path="metrics",server_type="readonly"} 4
+# HELP kubelet_http_requests_total [ALPHA] Number of the http requests received since the server started
+# TYPE kubelet_http_requests_total counter
+kubelet_http_requests_total{long_running="false",method="GET",path="metrics",server_type="readonly"} 5
+# HELP kubelet_managed_ephemeral_containers [ALPHA] Current number of ephemeral containers in pods managed by this kubelet. Ephemeral containers will be ignored if disabled by the EphemeralContainers feature gate, and this number will be 0.
+# TYPE kubelet_managed_ephemeral_containers gauge
+kubelet_managed_ephemeral_containers 0
+# HELP kubelet_network_plugin_operations_duration_seconds [ALPHA] Latency in seconds of network plugin operations. Broken down by operation type.
+# TYPE kubelet_network_plugin_operations_duration_seconds histogram
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="0.005"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="0.01"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="0.025"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="0.05"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="0.1"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="0.25"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="0.5"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="1"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="2.5"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="5"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="10"} 6
+kubelet_network_plugin_operations_duration_seconds_bucket{operation_type="get_pod_network_status",le="+Inf"} 6
+kubelet_network_plugin_operations_duration_seconds_sum{operation_type="get_pod_network_status"} 1.9258e-05
+kubelet_network_plugin_operations_duration_seconds_count{operation_type="get_pod_network_status"} 6
+# HELP kubelet_network_plugin_operations_total [ALPHA] Cumulative number of network plugin operations by operation type.
+# TYPE kubelet_network_plugin_operations_total counter
+kubelet_network_plugin_operations_total{operation_type="get_pod_network_status"} 6
+# HELP kubelet_node_name [ALPHA] The node's name. The count is always 1.
+# TYPE kubelet_node_name gauge
+kubelet_node_name{node="minikube"} 1
+# HELP kubelet_pleg_discard_events [ALPHA] The number of discard events in PLEG.
+# TYPE kubelet_pleg_discard_events counter
+kubelet_pleg_discard_events 0
+# HELP kubelet_pleg_last_seen_seconds [ALPHA] Timestamp in seconds when PLEG was last seen active.
+# TYPE kubelet_pleg_last_seen_seconds gauge
+kubelet_pleg_last_seen_seconds 1.652225887e+09
+# HELP kubelet_pleg_relist_duration_seconds [ALPHA] Duration in seconds for relisting pods in PLEG.
+# TYPE kubelet_pleg_relist_duration_seconds histogram
+kubelet_pleg_relist_duration_seconds_bucket{le="0.005"} 2
+kubelet_pleg_relist_duration_seconds_bucket{le="0.01"} 48647
+kubelet_pleg_relist_duration_seconds_bucket{le="0.025"} 56814
+kubelet_pleg_relist_duration_seconds_bucket{le="0.05"} 57042
+kubelet_pleg_relist_duration_seconds_bucket{le="0.1"} 57063
+kubelet_pleg_relist_duration_seconds_bucket{le="0.25"} 57073
+kubelet_pleg_relist_duration_seconds_bucket{le="0.5"} 57073
+kubelet_pleg_relist_duration_seconds_bucket{le="1"} 57074
+kubelet_pleg_relist_duration_seconds_bucket{le="2.5"} 57074
+kubelet_pleg_relist_duration_seconds_bucket{le="5"} 57074
+kubelet_pleg_relist_duration_seconds_bucket{le="10"} 57074
+kubelet_pleg_relist_duration_seconds_bucket{le="+Inf"} 57074
+kubelet_pleg_relist_duration_seconds_sum 519.8767160620047
+kubelet_pleg_relist_duration_seconds_count 57074
+# HELP kubelet_pleg_relist_interval_seconds [ALPHA] Interval in seconds between relisting in PLEG.
+# TYPE kubelet_pleg_relist_interval_seconds histogram
+kubelet_pleg_relist_interval_seconds_bucket{le="0.005"} 0
+kubelet_pleg_relist_interval_seconds_bucket{le="0.01"} 0
+kubelet_pleg_relist_interval_seconds_bucket{le="0.025"} 0
+kubelet_pleg_relist_interval_seconds_bucket{le="0.05"} 0
+kubelet_pleg_relist_interval_seconds_bucket{le="0.1"} 0
+kubelet_pleg_relist_interval_seconds_bucket{le="0.25"} 0
+kubelet_pleg_relist_interval_seconds_bucket{le="0.5"} 0
+kubelet_pleg_relist_interval_seconds_bucket{le="1"} 0
+kubelet_pleg_relist_interval_seconds_bucket{le="2.5"} 57073
+kubelet_pleg_relist_interval_seconds_bucket{le="5"} 57073
+kubelet_pleg_relist_interval_seconds_bucket{le="10"} 57073
+kubelet_pleg_relist_interval_seconds_bucket{le="+Inf"} 57073
+kubelet_pleg_relist_interval_seconds_sum 57644.7372549915
+kubelet_pleg_relist_interval_seconds_count 57073
+# HELP kubelet_pod_start_duration_seconds [ALPHA] Duration in seconds for a single pod to go from pending to running.
+# TYPE kubelet_pod_start_duration_seconds histogram
+kubelet_pod_start_duration_seconds_bucket{le="0.005"} 6
+kubelet_pod_start_duration_seconds_bucket{le="0.01"} 6
+kubelet_pod_start_duration_seconds_bucket{le="0.025"} 6
+kubelet_pod_start_duration_seconds_bucket{le="0.05"} 6
+kubelet_pod_start_duration_seconds_bucket{le="0.1"} 6
+kubelet_pod_start_duration_seconds_bucket{le="0.25"} 6
+kubelet_pod_start_duration_seconds_bucket{le="0.5"} 10
+kubelet_pod_start_duration_seconds_bucket{le="1"} 10
+kubelet_pod_start_duration_seconds_bucket{le="2.5"} 13
+kubelet_pod_start_duration_seconds_bucket{le="5"} 13
+kubelet_pod_start_duration_seconds_bucket{le="10"} 13
+kubelet_pod_start_duration_seconds_bucket{le="+Inf"} 13
+kubelet_pod_start_duration_seconds_sum 5.575423669
+kubelet_pod_start_duration_seconds_count 13
+# HELP kubelet_pod_worker_duration_seconds [ALPHA] Duration in seconds to sync a single pod. Broken down by operation type: create, update, or sync
+# TYPE kubelet_pod_worker_duration_seconds histogram
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="0.005"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="0.01"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="0.025"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="0.05"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="0.1"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="0.25"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="0.5"} 4
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="1"} 4
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="2.5"} 4
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="5"} 10
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="10"} 10
+kubelet_pod_worker_duration_seconds_bucket{operation_type="create",le="+Inf"} 10
+kubelet_pod_worker_duration_seconds_sum{operation_type="create"} 21.697797916999995
+kubelet_pod_worker_duration_seconds_count{operation_type="create"} 10
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="0.005"} 7523
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="0.01"} 7599
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="0.025"} 7613
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="0.05"} 7614
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="0.1"} 7614
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="0.25"} 7614
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="0.5"} 7616
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="1"} 7617
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="2.5"} 7621
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="5"} 7626
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="10"} 7626
+kubelet_pod_worker_duration_seconds_bucket{operation_type="sync",le="+Inf"} 7626
+kubelet_pod_worker_duration_seconds_sum{operation_type="sync"} 32.75478167899988
+kubelet_pod_worker_duration_seconds_count{operation_type="sync"} 7626
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="0.005"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="0.01"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="0.025"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="0.05"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="0.1"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="0.25"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="0.5"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="1"} 0
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="2.5"} 1
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="5"} 2
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="10"} 2
+kubelet_pod_worker_duration_seconds_bucket{operation_type="update",le="+Inf"} 2
+kubelet_pod_worker_duration_seconds_sum{operation_type="update"} 5.2968361680000005
+kubelet_pod_worker_duration_seconds_count{operation_type="update"} 2
+# HELP kubelet_pod_worker_start_duration_seconds [ALPHA] Duration in seconds from seeing a pod to starting a worker.
+# TYPE kubelet_pod_worker_start_duration_seconds histogram
+kubelet_pod_worker_start_duration_seconds_bucket{le="0.005"} 6
+kubelet_pod_worker_start_duration_seconds_bucket{le="0.01"} 6
+kubelet_pod_worker_start_duration_seconds_bucket{le="0.025"} 6
+kubelet_pod_worker_start_duration_seconds_bucket{le="0.05"} 6
+kubelet_pod_worker_start_duration_seconds_bucket{le="0.1"} 6
+kubelet_pod_worker_start_duration_seconds_bucket{le="0.25"} 6
+kubelet_pod_worker_start_duration_seconds_bucket{le="0.5"} 10
+kubelet_pod_worker_start_duration_seconds_bucket{le="1"} 10
+kubelet_pod_worker_start_duration_seconds_bucket{le="2.5"} 10
+kubelet_pod_worker_start_duration_seconds_bucket{le="5"} 10
+kubelet_pod_worker_start_duration_seconds_bucket{le="10"} 10
+kubelet_pod_worker_start_duration_seconds_bucket{le="+Inf"} 10
+kubelet_pod_worker_start_duration_seconds_sum 1.6116278279999998
+kubelet_pod_worker_start_duration_seconds_count 10
+# HELP kubelet_running_containers [ALPHA] Number of containers currently running
+# TYPE kubelet_running_containers gauge
+kubelet_running_containers{container_state="exited"} 8
+kubelet_running_containers{container_state="running"} 10
+# HELP kubelet_running_pods [ALPHA] Number of pods that have a running pod sandbox
+# TYPE kubelet_running_pods gauge
+kubelet_running_pods 10
+# HELP kubelet_runtime_operations_duration_seconds [ALPHA] Duration in seconds of runtime operations. Broken down by operation type.
+# TYPE kubelet_runtime_operations_duration_seconds histogram
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="0.005"} 14
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="0.0125"} 17
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="0.03125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="0.078125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="0.1953125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="0.48828125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="1.220703125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="3.0517578125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="7.62939453125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="19.073486328125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="47.6837158203125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="119.20928955078125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="298.0232238769531"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="745.0580596923828"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="container_status",le="+Inf"} 18
+kubelet_runtime_operations_duration_seconds_sum{operation_type="container_status"} 0.07480188999999998
+kubelet_runtime_operations_duration_seconds_count{operation_type="container_status"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="0.005"} 190
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="0.0125"} 192
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="0.03125"} 192
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="0.078125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="0.1953125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="0.48828125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="1.220703125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="3.0517578125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="7.62939453125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="19.073486328125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="47.6837158203125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="119.20928955078125"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="298.0232238769531"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="745.0580596923828"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="image_status",le="+Inf"} 193
+kubelet_runtime_operations_duration_seconds_sum{operation_type="image_status"} 0.4137162509999999
+kubelet_runtime_operations_duration_seconds_count{operation_type="image_status"} 193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="0.005"} 99654
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="0.0125"} 105639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="0.03125"} 106193
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="0.078125"} 106213
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="0.1953125"} 106217
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="0.48828125"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="1.220703125"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="3.0517578125"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="7.62939453125"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="19.073486328125"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="47.6837158203125"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="119.20928955078125"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="298.0232238769531"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="745.0580596923828"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_containers",le="+Inf"} 106219
+kubelet_runtime_operations_duration_seconds_sum{operation_type="list_containers"} 316.8741357549995
+kubelet_runtime_operations_duration_seconds_count{operation_type="list_containers"} 106219
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="0.005"} 924
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="0.0125"} 7633
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="0.03125"} 7860
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="0.078125"} 7863
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="0.1953125"} 7865
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="0.48828125"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="1.220703125"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="3.0517578125"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="7.62939453125"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="19.073486328125"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="47.6837158203125"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="119.20928955078125"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="298.0232238769531"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="745.0580596923828"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_images",le="+Inf"} 7866
+kubelet_runtime_operations_duration_seconds_sum{operation_type="list_images"} 50.309983523000106
+kubelet_runtime_operations_duration_seconds_count{operation_type="list_images"} 7866
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="0.005"} 65328
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="0.0125"} 104196
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="0.03125"} 105207
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="0.078125"} 105245
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="0.1953125"} 105254
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="0.48828125"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="1.220703125"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="3.0517578125"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="7.62939453125"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="19.073486328125"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="47.6837158203125"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="119.20928955078125"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="298.0232238769531"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="745.0580596923828"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="list_podsandbox",le="+Inf"} 105258
+kubelet_runtime_operations_duration_seconds_sum{operation_type="list_podsandbox"} 492.7535431119958
+kubelet_runtime_operations_duration_seconds_count{operation_type="list_podsandbox"} 105258
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="0.005"} 16
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="0.0125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="0.03125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="0.078125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="0.1953125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="0.48828125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="1.220703125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="3.0517578125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="7.62939453125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="19.073486328125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="47.6837158203125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="119.20928955078125"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="298.0232238769531"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="745.0580596923828"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="podsandbox_status",le="+Inf"} 18
+kubelet_runtime_operations_duration_seconds_sum{operation_type="podsandbox_status"} 0.04443766400000001
+kubelet_runtime_operations_duration_seconds_count{operation_type="podsandbox_status"} 18
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="0.005"} 0
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="0.0125"} 3559
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="0.03125"} 11438
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="0.078125"} 11491
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="0.1953125"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="0.48828125"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="1.220703125"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="3.0517578125"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="7.62939453125"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="19.073486328125"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="47.6837158203125"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="119.20928955078125"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="298.0232238769531"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="745.0580596923828"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="status",le="+Inf"} 11495
+kubelet_runtime_operations_duration_seconds_sum{operation_type="status"} 167.86243340700045
+kubelet_runtime_operations_duration_seconds_count{operation_type="status"} 11495
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="0.005"} 0
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="0.0125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="0.03125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="0.078125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="0.1953125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="0.48828125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="1.220703125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="3.0517578125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="7.62939453125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="19.073486328125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="47.6837158203125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="119.20928955078125"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="298.0232238769531"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="745.0580596923828"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="update_runtime_config",le="+Inf"} 1
+kubelet_runtime_operations_duration_seconds_sum{operation_type="update_runtime_config"} 0.005107974
+kubelet_runtime_operations_duration_seconds_count{operation_type="update_runtime_config"} 1
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="0.005"} 0
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="0.0125"} 1792
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="0.03125"} 5614
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="0.078125"} 5638
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="0.1953125"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="0.48828125"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="1.220703125"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="3.0517578125"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="7.62939453125"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="19.073486328125"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="47.6837158203125"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="119.20928955078125"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="298.0232238769531"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="745.0580596923828"} 5639
+kubelet_runtime_operations_duration_seconds_bucket{operation_type="version",le="+Inf"} 5639
+kubelet_runtime_operations_duration_seconds_sum{operation_type="version"} 78.07114222499996
+kubelet_runtime_operations_duration_seconds_count{operation_type="version"} 5639
+# HELP kubelet_runtime_operations_total [ALPHA] Cumulative number of runtime operations by operation type.
+# TYPE kubelet_runtime_operations_total counter
+kubelet_runtime_operations_total{operation_type="container_status"} 18
+kubelet_runtime_operations_total{operation_type="image_status"} 193
+kubelet_runtime_operations_total{operation_type="list_containers"} 106219
+kubelet_runtime_operations_total{operation_type="list_images"} 7866
+kubelet_runtime_operations_total{operation_type="list_podsandbox"} 105258
+kubelet_runtime_operations_total{operation_type="podsandbox_status"} 18
+kubelet_runtime_operations_total{operation_type="status"} 11495
+kubelet_runtime_operations_total{operation_type="update_runtime_config"} 1
+kubelet_runtime_operations_total{operation_type="version"} 5639
+# HELP kubelet_started_pods_errors_total [ALPHA] Cumulative number of errors when starting pods
+# TYPE kubelet_started_pods_errors_total counter
+kubelet_started_pods_errors_total 0
+# HELP kubelet_started_pods_total [ALPHA] Cumulative number of pods started
+# TYPE kubelet_started_pods_total counter
+kubelet_started_pods_total 0
+# HELP kubelet_volume_stats_available_bytes [ALPHA] Number of available bytes in the volume
+# TYPE kubelet_volume_stats_available_bytes gauge
+kubelet_volume_stats_available_bytes{namespace="default",persistentvolumeclaim="nfs-2"} 3.5026108416e+10
+# HELP kubelet_volume_stats_capacity_bytes [ALPHA] Capacity in bytes of the volume
+# TYPE kubelet_volume_stats_capacity_bytes gauge
+kubelet_volume_stats_capacity_bytes{namespace="default",persistentvolumeclaim="nfs-2"} 4.1567977472e+10
+# HELP kubelet_volume_stats_inodes [ALPHA] Maximum number of inodes in the volume
+# TYPE kubelet_volume_stats_inodes gauge
+kubelet_volume_stats_inodes{namespace="default",persistentvolumeclaim="nfs-2"} 5.12e+06
+# HELP kubelet_volume_stats_inodes_free [ALPHA] Number of free inodes in the volume
+# TYPE kubelet_volume_stats_inodes_free gauge
+kubelet_volume_stats_inodes_free{namespace="default",persistentvolumeclaim="nfs-2"} 5.044629e+06
+# HELP kubelet_volume_stats_inodes_used [ALPHA] Number of used inodes in the volume
+# TYPE kubelet_volume_stats_inodes_used gauge
+kubelet_volume_stats_inodes_used{namespace="default",persistentvolumeclaim="nfs-2"} 75371
+# HELP kubelet_volume_stats_used_bytes [ALPHA] Number of used bytes in the volume
+# TYPE kubelet_volume_stats_used_bytes gauge
+kubelet_volume_stats_used_bytes{namespace="default",persistentvolumeclaim="nfs-2"} 6.52509184e+09
+kubelet_volume_stats_used_bytes{namespace="knittest",persistentvolumeclaim="nfs-3"} 6.52509184e+09
+# HELP kubernetes_build_info [ALPHA] A metric with a constant '1' value labeled by major, minor, git version, git commit, git tree state, build date, Go version, and compiler from which Kubernetes was built, and platform on which it is running.
+# TYPE kubernetes_build_info gauge
+kubernetes_build_info{build_date="2022-01-25T21:24:08Z",compiler="gc",git_commit="816c97ab8cff8a1c72eccca1026f7820e93e0d25",git_tree_state="clean",git_version="v1.23.3",go_version="go1.17.6",major="1",minor="23",platform="linux/amd64"} 1
+# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
+# TYPE process_cpu_seconds_total counter
+process_cpu_seconds_total 1420.55
+# HELP process_max_fds Maximum number of open file descriptors.
+# TYPE process_max_fds gauge
+process_max_fds 1e+06
+# HELP process_open_fds Number of open file descriptors.
+# TYPE process_open_fds gauge
+process_open_fds 46
+# HELP process_resident_memory_bytes Resident memory size in bytes.
+# TYPE process_resident_memory_bytes gauge
+process_resident_memory_bytes 1.08261376e+08
+# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
+# TYPE process_start_time_seconds gauge
+process_start_time_seconds 1.65216824165e+09
+# HELP process_virtual_memory_bytes Virtual memory size in bytes.
+# TYPE process_virtual_memory_bytes gauge
+process_virtual_memory_bytes 1.984602112e+09
+# HELP process_virtual_memory_max_bytes Maximum amount of virtual memory available in bytes.
+# TYPE process_virtual_memory_max_bytes gauge
+process_virtual_memory_max_bytes 1.8446744073709552e+19
+# HELP rest_client_exec_plugin_certificate_rotation_age [ALPHA] Histogram of the number of seconds the last auth exec plugin client certificate lived before being rotated. If auth exec plugin client certificates are unused, histogram will contain no data.
+# TYPE rest_client_exec_plugin_certificate_rotation_age histogram
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="600"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="1800"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="3600"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="14400"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="86400"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="604800"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="2.592e+06"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="7.776e+06"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="1.5552e+07"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="3.1104e+07"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="1.24416e+08"} 0
+rest_client_exec_plugin_certificate_rotation_age_bucket{le="+Inf"} 0
+rest_client_exec_plugin_certificate_rotation_age_sum 0
+rest_client_exec_plugin_certificate_rotation_age_count 0
+# HELP rest_client_exec_plugin_ttl_seconds [ALPHA] Gauge of the shortest TTL (time-to-live) of the client certificate(s) managed by the auth exec plugin. The value is in seconds until certificate expiry (negative if already expired). If auth exec plugins are unused or manage no TLS certificates, the value will be +INF.
+# TYPE rest_client_exec_plugin_ttl_seconds gauge
+rest_client_exec_plugin_ttl_seconds +Inf
+# HELP rest_client_rate_limiter_duration_seconds [ALPHA] Client side rate limiter latency in seconds. Broken down by verb and URL.
+# TYPE rest_client_rate_limiter_duration_seconds histogram
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 5
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 4.767845749
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 5
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.001"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.002"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.004"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.008"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.016"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.032"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.064"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.128"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.256"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.512"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="+Inf"} 8
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST"} 8.378600000000001e-05
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.001"} 762
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.002"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.004"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.008"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.016"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.032"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.064"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.128"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.256"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.512"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="+Inf"} 764
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET"} 1.5498872770000027
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET"} 764
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.001"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.002"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.004"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.008"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.016"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.032"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.064"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.128"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.256"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.512"} 4
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="+Inf"} 8
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST"} 7.897174408
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST"} 8
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.001"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.002"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.004"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.008"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.016"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.032"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.064"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.128"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.256"} 20
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.512"} 23
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="+Inf"} 23
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET"} 4.988447505
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET"} 23
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.001"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.002"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.004"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.008"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.016"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.032"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.064"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.128"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.256"} 15
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.512"} 15
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="+Inf"} 16
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH"} 6.320421455
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH"} 16
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 0.594439691
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.001"} 114
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.002"} 114
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.004"} 114
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.008"} 114
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.016"} 114
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.032"} 114
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.064"} 114
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.128"} 114
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.256"} 115
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.512"} 115
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="+Inf"} 120
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST"} 14.379889004999992
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST"} 120
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.001"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.002"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.004"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.008"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.016"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.032"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.064"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.128"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.256"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.512"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="+Inf"} 1
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST"} 1.329e-06
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.001"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.002"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.004"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.008"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.016"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.032"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.064"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.128"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.256"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.512"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="+Inf"} 1
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET"} 1.837e-06
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1.411e-06
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.001"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.002"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.004"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.008"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.016"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.032"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.064"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.128"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.256"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.512"} 763
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="+Inf"} 764
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET"} 2.1978635959999955
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET"} 764
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 0
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 0.197735069
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 9.93e-07
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1.295e-06
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1.553e-06
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.001"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.002"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.004"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.008"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.016"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.032"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.064"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.128"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.256"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.512"} 2
+rest_client_rate_limiter_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="+Inf"} 2
+rest_client_rate_limiter_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET"} 3.705e-06
+rest_client_rate_limiter_duration_seconds_count{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET"} 2
+# HELP rest_client_request_duration_seconds [ALPHA] Request latency in seconds. Broken down by verb and URL.
+# TYPE rest_client_request_duration_seconds histogram
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 5
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 4.779618588
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/configmaps?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 5
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.004"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.008"} 2
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.016"} 7
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.032"} 8
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.064"} 8
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.128"} 8
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.256"} 8
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="0.512"} 8
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST",le="+Inf"} 8
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST"} 0.07922143499999999
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/events",verb="POST"} 8
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.004"} 17
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.008"} 163
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.016"} 528
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.032"} 759
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.064"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.128"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.256"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="0.512"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET",le="+Inf"} 764
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET"} 11.423599070000012
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/persistentvolumeclaims/%7Bname%7D",verb="GET"} 764
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.016"} 4
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.032"} 4
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.064"} 4
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.128"} 4
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.256"} 4
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="0.512"} 4
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST",le="+Inf"} 8
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST"} 7.97832774
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods",verb="POST"} 8
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.016"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.032"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.064"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.128"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.256"} 20
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="0.512"} 23
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET",le="+Inf"} 23
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET"} 5.091647063999999
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D",verb="GET"} 23
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.016"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.032"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.064"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.128"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.256"} 15
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="0.512"} 15
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH",le="+Inf"} 16
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH"} 6.496997600999998
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/pods/%7Bname%7D/status",verb="PATCH"} 16
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 0.596737385
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/secrets?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.008"} 3
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.016"} 60
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.032"} 114
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.064"} 114
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.128"} 114
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.256"} 115
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="0.512"} 115
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST",le="+Inf"} 120
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST"} 16.230795725000004
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/namespaces/%7Bnamespace%7D/serviceaccounts/%7Bname%7D/token",verb="POST"} 120
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.016"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.032"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.064"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.128"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.256"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST"} 0.009221656
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/nodes",verb="POST"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.008"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.016"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.032"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.064"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.128"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.256"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET"} 0.005286389
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D",verb="GET"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.008"} 65
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.016"} 188
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.032"} 189
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.064"} 189
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.128"} 189
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.256"} 189
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="0.512"} 189
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH",le="+Inf"} 189
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH"} 1.6347853430000001
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D/status?timeout=10s",verb="PATCH"} 189
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.002"} 25
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.004"} 778
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.008"} 2891
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.016"} 5249
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.032"} 5629
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.064"} 5636
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.128"} 5638
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.256"} 5638
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="0.512"} 5638
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET",le="+Inf"} 5638
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET"} 49.13748213400008
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/nodes/%7Bname%7D?resourceVersion=%7Bvalue%7D&timeout=10s",verb="GET"} 5638
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 0.026237634
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/nodes?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.002"} 240
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.004"} 736
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.008"} 757
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.016"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.032"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.064"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.128"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.256"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="0.512"} 763
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET",le="+Inf"} 764
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET"} 3.9758344909999943
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/persistentvolumes/%7Bname%7D",verb="GET"} 764
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 0.202042855
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/pods?fieldSelector=%7Bvalue%7D&limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 0.025556816
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/api/v1/services?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.008"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.016"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.032"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.064"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.128"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.256"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET"} 0.010607551
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="GET"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.004"} 10
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.008"} 1225
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.016"} 4197
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.032"} 5632
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.064"} 5640
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.128"} 5644
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.256"} 5645
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="0.512"} 5645
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT",le="+Inf"} 5645
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT"} 71.78725553200006
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/apis/coordination.k8s.io/v1/namespaces/%7Bnamespace%7D/leases/%7Bname%7D?timeout=10s",verb="PUT"} 5645
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 0.001268347
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/apis/node.k8s.io/v1/runtimeclasses?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.004"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.008"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.016"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.032"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.064"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.128"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.256"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="0.512"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET",le="+Inf"} 1
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 0.00295279
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csidrivers?limit=%7Bvalue%7D&resourceVersion=%7Bvalue%7D",verb="GET"} 1
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.001"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.002"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.004"} 0
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.008"} 2
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.016"} 2
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.032"} 2
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.064"} 2
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.128"} 2
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.256"} 2
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="0.512"} 2
+rest_client_request_duration_seconds_bucket{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET",le="+Inf"} 2
+rest_client_request_duration_seconds_sum{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET"} 0.012325775
+rest_client_request_duration_seconds_count{url="https://control-plane.minikube.internal:8443/apis/storage.k8s.io/v1/csinodes/%7Bname%7D",verb="GET"} 2
+# HELP rest_client_requests_total [ALPHA] Number of HTTP requests, partitioned by status code, method, and host.
+# TYPE rest_client_requests_total counter
+rest_client_requests_total{code="200",host="control-plane.minikube.internal:8443",method="GET"} 8635
+rest_client_requests_total{code="200",host="control-plane.minikube.internal:8443",method="PATCH"} 205
+rest_client_requests_total{code="200",host="control-plane.minikube.internal:8443",method="PUT"} 5645
+rest_client_requests_total{code="201",host="control-plane.minikube.internal:8443",method="POST"} 128
+rest_client_requests_total{code="409",host="control-plane.minikube.internal:8443",method="POST"} 9
+# HELP storage_operation_duration_seconds [ALPHA] Storage operation duration
+# TYPE storage_operation_duration_seconds histogram
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="0.1"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="0.25"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="0.5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="1"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="2.5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="10"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="15"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="25"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="50"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="120"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="300"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="600"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap",le="+Inf"} 2
+storage_operation_duration_seconds_sum{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap"} 0.000442048
+storage_operation_duration_seconds_count{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/configmap"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="0.1"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="0.25"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="0.5"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="1"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="2.5"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="5"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="10"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="15"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="25"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="50"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="120"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="300"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="600"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path",le="+Inf"} 14
+storage_operation_duration_seconds_sum{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path"} 0.0026217799999999998
+storage_operation_duration_seconds_count{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/host-path"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="0.1"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="0.25"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="0.5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="1"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="2.5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="10"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="15"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="25"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="50"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="120"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="300"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="600"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs",le="+Inf"} 2
+storage_operation_duration_seconds_sum{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs"} 0.000716119
+storage_operation_duration_seconds_count{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/nfs"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="0.1"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="0.25"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="0.5"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="1"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="2.5"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="5"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="10"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="15"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="25"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="50"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="120"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="300"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="600"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected",le="+Inf"} 6
+storage_operation_duration_seconds_sum{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected"} 0.001580118
+storage_operation_duration_seconds_count{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/projected"} 6
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="0.1"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="0.25"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="0.5"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="1"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="2.5"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="5"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="10"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="15"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="25"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="50"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="120"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="300"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="600"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret",le="+Inf"} 1
+storage_operation_duration_seconds_sum{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret"} 0.000173138
+storage_operation_duration_seconds_count{migrated="false",operation_name="verify_controller_attached_volume",status="success",volume_plugin="kubernetes.io/secret"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="0.1"} 0
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="0.25"} 0
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="0.5"} 0
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="1"} 0
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="2.5"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="5"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="10"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="15"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="25"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="50"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="120"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="300"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="600"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap",le="+Inf"} 1
+storage_operation_duration_seconds_sum{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap"} 1.003183782
+storage_operation_duration_seconds_count{migrated="false",operation_name="volume_mount",status="fail-unknown",volume_plugin="kubernetes.io/configmap"} 1
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="0.1"} 1524
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="0.25"} 1524
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="0.5"} 1524
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="1"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="2.5"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="5"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="10"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="15"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="25"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="50"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="120"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="300"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="600"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap",le="+Inf"} 1525
+storage_operation_duration_seconds_sum{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap"} 1.5647849350000003
+storage_operation_duration_seconds_count{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/configmap"} 1525
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="0.1"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="0.25"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="0.5"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="1"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="2.5"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="5"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="10"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="15"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="25"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="50"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="120"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="300"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="600"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path",le="+Inf"} 14
+storage_operation_duration_seconds_sum{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path"} 0.005151356
+storage_operation_duration_seconds_count{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/host-path"} 14
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="0.1"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="0.25"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="0.5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="1"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="2.5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="5"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="10"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="15"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="25"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="50"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="120"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="300"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="600"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs",le="+Inf"} 2
+storage_operation_duration_seconds_sum{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs"} 0.001311045
+storage_operation_duration_seconds_count{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/nfs"} 2
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="0.1"} 4569
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="0.25"} 4570
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="0.5"} 4570
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="1"} 4570
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="2.5"} 4571
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="5"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="10"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="15"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="25"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="50"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="120"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="300"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="600"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected",le="+Inf"} 4575
+storage_operation_duration_seconds_sum{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected"} 18.560115772999925
+storage_operation_duration_seconds_count{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/projected"} 4575
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="0.1"} 764
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="0.25"} 764
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="0.5"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="1"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="2.5"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="5"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="10"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="15"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="25"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="50"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="120"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="300"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="600"} 765
+storage_operation_duration_seconds_bucket{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret",le="+Inf"} 765
+storage_operation_duration_seconds_sum{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret"} 0.8664417800000006
+storage_operation_duration_seconds_count{migrated="false",operation_name="volume_mount",status="success",volume_plugin="kubernetes.io/secret"} 765
+# HELP volume_manager_total_volumes [ALPHA] Number of volumes in Volume Manager
+# TYPE volume_manager_total_volumes gauge
+volume_manager_total_volumes{plugin_name="kubernetes.io/configmap",state="actual_state_of_world"} 2
+volume_manager_total_volumes{plugin_name="kubernetes.io/configmap",state="desired_state_of_world"} 2
+volume_manager_total_volumes{plugin_name="kubernetes.io/host-path",state="actual_state_of_world"} 14
+volume_manager_total_volumes{plugin_name="kubernetes.io/host-path",state="desired_state_of_world"} 14
+volume_manager_total_volumes{plugin_name="kubernetes.io/nfs",state="actual_state_of_world"} 2
+volume_manager_total_volumes{plugin_name="kubernetes.io/nfs",state="desired_state_of_world"} 2
+volume_manager_total_volumes{plugin_name="kubernetes.io/projected",state="actual_state_of_world"} 6
+volume_manager_total_volumes{plugin_name="kubernetes.io/projected",state="desired_state_of_world"} 6
+volume_manager_total_volumes{plugin_name="kubernetes.io/secret",state="actual_state_of_world"} 1
+volume_manager_total_volumes{plugin_name="kubernetes.io/secret",state="desired_state_of_world"} 1
+# HELP workqueue_adds_total [ALPHA] Total number of adds handled by workqueue
+# TYPE workqueue_adds_total counter
+workqueue_adds_total{name="DynamicCABundle-client-ca-bundle"} 1
+# HELP workqueue_depth [ALPHA] Current depth of workqueue
+# TYPE workqueue_depth gauge
+workqueue_depth{name="DynamicCABundle-client-ca-bundle"} 0
+# HELP workqueue_longest_running_processor_seconds [ALPHA] How many seconds has the longest running processor for workqueue been running.
+# TYPE workqueue_longest_running_processor_seconds gauge
+workqueue_longest_running_processor_seconds{name="DynamicCABundle-client-ca-bundle"} 0
+# HELP workqueue_queue_duration_seconds [ALPHA] How long in seconds an item stays in workqueue before being requested.
+# TYPE workqueue_queue_duration_seconds histogram
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="1e-08"} 0
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="1e-07"} 0
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="1e-06"} 0
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="9.999999999999999e-06"} 0
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="9.999999999999999e-05"} 0
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="0.001"} 0
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="0.01"} 1
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="0.1"} 1
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="1"} 1
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="10"} 1
+workqueue_queue_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="+Inf"} 1
+workqueue_queue_duration_seconds_sum{name="DynamicCABundle-client-ca-bundle"} 0.001147885
+workqueue_queue_duration_seconds_count{name="DynamicCABundle-client-ca-bundle"} 1
+# HELP workqueue_retries_total [ALPHA] Total number of retries handled by workqueue
+# TYPE workqueue_retries_total counter
+workqueue_retries_total{name="DynamicCABundle-client-ca-bundle"} 0
+# HELP workqueue_unfinished_work_seconds [ALPHA] How many seconds of work has done that is in progress and hasn't been observed by work_duration. Large values indicate stuck threads. One can deduce the number of stuck threads by observing the rate at which this increases.
+# TYPE workqueue_unfinished_work_seconds gauge
+workqueue_unfinished_work_seconds{name="DynamicCABundle-client-ca-bundle"} 0
+# HELP workqueue_work_duration_seconds [ALPHA] How long in seconds processing an item from workqueue takes.
+# TYPE workqueue_work_duration_seconds histogram
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="1e-08"} 0
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="1e-07"} 0
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="1e-06"} 0
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="9.999999999999999e-06"} 0
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="9.999999999999999e-05"} 1
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="0.001"} 1
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="0.01"} 1
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="0.1"} 1
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="1"} 1
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="10"} 1
+workqueue_work_duration_seconds_bucket{name="DynamicCABundle-client-ca-bundle",le="+Inf"} 1
+workqueue_work_duration_seconds_sum{name="DynamicCABundle-client-ca-bundle"} 2.7965e-05
+workqueue_work_duration_seconds_count{name="DynamicCABundle-client-ca-bundle"} 1

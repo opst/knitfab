@@ -1,0 +1,12 @@
+# ignore all.
+*
+
+# # # allow list # # #
+!./cmd
+!./internal
+!./pkg
+!./go.mod
+!./go.sum
+
+# # # ignore list # # #
+*_test.go

@@ -1,0 +1,60 @@
+# Install Docker and its dependent components
+---
+- hosts: all
+  become: true
+  roles:
+    - "k8s-worker"
+    - role: nfs
+      when: is_nfs
+  tasks:
+    - name: Configure node label
+      lineinfile:
+        path: /etc/default/kubelet
+        line: LABELS="--node-labels='knit/node=gateway'"
+        create: yes
+
+    - name: pull template
+      template:
+        src: templates/gateway/san.j2
+        dest: /home/vagrant/certs/san.extfile
+
+    - name: Create CA key
+      shell:
+        cmd: |-
+          openssl genrsa -out ca.key 2048
+        chdir: /home/vagrant/certs
+
+    - name: Create CA Cert
+      shell:
+        cmd: |-
+          openssl req -x509 -new -nodes -key ca.key -subj "/CN={{ gateway_ip }}" -days 10000 -out ca.crt
+        chdir: /home/vagrant/certs
+
+    - name: Create Server Key
+      shell:
+        cmd: |-
+          openssl genrsa -out server.key 2048
+        chdir: /home/vagrant/certs
+
+    - name: Create Server CSR
+      shell:
+        cmd: |-
+          openssl req -new -key server.key -out server.csr -config san.extfile
+        chdir: /home/vagrant/certs
+
+    - name: Create Server Cert
+      shell:
+        cmd: |-
+          openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 10000 -extensions v3_ext -extfile san.extfile -sha256
+        chdir: /home/vagrant/certs
+
+    - name: update knit config (related gateway)
+      shell: |-
+        mkdir -p {{ knit_config }}
+        sed -Eie '/^(KNIT_API_HOST|KNIT_REGISTRY_HOST|TLSCERT|TLSKEY|TLSCACERT|TLSCAKEY)=/d' {{ knit_config }}/install_setting
+        echo "KNIT_API_HOST={{ gateway_ip }}" >> {{ knit_config }}/install_setting
+        echo "KNIT_REGISTRY_HOST={{ gateway_ip }}" >> {{ knit_config }}/install_setting
+        echo "TLSCERT={{ ca_certs_dir_in_host }}/server.crt" >> {{ knit_config }}/install_setting
+        echo "TLSKEY={{ ca_certs_dir_in_host }}/server.key" >> {{ knit_config }}/install_setting
+        echo "TLSCACERT={{ ca_certs_dir_in_host }}/ca.crt" >> {{ knit_config }}/install_setting
+        echo "TLSCAKEY={{ ca_certs_dir_in_host }}/ca.key" >> {{ knit_config }}/install_setting

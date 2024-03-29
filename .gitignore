@@ -1,0 +1,12 @@
+
+# # # generated files # # #
+
+.testenv
+
+# # # build artifact # # #
+/bin
+
+# # # others # # #
+__debug_bin
+
+./configure

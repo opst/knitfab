@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-2
+  namespace: knit-test
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: knit-test-data-sc
+  resources:
+    requests:
+      storage: 10Mi
+
+---
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: knit-test-data-sc
+  labels:
+    app: knit-testing
+    knit-testing/version: {{ .Chart.Version | quote }}
+    knit-testing/layer: system
+provisioner: nfs.csi.k8s.io
+allowVolumeExpansion: true
+parameters:
+  server: {{ .Values.storage.nfs.server }}
+  share: {{ .Values.storage.nfs.share }}
+  subDir: test-workloads-data
+
+  # https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/docs/driver-parameters.md#tips
+  csi.storage.k8s.io/provisioner-secret-name: {{ .Values.storage.component }}-mount-options
+  csi.storage.k8s.io/provisioner-secret-namespace: {{ .Release.Namespace | quote }}
+reclaimPolicy: Delete  # keep Delete for PV to be deleted after test.
+volumeBindingMode: Immediate
+mountOptions: {{ regexSplit "," (.Values.storage.nfs.mountOptions | default "") -1 | toYaml | nindent 2 }}
+
+---
+
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nfs-test-nginx
+  namespace: knit-test
+spec:
+  replicas: 1
+  selector:
+    name: nfs-nginx
+  template:
+    metadata:
+      labels:
+        name: nfs-nginx
+    spec:
+      containers:
+      - image: nginx
+        imagePullPolicy: IfNotPresent
+        name: nginx
+        volumeMounts: # コンテナにマウントするディレクトリ
+          # name must match the volume name below
+          - name: nfs
+            mountPath: "/mnt"
+      volumes:
+      - name: nfs
+        persistentVolumeClaim:
+          claimName: nfs-2

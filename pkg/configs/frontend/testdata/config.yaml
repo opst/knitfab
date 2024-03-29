@@ -1,0 +1,3 @@
+dburi: "postgres://knit-test-pgdb-svc:32555/knit"
+backendapiroot: "http://127.0.0.1:8080"
+serverport: "8080"

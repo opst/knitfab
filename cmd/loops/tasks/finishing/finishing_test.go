@@ -1,0 +1,528 @@
+package finishing_test
+
+import (
+	"context"
+	"errors"
+	"io"
+	"testing"
+
+	"github.com/opst/knitfab/cmd/loops/tasks/finishing"
+	kdb "github.com/opst/knitfab/pkg/db"
+	kdbmock "github.com/opst/knitfab/pkg/db/mocks"
+	"github.com/opst/knitfab/pkg/workloads"
+	"github.com/opst/knitfab/pkg/workloads/k8s"
+	"github.com/opst/knitfab/pkg/workloads/worker"
+)
+
+func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
+
+	type When struct {
+		cursorToTestee kdb.RunCursor
+
+		cursorFromPickAndSetStatus kdb.RunCursor
+		errFromPickAndSetStatus    error
+	}
+
+	type Then struct {
+		exptectedCursor kdb.RunCursor
+		expectedOk      bool
+		expectedErr     error
+	}
+
+	theory := func(when When, then Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+
+			iDbRun := kdbmock.NewRunInterface()
+
+			pickAndSetStatusCalled := false
+			iDbRun.Impl.PickAndSetStatus = func(
+				ctx context.Context, cursor kdb.RunCursor,
+				callback func(kdb.Run) (kdb.KnitRunStatus, error), // ignore
+			) (kdb.RunCursor, error) {
+				pickAndSetStatusCalled = true
+				return when.cursorFromPickAndSetStatus, when.errFromPickAndSetStatus
+			}
+
+			// Testee
+			testee := finishing.Task(iDbRun, nil, nil)
+			cursor, ok, err := testee(ctx, when.cursorToTestee)
+			t.Logf("from testee, cursor:=%+v,\n ok=%+v, err=%+v", cursor, ok, err)
+
+			// assertion
+			if !pickAndSetStatusCalled {
+				t.Errorf("callback: not called")
+			}
+
+			if !cursor.Equal(then.exptectedCursor) {
+				t.Errorf("cursor: actual=%+v, expect=%+v", cursor, then.exptectedCursor)
+			}
+
+			if ok != then.expectedOk {
+				t.Errorf("ok: actual=%+v, expect=%+v", ok, then.expectedOk)
+			}
+
+			if !errors.Is(err, then.expectedErr) {
+				t.Errorf("err: actual=%+v, expect=%+v", err, then.expectedErr)
+			}
+		}
+	}
+
+	t.Run("when PickAndSetStatus do not cause error, the task should return no error", theory(
+		When{
+			cursorToTestee: kdb.RunCursor{
+				Head:   "run-id-0",
+				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+				Pseudo: []kdb.PseudoPlanName{},
+			},
+			cursorFromPickAndSetStatus: kdb.RunCursor{
+				Head:   "run-id-1",
+				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+				Pseudo: []kdb.PseudoPlanName{},
+			},
+			errFromPickAndSetStatus: nil,
+		},
+		Then{
+			exptectedCursor: kdb.RunCursor{
+				Head:   "run-id-1",
+				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+				Pseudo: []kdb.PseudoPlanName{},
+			},
+			expectedOk:  true,
+			expectedErr: nil,
+		},
+	))
+
+	t.Run("when PickAndSetStatus do not change cursor, the task should return non-ok", theory(
+		When{
+			cursorToTestee: kdb.RunCursor{
+				Head:   "run-id-0",
+				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+				Pseudo: []kdb.PseudoPlanName{},
+			},
+			cursorFromPickAndSetStatus: kdb.RunCursor{
+				Head:   "run-id-0",
+				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+				Pseudo: []kdb.PseudoPlanName{},
+			},
+			errFromPickAndSetStatus: nil,
+		},
+		Then{
+			exptectedCursor: kdb.RunCursor{
+				Head:   "run-id-0",
+				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+				Pseudo: []kdb.PseudoPlanName{},
+			},
+			expectedOk:  false,
+			expectedErr: nil,
+		},
+	))
+
+	{
+		expectedErr := errors.New("fake error")
+		t.Run("when PickAndSetStatus returns error, the task should return the error", theory(
+			When{
+				cursorToTestee: kdb.RunCursor{
+					Head:   "run-id-0",
+					Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+					Pseudo: []kdb.PseudoPlanName{},
+				},
+				cursorFromPickAndSetStatus: kdb.RunCursor{
+					Head:   "run-id-1",
+					Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+					Pseudo: []kdb.PseudoPlanName{},
+				},
+				errFromPickAndSetStatus: expectedErr,
+			},
+			Then{
+				exptectedCursor: kdb.RunCursor{
+					Head:   "run-id-1",
+					Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+					Pseudo: []kdb.PseudoPlanName{},
+				},
+				expectedOk:  true,
+				expectedErr: expectedErr,
+			},
+		))
+	}
+}
+
+type FakeWorker struct {
+	runId     string
+	jobStatus worker.Status
+	closed    bool
+	closeErr  error
+
+	exitCode   uint8
+	exitReason string
+	exitOk     bool
+}
+
+func (fw *FakeWorker) RunId() string {
+	return fw.runId
+}
+
+func (fw *FakeWorker) JobStatus() worker.Status {
+	return fw.jobStatus
+}
+
+func (fw *FakeWorker) ExitCode() (uint8, string, bool) {
+	return fw.exitCode, fw.exitReason, fw.exitOk
+}
+
+func (fw *FakeWorker) Log(ctx context.Context) (io.ReadCloser, error) {
+	return nil, nil
+}
+
+func (fw *FakeWorker) Close() error {
+	fw.closed = true
+	return fw.closeErr
+}
+
+var _ worker.Worker = &FakeWorker{}
+
+func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
+
+	type When struct {
+		runPassedToCallback kdb.Run
+		workerFromFind      *FakeWorker
+		errFromFind         error
+		errFromDeleteWorker error
+	}
+
+	type Then struct {
+		runStatus        kdb.KnitRunStatus
+		wantError        error
+		wantAnyError     bool
+		wantWorkerClosed bool
+		wantDeleteWorker bool
+	}
+
+	theory := func(when When, thenTask Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			iDbRun := kdbmock.NewRunInterface()
+			// build mock of PickAndSetStatus
+
+			iDbRun.Impl.PickAndSetStatus = func(
+				ctx context.Context, cursor kdb.RunCursor,
+				callback func(kdb.Run) (kdb.KnitRunStatus, error), // ignore
+			) (kdb.RunCursor, error) {
+				newStatus, err := callback(when.runPassedToCallback)
+
+				if thenTask.wantAnyError && (err == nil) {
+					t.Errorf("err: actual=%+v, expect=%+v", err, thenTask.wantError)
+				}
+				if !thenTask.wantAnyError && !errors.Is(err, thenTask.wantError) {
+					t.Errorf("err: actual=%+v, expect=%+v", err, thenTask.wantError)
+				}
+				if newStatus != thenTask.runStatus {
+					t.Errorf("runStatus: actual=%+v, expect=%+v", newStatus, thenTask.runStatus)
+				}
+
+				return cursor, nil
+			}
+			iDbRun.Impl.DeleteWorker = func(ctx context.Context, runId string) error {
+				if runId != when.runPassedToCallback.Id {
+					t.Errorf("runId: actual=%+v, expect=%+v", runId, when.runPassedToCallback.Id)
+				}
+				return when.errFromDeleteWorker
+			}
+
+			fakeFind := func(ctx context.Context, cluster k8s.Cluster, runBody kdb.RunBody) (worker.Worker, error) {
+				if !runBody.Equal(&when.runPassedToCallback.RunBody) {
+					t.Errorf("find: runBody: actual=%+v, expect=%+v", runBody, when.runPassedToCallback.RunBody)
+				}
+				return when.workerFromFind, when.errFromFind
+			}
+
+			// Testee
+			testee := finishing.Task(iDbRun, fakeFind, nil)
+			testee(context.Background(), kdb.RunCursor{
+				Head:   "run-id-0",
+				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+				Pseudo: []kdb.PseudoPlanName{kdb.Uploaded},
+			})
+
+			// assertion
+			if len(iDbRun.Calls.PickAndSetStatus) < 1 {
+				t.Errorf("callback: not called")
+			}
+
+			if thenTask.wantDeleteWorker {
+				if len(iDbRun.Calls.DeleteWorker) < 1 {
+					t.Errorf("deleteWorker: not called")
+				}
+			} else {
+				if 0 < len(iDbRun.Calls.DeleteWorker) {
+					t.Errorf("deleteWorker: called")
+				}
+			}
+
+			if w := when.workerFromFind; w != nil && w.closed != thenTask.wantWorkerClosed {
+				t.Errorf(
+					"workerClosed: actual=%+v, expect=%+v",
+					when.workerFromFind.closed, thenTask.wantWorkerClosed,
+				)
+			}
+		}
+	}
+
+	t.Run("for completeing run with worker name, it returns Done as new status", theory(
+		When{
+			runPassedToCallback: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id:         "run-id-0",
+					WorkerName: "worker-name-0",
+					Status:     kdb.Completing,
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-id-0",
+						Hash:   "hash-0",
+						Active: true,
+						Image: &kdb.ImageIdentifier{
+							Image: "repo-0", Version: "tag-0",
+						},
+					},
+				},
+			},
+			workerFromFind: &FakeWorker{
+				runId:     "run-id-0",
+				jobStatus: worker.Done,
+				closed:    false,
+			},
+		},
+		Then{
+			runStatus:        kdb.Done,
+			wantWorkerClosed: true,
+			wantDeleteWorker: true,
+		},
+	))
+
+	t.Run("for aborting run with worker name, it returns Failed as new status", theory(
+		When{
+			runPassedToCallback: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id:         "run-id-0",
+					WorkerName: "worker-name-0",
+					Status:     kdb.Aborting,
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-id-0",
+						Hash:   "hash-0",
+						Active: true,
+						Image: &kdb.ImageIdentifier{
+							Image: "repo-0", Version: "tag-0",
+						},
+					},
+				},
+			},
+			workerFromFind: &FakeWorker{
+				runId:     "run-id-0",
+				jobStatus: worker.Failed,
+				closed:    false,
+			},
+		},
+		Then{
+			runStatus:        kdb.Failed,
+			wantWorkerClosed: true,
+			wantDeleteWorker: true,
+		},
+	))
+
+	t.Run("for completeing run without worker name, it returns Done as new status", theory(
+		When{
+			runPassedToCallback: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id:     "run-id-0",
+					Status: kdb.Completing,
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-id-0",
+						Hash:   "hash-0",
+						Active: true,
+						Image: &kdb.ImageIdentifier{
+							Image: "repo-0", Version: "tag-0",
+						},
+					},
+				},
+			},
+			workerFromFind: &FakeWorker{},
+		},
+		Then{
+			runStatus:        kdb.Done,
+			wantWorkerClosed: false,
+			wantDeleteWorker: false,
+		},
+	))
+
+	t.Run("for aborting run without worker name, it returns Failed as new status", theory(
+		When{
+			runPassedToCallback: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id:     "run-id-0",
+					Status: kdb.Aborting,
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-id-0",
+						Hash:   "hash-0",
+						Active: true,
+						Image: &kdb.ImageIdentifier{
+							Image: "repo-0", Version: "tag-0",
+						},
+					},
+				},
+			},
+			workerFromFind: &FakeWorker{},
+		},
+		Then{
+			runStatus:        kdb.Failed,
+			wantWorkerClosed: false,
+			wantDeleteWorker: false,
+		},
+	))
+
+	t.Run("when find returns ErrMissing, it returns no error and update state", theory(
+		When{
+			runPassedToCallback: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id:         "run-id-0",
+					WorkerName: "worker-name-0",
+					Status:     kdb.Completing,
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-id-0",
+						Hash:   "hash-0",
+						Active: true,
+						Image: &kdb.ImageIdentifier{
+							Image: "repo-0", Version: "tag-0",
+						},
+					},
+				},
+			},
+			errFromFind: workloads.NewMissing("fake missing error"),
+		},
+		Then{
+			runStatus:        kdb.Done,
+			wantWorkerClosed: false,
+			wantDeleteWorker: true,
+		},
+	))
+
+	{
+		fakeError := errors.New("fake error")
+		t.Run("when find returns other error, it returns the error and stay its state", theory(
+			When{
+				runPassedToCallback: kdb.Run{
+					RunBody: kdb.RunBody{
+						Id:         "run-id-0",
+						WorkerName: "worker-name-0",
+						Status:     kdb.Completing,
+						PlanBody: kdb.PlanBody{
+							PlanId: "plan-id-0",
+							Hash:   "hash-0",
+							Active: true,
+							Image: &kdb.ImageIdentifier{
+								Image: "repo-0", Version: "tag-0",
+							},
+						},
+					},
+				},
+				errFromFind: fakeError,
+			},
+			Then{
+				runStatus:        kdb.Completing,
+				wantWorkerClosed: false,
+				wantDeleteWorker: false,
+				wantError:        fakeError,
+			},
+		))
+	}
+
+	{
+		fakeError := errors.New("fake error")
+		t.Run("when worker.Close returns error, it returns the error and stay its state", theory(
+			When{
+				runPassedToCallback: kdb.Run{
+					RunBody: kdb.RunBody{
+						Id:         "run-id-0",
+						WorkerName: "worker-name-0",
+						Status:     kdb.Completing,
+						PlanBody: kdb.PlanBody{
+							PlanId: "plan-id-0",
+							Hash:   "hash-0",
+							Active: true,
+							Image: &kdb.ImageIdentifier{
+								Image: "repo-0", Version: "tag-0",
+							},
+						},
+					},
+				},
+				workerFromFind: &FakeWorker{
+					runId:     "run-id-0",
+					jobStatus: worker.Done,
+					closeErr:  fakeError,
+				},
+			},
+			Then{
+				runStatus:        kdb.Completing,
+				wantWorkerClosed: true,
+				wantDeleteWorker: false,
+				wantError:        fakeError,
+			},
+		))
+	}
+
+	{
+		fakeError := errors.New("fake error")
+		t.Run("when iDbRun.DeleteWorker returns error, it returns the error and stay its state", theory(
+			When{
+				runPassedToCallback: kdb.Run{
+					RunBody: kdb.RunBody{
+						Id:         "run-id-0",
+						WorkerName: "worker-name-0",
+						Status:     kdb.Completing,
+						PlanBody: kdb.PlanBody{
+							PlanId: "plan-id-0",
+							Hash:   "hash-0",
+							Active: true,
+							Image: &kdb.ImageIdentifier{
+								Image: "repo-0", Version: "tag-0",
+							},
+						},
+					},
+				},
+				workerFromFind:      &FakeWorker{},
+				errFromDeleteWorker: fakeError,
+			},
+			Then{
+				runStatus:        kdb.Completing,
+				wantWorkerClosed: true,
+				wantDeleteWorker: true,
+				wantError:        fakeError,
+			},
+		))
+	}
+
+	t.Run("when run status is unexpected, it returns error", theory(
+		When{
+			runPassedToCallback: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id:         "run-id-0",
+					WorkerName: "worker-name-0",
+					Status:     kdb.Running,
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-id-0",
+						Hash:   "hash-0",
+						Active: true,
+						Image: &kdb.ImageIdentifier{
+							Image: "repo-0", Version: "tag-0",
+						},
+					},
+				},
+			},
+			workerFromFind: &FakeWorker{},
+		},
+		Then{
+			runStatus:        kdb.Running,
+			wantAnyError:     true,
+			wantWorkerClosed: false,
+			wantDeleteWorker: false,
+			wantError:        errors.New("unexpected run status: assertion error"),
+		},
+	))
+}

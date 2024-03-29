@@ -1,0 +1,37 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: knit-test-workloads-k8s-sc
+  labels:
+    app: knit-testing
+    knit-testing/version: {{ .Chart.Version | quote }}
+    knit-testing/layer: system
+provisioner: nfs.csi.k8s.io
+allowVolumeExpansion: true
+parameters:
+  server: {{ .Values.storage.nfs.server }}
+  share: {{ .Values.storage.nfs.share }}
+  subDir: test-workloads-k8s/nfs-csi/${pvc.metadata.namespace}/${pvc.metadata.name}
+
+  # https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/docs/driver-parameters.md#tips
+  csi.storage.k8s.io/provisioner-secret-name: {{ .Values.storage.component }}-mount-options
+  csi.storage.k8s.io/provisioner-secret-namespace: {{ .Release.Namespace | quote }}
+reclaimPolicy: Delete  # keep Delete for PV to be deleted after test.
+volumeBindingMode: Immediate
+mountOptions: {{ regexSplit "," (.Values.storage.nfs.mountOptions | default "") -1 | toYaml | nindent 2 }}
+
+---
+
+# pre-defiend PVC to check GetPVC method retreives PVC.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: knit-test-workloads-k8s-get-pvc
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: knit-test-workloads-k8s-sc
+  resources:
+    requests:
+      storage: 10Mi

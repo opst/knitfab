@@ -1,0 +1,7 @@
+# Setup a handler for checking Docker daemon
+# - name: start CRI
+#   service: name=containerd state=restarted
+
+- name: k8s-node ready is optional handler.
+  command: "/bin/true"
+  listen: k8s-node ready

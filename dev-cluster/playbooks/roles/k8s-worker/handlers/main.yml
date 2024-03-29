@@ -1,0 +1,3 @@
+- name: Join the node to cluster
+  command: sh {{ share_kubeadm }}/join-command.sh
+  listen: k8s-node ready

@@ -1,0 +1,4 @@
+#! /bin/bash
+
+HERE=${0%/*}
+${HERE}/kurl -X PUT "$@"

@@ -1,0 +1,5 @@
+tag:
+  - "project:mnist"
+  - "pase: test"
+  - "param　: param1"
+  - "many:colon:in:tag"

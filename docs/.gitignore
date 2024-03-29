@@ -1,0 +1,10 @@
+*
+
+!.gitignore
+
+!01.getting-started
+!01.getting-started/**/*
+!02.user-guide
+!02.user-guide/**/*
+!03.admin-guide
+!03.admin-guide/**/*

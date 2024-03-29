@@ -1,0 +1,6 @@
+dependencies:
+- name: knit-db-postgres
+  repository: file://../v0.1.0/knit-db-postgres
+  version: 0.1.0
+digest: sha256:ae32a84f6cd321ae172cfc41dee41e1541837e36942a372e7eaff88dcf68666c
+generated: "2024-02-16T09:38:44.801776+09:00"

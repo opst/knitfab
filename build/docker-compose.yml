@@ -1,0 +1,129 @@
+version: "3.4"
+
+#
+# THIS COMPOSE FILE IS FOR `docker compose build` .
+#
+
+services:
+  knit-builder:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: builder
+    image: "knit-builder:${APP_VERSION}"
+  knit-dataagt:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-dataagt
+      args:
+        - LDFLAGS="-s"
+    image: "knit-dataagt:${APP_VERSION}"
+  knit-dataagt-debug:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-dataagt-debug
+      args:
+        - GCFLAGS=all="-N -l"
+    image: "knit-dataagt:${APP_VERSION}"
+
+  knit-vex:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-vex
+      args:
+        - LDFLAGS="-s"
+    image: "knit-vex:${APP_VERSION}"
+  knit-vex-debug:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-vex-debug
+      args:
+        - GCFLAGS=all="-N -l"
+    image: "knit-vex:${APP_VERSION}"
+
+  knit-empty:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-empty
+      args:
+        - LDFLAGS="-s"
+    image: "knit-empty:${APP_VERSION}"
+  knit-empty-debug:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-empty-debug
+      args:
+        - GCFLAGS=all="-N -l"
+    image: "knit-empty:${APP_VERSION}"
+  knit-nurse:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-nurse
+      args:
+        - LDFLAGS="-s"
+    image: "knit-nurse:${APP_VERSION}"
+  knit-nurse-debug:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-nurse-debug
+      args:
+        - GCFLAGS=all="-N -l"
+    image: "knit-nurse:${APP_VERSION}"
+  knit-loops:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-loops
+      args:
+        - LDFLAGS="-s"
+    image: "knit-loops:${APP_VERSION}"
+  knit-loops-debug:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knit-loops-debug
+      args:
+        - GCFLAGS=all="-N -l"
+    image: "knit-loops:${APP_VERSION}"
+
+  knitd:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knitd
+      args:
+        - LDFLAGS="-s"
+    image: "knitd:${APP_VERSION}"
+  knitd-debug:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knitd-debug
+      args:
+        - GCFLAGS=all="-N -l"
+    image: "knitd:${APP_VERSION}"
+
+  knitd-backend:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knitd-backend
+      args:
+        - LDFLAGS="-s"
+    image: "knitd-backend:${APP_VERSION}"
+  knitd-backend-debug:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile
+      target: knitd-backend-debug
+      args:
+        - GCFLAGS=all="-N -l"
+    image: "knitd-backend:${APP_VERSION}"

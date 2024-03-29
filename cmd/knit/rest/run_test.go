@@ -1,0 +1,942 @@
+package rest_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
+
+	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
+	krst "github.com/opst/knitfab/cmd/knit/rest"
+	apierr "github.com/opst/knitfab/pkg/api/types/errors"
+	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
+	apirun "github.com/opst/knitfab/pkg/api/types/runs"
+	apitag "github.com/opst/knitfab/pkg/api/types/tags"
+	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
+	"github.com/opst/knitfab/pkg/utils/try"
+)
+
+func TestGetRun(t *testing.T) {
+	t.Run("when server returns data, it returns that as is", func(t *testing.T) {
+		hadelerFactory := func(t *testing.T, resp apirun.Detail) (http.Handler, func() *http.Request) {
+			var request *http.Request
+			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+				if r.Method != http.MethodGet {
+					t.Errorf("request is not GET /api/runs/:runid (actual method = %s)", r.Method)
+				}
+
+				request = r
+
+				w.Header().Add("Content-Type", "application/json")
+
+				body, err := json.Marshal(resp)
+				if err != nil {
+					t.Fatal(err.Error())
+				}
+
+				w.WriteHeader(http.StatusOK)
+				w.Write(body)
+			})
+			return h, func() *http.Request { return request }
+		}
+		expectedResponse := apirun.Detail{
+			Summary: apirun.Summary{
+				RunId:  "test-runId",
+				Status: "done",
+				Plan: apiplan.Summary{
+					PlanId: "test-Id",
+					Image: &apiplan.Image{
+						Repository: "test-image",
+						Tag:        "test-version",
+					},
+					Name: "test-Name",
+				},
+				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+					"2022-04-02T12:00:00+00:00",
+				)).OrFatal(t),
+			},
+			Inputs: []apirun.Assignment{
+				{
+					Mountpoint: apiplan.Mountpoint{
+						Path: "/in/1",
+						Tags: []apitag.Tag{
+							{Key: "type", Value: "raw data"},
+							{Key: "format", Value: "rgb image"},
+						},
+					},
+					KnitId: "test-knitId-a",
+				},
+			},
+			Outputs: []apirun.Assignment{
+				{
+					Mountpoint: apiplan.Mountpoint{
+						Path: "/out/2",
+						Tags: []apitag.Tag{
+							{Key: "type", Value: "training data"},
+							{Key: "format", Value: "mask"},
+						},
+					},
+					KnitId: "test-knitId-b",
+				}},
+			Log: &apirun.LogSummary{
+				LogPoint: apiplan.LogPoint{
+					Tags: []apitag.Tag{
+						{Key: "type", Value: "log"},
+						{Key: "format", Value: "jsonl"},
+					},
+				},
+				KnitId: "test-knitId",
+			},
+		}
+
+		handler, _ := hadelerFactory(t, expectedResponse)
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+		testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+		runId := "test-runId"
+		actualResponse := try.To(testee.GetRun(context.Background(), runId)).OrFatal(t)
+		if !actualResponse.Equal(&expectedResponse) {
+			t.Errorf("response is not equal (actual,expected): %v,%v", actualResponse, expectedResponse)
+		}
+	})
+
+	t.Run("a server responding with error is given", func(t *testing.T) {
+		handlerFactory := func(t *testing.T, status int, message string) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Helper()
+				w.WriteHeader(status)
+				w.Header().Set("Content-Type", "application/json")
+
+				buf := try.To(json.Marshal(
+					apierr.ErrorMessage{Reason: message},
+				)).OrFatal(t)
+				w.Write(buf)
+			})
+		}
+		for _, status := range []int{http.StatusNotFound, http.StatusInternalServerError} {
+			t.Run(fmt.Sprintf("when server responding with %d, it returns error", status), func(t *testing.T) {
+				ctx := context.Background()
+				handler := handlerFactory(t, status, "something wrong")
+
+				server := httptest.NewServer(handler)
+				defer server.Close()
+
+				profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+				runId := "test-Id"
+				if _, err := testee.GetRun(ctx, runId); err == nil {
+					t.Errorf("no error occured")
+				}
+			})
+		}
+	})
+}
+
+func TestGetRunLog(t *testing.T) {
+	t.Run("when server response with 200 in chunked, it returns the stream in response (non-follow)", func(t *testing.T) {
+		expectedContent := []byte("streaming payload...")
+		runId := "someRunId"
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				t.Errorf("request is not GET /api/runs/:runid/log (actual method = %s)", r.Method)
+			}
+			if !strings.HasSuffix(r.URL.Path, "/runs/"+runId+"/log") {
+				t.Errorf("request is not GET /api/runs/:runid/log (actual path = %s)", r.URL.Path)
+			}
+			if r.URL.Query().Has("follow") {
+				t.Errorf("request has follow query")
+			}
+
+			w.Header().Add("Transfer-Encoding", "chunked")
+			w.WriteHeader(http.StatusOK)
+
+			io.Copy(w, bytes.NewBuffer(expectedContent))
+		}),
+		)
+		defer server.Close()
+
+		prof := kprof.KnitProfile{ApiRoot: server.URL}
+
+		testee := try.To(krst.NewClient(&prof)).OrFatal(t)
+
+		ctx := context.Background()
+		payload := try.To(testee.GetRunLog(ctx, runId, false)).OrFatal(t)
+
+		defer payload.Close()
+
+		actualContent := bytes.NewBuffer(nil)
+		try.To(io.Copy(actualContent, payload)).OrFatal(t)
+		if !bytes.Equal(actualContent.Bytes(), expectedContent) {
+			t.Errorf(
+				"content is wrong: (actual, expected) = (%s, %s)",
+				actualContent.Bytes(), expectedContent,
+			)
+		}
+	})
+
+	t.Run("when server response with 200 in chunked, it returns the stream in response (follow)", func(t *testing.T) {
+		expectedContent := []byte("streaming payload...")
+		runId := "someRunId"
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				t.Errorf("request is not GET /api/runs/:runid/log (actual method = %s)", r.Method)
+			}
+			if !strings.HasSuffix(r.URL.Path, "/runs/"+runId+"/log") {
+				t.Errorf("request is not GET /api/runs/:runid/log (actual path = %s)", r.URL.Path)
+			}
+			if !r.URL.Query().Has("follow") {
+				t.Errorf("request has follow query")
+			}
+
+			w.Header().Add("Transfer-Encoding", "chunked")
+			w.WriteHeader(http.StatusOK)
+
+			io.Copy(w, bytes.NewBuffer(expectedContent))
+		}),
+		)
+		defer server.Close()
+
+		prof := kprof.KnitProfile{ApiRoot: server.URL}
+
+		testee := try.To(krst.NewClient(&prof)).OrFatal(t)
+
+		ctx := context.Background()
+		payload := try.To(testee.GetRunLog(ctx, runId, true)).OrFatal(t)
+
+		defer payload.Close()
+
+		actualContent := bytes.NewBuffer(nil)
+		try.To(io.Copy(actualContent, payload)).OrFatal(t)
+		if !bytes.Equal(actualContent.Bytes(), expectedContent) {
+			t.Errorf(
+				"content is wrong: (actual, expected) = (%s, %s)",
+				actualContent.Bytes(), expectedContent,
+			)
+		}
+	})
+
+	t.Run("a server responding with error is given", func(t *testing.T) {
+		handlerFactory := func(t *testing.T, status int, message string) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Helper()
+				w.WriteHeader(status)
+				w.Header().Set("Content-Type", "application/json")
+
+				buf, err := json.Marshal(apierr.ErrorMessage{
+					Reason: message,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				w.Write(buf)
+			})
+		}
+		for _, status := range []int{http.StatusNotFound, http.StatusInternalServerError} {
+			t.Run(fmt.Sprintf("when server responding with %d, it returns error", status), func(t *testing.T) {
+				ctx := context.Background()
+				handler := handlerFactory(t, status, "something wrong")
+
+				server := httptest.NewServer(handler)
+				defer server.Close()
+
+				profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+				runId := "test-Id"
+				if _, err := testee.GetRunLog(ctx, runId, false); err == nil {
+					t.Errorf("no error occured")
+				}
+			})
+		}
+	})
+
+	t.Run("When send request to invalid host, it returns error", func(t *testing.T) {
+		runId := "someRunId"
+		ctx := context.Background()
+
+		prof := kprof.KnitProfile{ApiRoot: "http://test.invalid"}
+
+		testee := try.To(krst.NewClient(&prof)).OrFatal(t)
+
+		payload, err := testee.GetRunLog(ctx, runId, false)
+		if payload != nil {
+			payload.Close()
+			t.Error("payload is not nil")
+		}
+
+		if err == nil {
+			t.Fatalf("GetRunLog does not return error")
+		} else if urlerr := new(url.Error); !errors.As(err, &urlerr) {
+			t.Errorf(
+				"GetRunLog does not return expected error (url.Error), but actual = %s (%#v)",
+				err, err,
+			)
+		}
+	})
+}
+
+func TestFindRun(t *testing.T) {
+	t.Run("a server responding successfully	is given", func(t *testing.T) {
+		handlerFactory := func(t *testing.T, resp []apirun.Detail) (http.Handler, func() *http.Request) {
+			var request *http.Request
+			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Helper()
+
+				if r.Method != http.MethodGet {
+					t.Errorf("request is not GET /api/runs (actual method = %s)", r.Method)
+				}
+
+				request = r
+
+				w.Header().Add("Content-Type", "application/json")
+
+				buf, err := json.Marshal(resp)
+				if err != nil {
+					t.Fatal(err)
+				}
+				w.Write(buf)
+			})
+			return h, func() *http.Request { return request }
+		}
+
+		type when struct {
+			planId    []string
+			knitIdIn  []string
+			knitIdOut []string
+			status    []string
+		}
+
+		type then struct {
+			planIdInQuery    []string
+			knitIdInInQuery  []string
+			knitIdOutInQuery []string
+			statusInQuery    []string
+		}
+
+		type testcase struct {
+			when when
+			then then
+		}
+
+		for name, testcase := range map[string]testcase{
+			"when query with nothing, server receives empty query": {
+				when: when{
+					planId:    []string{},
+					knitIdIn:  []string{},
+					knitIdOut: []string{},
+					status:    []string{},
+				},
+				then: then{
+					planIdInQuery:    []string{},
+					knitIdInInQuery:  []string{},
+					knitIdOutInQuery: []string{},
+					statusInQuery:    []string{},
+				},
+			},
+			"when query with each item, server receives all": {
+				when: when{
+					planId:    []string{"test-a", "test-b"},
+					knitIdIn:  []string{"in-a", "in-b"},
+					knitIdOut: []string{"out-a", "out-b"},
+					status:    []string{"wating", "running"},
+				},
+				then: then{
+					planIdInQuery:    []string{"test-a,test-b"},
+					knitIdInInQuery:  []string{"in-a,in-b"},
+					knitIdOutInQuery: []string{"out-a,out-b"},
+					statusInQuery:    []string{"wating,running"},
+				},
+			},
+		} {
+			t.Run(name, func(t *testing.T) {
+				ctx := context.Background()
+				response := []apirun.Detail{} //empty. this is out of scope of these testcases.
+
+				handler, getLastRequest := handlerFactory(t, response)
+				ts := httptest.NewServer(handler)
+				defer ts.Close()
+
+				// prepare for the tests
+				profile := kprof.KnitProfile{ApiRoot: ts.URL}
+
+				when := testcase.when
+				then := testcase.then
+
+				//test start
+				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+				result := try.To(testee.FindRun(
+					ctx, when.planId, when.knitIdIn, when.knitIdOut, when.status,
+				)).OrFatal(t)
+
+				// check response
+				if !cmp.SliceContentEqWith(
+					utils.RefOf(result), utils.RefOf(response),
+					(*apirun.Detail).Equal,
+				) {
+					t.Errorf(
+						"response is wrong:\n- actual:\n%#v\n- expected:\n%#v",
+						result, response,
+					)
+				}
+
+				// check method
+				actualMethod := getLastRequest().Method
+				if actualMethod != http.MethodGet {
+					t.Errorf("wrong HTTP method: %s (!= %s )", actualMethod, http.MethodGet)
+				}
+
+				//Check the content of the query received by the server
+				actualPlan := getLastRequest().URL.Query()["plan"]
+				actualKnitIdIn := getLastRequest().URL.Query()["knitIdInput"]
+				actualKnitIdOut := getLastRequest().URL.Query()["knitIdOutput"]
+				actualStatus := getLastRequest().URL.Query()["status"]
+
+				checkSliceContentEquality(t, "active", actualPlan, then.planIdInQuery)
+				checkSliceContentEquality(t, "image", actualKnitIdIn, then.knitIdInInQuery)
+				checkSliceContentEquality(t, "input tag", actualKnitIdOut, then.knitIdOutInQuery)
+				checkSliceContentEquality(t, "output tag", actualStatus, then.statusInQuery)
+			})
+		}
+
+		t.Run("when server returns data, it returns that as is", func(t *testing.T) {
+			ctx := context.Background()
+
+			expectedResponse := []apirun.Detail{}
+
+			handler, _ := handlerFactory(t, expectedResponse)
+
+			ts := httptest.NewServer(handler)
+			defer ts.Close()
+
+			// prepare for the tests
+			profile := kprof.KnitProfile{ApiRoot: ts.URL}
+			testee, err := krst.NewClient(&profile)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+
+			// argements set up
+			planId := []string{"test-planId"}
+			inputKnitId := []string{"test-inputKnitId"}
+			outputKnitId := []string{"test-outputKnitId"}
+			status := []string{"test-status"}
+
+			//test start
+			actualResponse := try.To(testee.FindRun(ctx, planId, inputKnitId, outputKnitId, status)).OrFatal(t)
+
+			if !cmp.SliceContentEqWith(
+				actualResponse, expectedResponse,
+				func(a, b apirun.Detail) bool { return a.Equal(&b) },
+			) {
+				t.Errorf(
+					"response is in unexpected form:\n===actual===\n%+v\n===expected===\n%+v",
+					actualResponse, expectedResponse,
+				)
+			}
+		})
+	})
+
+	t.Run("a server responding with error is given", func(t *testing.T) {
+		handerFactory := func(t *testing.T, status int, message string) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Helper()
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(status)
+
+				buf, err := json.Marshal(apierr.ErrorMessage{
+					Reason: message,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				w.Write(buf)
+			})
+		}
+
+		for _, status := range []int{http.StatusBadRequest, http.StatusInternalServerError} {
+			t.Run(fmt.Sprintf("when server responding with %d, it returns error", status), func(t *testing.T) {
+				ctx := context.Background()
+				handler := handerFactory(t, status, "something wrong")
+
+				ts := httptest.NewServer(handler)
+				defer ts.Close()
+
+				// prepare for the tests
+				profile := kprof.KnitProfile{ApiRoot: ts.URL}
+				testee, err := krst.NewClient(&profile)
+				if err != nil {
+					t.Fatal(err.Error())
+				}
+
+				// argements set up
+				planId := []string{"test-planId"}
+				inputKnitId := []string{"test-inputKnitId"}
+				outputKnitId := []string{"test-outputKnitId"}
+				status := []string{"test-status"}
+
+				if _, err := testee.FindRun(ctx, planId, inputKnitId, outputKnitId, status); err == nil {
+					t.Errorf("no error occured")
+				}
+			})
+		}
+	})
+}
+
+func checkSliceContentEquality(t *testing.T, name string, actual, expected []string) {
+	if !cmp.SliceContentEq(actual, expected) {
+		t.Errorf(
+			"query %s is wrong:\n- actual  : %s\n- expected: %s",
+			name, actual, expected,
+		)
+	}
+}
+
+func TestRunAbort(t *testing.T) {
+	type When struct {
+		statusCode    int
+		responseOk    apirun.Detail
+		responseError apierr.ErrorMessage
+	}
+	type Then struct {
+		wantError bool
+	}
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			runId := "someRunId"
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPut {
+					t.Errorf("request is not PUT /api/runs/:runid/abort (actual method = %s)", r.Method)
+				}
+				if !strings.HasSuffix(r.URL.Path, fmt.Sprintf("/runs/%s/abort", runId)) {
+					t.Errorf("request is not PUT /api/runs/:runid/abort (actual path = %s)", r.URL.Path)
+				}
+
+				w.Header().Add("Transfer-Encoding", "chunked")
+				w.WriteHeader(when.statusCode)
+
+				var buf []byte
+				if when.statusCode == http.StatusOK {
+					buf = try.To(json.Marshal(when.responseOk)).OrFatal(t)
+				} else {
+					buf = try.To(json.Marshal(when.responseError)).OrFatal(t)
+				}
+				w.Write(buf)
+			}),
+			)
+			defer server.Close()
+
+			prof := kprof.KnitProfile{ApiRoot: server.URL}
+
+			testee := try.To(krst.NewClient(&prof)).OrFatal(t)
+
+			ctx := context.Background()
+			payload, err := testee.Abort(ctx, runId)
+
+			if then.wantError {
+				if err == nil {
+					t.Error("Abort does not return error")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Abort returns error: %s", err)
+			}
+
+			if !payload.Equal(&when.responseOk) {
+				t.Errorf(
+					"Abort returns wrong payload (actual, expected) = (%v, %v)",
+					payload, when.responseOk,
+				)
+			}
+		}
+	}
+
+	t.Run("when server response with 200, it returns the run detail", theory(
+		When{
+			statusCode: http.StatusOK,
+			responseOk: apirun.Detail{
+				Summary: apirun.Summary{
+					RunId:  "test-runId",
+					Status: "done",
+					Plan: apiplan.Summary{
+						PlanId: "test-Id",
+						Image: &apiplan.Image{
+							Repository: "test-image",
+							Tag:        "test-version",
+						},
+						Name: "test-Name",
+					},
+
+					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+						"2022-04-02T12:00:00+00:00",
+					)).OrFatal(t),
+				},
+				Inputs: []apirun.Assignment{
+					{
+						Mountpoint: apiplan.Mountpoint{
+							Path: "/in/1",
+							Tags: []apitag.Tag{
+								{Key: "type", Value: "raw data"},
+								{Key: "format", Value: "rgb image"},
+							},
+						},
+						KnitId: "test-knitId-a",
+					},
+				},
+				Outputs: []apirun.Assignment{
+					{
+						Mountpoint: apiplan.Mountpoint{
+							Path: "/out/2",
+							Tags: []apitag.Tag{
+								{Key: "type", Value: "training data"},
+								{Key: "format", Value: "mask"},
+							},
+						},
+						KnitId: "test-knitId-b",
+					},
+				},
+				Log: &apirun.LogSummary{
+					LogPoint: apiplan.LogPoint{
+						Tags: []apitag.Tag{
+							{Key: "type", Value: "log"},
+							{Key: "format", Value: "jsonl"},
+						},
+					},
+					KnitId: "test-knitId",
+				},
+			},
+		},
+		Then{wantError: false},
+	))
+
+	t.Run("when server response with 4xx, it returns error", theory(
+		When{
+			statusCode: http.StatusNotFound,
+			responseError: apierr.ErrorMessage{
+				Reason: "something wrong",
+			},
+		},
+		Then{wantError: true},
+	))
+
+	t.Run("when server response with 5xx, it returns error", theory(
+		When{
+			statusCode: http.StatusInternalServerError,
+			responseError: apierr.ErrorMessage{
+				Reason: "something wrong",
+			},
+		},
+		Then{wantError: true},
+	))
+
+}
+
+func TestRunTearoff(t *testing.T) {
+	type When struct {
+		statusCode    int
+		responseOk    apirun.Detail
+		responseError apierr.ErrorMessage
+	}
+	type Then struct {
+		wantError bool
+	}
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			runId := "someRunId"
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPut {
+					t.Errorf("request is not PUT /api/runs/:runid/tearoff (actual method = %s)", r.Method)
+				}
+				if !strings.HasSuffix(r.URL.Path, fmt.Sprintf("/runs/%s/tearoff", runId)) {
+					t.Errorf("request is not PUT /api/runs/:runid/tearoff (actual path = %s)", r.URL.Path)
+				}
+
+				w.Header().Add("Transfer-Encoding", "chunked")
+				w.WriteHeader(when.statusCode)
+
+				var buf []byte
+				if when.statusCode == http.StatusOK {
+					buf = try.To(json.Marshal(when.responseOk)).OrFatal(t)
+				} else {
+					buf = try.To(json.Marshal(when.responseError)).OrFatal(t)
+				}
+				w.Write(buf)
+			}),
+			)
+			defer server.Close()
+
+			prof := kprof.KnitProfile{ApiRoot: server.URL}
+
+			testee := try.To(krst.NewClient(&prof)).OrFatal(t)
+
+			ctx := context.Background()
+			payload, err := testee.Tearoff(ctx, runId)
+
+			if then.wantError {
+				if err == nil {
+					t.Error("Tearoff does not return error")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Abort returns error: %s", err)
+			}
+
+			if !payload.Equal(&when.responseOk) {
+				t.Errorf(
+					"Tearoff returns wrong payload (actual, expected) = (%v, %v)",
+					payload, when.responseOk,
+				)
+			}
+		}
+	}
+
+	t.Run("when server response with 200, it returns the run detail", theory(
+		When{
+			statusCode: http.StatusOK,
+			responseOk: apirun.Detail{
+				Summary: apirun.Summary{
+					RunId:  "test-runId",
+					Status: "done",
+					Plan: apiplan.Summary{
+						PlanId: "test-Id",
+						Image: &apiplan.Image{
+							Repository: "test-image",
+							Tag:        "test-version",
+						},
+						Name: "test-Name",
+					},
+
+					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+						"2022-04-02T12:00:00+00:00",
+					)).OrFatal(t),
+				},
+				Inputs: []apirun.Assignment{
+					{
+						Mountpoint: apiplan.Mountpoint{
+							Path: "/in/1",
+							Tags: []apitag.Tag{
+								{Key: "type", Value: "raw data"},
+								{Key: "format", Value: "rgb image"},
+							},
+						},
+						KnitId: "test-knitId-a",
+					},
+				},
+				Outputs: []apirun.Assignment{
+					{
+						Mountpoint: apiplan.Mountpoint{
+							Path: "/out/2",
+							Tags: []apitag.Tag{
+								{Key: "type", Value: "training data"},
+								{Key: "format", Value: "mask"},
+							},
+						},
+						KnitId: "test-knitId-b",
+					},
+				},
+				Log: &apirun.LogSummary{
+					LogPoint: apiplan.LogPoint{
+						Tags: []apitag.Tag{
+							{Key: "type", Value: "log"},
+							{Key: "format", Value: "jsonl"},
+						},
+					},
+					KnitId: "test-knitId",
+				},
+			},
+		},
+		Then{wantError: false},
+	))
+
+	t.Run("when server response with 4xx, it returns error", theory(
+		When{
+			statusCode: http.StatusNotFound,
+			responseError: apierr.ErrorMessage{
+				Reason: "something wrong",
+			},
+		},
+		Then{wantError: true},
+	))
+
+	t.Run("when server response with 5xx, it returns error", theory(
+		When{
+			statusCode: http.StatusInternalServerError,
+			responseError: apierr.ErrorMessage{
+				Reason: "something wrong",
+			},
+		},
+		Then{wantError: true},
+	))
+
+}
+
+func TestDeleteRun(t *testing.T) {
+	t.Run("when server responses without err, it returns nil", func(t *testing.T) {
+		runId := "someRunId"
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodDelete {
+				t.Errorf("request is not DELETE /api/runs/:runid (actual method = %s)", r.Method)
+			}
+			if !strings.HasSuffix(r.URL.Path, "/runs/"+runId) {
+				t.Errorf("request is not DELETE /api/runs/:runid (actual path = %s)", r.URL.Path)
+			}
+			w.WriteHeader(http.StatusOK)
+		}),
+		)
+		defer server.Close()
+
+		prof := kprof.KnitProfile{ApiRoot: server.URL}
+		testee := try.To(krst.NewClient(&prof)).OrFatal(t)
+
+		ctx := context.Background()
+		if err := testee.DeleteRun(ctx, runId); err != nil {
+			t.Fatalf("DeleteRun returns error: %s", err)
+		}
+	})
+
+	t.Run("a server responding with error is given", func(t *testing.T) {
+		handlerFactory := func(t *testing.T, status int, message string) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Helper()
+				w.WriteHeader(status)
+				w.Header().Set("Content-Type", "application/json")
+
+				buf, err := json.Marshal(apierr.ErrorMessage{
+					Reason: message,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				w.Write(buf)
+			})
+		}
+		for _, status := range []int{http.StatusNotFound, http.StatusInternalServerError} {
+			t.Run(fmt.Sprintf("when server responding with %d, it returns error", status), func(t *testing.T) {
+				ctx := context.Background()
+				handler := handlerFactory(t, status, "something wrong")
+				server := httptest.NewServer(handler)
+				defer server.Close()
+				profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+				runId := "test-Id"
+				if err := testee.DeleteRun(ctx, runId); err == nil {
+					t.Errorf("no error occured")
+				}
+			})
+		}
+	})
+
+	t.Run("When send request to invalid host, it returns error", func(t *testing.T) {
+		runId := "someRunId"
+		ctx := context.Background()
+		prof := kprof.KnitProfile{ApiRoot: "http://test.invalid"}
+
+		testee := try.To(krst.NewClient(&prof)).OrFatal(t)
+		err := testee.DeleteRun(ctx, runId)
+
+		if err == nil {
+			t.Fatalf("DeleteRun does not return error")
+		} else if urlerr := new(url.Error); !errors.As(err, &urlerr) {
+			t.Errorf(
+				"DeleteRun does not return expected error (url.Error), but actual = %s (%#v)",
+				err, err,
+			)
+		}
+	})
+}
+
+func TestRetry(t *testing.T) {
+	t.Run("when server responses without err, it returns nil", func(t *testing.T) {
+		runId := "someRunId"
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPut {
+				t.Errorf("request is not PUT /api/runs/:runid/retry (actual method = %s)", r.Method)
+			}
+			if !strings.HasSuffix(r.URL.Path, "/runs/"+runId+"/retry") {
+				t.Errorf("request is not PUT /api/runs/:runid/retry (actual path = %s)", r.URL.Path)
+			}
+			w.WriteHeader(http.StatusOK)
+		}),
+		)
+		defer server.Close()
+
+		prof := kprof.KnitProfile{ApiRoot: server.URL}
+		testee := try.To(krst.NewClient(&prof)).OrFatal(t)
+
+		ctx := context.Background()
+		if err := testee.Retry(ctx, runId); err != nil {
+			t.Fatalf("Retry returns error: %s", err)
+		}
+	})
+
+	t.Run("a server responding with error is given", func(t *testing.T) {
+		handlerFactory := func(t *testing.T, status int, message string) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Helper()
+				w.WriteHeader(status)
+				w.Header().Set("Content-Type", "application/json")
+
+				buf := try.To(
+					json.Marshal(apierr.ErrorMessage{Reason: message}),
+				).OrFatal(t)
+				w.Write(buf)
+			})
+		}
+		for _, status := range []int{
+			http.StatusNotFound,
+			http.StatusConflict,
+			http.StatusInternalServerError,
+		} {
+			t.Run(fmt.Sprintf("when server responding with %d, it returns error", status), func(t *testing.T) {
+				ctx := context.Background()
+				handler := handlerFactory(t, status, "something wrong")
+				server := httptest.NewServer(handler)
+				defer server.Close()
+				profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+				runId := "test-Id"
+				if err := testee.Retry(ctx, runId); err == nil {
+					t.Errorf("no error occured")
+				}
+			})
+		}
+
+		t.Run("when server responding with 200, it returns nil", func(t *testing.T) {
+			ctx := context.Background()
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+			profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+			runId := "test-Id"
+			if err := testee.Retry(ctx, runId); err != nil {
+				t.Errorf("no error occured")
+			}
+		})
+	})
+}

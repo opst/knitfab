@@ -1,0 +1,13 @@
+- name: Initialize the Kubernetes cluster using kubeadm
+  command: kubeadm init --apiserver-advertise-address="{{ node_ip }}" --apiserver-cert-extra-sans="{{ node_ip }}" --node-name="{{ node_name }}" --pod-network-cidr="{{ pod_subnet }}" --ignore-preflight-errors="Mem"
+
+- name: Restart kubelet to reload config
+  service:
+    name: kubelet
+    state: restarted
+
+- name: Generate join command
+  shell: kubeadm token create --print-join-command > {{ share_kubeadm }}/join-command.sh
+
+- name: expose kubeconfig
+  command: cp /etc/kubernetes/admin.conf "{{ share_kubeconfig }}/kubeconfig"

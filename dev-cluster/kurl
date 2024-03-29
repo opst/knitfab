@@ -1,0 +1,55 @@
+#! /bin/bash
+
+HERE=${0%/*}
+KNIT_HOST=${KNIT_HOST:-10.10.0.3:30803}
+
+DEFAULT_CACERT=${HERE}/.sync/certs/server.crt
+CACERT=${CACERT:-${DEFAULT_CACERT}}
+
+declare -a ARG
+for V in "$@" ; do
+	case "$V" in
+		knit://*)
+			ARG[${#ARG[@]}]="https://${KNIT_HOST}/${V:7}"
+			;;
+		-h|--help)
+cat <<EOF
+kurl -- curl wrapper for knit
+
+SYNOPSIS:
+	kurl[.METHOD] [options for curl...] URL
+
+OPTIONS:
+	Almost of all options are same as curl.
+
+	Exceptions are below.
+
+	-h, --help: show this message.
+		(need "curl --help"? you can do that.)
+
+	--cacert: Defaulted as server certification for your dev-cluster
+		(${DEFAULT_CACERT}).
+		You can overwrite default with envvar "CACERT",
+		or pass more certs with --cacert.
+
+	METHOD: pass "-X METHOD" to curl.
+		For example, "kurl.post" works like "curl -X POST"
+
+	URL: kurl handles special schema "knit://" .
+		When kurl finds parameter started with "knit://",
+		kurl replaces that part with "https://<knit host and port>/" .
+		For example,
+		  - "knit://api/data"  ->  "https://<knit host and port>/api/data"
+		<knit host and port> will be read from envvar "KNIT_HOST".
+		When not set, kurl use "10.10.0.3:30803" as default
+		(same as default value in "vagrant up")
+
+EOF
+		exit 0
+		;;
+		*)
+			ARG[${#ARG[@]}]="$V"
+	esac
+done
+
+curl --cacert ${CACERT} "${ARG[@]}"

@@ -1,0 +1,26 @@
+[SAN]
+subjectAltName=@alt_names
+basicConstraints=CA:FALSE
+
+[alt_names]
+DNS.1=localhost
+IP.1={{ gateway_ip }}
+IP.2=127.0.0.1
+
+[req_ext]
+subjectAltName = @alt_names
+
+[req]
+prompt = no
+req_extensions = req_ext
+distinguished_name = dn
+
+[dn]
+CN = {{ gateway_ip }}
+
+[ v3_ext ]
+authorityKeyIdentifier=keyid,issuer:always
+basicConstraints=CA:FALSE
+keyUsage=keyEncipherment,dataEncipherment
+extendedKeyUsage=serverAuth,clientAuth
+subjectAltName=@alt_names
