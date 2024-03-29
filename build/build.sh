@@ -246,7 +246,7 @@ else
 	for CHART in knit-app knit-certs knit-db-postgres knit-image-registry knit-storage-nfs ; do
 		(
 			cd ${CHART_DEST}/${CHART_VERSION};
-			${HELM} package ${CHART};
+			${HELM} package -u ${CHART};
 		)
 	done
 	(
