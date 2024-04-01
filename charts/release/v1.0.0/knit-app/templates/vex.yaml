@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vex
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knit
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: vex
+    app.kubernetes.io/part-of: knitfab
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pvc-observer
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knit
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: vex
+    app.kubernetes.io/part-of: knitfab
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "update"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: knit-pv-observer
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: vex
+    app.kubernetes.io/name: knit
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["nodes/proxy"]
+    verbs: ["get", "list"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grant-vex
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knit
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: vex
+    app.kubernetes.io/part-of: knitfab
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pvc-observer
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: vex
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: grant-knit-vex
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knit
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: vex
+    app.kubernetes.io/part-of: knitfab
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: knit-pv-observer
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: vex
+
+---
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: knit-vex
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knit-vex
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: vex
+    app.kubernetes.io/part-of: knitfab
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: knit-vex
+      app.kubernetes.io/component: vex
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: knit-vex
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: vex
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      serviceAccountName: vex
+      tolerations:
+        - operator: Exists  # allow to run on every nodes
+      containers:
+        - name: vex
+          image: "{{ .Values.imageRepository }}/{{ .Values.vex.image }}:{{ .Chart.AppVersion }}"
+          args: [
+            "--margin", "{{ .Values.vex.margin }}",
+            "--delta", "{{ .Values.vex.delta }}",
+            "{{ .Release.Namespace }}"
+          ]
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName

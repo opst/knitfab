@@ -1,0 +1,25 @@
+component: database
+
+# service: name of service for database.
+service: database
+
+# port: port number for database.
+port: 5432
+
+# secret: name of Secret for database credential.
+secret: database-credential
+
+# initialCapacity: initial capcity of PVC for database storage(PGDATA)
+initialCapacity: 1Gi
+
+ephemeral: false
+
+# credential: credential for database.
+credential:
+  secret: database-credential
+
+  # username: for login to the database.
+  username: knit
+
+  # password: for login to the database.
+  # password: # mandatory.
