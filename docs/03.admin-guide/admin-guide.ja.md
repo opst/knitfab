@@ -123,10 +123,10 @@ chmod +x ./installer.sh
 #### 手順2: インストール設定ファイルを生成し、パラメータを調整する
 
 ```
-./installer.sh --prepare
+./installer.sh --prepare --kubeconfig ${YOUR_KUBECONFIG}
 ```
 
-を実行すると、 `./knitfab_install_settings` ディレクトリに Knitfab のインストール設定が生成される。
+を実行すると、 `./knitfab-install-settings` ディレクトリに Knitfab のインストール設定が生成される。 `${YOUR_KUBECONFIG}` の部分は、インストール先となる kubernetes 用の kubeconfig ファイルへのパスに置き換えてほしい。
 
 > [!Note]
 >
