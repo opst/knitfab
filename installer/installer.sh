@@ -5,6 +5,7 @@ HELM=${HELM:-helm}
 KUBECTL=${KUBECTL:-kubectl}
 OPENSSL=${OPENSSL:-openssl}
 REPOSITORY=${REPOSITORY:-opst/knitfab}
+IMAGE_REPOSITORY_HOST=${IMAGE_REPOSITORY_HOST:-ghcr.io}
 BRANCH=${BRANCH:-main}
 
 CHART_REPOSITORY_ROOT=${CHART_REPOSITORY_ROOT:-"https://raw.githubusercontent.com/${REPOSITORY}/${BRANCH}/charts/release"}
@@ -485,8 +486,6 @@ fi
 ${HELM} uninstall -n ${NAMESPACE} --wait knit-image-registry || :
 ${HELM} uninstall -n ${NAMESPACE} --wait knit-db-postgres || :
 ${HELM} uninstall -n ${NAMESPACE} --wait knit-certs || :
-${KUBECTL} delete -n ${NAMESPACE} pvc --all || :
-${KUBECTL} delete pv --all || :
 ${HELM} uninstall -n ${NAMESPACE} --wait knit-storage-nfs || :
 EOF
 
@@ -560,7 +559,7 @@ else
 		--version ${CHART_VERSION} \
 		--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
 		--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
-		--set-json "imageRegistry=$(${HELM} get values knit-image-registry -n ${NAMESPACE} -o json --all)" \
+		--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
 		--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
 		${SET_PULL_SECRET} -f ${VALUES}/knit-app.yaml \
 	knit-app knitfab/knit-app
