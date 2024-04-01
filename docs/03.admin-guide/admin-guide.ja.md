@@ -224,7 +224,7 @@ nfs:
 #### 3. インストールする
 
 ```
-./installer.sh --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./Knitfab-install-settings
+./installer.sh --install --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./knitfab-install-settings
 ```
 
 このコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを kubernetes クラスタにインストールする。しばらく時間がかかるだろう。
