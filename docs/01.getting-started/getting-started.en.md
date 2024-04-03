@@ -171,19 +171,23 @@ CLI Tool: knit
 
 Operations on Knitfab are performed through the CLI command `knit`.
 Before proceeding with the following tutorials, you need to obtain the `knit` command.
-Obtain it using one of the following two methods.
-
-### (1)Obtaining as a binary
 
 The tool can be obtained from https://github.com/opst/knitfab/releases.
 Please download the binary that matches your environment.
 
-### (2)Building it yourself
-
-Install go 1.22 or higher and execute the following command.
+For example:
 
 ```
-go install https://github.com/opst/knitfab/cmd/knit@latest
+mkdir -p ~/.local/bin
+
+VERSION=v1.0.0  # or release which you desired
+OS=linux        # or windows, darwin
+ARCH=arm64      # or amd64
+
+wget -O ~/.local/bin/knit https://github.com/opst/knitfab/releases/download/${VERSION}/knit-${OS}-${ARCH}
+chmod -x ~/.local/bin/knit
+
+# and prepend ~/.local/bin to ${PATH}
 ```
 
 Tutorial 1: Training Models with Knitfab
