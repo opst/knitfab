@@ -16,7 +16,7 @@ Knitfab をインストールの事前準備
 
 Knitfab のインストール作業を開始する前に、環境の用意をする必要がある。
 
-- kubernetes クラスタ: Knitfab は kubenetes 上で稼働する。
+- x86_64 系 CPU を搭載した Node からなる kubernetes クラスタ: Knitfab は kubenetes 上で稼働する。
 - NFS: RDB やクラスタ内イメージレジストリ、Knitfab のデータなどを永続化するために、NFS を利用する。
 
 とくに NFS は、ユーザがデータをどんどん蓄積してゆく先になる。容量は大きめに確保しておいたほうが良いだろう。

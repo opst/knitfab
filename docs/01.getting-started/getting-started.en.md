@@ -16,6 +16,10 @@ Knitfab automatically executes those experiments once users Plan(Described later
 
 This allows for the entire history of all experiments to be organically linked.
 
+> [!Caution]
+>
+> This tutorial does not work with Apple Silicon Mac or ARM Machine.
+
 ### Concepts
 
 #### "Machine Learning Task" in Knitfab

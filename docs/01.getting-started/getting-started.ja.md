@@ -5,6 +5,10 @@ Knitfab にようこそ！
 
 本書では、簡易的な Knitfab のインストールと、単純な機械学習タスクを題材にした Knitfab のチュートリアルを扱う。
 
+> [!Caution]
+>
+> 本チュートリアルは、Apple Silicon や ARM 系の CPU を搭載しているコンピュータではうまく機能しない。
+
 Knitfab とは
 ------
 
