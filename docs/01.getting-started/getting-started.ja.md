@@ -5,6 +5,10 @@ Knitfab にようこそ！
 
 本書では、簡易的な Knitfab のインストールと、単純な機械学習タスクを題材にした Knitfab のチュートリアルを扱う。
 
+> [!Caution]
+>
+> 本チュートリアルは、Apple Silicon や ARM 系の CPU を搭載しているコンピュータではうまく機能しない。
+
 Knitfab とは
 ------
 
@@ -190,19 +194,23 @@ CLI ツール: knit
 
 Knitfab に対する操作は CLI コマンド `knit` を介して行う。
 以降のチュートリアルに先立ち、 `knit` コマンドを入手する必要がある。
-以下の２つのうち、いずれかの方法で入手すること。
-
-### (1)バイナリとして入手する
 
 ツールは https://github.com/opst/knitfab/releases から入手できる。
 使用する環境にあったバイナリをダウンロードしてほしい。
 
-### (2)自分でビルドする
-
-go 1.22 以上をインストールし、次のコマンドを実行する。
+たとえば、
 
 ```
-go install https://github.com/opst/knitfab/cmd/knit@latest
+mkdir -p ~/.local/bin
+
+VERSION=v1.0.0  # or release which you desired
+OS=linux        # or windows, darwin
+ARCH=arm64      # or amd64
+
+wget -O ~/.local/bin/knit https://github.com/opst/knitfab/releases/download/${VERSION}/knit-${OS}-${ARCH}
+chmod -x ~/.local/bin/knit
+
+# and prepend ~/.local/bin to ${PATH}
 ```
 
 チュートリアル1: Knitfab でモデルを訓練する
