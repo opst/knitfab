@@ -122,11 +122,11 @@ chmod +x ./installer.sh
 
 #### Step 2: Generate the installation settings file and adjust the parameters
 
+The following Command generates the installation settings for Knitfab in the `./knitfab_install_settings` directory:
 
+```
 ./installer.sh --prepare --kubeconfig ${YOUR_KUBECONFIG}
-
-
-This Command generates the installation settings for Knitfab in the `./knitfab_install_settings` directory.
+```
 
 > [!Note]
 >
