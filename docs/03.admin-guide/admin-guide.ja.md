@@ -221,7 +221,7 @@ nfs:
 - `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメントインして書き換える)
 
 
-#### 3. インストールする
+#### 手順3: インストールする
 
 ```
 ./installer.sh --install --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./knitfab-install-settings
@@ -229,7 +229,7 @@ nfs:
 
 このコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを kubernetes クラスタにインストールする。しばらく時間がかかるだろう。
 
-#### 4. ユーザにハンドアウトを配布する
+#### 手順4: ユーザにハンドアウトを配布する
 
 インストールされた Knitfab への接続情報が `knitfab-install-settings/handout` に生成されている。
 
