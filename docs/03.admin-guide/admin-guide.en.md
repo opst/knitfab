@@ -122,9 +122,9 @@ chmod +x ./installer.sh
 
 #### Step 2: Generate the installation settings file and adjust the parameters
 
-```
-./installer.sh --prepare
-```
+
+./installer.sh --prepare --kubeconfig ${YOUR_KUBECONFIG}
+
 
 This Command generates the installation settings for Knitfab in the `./knitfab_install_settings` directory.
 
@@ -221,7 +221,7 @@ Also, if you have changed the TLD (Top-Level Domain) of the Kubernetes cluster d
 #### Step 3: Install
 
 ```
-./installer.sh --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./Knitfab-install-settings
+./installer.sh --install --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./knitfab-install-settings
 ```
 
 By executing this command, the installer script will sequentially install Knitfab components onto the Kubernetes cluster. It may take some time to complete.
