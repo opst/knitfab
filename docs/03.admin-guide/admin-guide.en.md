@@ -16,7 +16,7 @@ Preparation for Installing Knitfab
 
 Before starting the installation process of Knitfab, you need to prepare an environment that meets the following requirements.
 
-- Kubernetes Cluster: Knitfab runs on Kubernetes.
+- Kubernetes Cluster consisting of Nodes equipped with x86_64 CPUs: Knitfab runs Kubernetes.
 - NFS: To persist RDB, cluster-internal image registry, and Knitfab data, NFS is used.
 
 In particular, NFS will serve as the destination for users to accumulate data. It is recommended to allocate sufficient storage capacity.
