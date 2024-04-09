@@ -782,7 +782,7 @@ You can also reactivate a Plan that was deactivated for some reason.
 knit plan active yes PLAN_ID
 ```
 
-This command will re-execute any Run based on the Plan with the specified `PLAN_ID` that was previously prevented from executing.
+This command will re-execute any prevented Run based on the Plan with the specified `PLAN_ID`.
 
 ### Updating the compute resources required by a Plan
 
