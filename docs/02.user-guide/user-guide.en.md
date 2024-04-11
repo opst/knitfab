@@ -6,10 +6,15 @@ This document explains the concepts and usage of Knitfab to Knitfab users.
 The section explaining the concept is useful for anyone involved with Knitfab to understand the basic ideas.
 The other chapters are specifically written for users who want to perform machine learning tasks on Knitfab.
 
+他言語版/Translations
+---------------------
+
+- 日本語: [./user-guide.ja.md](./user-guide.ja.md)
+
 Concept of Knitfab
 --------
 
-Knitfab is 
+Knitfab is
 - a MLOps tool which has
 - an automatic lineage management feature
 - with a tag-based workflow engine
@@ -449,7 +454,7 @@ In addition, executing
 knit data tag --remove old:tag KNIT_ID
 ```
 
-will removed the Tag `old:tag` from the Data identified by the ID `KNIT_ID`.  
+will removed the Tag `old:tag` from the Data identified by the ID `KNIT_ID`.
 If you try to add a Tag that already exists in the Data or remove a Tag that doesn't exist, nothing will happen and no error will be thrown.
 
 In this case, you cannot add or remove Tag that start with the key `knit#`. These tags are reserved and managed by the system.
@@ -899,7 +904,7 @@ A Run follows the lifecycle depicted in this state transition diagram.
     - When successful completion is detected, it transitions to `completing`, and once the container is removed, it transitions to `done`.
     - **Only the data outputted from a Run in this state can be used as input by other Runs.**
 - `invalidated`: An internal state used by Knitfab for management purposes. Users will not encounter a Run in this state.
- 
+
 The success of a Run is determined by the exit status of the user-defined container.
 If the exit status is `0`, it is considered successful; otherwise, it is considered a failure.
 

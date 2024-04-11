@@ -9,6 +9,11 @@ Knitfab にようこそ！
 >
 > 本チュートリアルは、Apple Silicon や ARM 系の CPU を搭載しているコンピュータではうまく機能しない。
 
+他言語版/Translations
+---------------------
+
+- en: [./getting-started.en.md](./getting-started.en.md)
+
 Knitfab とは
 ------
 

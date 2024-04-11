@@ -11,6 +11,11 @@ Topics covered include:
 
 These topics may go beyond the scope of interest for users who do not manage or operate Knitfab.
 
+他言語版/Translations
+---------------------
+
+- 日本語: [./admin-guide.ja.md](./admin-guide.ja.md)
+
 Preparation for Installing Knitfab
 ----------------------------------
 
