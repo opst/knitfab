@@ -11,12 +11,18 @@ Knitfab 管理ガイド
 
 Knitfab を管理・運用しないユーザにとっては関心の範囲を超えるであろう話題を扱っている。
 
+他言語版/Translations
+---------------------
+
+- 日本語: [./admin-guide.en.md](./admin-guide.en.md)
+
+
 Knitfab をインストールの事前準備
 -----------------------
 
 Knitfab のインストール作業を開始する前に、環境の用意をする必要がある。
 
-- kubernetes クラスタ: Knitfab は kubenetes 上で稼働する。
+- x86_64 系 CPU を搭載した Node からなる kubernetes クラスタ: Knitfab は kubenetes 上で稼働する。
 - NFS: RDB やクラスタ内イメージレジストリ、Knitfab のデータなどを永続化するために、NFS を利用する。
 
 とくに NFS は、ユーザがデータをどんどん蓄積してゆく先になる。容量は大きめに確保しておいたほうが良いだろう。
@@ -221,7 +227,7 @@ nfs:
 - `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメントインして書き換える)
 
 
-#### 3. インストールする
+#### 手順3: インストールする
 
 ```
 ./installer.sh --install --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./knitfab-install-settings
@@ -229,7 +235,7 @@ nfs:
 
 このコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを kubernetes クラスタにインストールする。しばらく時間がかかるだろう。
 
-#### 4. ユーザにハンドアウトを配布する
+#### 手順4: ユーザにハンドアウトを配布する
 
 インストールされた Knitfab への接続情報が `knitfab-install-settings/handout` に生成されている。
 
