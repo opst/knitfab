@@ -84,12 +84,13 @@ OPTIONS:
 ```
 
 The `--release` and `--test` options are mutually exclusive.
+The `--release` and `--debug` options are also mutually exclusive.
 If neither `--release` nor `--test` are specified, it performs local build (for dev-cluster).
 
 `./build/build.sh` requires commands below:
 
 - bash
-- docker and docker-compose (or docker compose) with buildkit
+- docker and buildx with buildkit
 - base64
 - git
 - envsubst
@@ -120,7 +121,7 @@ If your preferred IDE is not supported, write your own config and share it with 
 By default, container images are tagged as below:
 
 ```
-${COMPONENT NAME}:${VERSION}-${GIT HASH}
+${COMPONENT NAME}:${VERSION}-${GIT HASH}-${ARCH or "local"}[-debug]
 ```
 
 - `COMPONENT NAME`: name of Knitfab component.
@@ -128,9 +129,59 @@ ${COMPONENT NAME}:${VERSION}-${GIT HASH}
 - `VERSION` : the first line of `./VERSION` file.
 - `GIT HASH` : short hash of the commit when you run `./build/build.sh`
     - It may be omitted when the env var `RELEASE_BUILD` is not empty.
+- `ARCH`: When release build, CPU Archetecutre comes here.
+    - When local build, it becomes "local".
+- `-debug`: Appended only when debug build.
 
 If it is built as local build and your working copy has diff from `HEAD`,
-image will be suffixed with `-localdiff-${TIMESTAMP}`.
+image will be suffixed with `-diff-${TIMESTAMP}`.
+
+### Release build
+
+```
+./build/bulld.sh --release
+```
+
+perform release build.
+
+- Generates CLIs for OSes and ARCHs in `./bin/clis/*`
+- Generates Helm Chart in `./charts/release/<VERSION>` and update chart index.
+- Builds Knitfab images for ARCHs.
+- Generates `./bin/images/publish.sh`, which is shell script bundling multiatch image manifest and publishing images & manifests.
+
+`./build/build.sh --relrease` prints instructions to release operations.
+
+Release build would not go when your working copy has diffs.
+**Before releasing, you should merge (via Pull Req.) your change into main.**
+
+#### Custom Release
+
+When you would like to make your custom build and *publish*, pass build options to `./build/build.sh --release` via environmaental variables.
+
+> [!Note]
+>
+> If you want to do only local testing and not to publish, you can make a local build and install it into dev-cluster or so.
+>
+
+- `IMAGE_REGISTRY` (Default: `ghcr.io`)
+- `CHART_VERSION` (Default: content of `./VERSION`)
+    - Overwrite chart version you building.
+- `RESPOTIRORY_PATH` (Default: "opst/knitfab")
+    - Your repository name.
+    - Special value `git://<REMOTE-NAME>` (e.g., `git://origin`, `git://upstream`, ...) is acceptable. Build script detects your repo from git.
+- `BRANCH` (Default: `main`)
+    - When you want to publish your custom release from non-main branch, you should set it explicitly.
+    - `BRANCH=$(git branch --show-current)` may be useful.
+    - If your branch name contains `#`, out installer may not work properly.
+
+After publishing, to install your custom release, do like
+
+```
+CHART_VERSION=... REPOSITORY_PATH=... BRANCH=... ./installer/install.sh --prepare ...
+CHART_VERSION=... REPOSITORY_PATH=... BRANCH=... ./installer/install.sh --install ...
+```
+
+For more detail, read `./build/build.sh` and `./installer/installer.sh`
 
 The dev-cluster: A k8s cluster for developers
 ==================================
@@ -209,6 +260,14 @@ During provisioning, it generates records of the cluster's configurations in the
 > For example, in the case of colima, `ca.crt` should place `/etc/docker/certs.d/...` *IN COLIMA*.
 > You may need to `colima ssh` and copy the file.
 >
+
+#### local install to a cluster but dev-cluster
+
+`./dev-cluster/install-knit.sh` recognise some environmental variables.
+
+- `KUBECONFIG`: kubeconfig file pointing kubernetes cluster to be installed Knitfab into.
+- `CERTSDIR`: a directory contains CA Cert Pair(`ca.crt`, `ca.key`) and Server Cert Pair(`server.crt`, `server.key`).
+    - The (server) certs are used by the in-cluster image registry and knitd.
 
 #### `./dev-cluster/knitctl.sh`
 
