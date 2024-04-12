@@ -34,13 +34,13 @@ case ${1} in
 		KNIT_TEST_KUBECTX=$(${KUBECTL} ${KUBEOPTS} config current-context)
 		HELMOPTS="${HELMOPTS} --kube-context ${KNIT_TEST_KUBECTX}"
 		KUBEOPTS="${KUBEOPTS} --context ${KNIT_TEST_KUBECTX}"
-		./build/build.sh  --test
+		APP_VERSION=TEST CHART_VERSION=v0.0.0 ARCH=test ./build/build.sh --test image chart
 		echo "" >&2
 
 		${HELM} ${HELMOPTS} install --namespace ${KNIT_TEST_NAMESPACE} --create-namespace --dependency-update --wait \
 			--set "nfs.node=" --set "nfs.hostPath=" \
 			--set "csi-driver-nfs.controller.replicas=1" \
-			knit-storage-nfs "./charts/test/v0.0.0-test/knit-storage-nfs/"
+			knit-storage-nfs "./charts/test/v0.0.0/knit-storage-nfs/"
 
 		echo "" >&2
 
@@ -48,7 +48,7 @@ case ${1} in
 			--set-json "ephemeral=true" \
 			--set-json "storage=$(${HELM} ${HELMOPTS} --namespace ${KNIT_TEST_NAMESPACE} get values -o json --all knit-storage-nfs)" \
 			--set-json 'credential={"secret":"database-credential","username":"test-user","password":"test-pass"}' \
-			knit-db-postgres "./charts/test/v0.0.0-test/knit-db-postgres/"
+			knit-db-postgres "./charts/test/v0.0.0/knit-db-postgres/"
 
 		echo "" >&2
 
