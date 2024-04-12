@@ -11,6 +11,12 @@ Knitfab 管理ガイド
 
 Knitfab を管理・運用しないユーザにとっては関心の範囲を超えるであろう話題を扱っている。
 
+他言語版/Translations
+---------------------
+
+- 日本語: [./admin-guide.en.md](./admin-guide.en.md)
+
+
 Knitfab をインストールの事前準備
 -----------------------
 
@@ -221,7 +227,7 @@ nfs:
 - `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメントインして書き換える)
 
 
-#### 3. インストールする
+#### 手順3: インストールする
 
 ```
 ./installer.sh --install --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./knitfab-install-settings
@@ -229,7 +235,7 @@ nfs:
 
 このコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを kubernetes クラスタにインストールする。しばらく時間がかかるだろう。
 
-#### 4. ユーザにハンドアウトを配布する
+#### 手順4: ユーザにハンドアウトを配布する
 
 インストールされた Knitfab への接続情報が `knitfab-install-settings/handout` に生成されている。
 

@@ -5,6 +5,11 @@ Welcome to Knitfab!
 
 This document covers the installation of Knitfab and a tutorial using a simple machine learning task.
 
+他言語版/Translations
+---------------------
+
+- 日本語: [./getting-started.ja.md](./getting-started.ja.md)
+
 What is Knitfab
 ------
 
