@@ -204,7 +204,7 @@ type KnitClient interface {
 	// - error
 	GetRunLog(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
 
-	// FindRun find run with given planId, knitId and status.
+	// FindRun find run with given planId, knitId, status, since and duration.
 
 	// Args
 	//
@@ -218,13 +218,18 @@ type KnitClient interface {
 	//
 	// - []string: status which run to be found is
 	//
+	// - string: since which updated time of run to be found is after
+	//
+	// - string: duration which updated time of run to be found is within
+	//
 	// Returns
 	//
 	// - []apirun.Detail: metadata of found run
 	//
 	// - error
 	FindRun(
-		ctx context.Context, planId []string, knitIdIn []string, knitIdOut []string, status []string,
+		ctx context.Context, planId []string, knitIdIn []string, knitIdOut []string,
+		status []string, since string, duration string,
 	) ([]apirun.Detail, error)
 
 	// Abort abort run with given runId.

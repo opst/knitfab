@@ -1126,3 +1126,264 @@ func TestRun_Find(t *testing.T) {
 	}
 
 }
+
+// Test to search using the new fields, "Since" and "Duration", added to RunFindQuery
+func TestRun_Find_Add(t *testing.T) {
+	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
+	type then struct {
+		run []string
+	}
+	type testcase struct {
+		when kdb.RunFindQuery
+		then
+	}
+
+	basedTime := "2023-04-01T13:34:45+00:00"
+	baseUpdatedAT := try.To(rfctime.ParseRFC3339DateTime(
+		basedTime,
+	)).OrFatal(t).Time()
+
+	// Set according to the PostgreSQL interval type
+	dummyDuration1 := "1 minutes 1 hours"
+	dummyDuration2 := "1 days 1weeks"
+	dummyDuration3 := "1 months 1 years"
+
+	given := tables.Operation{
+		Plan: []tables.Plan{
+			{PlanId: th.Padding36("plan-1-pseudo"), Hash: "#pseudo", Active: true},
+			{PlanId: th.Padding36("plan-2"), Hash: "#2", Active: true},
+		},
+		PlanPseudo: []tables.PlanPseudo{
+			{PlanId: th.Padding36("plan-1-pseudo"), Name: "uploaded"},
+		},
+		PlanImage: []tables.PlanImage{
+			{PlanId: th.Padding36("plan-2"), Image: "repo.invalid/image", Version: "v1.2"},
+		},
+		Outputs: map[tables.Output]tables.OutputAttr{
+			{OutputId: 1_010, PlanId: th.Padding36("plan-1-pseudo"), Path: "/1/out/1"}: {},
+			{OutputId: 2_010, PlanId: th.Padding36("plan-2"), Path: "/2/out/1"}:        {},
+			{OutputId: 2_001, PlanId: th.Padding36("plan-2"), Path: "/2/log/"}:         {IsLog: true},
+		},
+		Inputs: map[tables.Input]tables.InputAttr{
+			{InputId: 2_100, PlanId: th.Padding36("plan-2"), Path: "/2/in/1"}: {},
+		},
+		Steps: []tables.Step{
+			// three run based on plan-1-pseudo
+			// one of UpdatedAt is basedtime - 1hour
+			// the other is basedtime
+			// the other is basedtime + 1minute + 1hour
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-1-pseudo/-1hour"),
+					PlanId:    th.Padding36("plan-1-pseudo"),
+					Status:    kdb.Done,
+					UpdatedAt: baseUpdatedAT.Add(-1 * time.Hour),
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-1-pseudo/-1hour/out/1"),
+						VolumeRef: "#plan-1-pseudo/-1hour/out/1",
+						RunId:     th.Padding36("plan-1-pseudo/-1hour"),
+						PlanId:    th.Padding36("plan-1-pseudo"),
+						OutputId:  1_010,
+					}: {},
+				},
+			},
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-1-pseudo/basedtime"),
+					PlanId:    th.Padding36("plan-1-pseudo"),
+					Status:    kdb.Done,
+					UpdatedAt: baseUpdatedAT,
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-1-pseudo/basedtime/out/1"),
+						VolumeRef: "#plan-1-pseudo/basedtime/out/1",
+						RunId:     th.Padding36("plan-1-pseudo/basedtime"),
+						PlanId:    th.Padding36("plan-1-pseudo"),
+						OutputId:  1_010,
+					}: {},
+				},
+			},
+
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-1-pseudo/1minute/1hour"),
+					PlanId:    th.Padding36("plan-1-pseudo"),
+					Status:    kdb.Failed,
+					UpdatedAt: baseUpdatedAT.Add(1*time.Minute + 1*time.Hour),
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-1-pseudo/1minute/1hour/out/2"),
+						VolumeRef: "#plan-1-pseudo/1minute/1hour/out/2",
+						RunId:     th.Padding36("plan-1-pseudo/1minute/1hour"),
+						PlanId:    th.Padding36("plan-1-pseudo"),
+						OutputId:  1_010,
+					}: {},
+				},
+			},
+
+			// two runs based on plan-2
+			// one of UpdatedAt is basedtime + 1days + 1 week
+			// the other is basedtime + 1months + 1 year
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-2/1day/1week"),
+					PlanId:    th.Padding36("plan-2"),
+					Status:    kdb.Deactivated,
+					UpdatedAt: baseUpdatedAT.Add(24*time.Hour + 7*24*time.Hour),
+				},
+				Assign: []tables.Assign{
+					{
+						RunId:   th.Padding36("plan-2/1day/1week"),
+						PlanId:  th.Padding36("plan-2"),
+						InputId: 2_100,
+						KnitId:  th.Padding36("plan-1-pseudo/basedtime/out/1"),
+					},
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-2/1day/1week/out/1"),
+						VolumeRef: "#plan-2/1day/1week/out/1",
+						RunId:     th.Padding36("plan-2/1day/1week"),
+						PlanId:    th.Padding36("plan-2"),
+						OutputId:  2_010,
+					}: {},
+					{
+						KnitId:    th.Padding36("plan-2/1day/1week/log"),
+						VolumeRef: "#plan-2/1day/1week/log",
+						RunId:     th.Padding36("plan-2/1day/1week"),
+						PlanId:    th.Padding36("plan-2"),
+						OutputId:  2_001,
+					}: {},
+				},
+			},
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-2/1month/1year"),
+					PlanId:    th.Padding36("plan-2"),
+					Status:    kdb.Waiting,
+					UpdatedAt: baseUpdatedAT.Add(30*24*time.Hour + 365*24*time.Hour),
+				},
+				Assign: []tables.Assign{
+					{
+						RunId:   th.Padding36("plan-2/1month/1year"),
+						PlanId:  th.Padding36("plan-2"),
+						InputId: 2_100,
+						KnitId:  th.Padding36("plan-1-pseudo/basedtime/out/1"),
+					},
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-2/1month/1year/out/1"),
+						VolumeRef: "#plan-2/1month/1year/out/1",
+						RunId:     th.Padding36("plan-2/1month/1year"),
+						PlanId:    th.Padding36("plan-2"),
+						OutputId:  2_010,
+					}: {},
+					{
+						KnitId:    th.Padding36("plan-2/1month/1year/log"),
+						VolumeRef: "#plan-2/1month/1year/log",
+						RunId:     th.Padding36("plan-2/1month/1year"),
+						PlanId:    th.Padding36("plan-2"),
+						OutputId:  2_001,
+					}: {},
+				},
+			},
+		},
+	}
+
+	for name, data := range map[string]testcase{
+		"when no querying, it should find all runIds": {
+			when: kdb.RunFindQuery{
+				Since:    nil,
+				Duration: nil,
+			},
+			then: then{
+				run: []string{
+					th.Padding36("plan-1-pseudo/-1hour"),
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/1minute/1hour"),
+					th.Padding36("plan-2/1day/1week"),
+					th.Padding36("plan-2/1month/1year"),
+				},
+			},
+		},
+		"when querying by UpdatedAt, it should find runIds matching with the query": {
+			when: kdb.RunFindQuery{
+				Since:    &basedTime,
+				Duration: nil,
+			},
+			then: then{
+				run: []string{
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/1minute/1hour"),
+					th.Padding36("plan-2/1day/1week"),
+					th.Padding36("plan-2/1month/1year"),
+				},
+			},
+		},
+		"when querying by UpdatedAt and Duration specified minutes and hours, it should find runIds matching with the query": {
+			when: kdb.RunFindQuery{
+				Since:    &basedTime,
+				Duration: &dummyDuration1,
+			},
+			then: then{
+				run: []string{
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/1minute/1hour"),
+				},
+			},
+		},
+
+		"when querying by UpdatedAt and Duration specified days and weeks, it should find runIds matching with the query": {
+			when: kdb.RunFindQuery{
+				Since:    &basedTime,
+				Duration: &dummyDuration2,
+			},
+			then: then{
+				run: []string{
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/1minute/1hour"),
+					th.Padding36("plan-2/1day/1week"),
+				},
+			},
+		},
+
+		"when querying by UpdatedAt and Duration specified months and years, it should find runIds matching with the query": {
+			when: kdb.RunFindQuery{
+				Since:    &basedTime,
+				Duration: &dummyDuration3,
+			},
+			then: then{
+				run: []string{
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/1minute/1hour"),
+					th.Padding36("plan-2/1day/1week"),
+					th.Padding36("plan-2/1month/1year"),
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			pgpool := poolBroaker.GetPool(ctx, t)
+			if err := given.Apply(ctx, pgpool); err != nil {
+				t.Fatal(err)
+			}
+
+			testee := kpgrun.New(pgpool) // only finding. no new items.
+			actual := try.To(testee.Find(ctx, data.when)).OrFatal(t)
+
+			if !cmp.SliceEq(actual, data.then.run) {
+				t.Errorf(
+					"runs does not match. (actual, expected) = \n(%+v, \n%+v)",
+					actual, data.then.run,
+				)
+			}
+		})
+	}
+
+}

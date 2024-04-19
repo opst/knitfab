@@ -320,6 +320,8 @@ func TestFindRun(t *testing.T) {
 			knitIdIn  []string
 			knitIdOut []string
 			status    []string
+			since     string
+			duration  string
 		}
 
 		type then struct {
@@ -327,6 +329,8 @@ func TestFindRun(t *testing.T) {
 			knitIdInInQuery  []string
 			knitIdOutInQuery []string
 			statusInQuery    []string
+			sinceQuery       string
+			durationQuery    string
 		}
 
 		type testcase struct {
@@ -341,12 +345,16 @@ func TestFindRun(t *testing.T) {
 					knitIdIn:  []string{},
 					knitIdOut: []string{},
 					status:    []string{},
+					since:     "",
+					duration:  "",
 				},
 				then: then{
 					planIdInQuery:    []string{},
 					knitIdInInQuery:  []string{},
 					knitIdOutInQuery: []string{},
 					statusInQuery:    []string{},
+					sinceQuery:       "",
+					durationQuery:    "",
 				},
 			},
 			"when query with each item, server receives all": {
@@ -355,12 +363,16 @@ func TestFindRun(t *testing.T) {
 					knitIdIn:  []string{"in-a", "in-b"},
 					knitIdOut: []string{"out-a", "out-b"},
 					status:    []string{"wating", "running"},
+					since:     "2024-04-02T12:00:00+00:00",
+					duration:  "2 hours",
 				},
 				then: then{
 					planIdInQuery:    []string{"test-a,test-b"},
 					knitIdInInQuery:  []string{"in-a,in-b"},
 					knitIdOutInQuery: []string{"out-a,out-b"},
 					statusInQuery:    []string{"wating,running"},
+					sinceQuery:       "2024-04-02T12:00:00+00:00",
+					durationQuery:    "2 hours",
 				},
 			},
 		} {
@@ -381,7 +393,7 @@ func TestFindRun(t *testing.T) {
 				//test start
 				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 				result := try.To(testee.FindRun(
-					ctx, when.planId, when.knitIdIn, when.knitIdOut, when.status,
+					ctx, when.planId, when.knitIdIn, when.knitIdOut, when.status, when.since, when.duration,
 				)).OrFatal(t)
 
 				// check response
@@ -406,11 +418,19 @@ func TestFindRun(t *testing.T) {
 				actualKnitIdIn := getLastRequest().URL.Query()["knitIdInput"]
 				actualKnitIdOut := getLastRequest().URL.Query()["knitIdOutput"]
 				actualStatus := getLastRequest().URL.Query()["status"]
+				actualSince := getLastRequest().URL.Query().Get("since")
+				actualDuration := getLastRequest().URL.Query().Get("duration")
 
 				checkSliceContentEquality(t, "active", actualPlan, then.planIdInQuery)
 				checkSliceContentEquality(t, "image", actualKnitIdIn, then.knitIdInInQuery)
 				checkSliceContentEquality(t, "input tag", actualKnitIdOut, then.knitIdOutInQuery)
 				checkSliceContentEquality(t, "output tag", actualStatus, then.statusInQuery)
+				if actualSince != then.sinceQuery {
+					t.Errorf("query since is wrong: actual=%s, then=%s)", actualSince, then.sinceQuery)
+				}
+				if actualDuration != then.durationQuery {
+					t.Errorf("query duration is wrong: actual=%s,then=%s)", actualDuration, then.durationQuery)
+				}
 			})
 		}
 
@@ -436,9 +456,15 @@ func TestFindRun(t *testing.T) {
 			inputKnitId := []string{"test-inputKnitId"}
 			outputKnitId := []string{"test-outputKnitId"}
 			status := []string{"test-status"}
+			since := "2024-04-02T12:00:00+00:00"
+			duration := "2 hours"
 
 			//test start
-			actualResponse := try.To(testee.FindRun(ctx, planId, inputKnitId, outputKnitId, status)).OrFatal(t)
+			actualResponse := try.To(
+				testee.FindRun(
+					ctx, planId, inputKnitId, outputKnitId, status, since, duration,
+				),
+			).OrFatal(t)
 
 			if !cmp.SliceContentEqWith(
 				actualResponse, expectedResponse,
@@ -489,8 +515,12 @@ func TestFindRun(t *testing.T) {
 				inputKnitId := []string{"test-inputKnitId"}
 				outputKnitId := []string{"test-outputKnitId"}
 				status := []string{"test-status"}
+				since := "2024-04-02T12:00:00+00:00"
+				duration := "2 hours"
 
-				if _, err := testee.FindRun(ctx, planId, inputKnitId, outputKnitId, status); err == nil {
+				if _, err := testee.FindRun(
+					ctx, planId, inputKnitId, outputKnitId, status, since, duration,
+				); err == nil {
 					t.Errorf("no error occured")
 				}
 			})

@@ -15,13 +15,15 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
-
 		query, err := func(c echo.Context) (kdb.RunFindQuery, error) {
+
 			result := kdb.RunFindQuery{
 				PlanId:       kstrings.SplitIfNotEmpty(c.QueryParam("plan"), ","),
 				InputKnitId:  kstrings.SplitIfNotEmpty(c.QueryParam("knitIdInput"), ","),
 				OutputKnitId: kstrings.SplitIfNotEmpty(c.QueryParam("knitIdOutput"), ","),
 				Status:       []kdb.KnitRunStatus{},
+				Since:        nil,
+				Duration:     nil,
 			}
 
 			for _, p := range kstrings.SplitIfNotEmpty(c.QueryParam("status"), ",") {
@@ -33,6 +35,16 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 					)
 				}
 				result.Status = append(result.Status, s)
+			}
+
+			since := c.QueryParam("since")
+			if since != "" {
+				result.Since = &since
+			}
+
+			duration := c.QueryParam("duration")
+			if duration != "" {
+				result.Duration = &duration
 			}
 
 			return result, nil

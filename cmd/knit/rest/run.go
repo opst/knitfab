@@ -69,6 +69,8 @@ func (c *client) FindRun(
 	knitIdIn []string,
 	knitIdOut []string,
 	status []string,
+	since string,
+	duration string,
 ) ([]apirun.Detail, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apipath("runs"), nil)
@@ -83,6 +85,8 @@ func (c *client) FindRun(
 		"knitIdInput":  knitIdIn,
 		"knitIdOutput": knitIdOut,
 		"status":       status,
+		"since":        {since},
+		"duration":     {duration},
 	}
 	for key, value := range paramMap {
 		if len(value) > 0 {

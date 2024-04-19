@@ -73,6 +73,15 @@ func (t RFC3339) String() string {
 	return time.Time(t).Format(RFC3339DateTimeFormat)
 }
 
+// When you need to get string with local timezone, use
+func (t RFC3339) StringWithLocalTimeZone() (string, error) {
+	location, err := time.LoadLocation("Local")
+	if err != nil {
+		return "", err
+	}
+	return time.Time(t).In(location).Format(RFC3339DateTimeFormat), nil
+}
+
 // Parse string to ISO8601 time.
 //
 // It trancates resolution to milli second.
@@ -82,6 +91,19 @@ func ParseRFC3339DateTime(s string) (RFC3339, error) {
 		return *new(RFC3339), err
 	}
 	return RFC3339(t), nil
+}
+
+// when you need to parse multiple formats, use
+func ParseMultipleFormats(s string, formats ...string) (RFC3339, string, error) {
+	var err error
+	var t time.Time
+	for _, format := range formats {
+		t, err = time.Parse(format, s)
+		if err == nil {
+			return RFC3339(t), format, nil
+		}
+	}
+	return *new(RFC3339), "", fmt.Errorf("failed to parse %s", s)
 }
 
 // implement encoding/json.Marshaller

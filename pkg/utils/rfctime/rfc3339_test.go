@@ -99,3 +99,19 @@ func TestRFC3339(t *testing.T) {
 		})
 	})
 }
+func Test_StringWithLocalTimeZone(t *testing.T) {
+	t.Run("it should return local time zone when passed format without local time zone", func(t *testing.T) {
+		s := "2024-04-02"
+		testee := rfctime.RFC3339(try.To(time.Parse(time.DateOnly, s)).OrFatal(t))
+
+		actual, err := testee.StringWithLocalTimeZone()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expected := "2024-04-02T09:00:00+09:00"
+		if actual != expected {
+			t.Errorf("unmatch: (actual, expected) = (%s, %s)", actual, expected)
+		}
+	})
+}

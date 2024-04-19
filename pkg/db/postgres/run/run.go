@@ -16,6 +16,7 @@ import (
 	xe "github.com/opst/knitfab/pkg/errors"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/combination"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 type NamingConvention interface {
@@ -533,10 +534,21 @@ func (m *runPG) find(
 	knitIdIn []string,
 	knitIdOut []string,
 	status []kdb.KnitRunStatus,
+	since *string,
+	duration *string,
 ) ([]string, error) {
 
 	runIds := []string{}
 
+	var updatedSince *time.Time
+	if since != nil {
+		t, err := rfctime.ParseRFC3339DateTime(*since)
+		if err != nil {
+			return nil, err
+		}
+		_t := t.Time()
+		updatedSince = &_t
+	}
 	rows, err := conn.Query(
 		ctx,
 		`
@@ -560,6 +572,9 @@ func (m *runPG) find(
 		)
 		select "run_id"
 		from "assign_and_data"
+		where 
+			($9::timestamp with time zone is null or "updated_at" >= $9::timestamp with time zone)
+			and ($10::interval is null or "updated_at" <= ($9+$10)::timestamp with time zone)
 		order by "updated_at", "run_id"
 		`,
 		len(planId) == 0, planId,
@@ -568,6 +583,7 @@ func (m *runPG) find(
 		),
 		len(knitIdIn) == 0, knitIdIn,
 		len(knitIdOut) == 0, knitIdOut,
+		updatedSince, duration,
 	)
 	if err != nil {
 		return nil, err
@@ -592,7 +608,7 @@ func (m *runPG) Find(ctx context.Context, q kdb.RunFindQuery) ([]string, error) 
 	}
 	defer conn.Release()
 
-	return m.find(ctx, conn, q.PlanId, q.InputKnitId, q.OutputKnitId, q.Status)
+	return m.find(ctx, conn, q.PlanId, q.InputKnitId, q.OutputKnitId, q.Status, q.Since, q.Duration)
 }
 
 func (m *runPG) Get(ctx context.Context, runId []string) (map[string]kdb.Run, error) {

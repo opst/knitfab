@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -102,12 +103,24 @@ func TestFindCommand(t *testing.T) {
 				knitIdIn []string,
 				knitIdOut []string,
 				status []string,
+				since string,
+				duration string,
 			) ([]apirun.Detail, error) {
 
 				checkSliceEq(t, "planId", planId, ptr.SafeDeref(when.flag.PlanId))
 				checkSliceEq(t, "knitIdIn", knitIdIn, ptr.SafeDeref(when.flag.KnitIdIn))
 				checkSliceEq(t, "knitIdOut", knitIdOut, ptr.SafeDeref(when.flag.KnitIdOut))
 				checkSliceEq(t, "status", status, ptr.SafeDeref(when.flag.Status))
+
+				if since != "" {
+					_, err := rfctime.ParseRFC3339DateTime(since)
+					if err != nil {
+						t.Errorf("since cannot be parsed: %s", since)
+					}
+				}
+				if duration != when.flag.Duration {
+					t.Errorf("wrong duration: (actual, expected) != (%s, %s)", duration, when.flag.Duration)
+				}
 
 				return when.presentation, when.err
 			}
@@ -173,6 +186,29 @@ func TestFindCommand(t *testing.T) {
 		},
 	))
 
+	t.Run("when since is describe in Dateonly, it should output time with formated by RFC3339DateTimeFormat", theory(
+		When{
+			flag: run_find.Flag{
+				Since: "2024-04-01",
+			},
+			presentation: presentationItems,
+		},
+		Then{
+			err: nil,
+		},
+	))
+
+	t.Run("when since is describe in DateTime, it should output time with formated by RFC3339DateTimeFormat", theory(
+		When{
+			flag: run_find.Flag{
+				Since: "2024-04-02T09:00:00+09:00",
+			},
+			presentation: presentationItems,
+		},
+		Then{
+			err: nil,
+		},
+	))
 	t.Run("when values for each flag are passed, it should call task with these values", theory(
 		When{
 			flag: run_find.Flag{
@@ -188,11 +224,25 @@ func TestFindCommand(t *testing.T) {
 				Status: &kflag.Argslice{
 					"waiting", "running",
 				},
+				Since:    "2024-04-02T09:00:00+09:00", //RFC3339DateTimeFormat
+				Duration: "1 hour",
 			},
 			presentation: presentationItems,
 		},
 		Then{
 			err: nil,
+		},
+	))
+
+	t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
+		When{
+			flag: run_find.Flag{
+				Duration: "1 hour",
+			},
+			presentation: presentationItems,
+		},
+		Then{
+			err: kcmd.ErrUsage,
 		},
 	))
 
@@ -266,7 +316,7 @@ func TestRunFindRun(t *testing.T) {
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
 			ctx context.Context, planId []string,
-			knitIdIn []string, knitIdOut []string, status []string,
+			knitIdIn []string, knitIdOut []string, status []string, since string, duration string,
 		) ([]apirun.Detail, error) {
 			return expectedValue, nil
 		}
@@ -276,10 +326,12 @@ func TestRunFindRun(t *testing.T) {
 		inputKnitId := []string{"test-inputKnitId"}
 		outputKnitId := []string{"test-outputKnitId"}
 		status := []string{"test-status"}
+		since := "test-since"
+		duration := "test-duration"
 
 		// test start
 		actual := try.To(run_find.RunFindRun(
-			ctx, log, mock, planId, inputKnitId, outputKnitId, status)).OrFatal(t)
+			ctx, log, mock, planId, inputKnitId, outputKnitId, status, since, duration)).OrFatal(t)
 
 		//check actual
 		if !cmp.SliceContentEqWith(
@@ -302,7 +354,7 @@ func TestRunFindRun(t *testing.T) {
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
 			ctx context.Context, planId []string,
-			knitIdIn []string, knitIdOut []string, status []string,
+			knitIdIn []string, knitIdOut []string, status []string, since, duration string,
 		) ([]apirun.Detail, error) {
 			return expectedValue, expectedError
 		}
@@ -312,10 +364,12 @@ func TestRunFindRun(t *testing.T) {
 		inputKnitId := []string{"test-inputKnitId"}
 		outputKnitId := []string{"test-outputKnitId"}
 		status := []string{"test-status"}
+		since := "test-since"
+		duration := "test-duration"
 
 		// test start
 		actual, err := run_find.RunFindRun(
-			ctx, log, mock, planId, inputKnitId, outputKnitId, status)
+			ctx, log, mock, planId, inputKnitId, outputKnitId, status, since, duration)
 
 		//check actual and err
 		if actual != nil {
