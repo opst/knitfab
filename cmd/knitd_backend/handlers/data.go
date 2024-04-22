@@ -160,8 +160,6 @@ func GetDataHandler(
 			return apierr.InternalServerError(err)
 		}
 
-		echoutil.CopyResponse(&c, bresp) // proxy dataagt response.  -- fixme: check & reword error message.
-
-		return nil
+		return echoutil.CopyResponse(&c, bresp)
 	}
 }
