@@ -36,6 +36,10 @@ while [ -n "${1}" ] ; do
 			BUILD_CHART=true
 			EXPLICIT_BUILD_TARGET=true
 			;;
+		admin-tools)
+			BUILD_ADMIN_TOOLS=true
+			EXPLICIT_BUILD_TARGET=true
+			;;
 	esac
 done
 
@@ -107,6 +111,7 @@ if [ -z "${EXPLICIT_BUILD_TARGET}" ] ; then
 	BUILD_IMAGE=true
 	BUILD_CLI=true
 	BUILD_CHART=true
+	BUILD_ADMIN_TOOLS=true
 fi
 
 function detect_diff() {
@@ -185,6 +190,12 @@ fi
 if [ -n "${BUILD_CHART}" ] ; then
 	echo "*** building charts ***" >&2
 	${ROOT}/build/lib/chart.sh
+fi
+
+if [ -n "${BUILD_ADMIN_TOOLS}" ] ; then
+	echo "*** packaging admin tools ***" >&2
+
+	tar -cz -f ${ROOT}/bin/admin-tools.tar.gz -C ${ROOT} admin-tools
 fi
 
 if [ "release" = "${BUILD_MODE}" ] ; then
