@@ -321,9 +321,13 @@ func (r *runPG) project(
 		rows, err := tx.Query(
 			ctx,
 			`
+			with "known" as (
+				select "run_id" from "assign"
+				where "plan_id" = $1 and "input_id" = $2 and "knit_id" = $3
+			)
 			select "run_id", "input_id", "knit_id"
 			from "assign"
-			where "plan_id" = $1 and "input_id" = $2 and "knit_id" = $3
+			where "run_id" = any(table "known")
 			`,
 			trigger.PlanId,
 			trigger.InputId,
