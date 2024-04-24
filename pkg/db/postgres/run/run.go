@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v4"
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpgerr "github.com/opst/knitfab/pkg/db/postgres/errors"
 	kpgintr "github.com/opst/knitfab/pkg/db/postgres/internal"
@@ -212,7 +211,7 @@ func (m *runPG) New(ctx context.Context) ([]string, *kdb.ProjectionTrigger, erro
 			),
 			"known" as (
 				select "input_id", "knit_id", "updated" from "nom"
-				where not "updated"
+				where not "updated" and "input_id" not in (select "input_id" from "new")
 			)
 			select "input_id", "knit_id", "updated"
 			from "input"
@@ -308,78 +307,66 @@ func (r *runPG) project(
 		nominations = m
 	}
 
-	// === fetch already performed runs ===
-
-	type assignment map[int]string // mountpoint_id -> knit_id
-	var performed []assignment
-	{
-		_performed := map[string]assignment{}
-		//       (string)     (int)      (string)
-		//        run_id -> {input_id -> knit_id}
-		//                  ^^^^^^^^^^^^^^^^^^^^^
-		//                       assignment
-		rows, err := tx.Query(
-			ctx,
-			`
-			with "known" as (
-				select "run_id" from "assign"
-				where "plan_id" = $1 and "input_id" = $2 and "knit_id" = $3
-			)
-			select "run_id", "input_id", "knit_id"
-			from "assign"
-			where "run_id" = any(table "known")
-			`,
-			trigger.PlanId,
-			trigger.InputId,
-			trigger.KnitId,
-		)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var runId, knitId string
-			var mountpointId int
-
-			if err := rows.Scan(&runId, &mountpointId, &knitId); err != nil {
-				return nil, err
-			}
-
-			var a assignment
-			if _a, ok := _performed[runId]; ok {
-				a = _a
-			} else {
-				a = assignment{}
-			}
-
-			a[mountpointId] = knitId
-			_performed[runId] = a
-		}
-
-		performed = utils.ValuesOf(_performed)
-	}
-
-	// XXX: this call can cause OOM (MapCartesian can generate huge result).
-	// If it causes, rewrite MapCartesian as "func(...) <-chan map[K]T" and
-	// make this online algorithm.
-	newInputPattern, _ := utils.Group(
-		combination.MapCartesian(nominations),
-		func(q map[int]string) bool {
-			_, found := utils.First(
-				performed, func(p assignment) bool {
-					return cmp.MapEq(p, q)
-				},
-			)
-			return !found
-		},
-	)
+	// TODO: rewrite in rangefunc when that comes in Go standard.
+	newInputPattern := combination.MapCartesian(nominations)
 	if len(newInputPattern) == 0 {
 		return nil, nil
 	}
 
 	runIds := make([]string, 0, len(newInputPattern))
 	for _, pat := range newInputPattern {
+		input_ids := make([]int, 0, len(pat))
+		knit_ids := make([]string, 0, len(pat))
+		for input_id, knit_id := range pat {
+			input_ids = append(input_ids, input_id)
+			knit_ids = append(knit_ids, knit_id)
+		}
+		var n int
+		if err := tx.QueryRow(
+			ctx,
+			// Checking if the same pattern has been already registered.
+			//
+			// `count(*) from "assign_pattern"`` means the number of elements in the pattern.
+			//
+			// CTE "known" counts common elements between the pattern and the registered patterns, per run_id.
+			//
+			// If the number of common elements is equal to the number of elements in the pattern,
+			// the pattern has been already registered.
+			//
+			// If there are no such patterns (= the final query returns zero), register a new run.
+			`
+			with "assign_pattern" as (
+				select
+					unnest($1::int[]) as "input_id",
+					unnest($2::varchar[]) as "knit_id"
+			),
+			"run_ids" as (
+				select distinct "run_id"
+				from "assign"
+				where "plan_id" = $3 and "input_id" = $4 and "knit_id" = $5
+			),
+			"assign" as (
+				select * from "assign" where "run_id" in (table "run_ids")
+			),
+			"known" as (
+				select "run_id", count(*) as "overlapped"
+				from "assign"
+				where ("input_id", "knit_id") = any(table "assign_pattern")
+				group by "run_id"
+			)
+			select count(*) from "known"
+			where "overlapped" = (select count(*) from "assign_pattern")
+			`,
+			input_ids, knit_ids,
+			trigger.PlanId, trigger.InputId, trigger.KnitId,
+		).Scan(&n); err != nil {
+			return nil, err
+		}
+		if 0 < n {
+			// A same Run has been already registered.
+			continue
+		}
+
 		runId, err := r.register(ctx, tx, trigger.PlanId, pat)
 		if err != nil {
 			return nil, err
