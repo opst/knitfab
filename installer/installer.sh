@@ -8,12 +8,15 @@ REPOSITORY=${REPOSITORY:-opst/knitfab}
 IMAGE_REPOSITORY_HOST=${IMAGE_REPOSITORY_HOST:-ghcr.io}
 BRANCH=${BRANCH:-main}
 
-CHART_REPOSITORY_ROOT=${CHART_REPOSITORY_ROOT:-"https://raw.githubusercontent.com/${REPOSITORY}/${BRANCH}/charts/release"}
-DEFAULT_CHART_VERSION=v1.0.0
-CHART_VERSION=${CHART_VERSION:-${DEFAULT_CHART_VERSION}}
+CONTENT_ROOT=${CONTENT_ROOT:-"https://raw.githubusercontent.com/${REPOSITORY}/${BRANCH}"}
+CHART_REPOSITORY_ROOT=${CHART_REPOSITORY_ROOT:-"${CONTENT_ROOT}/charts/release"}
 VERBOSE=${VERBOSE}
 THIS=./${0##*/}
 HERE=${0%/*}
+
+if [ -z "${CHART_VERSION}" ] ; then
+	CHART_VERSION=$(curl -s ${CONTENT_ROOT}/pkg/buildtime/VERSION)
+fi
 
 function message() {
 	echo "$@" >&2
@@ -133,7 +136,6 @@ EOF
 		exit 1
 	fi
 
-
 	cat <<EOF > ./README.md
 knitfab-install-settings/README.md
 =================================
@@ -147,6 +149,11 @@ In this directory, you can find install settings for knitfab.
   - values/*
     - Install paramters for knitfab.
     - please inspect and set values for your environment. For more details, see values/README.md.
+  - kubeconfig
+    - Copied kubeconfig file refers to your k8s cluster where Knitfab is going to be installed.
+    - Please keep this file secure.
+  - namespace
+    - Namespace where knitfab is going to be installed.
 
 This directory contains kubeconfig, RDB password and CA key pair.
 **KEEP THIS DIRECTORY SECURE**, please be careful to handle this directory.
@@ -162,7 +169,10 @@ Next Step
     - To know options, run "${THIS}" without arguments.
 EOF
 
-	cp ${KUBECONFIG} ./kubeconfig
+	cp ${KUBECONFIG:-~/.kube/config} ./kubeconfig
+	chmod go-rwx ./kubeconfig
+
+	echo ${NAMESPACE:-knitfab} > ./namespace
 
 	cat <<EOF >> values/knit-app.yaml
 # # # values/knit-app.yaml # # #
@@ -318,18 +328,13 @@ for ARG in ${@} ; do
 		--prepare)
 			PREPARE=1;
 			;;
+		--install)
+			INSTALL=1;
+			;;
+
 		# knitfab chart version
 		--chart-version)
 			CHART_VERSION=${1}; shift || :
-			;;
-		--kubeconfig)
-			KUBECONFIG=${1}; shift || :
-			if [ -r "${KUBECONFIG}" ] ; then
-				export KUBECONFIG=$(abspath ${KUBECONFIG})
-			else
-				message "ERROR: KUBECONFIG file not found: ${KUBECONFIG}"
-				exit 1
-			fi
 			;;
 		--tls-ca-cert)
 			TLSCACERT=${1}; shift || :
@@ -345,8 +350,14 @@ for ARG in ${@} ; do
 			;;
 
 		# kubernetes related options
-		--install)
-			INSTALL=1;
+		--kubeconfig)
+			KUBECONFIG=${1}; shift || :
+			if [ -r "${KUBECONFIG}" ] ; then
+				export KUBECONFIG=$(abspath ${KUBECONFIG})
+			else
+				message "ERROR: KUBECONFIG file not found: ${KUBECONFIG}"
+				exit 1
+			fi
 			;;
 		--namespace|-n)
 			NAMESPACE=${1}; shift || :
@@ -394,21 +405,38 @@ Usage
 
 \`\`\`
 # prepare install settings
-${THIS} --prepare [--tls-ca-cert <CA_CERT>] [--tls-ca-key <CA_KEY>] [--kubeconfig <KUBECONFIG>] [--settings|-s <directory where install settings are saved>]
+${THIS} --prepare \\
+    [--tls-ca-cert <CA_CERT>] [--tls-ca-key <CA_KEY>] \\
+    [--kubeconfig <KUBECONFIG>] [--namespace|-n <NAMESPACE>] \\
+    [--settings|-s <directory where install settings are saved>]
 \`\`\`
 * When --tls-ca-cert and --tls-ca-key is not passed, it generates self-signed CA certificate & key.
-* --kubeconfig is the path to the kubeconfig file. Default is ~/.kube/config.
 * --settings is the directory where install settings are saved. Default is \`./knitfab-install-settings\`.
+* --kubeconfig is the path to the kubeconfig file.
+    * Optional. Default is ~/.kube/config.
+    * This file is copied to the settings directory.
+* --namespace is the namespace where knitfab is installed.
+    * Optional. Default is "knitfab".
+    * This value is saved in the settings directory.
 
 \`\`\`
 # install knitfab
-${THIS} --install [--settings|-s <SETTINGS_DIR>] [--chart-version <VERSION>] [--namespace|-n <NAMESPACE>] [--kubeconfig <KUBECONFIG>]
+${THIS} --install \\
+    [--settings|-s <SETTINGS_DIR>] [--chart-version <VERSION>] \\
+    [--namespace|-n <NAMESPACE>] \\
+    [--kubeconfig <KUBECONFIG>]
 \`\`\`
 
-* --settings is the directory where install settings are saved. Default is \`./knitfab-install-settings\`.
-* --chart-version is the version of knitfab chart. Default is \`${DEFAULT_CHART_VERSION}\` .
-* --namespace is the namespace where knitfab is installed. Default is "knitfab".
-* --kubeconfig is the path to the kubeconfig file. Default is \`\$\{--settings\}/kubeconfig\`.
+* --chart-version is the version of knitfab chart.
+    * Optional. Default is the latest version.
+* --settings is the directory where install settings are saved.
+    * Optional. Default is \`./knitfab-install-settings\`.
+* --namespace is the namespace where knitfab is installed.
+    * Optinal. Default is content of \`\$\{--settings\}/namespace\`.
+    * This value is saved in the settings directory.
+* --kubeconfig is the path to the kubeconfig file.
+    * Optional. Default is \`\$\{--settings\}/kubeconfig\`.
+    * This file is copied to the settings directory.
 
 Steps
 -----
@@ -449,7 +477,11 @@ if ! [ -r "${KUBECONFIG}" ] ; then
 fi
 export KUBECONFIG=$(abspath ${KUBECONFIG})
 
+if [ -z "${NAMESPACE}" ] ; then
+	NAMESPACE=$(cat ${SETTINGS}/namespace)
+fi
 NAMESPACE=${NAMESPACE:-knitfab}
+echo ${NAMESPACE} > ${SETTINGS}/namespace  # write back
 
 if [ -r "${SETTINGS}/knit-image-registry-secret.yaml" ] ; then
 	${KUBECTL} apply -n ${NAMESPACE} -f ${SETTINGS}/knit-image-registry-secret.yaml
@@ -498,72 +530,67 @@ run ${HELM} repo add --force-update knitfab ${CHART_REPOSITORY_ROOT}
 message "[2 / 3] install knit middlewares..."
 
 message "[2 / 3] #1 install storage driver"
+MODE=install
 if ${HELM} status knit-storage-nfs -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	message "already installed: knit-storage-nfs"
-else
-	EXTERNAL=false
-	if [ -n "${KNIT_NFS_HOST}" ] ; then
-		EXTERNAL=true
-	fi
-
-	run ${HELM} install --dependency-update --wait \
-		-n ${NAMESPACE} --create-namespace \
-		--version ${CHART_VERSION} \
-		-f ${VALUES}/knit-storage-nfs.yaml \
-	knit-storage-nfs knitfab/knit-storage-nfs
-	sleep 5
+	MODE=upgrade
 fi
+run ${HELM} ${MODE} --dependency-update --wait \
+	-n ${NAMESPACE} --create-namespace \
+	--version ${CHART_VERSION} \
+	-f ${VALUES}/knit-storage-nfs.yaml \
+knit-storage-nfs knitfab/knit-storage-nfs
+sleep 5
 
 message "[2 / 3] #2 install tls certificates"
+MODE=install
 if ${HELM} status knit-certs -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	message "already installed: knit-certs"
-else
-	run ${HELM} install --dependency-update --wait \
-		-n ${NAMESPACE} --create-namespace \
-		--version ${CHART_VERSION} \
-		-f ${VALUES}/knit-certs.yaml \
-	knit-certs knitfab/knit-certs
+	MODE=upgrade
 fi
+run ${HELM} ${MODE} --dependency-update --wait \
+	-n ${NAMESPACE} --create-namespace \
+	--version ${CHART_VERSION} \
+	-f ${VALUES}/knit-certs.yaml \
+	knit-certs knitfab/knit-certs
 
 message "[2 / 3] #3 install database"
+MODE=install
 if ${HELM} status knit-db-postgres -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	message "already installed: knit-db-postgres"
-else
-	run ${HELM} install --dependency-update --wait \
-		-n ${NAMESPACE} --create-namespace \
-		--version ${CHART_VERSION} \
-		--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-		-f ${VALUES}/knit-db-postgres.yaml \
-	knit-db-postgres knitfab/knit-db-postgres
+	MODE=upgrade
 fi
+run ${HELM} ${MODE} --dependency-update --wait \
+	-n ${NAMESPACE} --create-namespace \
+	--version ${CHART_VERSION} \
+	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
+	-f ${VALUES}/knit-db-postgres.yaml \
+	knit-db-postgres knitfab/knit-db-postgres
 
 message "[2 / 3] #4 install image registry"
+MODE=install
 if ${HELM} status knit-image-registry -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	message "already installed: knit-image-registry"
-else
-	run ${HELM} install --dependency-update --wait \
-		-n ${NAMESPACE} --create-namespace \
-		--version ${CHART_VERSION} \
-		--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-		--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
-		-f ${VALUES}/knit-image-registry.yaml \
-	knit-image-registry knitfab/knit-image-registry
+	MODE=upgrade
 fi
+run ${HELM} ${MODE} --dependency-update --wait \
+	-n ${NAMESPACE} --create-namespace \
+	--version ${CHART_VERSION} \
+	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
+	--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
+	-f ${VALUES}/knit-image-registry.yaml \
+	knit-image-registry knitfab/knit-image-registry
 
 message "[3 / 3] install knit app"
+MODE=install
 if ${HELM} status knit-app -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	message "already installed: knit-app"
-else
-	run ${HELM} install --dependency-update --wait \
-		-n ${NAMESPACE} --create-namespace \
-		--version ${CHART_VERSION} \
-		--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-		--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
-		--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
-		--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
-		${SET_PULL_SECRET} -f ${VALUES}/knit-app.yaml \
-	knit-app knitfab/knit-app
+	MODE=upgrade
 fi
+run ${HELM} ${MODE} --dependency-update --wait \
+	-n ${NAMESPACE} --create-namespace \
+	--version ${CHART_VERSION} \
+	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
+	--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
+	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
+	--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
+	${SET_PULL_SECRET} -f ${VALUES}/knit-app.yaml \
+	knit-app knitfab/knit-app
 
 mkdir -p ${SETTINGS}/handouts
 cat <<EOF > ${SETTINGS}/handouts/README.md
