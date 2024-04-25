@@ -318,8 +318,8 @@ EOF
 }
 
 
-for ARG in ${@} ; do
-	shift || :
+while [ 0 -lt ${#} ] ; do
+	ARG=${1}; shift || :
 	case ${ARG} in
 		--settings|-s)
 			SETTINGS=${1}; shift || :
@@ -352,12 +352,6 @@ for ARG in ${@} ; do
 		# kubernetes related options
 		--kubeconfig)
 			KUBECONFIG=${1}; shift || :
-			if [ -r "${KUBECONFIG}" ] ; then
-				export KUBECONFIG=$(abspath ${KUBECONFIG})
-			else
-				message "ERROR: KUBECONFIG file not found: ${KUBECONFIG}"
-				exit 1
-			fi
 			;;
 		--namespace|-n)
 			NAMESPACE=${1}; shift || :
@@ -370,6 +364,15 @@ for ARG in ${@} ; do
 	esac
 done
 
+if [ -n "${KUBECONFIG}" ] ; then
+	KUBECONFIG=$(abspath ${KUBECONFIG})
+fi
+
+if [ -z "${SETTINGS}" ] ; then
+	SETTINGS=${HERE}/knitfab-install-settings
+fi
+export SETTINGS=$(abspath ${SETTINGS})
+
 if [ -n "${PREPARE}" ] ; then
 	if [ -n "${INSTALL}" ] ; then
 		message "ERROR: --prepare and --install are exclusive."
@@ -380,16 +383,12 @@ if [ -n "${PREPARE}" ] ; then
 		KUBECONFIG=$(abspath ~/.kube/config)
 	fi
 
+	KUBECONFIG=${KUBECONFIG:-~/.kube/config}
 	if ! [ -r "${KUBECONFIG}" ] ; then
 		message "ERROR: KUBECONFIG file not found: ${KUBECONFIG}"
 		exit 1
 	fi
 	export KUBECONFIG
-
-	if [ -z "${SETTINGS}" ] ; then
-		SETTINGS=${HERE}/knitfab-install-settings
-	fi
-	export SETTINGS=$(abspath ${SETTINGS})
 
 	prepare_install
 	exit 0
@@ -407,22 +406,28 @@ Usage
 # prepare install settings
 ${THIS} --prepare \\
     [--tls-ca-cert <CA_CERT>] [--tls-ca-key <CA_KEY>] \\
+    [--tls-cert <CA_CERT>] [--tls-key <CA_KEY>] \\
     [--kubeconfig <KUBECONFIG>] [--namespace|-n <NAMESPACE>] \\
-    [--settings|-s <directory where install settings are saved>]
+    [--settings|-s <SETTINGS_DIR=${HERE}/knitfab-install-settings>]
 \`\`\`
-* When --tls-ca-cert and --tls-ca-key is not passed, it generates self-signed CA certificate & key.
-* --settings is the directory where install settings are saved. Default is \`./knitfab-install-settings\`.
+* --tls-ca-cert and --tls-ca-key are the CA certificate and key for the Knitfab.
+    * Optional. If missing, it generates self-signed CA certificate & key.
+* --tls-cert and --tls-key are the server certificate and key for the Knitfab.
+    * Optional. If missing, it generates certificate & key by CA.
+* --settings is the directory where install settings are saved.
+    * Optional. Default is \`./knitfab-install-settings\`.
 * --kubeconfig is the path to the kubeconfig file.
     * Optional. Default is ~/.kube/config.
-    * This file is copied to the settings directory.
+    * This file is copied as \$\{--settings\}/kubeconfig.
 * --namespace is the namespace where knitfab is installed.
     * Optional. Default is "knitfab".
-    * This value is saved in the settings directory.
+    * This value is saved in \$\{--settings\}/namespace.
 
 \`\`\`
 # install knitfab
 ${THIS} --install \\
-    [--settings|-s <SETTINGS_DIR>] [--chart-version <VERSION>] \\
+    [--settings|-s <SETTINGS_DIR=>] \\
+	[--chart-version <VERSION>] \\
     [--namespace|-n <NAMESPACE>] \\
     [--kubeconfig <KUBECONFIG>]
 \`\`\`
@@ -437,6 +442,12 @@ ${THIS} --install \\
 * --kubeconfig is the path to the kubeconfig file.
     * Optional. Default is \`\$\{--settings\}/kubeconfig\`.
     * This file is copied to the settings directory.
+
+Each flags can be set by environment variables.
+For example, you can export envitonmental valriable
+    \`KUBECONFIG=...\` instead of \`--kubeconfig ...\`, or
+    \`TLS_CA_CERT=...\` instead of \`--tls-ca-cert ...\`
+and so on.
 
 Steps
 -----
@@ -460,16 +471,13 @@ fi
 #
 
 
-if [ -z "${SETTINGS}" ] ; then
-	SETTINGS=${HERE}/knitfab-install-settings
-fi
-
 CERTS=${SETTINGS}/certs
 VALUES=${SETTINGS}/values
 
 if [ -z "${KUBECONFIG}" ] ; then
 	KUBECONFIG=${HERE}/knitfab-install-settings/kubeconfig
 fi
+export KUBECONFIG=$(abspath ${KUBECONFIG})
 
 if ! [ -r "${KUBECONFIG}" ] ; then
 	message "ERROR: KUBECONFIG file not found: ${KUBECONFIG}"
