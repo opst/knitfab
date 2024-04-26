@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -320,8 +321,8 @@ func TestFindRun(t *testing.T) {
 			knitIdIn  []string
 			knitIdOut []string
 			status    []string
-			since     string
-			duration  string
+			since     time.Time
+			duration  time.Duration
 		}
 
 		type then struct {
@@ -345,8 +346,8 @@ func TestFindRun(t *testing.T) {
 					knitIdIn:  []string{},
 					knitIdOut: []string{},
 					status:    []string{},
-					since:     "",
-					duration:  "",
+					since:     time.Time{},
+					duration:  time.Duration(0),
 				},
 				then: then{
 					planIdInQuery:    []string{},
@@ -363,16 +364,19 @@ func TestFindRun(t *testing.T) {
 					knitIdIn:  []string{"in-a", "in-b"},
 					knitIdOut: []string{"out-a", "out-b"},
 					status:    []string{"wating", "running"},
-					since:     "2024-04-02T12:00:00+00:00",
-					duration:  "2 hours",
+					since: time.Date(
+						2024, 4, 22, 12, 34, 56, 987654321,
+						time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+					),
+					duration: time.Duration(2 * time.Hour),
 				},
 				then: then{
 					planIdInQuery:    []string{"test-a,test-b"},
 					knitIdInInQuery:  []string{"in-a,in-b"},
 					knitIdOutInQuery: []string{"out-a,out-b"},
 					statusInQuery:    []string{"wating,running"},
-					sinceQuery:       "2024-04-02T12:00:00+00:00",
-					durationQuery:    "2 hours",
+					sinceQuery:       "2024-04-22T12:34:56.987654321+07:00",
+					durationQuery:    "2h0m0s",
 				},
 			},
 		} {
@@ -456,8 +460,11 @@ func TestFindRun(t *testing.T) {
 			inputKnitId := []string{"test-inputKnitId"}
 			outputKnitId := []string{"test-outputKnitId"}
 			status := []string{"test-status"}
-			since := "2024-04-02T12:00:00+00:00"
-			duration := "2 hours"
+			since := time.Date(
+				2024, 4, 22, 12, 34, 56, 000000000,
+				time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+			)
+			duration := time.Duration(2 * time.Hour)
 
 			//test start
 			actualResponse := try.To(
@@ -515,8 +522,11 @@ func TestFindRun(t *testing.T) {
 				inputKnitId := []string{"test-inputKnitId"}
 				outputKnitId := []string{"test-outputKnitId"}
 				status := []string{"test-status"}
-				since := "2024-04-02T12:00:00+00:00"
-				duration := "2 hours"
+				since := time.Date(
+					2024, 4, 22, 12, 34, 56, 000000000,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				)
+				duration := time.Duration(2 * time.Hour)
 
 				if _, err := testee.FindRun(
 					ctx, planId, inputKnitId, outputKnitId, status, since, duration,

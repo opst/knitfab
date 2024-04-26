@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
@@ -218,9 +219,9 @@ type KnitClient interface {
 	//
 	// - []string: status which run to be found is
 	//
-	// - string: since which updated time of run to be found is after
+	// - time.Time: time which updated time of run to be found is after
 	//
-	// - string: duration which updated time of run to be found is within
+	// - time.duration: duration which updated time of run to be found is within
 	//
 	// Returns
 	//
@@ -229,7 +230,7 @@ type KnitClient interface {
 	// - error
 	FindRun(
 		ctx context.Context, planId []string, knitIdIn []string, knitIdOut []string,
-		status []string, since string, duration string,
+		status []string, since time.Time, duration time.Duration,
 	) ([]apirun.Detail, error)
 
 	// Abort abort run with given runId.

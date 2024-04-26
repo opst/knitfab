@@ -115,3 +115,179 @@ func Test_StringWithLocalTimeZone(t *testing.T) {
 		}
 	})
 }
+
+func Test_ParseLooseRFC3339(t *testing.T) {
+	type when struct {
+		args []string
+	}
+	type then struct {
+		expected []time.Time
+	}
+
+	theory := func(when when, then then) func(*testing.T) {
+		return func(t *testing.T) {
+			for i, w := range when.args {
+				testee, err := rfctime.ParseLooseRFC3339(w)
+				if err != nil {
+					t.Fatal(err)
+				}
+				expectdRFC3339 := rfctime.RFC3339(then.expected[i])
+
+				if !testee.Time().Equal(then.expected[i]) {
+					t.Errorf("unmatch: as time: (actual, expected) = (%+v, %+v)", testee, then.expected[i])
+				}
+
+				if !testee.Equiv(expectdRFC3339) {
+					t.Errorf("unmatch: as RFC3339: (actual, expected) = (%+v, %+v)", testee, expectdRFC3339)
+				}
+			}
+		}
+	}
+
+	t.Run("it should parse when passed RFC3339DateNano format", theory(
+		when{
+			args: []string{
+				"2024-04-22T12:34:56.987654321+07:00",
+				"2024-04-22 12:34:56.987654321+07:00",
+				"2024-04-22T12:34:56.987654321",
+				"2024-04-22 12:34:56.987654321",
+			},
+		},
+		then{
+			expected: []time.Time{
+				time.Date(
+					2024, 4, 22, 12, 34, 56, 987654321,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 56, 987654321,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 56, 987654321,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 56, 987654321,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+			},
+		},
+	))
+
+	//
+	t.Run("it should parse when passed RFC3339DateSec format", theory(
+		when{
+			args: []string{
+				"2024-04-22T12:34:56+07:00",
+				"2024-04-22 12:34:56+07:00",
+				"2024-04-22T12:34:56",
+				"2024-04-22 12:34:56",
+			},
+		},
+		then{
+			expected: []time.Time{
+				time.Date(
+					2024, 4, 22, 12, 34, 56, 000000000,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 56, 000000000,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 56, 000000000,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 56, 000000000,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+			},
+		},
+	))
+
+	t.Run("it should parse when passed RFC3339DateMin format", theory(
+		when{
+			args: []string{
+				"2024-04-22T12:34+07:00",
+				"2024-04-22 12:34+07:00",
+				"2024-04-22T12:34",
+				"2024-04-22 12:34",
+			},
+		},
+		then{
+			expected: []time.Time{
+				time.Date(
+					2024, 4, 22, 12, 34, 00, 000000000,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 00, 000000000,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 00, 000000000,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 34, 00, 000000000,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+			},
+		},
+	))
+
+	t.Run("it should parse when passed RFC3339DateHour format", theory(
+		when{
+			args: []string{
+				"2024-04-22T12+07:00",
+				"2024-04-22 12+07:00",
+				"2024-04-22T12",
+				"2024-04-22 12",
+			},
+		},
+		then{
+			expected: []time.Time{
+				time.Date(
+					2024, 4, 22, 12, 00, 00, 000000000,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 00, 00, 000000000,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 00, 00, 000000000,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 12, 00, 00, 000000000,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+			},
+		},
+	))
+
+	t.Run("it should parse when passed RFC3339DateOnly format", theory(
+		when{
+			args: []string{
+				"2024-04-22+07:00",
+				"2024-04-22",
+			},
+		},
+		then{
+			expected: []time.Time{
+				time.Date(
+					2024, 4, 22, 00, 00, 00, 000000000,
+					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+				),
+				time.Date(
+					2024, 4, 22, 0, 00, 00, 000000000,
+					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+				),
+			},
+		},
+	))
+
+}

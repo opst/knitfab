@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
@@ -103,21 +104,18 @@ func TestFindCommand(t *testing.T) {
 				knitIdIn []string,
 				knitIdOut []string,
 				status []string,
-				since string,
-				duration string,
+				since time.Time,
+				duration time.Duration,
 			) ([]apirun.Detail, error) {
 
 				checkSliceEq(t, "planId", planId, ptr.SafeDeref(when.flag.PlanId))
 				checkSliceEq(t, "knitIdIn", knitIdIn, ptr.SafeDeref(when.flag.KnitIdIn))
 				checkSliceEq(t, "knitIdOut", knitIdOut, ptr.SafeDeref(when.flag.KnitIdOut))
 				checkSliceEq(t, "status", status, ptr.SafeDeref(when.flag.Status))
-
-				if since != "" {
-					_, err := rfctime.ParseRFC3339DateTime(since)
-					if err != nil {
-						t.Errorf("since cannot be parsed: %s", since)
-					}
+				if since != time.Time(ptr.SafeDeref(when.flag.Since)) {
+					t.Errorf("wrong since: (actual, expected) != (%s, %s)", since, when.flag.Since)
 				}
+
 				if duration != when.flag.Duration {
 					t.Errorf("wrong duration: (actual, expected) != (%s, %s)", duration, when.flag.Duration)
 				}
@@ -186,58 +184,42 @@ func TestFindCommand(t *testing.T) {
 		},
 	))
 
-	t.Run("when since is describe in Dateonly, it should output time with formated by RFC3339DateTimeFormat", theory(
-		When{
-			flag: run_find.Flag{
-				Since: "2024-04-01",
+	{
+		timestamp := time.Date(
+			2024, 4, 22, 0, 00, 00, 000000000,
+			time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+		)
+		since := kflag.LooseRFC3339(timestamp)
+		t.Run("when values for each flag are passed, it should call task with these values", theory(
+			When{
+				flag: run_find.Flag{
+					PlanId: &kflag.Argslice{
+						"plan1", "plan2",
+					},
+					KnitIdIn: &kflag.Argslice{
+						"knit1", "knit2",
+					},
+					KnitIdOut: &kflag.Argslice{
+						"knit3", "knit4",
+					},
+					Status: &kflag.Argslice{
+						"waiting", "running",
+					},
+					Since:    &since,
+					Duration: time.Duration(2 * time.Hour),
+				},
+				presentation: presentationItems,
 			},
-			presentation: presentationItems,
-		},
-		Then{
-			err: nil,
-		},
-	))
-
-	t.Run("when since is describe in DateTime, it should output time with formated by RFC3339DateTimeFormat", theory(
-		When{
-			flag: run_find.Flag{
-				Since: "2024-04-02T09:00:00+09:00",
+			Then{
+				err: nil,
 			},
-			presentation: presentationItems,
-		},
-		Then{
-			err: nil,
-		},
-	))
-	t.Run("when values for each flag are passed, it should call task with these values", theory(
-		When{
-			flag: run_find.Flag{
-				PlanId: &kflag.Argslice{
-					"plan1", "plan2",
-				},
-				KnitIdIn: &kflag.Argslice{
-					"knit1", "knit2",
-				},
-				KnitIdOut: &kflag.Argslice{
-					"knit3", "knit4",
-				},
-				Status: &kflag.Argslice{
-					"waiting", "running",
-				},
-				Since:    "2024-04-02T09:00:00+09:00", //RFC3339DateTimeFormat
-				Duration: "1 hour",
-			},
-			presentation: presentationItems,
-		},
-		Then{
-			err: nil,
-		},
-	))
+		))
+	}
 
 	t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
 		When{
 			flag: run_find.Flag{
-				Duration: "1 hour",
+				Duration: time.Duration(2 * time.Hour),
 			},
 			presentation: presentationItems,
 		},
@@ -316,7 +298,7 @@ func TestRunFindRun(t *testing.T) {
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
 			ctx context.Context, planId []string,
-			knitIdIn []string, knitIdOut []string, status []string, since string, duration string,
+			knitIdIn []string, knitIdOut []string, status []string, since time.Time, duration time.Duration,
 		) ([]apirun.Detail, error) {
 			return expectedValue, nil
 		}
@@ -326,8 +308,11 @@ func TestRunFindRun(t *testing.T) {
 		inputKnitId := []string{"test-inputKnitId"}
 		outputKnitId := []string{"test-outputKnitId"}
 		status := []string{"test-status"}
-		since := "test-since"
-		duration := "test-duration"
+		since := time.Date(
+			2024, 4, 22, 12, 34, 56, 000000000,
+			time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+		)
+		duration := time.Duration(2 * time.Hour)
 
 		// test start
 		actual := try.To(run_find.RunFindRun(
@@ -354,7 +339,7 @@ func TestRunFindRun(t *testing.T) {
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
 			ctx context.Context, planId []string,
-			knitIdIn []string, knitIdOut []string, status []string, since, duration string,
+			knitIdIn []string, knitIdOut []string, status []string, since time.Time, duration time.Duration,
 		) ([]apirun.Detail, error) {
 			return expectedValue, expectedError
 		}
@@ -364,8 +349,11 @@ func TestRunFindRun(t *testing.T) {
 		inputKnitId := []string{"test-inputKnitId"}
 		outputKnitId := []string{"test-outputKnitId"}
 		status := []string{"test-status"}
-		since := "test-since"
-		duration := "test-duration"
+		since := time.Date(
+			2024, 4, 22, 12, 34, 56, 000000000,
+			time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
+		)
+		duration := time.Duration(2 * time.Hour)
 
 		// test start
 		actual, err := run_find.RunFindRun(

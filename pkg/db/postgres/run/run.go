@@ -549,6 +549,17 @@ func (m *runPG) find(
 		_t := t.Time()
 		updatedSince = &_t
 	}
+
+	var updatedUntil *time.Time
+	if duration != nil {
+		d, err := time.ParseDuration(*duration)
+		if err != nil {
+			return nil, err
+		}
+		_t := updatedSince.Add(d)
+		updatedUntil = &_t
+	}
+
 	rows, err := conn.Query(
 		ctx,
 		`
@@ -574,7 +585,7 @@ func (m *runPG) find(
 		from "assign_and_data"
 		where 
 			($9::timestamp with time zone is null or "updated_at" >= $9::timestamp with time zone)
-			and ($10::interval is null or "updated_at" <= ($9+$10)::timestamp with time zone)
+			and ($10::timestamp with time zone is null or "updated_at" <= $10::timestamp with time zone)
 		order by "updated_at", "run_id"
 		`,
 		len(planId) == 0, planId,
@@ -583,7 +594,7 @@ func (m *runPG) find(
 		),
 		len(knitIdIn) == 0, knitIdIn,
 		len(knitIdOut) == 0, knitIdOut,
-		updatedSince, duration,
+		updatedSince, updatedUntil,
 	)
 	if err != nil {
 		return nil, err

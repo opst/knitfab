@@ -37,7 +37,7 @@ func TestRunFindHandler(t *testing.T) {
 		}
 
 		dummySince := "2024-04-01T12:00:00+00:00"
-		dummyDuration := "1 hours"
+		dummyDuration := "2h30m45s"
 
 		for name, testcase := range map[string]struct {
 			when
@@ -45,7 +45,7 @@ func TestRunFindHandler(t *testing.T) {
 		}{
 			"as empty when no runs are found": {
 				when{
-					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=1+hours",
+					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -420,7 +420,7 @@ func TestRunFindHandler(t *testing.T) {
 			// duration is assumed to be used in conjunction with since.
 			"when it is queried about since and duration": {
 				when{
-					request: "/api/runs?since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=1+hours",
+					request: "/api/runs?since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -434,7 +434,7 @@ func TestRunFindHandler(t *testing.T) {
 			},
 			"when it is queried about all dimensions except planId": {
 				when{
-					request: "/api/runs?knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=1+hours",
+					request: "/api/runs?knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -450,7 +450,7 @@ func TestRunFindHandler(t *testing.T) {
 			},
 			"when it is queried about all dimensions except input knit id": {
 				when{
-					request: "/api/runs?plan=plan-x,plan-y&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=1+hours",
+					request: "/api/runs?plan=plan-x,plan-y&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -466,7 +466,7 @@ func TestRunFindHandler(t *testing.T) {
 			},
 			"when it is queried about all dimensions except output knit id": {
 				when{
-					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=1+hours",
+					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -482,7 +482,7 @@ func TestRunFindHandler(t *testing.T) {
 			},
 			"when it is queried about all dimensions except status": {
 				when{
-					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=1+hours",
+					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{

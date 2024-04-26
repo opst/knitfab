@@ -6,8 +6,10 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 func (c *client) GetRun(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -69,13 +71,27 @@ func (c *client) FindRun(
 	knitIdIn []string,
 	knitIdOut []string,
 	status []string,
-	since string,
-	duration string,
+	since time.Time,
+	duration time.Duration,
 ) ([]apirun.Detail, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apipath("runs"), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	var sinceStr string
+	if since != (time.Time{}) {
+		sinceStr = since.Format(rfctime.RFC3339DateTimeFormatZ)
+	} else {
+		sinceStr = ""
+	}
+
+	var durationStr string
+	if duration != 0 {
+		durationStr = duration.String()
+	} else {
+		durationStr = ""
 	}
 
 	// set query values
@@ -85,8 +101,8 @@ func (c *client) FindRun(
 		"knitIdInput":  knitIdIn,
 		"knitIdOutput": knitIdOut,
 		"status":       status,
-		"since":        {since},
-		"duration":     {duration},
+		"since":        {sinceStr},
+		"duration":     {durationStr},
 	}
 	for key, value := range paramMap {
 		if len(value) > 0 {

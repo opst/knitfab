@@ -3,9 +3,11 @@ package flag
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 type Argslice []string
@@ -40,5 +42,20 @@ func (t *Tags) Set(v string) error {
 		return err
 	}
 	*t = append(*t, tag)
+	return nil
+}
+
+type LooseRFC3339 time.Time
+
+func (t *LooseRFC3339) String() string {
+	return time.Time(*t).Format(rfctime.RFC3339DateTimeFormatZ)
+}
+
+func (t *LooseRFC3339) Set(v string) error {
+	parsedTime, err := rfctime.ParseLooseRFC3339(v)
+	if err != nil {
+		return err
+	}
+	*t = LooseRFC3339(parsedTime)
 	return nil
 }

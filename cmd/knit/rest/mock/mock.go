@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/opst/knitfab/cmd/knit/rest"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
@@ -35,8 +36,8 @@ type FindRunArgs struct {
 	KnitIdIn  []string
 	KnitIdOut []string
 	status    []string
-	since     string
-	duration  string
+	since     time.Time
+	duration  time.Duration
 }
 
 func New(t *testing.T) *mockKnitClient {
@@ -107,7 +108,7 @@ type mockKnitClient struct {
 		RegisterPlan       func(ctx context.Context, spec apiplans.PlanSpec) (apiplans.Detail, error)
 		GetRun             func(ctx context.Context, runId string) (apirun.Detail, error)
 		GetRunLog          func(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
-		FindRun            func(ctx context.Context, planId []string, knitIdIn []string, knitIdOut []string, status []string, since, duration string) ([]apirun.Detail, error)
+		FindRun            func(ctx context.Context, planId []string, knitIdIn []string, knitIdOut []string, status []string, since time.Time, duration time.Duration) ([]apirun.Detail, error)
 		Abort              func(ctx context.Context, runId string) (apirun.Detail, error)
 		Tearoff            func(ctx context.Context, runId string) (apirun.Detail, error)
 		DeleteRun          func(ctx context.Context, runId string) error
@@ -285,8 +286,8 @@ func (m *mockKnitClient) FindRun(
 	knitIdIn []string,
 	knitIdOut []string,
 	status []string,
-	since string,
-	duration string,
+	since time.Time,
+	duration time.Duration,
 ) ([]apirun.Detail, error) {
 	m.t.Helper()
 
