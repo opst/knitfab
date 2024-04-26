@@ -129,6 +129,17 @@ if [ -z "${CHART_VERSION}" ] ; then
 fi
 export CHART_VERSION
 
+echo "prepareing build environment..."
+mkdir -p ${ROOT}/bin
+for CMD in ${ROOT} ${ROOT}/cmd/* ; do
+	(
+		echo "generating code for ${CMD}..."
+		cd ${CMD}
+		go mod tidy
+		go generate ./...
+	)
+done
+
 if [ -z "${APP_VERSION}" ] ; then
 	APP_VERSION=${CHART_VERSION}
 
@@ -146,17 +157,6 @@ if [ -z "${APP_VERSION}" ] ; then
 fi
 
 export APP_VERSION
-
-echo "prepareing build environment..."
-mkdir -p ${ROOT}/bin
-for CMD in ${ROOT} ${ROOT}/cmd/* ; do
-	(
-		echo "generating code for ${CMD}..."
-		cd ${CMD}
-		go mod tidy
-		go generate ./...
-	)
-done
 
 mkdir -p ${ROOT}/bin
 mkdir -p ${ROOT}/charts/${BUILD_MODE}
