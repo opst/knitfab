@@ -46,17 +46,19 @@ type DataInterface interface {
 	//
 	Get(context.Context, []string) (map[string]KnitData, error)
 
-	// Retrieve data that contains all specified tags
+	// Retrieve data that contains all specified tags and range of updated time.
 	//
 	// args:
 	//     - ctx: context
 	//     - []Tag: specified tags
+	//     - string: start of the time range
+	//     - string: duration of the time range
 	//
 	// returns:
 	//     - []string: Knitid of the data that meets the conditions
 	//     - error
 	//
-	GetKnitIdByTags(context.Context, []Tag) ([]string, error)
+	GetKnitIdByDataFindQuery(context.Context, []Tag, string, string) ([]string, error)
 
 	// update tags on data.
 	//

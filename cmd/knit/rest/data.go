@@ -11,11 +11,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/archive"
 	kio "github.com/opst/knitfab/pkg/io"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 var (
@@ -308,20 +310,35 @@ func (ci *client) GetData(ctx context.Context, knitid string, handler func(FileE
 	})
 }
 
-func (c *client) FindData(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+func (c *client) FindData(ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apipath("data"), nil)
 	if err != nil {
 		return nil, err
 	}
+
+	// set query values
+	q := req.URL.Query()
+
+	sinceStr := ""
+	if since != (time.Time{}) {
+		sinceStr = since.Format(rfctime.RFC3339DateTimeFormatZ)
+	}
+	q.Add("since", sinceStr)
+
+	durationStr := ""
+	if duration != 0 {
+		durationStr = duration.String()
+	}
+	q.Add("duration", durationStr)
+
 	tagcount := len(tags)
 	if 0 < tagcount {
-		q := req.URL.Query()
 		for _, t := range tags {
 			q.Add("tag", fmt.Sprintf("%s:%s", t.Key, t.Value))
 		}
-		req.URL.RawQuery = q.Encode()
 	}
+	req.URL.RawQuery = q.Encode()
 
 	resp, err := c.httpclient.Do(req)
 	if err != nil {

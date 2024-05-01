@@ -24,11 +24,13 @@ import (
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
-func TestData_GetKnitIdByTags(t *testing.T) {
+func TestData_GetKnitIdByDataFindQuery(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 
 	type when struct {
-		tags []kdb.Tag
+		tags     []kdb.Tag
+		since    string
+		duration string
 	}
 	type then struct {
 		knitId []string
@@ -465,6 +467,87 @@ func TestData_GetKnitIdByTags(t *testing.T) {
 				then{knitId: []string{}}, // empty!
 			},
 
+			// since and duration
+			`when querying by "since", it returns data whose timestamp is equal or later "since"`: {
+				when{
+					since: "2022-11-13T13:15:16.678+09:00", // later than oldTimestamp earlier than newTimesamp
+				},
+				then{
+					knitId: []string{
+						Padding36("knit-a-and-b-new-aborting"),
+						Padding36("knit-a-and-b-new-completing"),
+						Padding36("knit-a-and-b-new-deactivated"),
+						Padding36("knit-a-and-b-new-done"),
+						Padding36("knit-a-and-b-new-failed"),
+						Padding36("knit-a-and-b-new-invalidated"),
+						Padding36("knit-a-and-b-new-ready"),
+						Padding36("knit-a-and-b-new-running"),
+						Padding36("knit-a-and-b-new-starting"),
+						Padding36("knit-a-and-b-new-waiting"),
+						Padding36("knit-b-and-c-new-aborting"),
+						Padding36("knit-b-and-c-new-completing"),
+						Padding36("knit-b-and-c-new-deactivated"),
+						Padding36("knit-b-and-c-new-done"),
+						Padding36("knit-b-and-c-new-failed"),
+						Padding36("knit-b-and-c-new-invalidated"),
+						Padding36("knit-b-and-c-new-ready"),
+						Padding36("knit-b-and-c-new-running"),
+						Padding36("knit-b-and-c-new-starting"),
+						Padding36("knit-b-and-c-new-waiting"),
+						Padding36("knit-no-tags-new-aborting"),
+						Padding36("knit-no-tags-new-completing"),
+						Padding36("knit-no-tags-new-deactivated"),
+						Padding36("knit-no-tags-new-done"),
+						Padding36("knit-no-tags-new-failed"),
+						Padding36("knit-no-tags-new-invalidated"),
+						Padding36("knit-no-tags-new-ready"),
+						Padding36("knit-no-tags-new-running"),
+						Padding36("knit-no-tags-new-starting"),
+						Padding36("knit-no-tags-new-waiting"),
+					},
+				},
+			},
+			`when querying by "since" and "duration", it returns data whose timestamp is equal or later "since + duration"`: {
+				when{
+					since:    "2022-11-12T12:14:15.678+09:00", // 1 hour earlier than oldTimesamp
+					duration: "1h",                            // 1 hour
+				},
+				then{
+					knitId: []string{
+						Padding36("knit-a-and-b-old-aborting"),
+						Padding36("knit-a-and-b-old-completing"),
+						Padding36("knit-a-and-b-old-deactivated"),
+						Padding36("knit-a-and-b-old-done"),
+						Padding36("knit-a-and-b-old-failed"),
+						Padding36("knit-a-and-b-old-invalidated"),
+						Padding36("knit-a-and-b-old-ready"),
+						Padding36("knit-a-and-b-old-running"),
+						Padding36("knit-a-and-b-old-starting"),
+						Padding36("knit-a-and-b-old-waiting"),
+						Padding36("knit-b-and-c-old-aborting"),
+						Padding36("knit-b-and-c-old-completing"),
+						Padding36("knit-b-and-c-old-deactivated"),
+						Padding36("knit-b-and-c-old-done"),
+						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-ready"),
+						Padding36("knit-b-and-c-old-running"),
+						Padding36("knit-b-and-c-old-starting"),
+						Padding36("knit-b-and-c-old-waiting"),
+						Padding36("knit-no-tags-old-aborting"),
+						Padding36("knit-no-tags-old-completing"),
+						Padding36("knit-no-tags-old-deactivated"),
+						Padding36("knit-no-tags-old-done"),
+						Padding36("knit-no-tags-old-failed"),
+						Padding36("knit-no-tags-old-invalidated"),
+						Padding36("knit-no-tags-old-ready"),
+						Padding36("knit-no-tags-old-running"),
+						Padding36("knit-no-tags-old-starting"),
+						Padding36("knit-no-tags-old-waiting"),
+					},
+				},
+			},
+
 			// combination
 			`when querying by user tag & "knit#transient: failed", it returns data which have all of the tags`: {
 				when{
@@ -615,7 +698,7 @@ func TestData_GetKnitIdByTags(t *testing.T) {
 				}
 				testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-				actual := try.To(testee.GetKnitIdByTags(ctx, testcase.when.tags)).OrFatal(t)
+				actual := try.To(testee.GetKnitIdByDataFindQuery(ctx, testcase.when.tags, testcase.since, testcase.duration)).OrFatal(t)
 
 				if !cmp.SliceEq(actual, testcase.then.knitId) {
 					t.Errorf(
@@ -696,12 +779,14 @@ func TestData_GetKnitIdByTags(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByTags(
+			actual := try.To(testee.GetKnitIdByDataFindQuery(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
 					tagsetAll[2],
 				},
+				"2022-10-11T12:13:14.567+09:00",
+				"1h",
 			)).OrFatal(t)
 
 			expected := []string{} // empty!
@@ -720,12 +805,14 @@ func TestData_GetKnitIdByTags(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByTags(
+			actual := try.To(testee.GetKnitIdByDataFindQuery(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
 					tagsetAll[0],
 				},
+				"2022-10-11T12:13:14.567+09:00",
+				"1h",
 			)).OrFatal(t)
 
 			expected := []string{} // empty!
@@ -744,12 +831,14 @@ func TestData_GetKnitIdByTags(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByTags(
+			actual := try.To(testee.GetKnitIdByDataFindQuery(
 				ctx,
 				[]kdb.Tag{
 					kdb.NewTimestampTag(oldTimestamp),
 					tagsetAll[2],
 				},
+				"2022-10-11T12:13:14.567+09:00",
+				"1h",
 			)).OrFatal(t)
 
 			expected := []string{} // empty!
@@ -817,11 +906,13 @@ func TestData_GetKnitIdByTags(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByTags(
+			actual := try.To(testee.GetKnitIdByDataFindQuery(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
 				},
+				"2022-10-11T12:13:14.567+09:00",
+				"1h",
 			)).OrFatal(t)
 
 			expected := []string{} // empty!
@@ -839,11 +930,13 @@ func TestData_GetKnitIdByTags(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByTags(
+			actual := try.To(testee.GetKnitIdByDataFindQuery(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
 				},
+				"2022-10-11T12:13:14.567+09:00",
+				"1h",
 			)).OrFatal(t)
 
 			expected := []string{} // empty!

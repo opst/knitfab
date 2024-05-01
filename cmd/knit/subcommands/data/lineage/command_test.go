@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
@@ -263,7 +264,7 @@ func TestTraceDownStream(t *testing.T) {
 			// Store arguments and return values for each call
 			nthData := 0
 			mock.Impl.FindData = func(
-				ctx context.Context, tags []apitag.Tag,
+				ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration,
 			) ([]apidata.Detail, error) {
 				ret := when.FindDataReturns[nthData]
 				nthData += 1
@@ -796,7 +797,7 @@ func TestTraceDownStream(t *testing.T) {
 
 	t.Run("When FindData returns Empty array it returns ErrNotFoundData", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{}, nil
 		}
 		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -815,7 +816,7 @@ func TestTraceDownStream(t *testing.T) {
 	expectedError := errors.New("fake error")
 	t.Run("When FindData fails, it returns the error that contains that error ", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{}, expectedError
 		}
 		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -834,7 +835,7 @@ func TestTraceDownStream(t *testing.T) {
 	t.Run("When GetRun fails, it returns the error that contains that error", func(t *testing.T) {
 		mock := mock.New(t)
 		knitId := "knitId-test"
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{
 				dummyData(knitId, "run1", "run2"),
 			}, nil
@@ -872,7 +873,7 @@ func TestTraceUpStream(t *testing.T) {
 			// Store arguments and return values for each call
 			nthData := 0
 			mock.Impl.FindData = func(
-				ctx context.Context, tags []apitag.Tag) (
+				ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) (
 				[]apidata.Detail, error) {
 				ret := when.FindDataReturns[nthData]
 				nthData += 1
@@ -1274,7 +1275,7 @@ func TestTraceUpStream(t *testing.T) {
 
 	t.Run("When FindData returns Empty array it returns ErrNotFoundData", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{}, nil
 		}
 		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -1293,7 +1294,7 @@ func TestTraceUpStream(t *testing.T) {
 	expectedError := errors.New("fake error")
 	t.Run("When FindData fails, it returns the error that contains that error ", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{}, expectedError
 		}
 		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -1315,7 +1316,7 @@ func TestTraceUpStream(t *testing.T) {
 			return apirun.Detail{}, expectedError
 		}
 		knitId := "knitId-test"
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{
 				dummyData(knitId, "run0", "run2"),
 			}, nil

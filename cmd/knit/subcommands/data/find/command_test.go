@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
@@ -80,6 +81,8 @@ func TestFindDataCommand(t *testing.T) {
 				_ krst.KnitClient,
 				tags []apitags.Tag,
 				transient data_find.TransientValue,
+				since time.Time,
+				duration time.Duration,
 			) ([]apidata.Detail, error) {
 				if !cmp.SliceContentEqWith(
 					tags, then.tags,
@@ -190,7 +193,6 @@ func TestFindDataCommand(t *testing.T) {
 		},
 	))
 
-	// for name, testcase := range map[string]testcase{
 	t.Run("when '--transient true' is passed, it should call task with TransientOnly", theory(
 		when{
 			flag: data_find.Flag{
@@ -319,6 +321,41 @@ func TestFindDataCommand(t *testing.T) {
 				{Key: kdb.KeyKnitId, Value: "some-knit-id"},
 			},
 			transient: data_find.TransientExclude,
+		},
+	))
+
+	{
+		timestamp := time.Date(
+			2024, 4, 22, 0, 00, 00, 000000000,
+			time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+		)
+		since := kflag.LooseRFC3339(timestamp)
+		t.Run("when since and duration are passed, it should call task with since and duration", theory(
+			when{
+				flag: data_find.Flag{
+					Transient: "both",
+					Since:     &since,
+					Duration:  time.Duration(2 * time.Hour),
+				},
+				presentation: presentationItems,
+			},
+			then{
+				err:       nil,
+				tags:      []apitags.Tag{},
+				transient: data_find.TransientAny,
+			},
+		))
+	}
+
+	t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
+		when{
+			flag: data_find.Flag{
+				Duration: time.Duration(2 * time.Hour),
+			},
+			presentation: presentationItems,
+		},
+		then{
+			err: kcmd.ErrUsage,
 		},
 	))
 	t.Run("when task returns no data, it should be done", theory(
@@ -640,12 +677,12 @@ func TestFindData(t *testing.T) {
 			ctx := context.Background()
 			logger := logger.Null()
 			mock := mock.New(t)
-			mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag) ([]apidata.Detail, error) {
+			mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s time.Time, d time.Duration) ([]apidata.Detail, error) {
 				return testcase.given, nil
 			}
 
 			actual := try.To(data_find.RunFindData(
-				ctx, logger, mock, testcase.when.tags, testcase.when.transientFlag,
+				ctx, logger, mock, testcase.when.tags, testcase.when.transientFlag, time.Time{}, time.Duration(0),
 			)).OrFatal(t)
 
 			{
@@ -678,11 +715,10 @@ func TestFindData(t *testing.T) {
 					len(mock.Calls.FindData),
 				)
 			}
-
-			if !cmp.SliceContentEq(mock.Calls.FindData[0], testcase.when.tags) {
+			if !cmp.SliceContentEq(mock.Calls.FindData[0].Tags, testcase.when.tags) {
 				t.Errorf(
 					"wrong tags are passed into client:\nactual = %+v\nexpected = %+v",
-					mock.Calls.FindData[0], testcase.when.tags,
+					mock.Calls.FindData[0].Tags, testcase.when.tags,
 				)
 			}
 		})
@@ -694,12 +730,12 @@ func TestFindData(t *testing.T) {
 		expectedError := errors.New("fake error")
 
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s time.Time, d time.Duration) ([]apidata.Detail, error) {
 			return nil, expectedError
 		}
 
 		actual, err := data_find.RunFindData(
-			ctx, logger, mock, []apitags.Tag{}, data_find.TransientAny,
+			ctx, logger, mock, []apitags.Tag{}, data_find.TransientAny, time.Time{}, time.Duration(0),
 		)
 
 		if len(actual) != 0 {

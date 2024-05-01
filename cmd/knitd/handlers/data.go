@@ -30,7 +30,10 @@ func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
 			return apierr.InternalServerError(err)
 		}
 
-		knitIds, err := dbData.GetKnitIdByTags(ctx, tags)
+		since := c.QueryParam("since")
+		duration := c.QueryParam("duration")
+
+		knitIds, err := dbData.GetKnitIdByDataFindQuery(ctx, tags, since, duration)
 		if err != nil {
 			return apierr.InternalServerError(err)
 		}
