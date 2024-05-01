@@ -29,7 +29,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 
 	t.Run("When data is received from the database, it should be converted to JSON format", func(t *testing.T) {
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.GetKnitIdByDataFindQuery = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
 			return []string{"knit-1", "knit-2"}, nil
 		}
 		mckdbdata.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
@@ -167,7 +167,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 		expectedDuration := "2h30m45s"
 
 		if !cmp.SliceEqWith(
-			mckdbdata.Calls.GetKnitIdByDataFindQuery,
+			mckdbdata.Calls.Find,
 			[]struct {
 				Tags     []kdb.Tag
 				Since    string
@@ -190,7 +190,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 					a.Since == b.Since && a.Duration == b.Duration
 			},
 		) {
-			t.Error("DataInterface.GetKnitIdByTags did not call with correct userTag args.")
+			t.Error("DataInterface.Find did not call with correct userTag args.")
 		}
 
 		expected := []apidata.Detail{
@@ -307,7 +307,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 		knitId := []string{}
 
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.GetKnitIdByDataFindQuery = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
 			d := knitId
 			return d, nil
 		}
@@ -370,7 +370,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 
 	t.Run("When Process of obtaining knitId from specified tag encounters an internal error, status code should be 500", func(t *testing.T) {
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.GetKnitIdByDataFindQuery = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
 			return nil, errors.New("Test Internal Error")
 		}
 
@@ -393,7 +393,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 		knitId := []string{"knit-1"}
 
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.GetKnitIdByDataFindQuery = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
 			d := knitId
 			return d, nil
 		}

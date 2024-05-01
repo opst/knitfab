@@ -10,17 +10,17 @@ import (
 
 type DataInterface struct {
 	Impl struct {
-		Get                      func(context.Context, []string) (map[string]kdb.KnitData, error)
-		GetKnitIdByDataFindQuery func(context.Context, []kdb.Tag, string, string) ([]string, error)
-		UpdateTag                func(context.Context, string, kdb.TagDelta) error
-		NewAgent                 func(context.Context, string, kdb.DataAgentMode, time.Duration) (kdb.DataAgent, error)
-		RemoveAgent              func(context.Context, string) error
-		PickAndRemoveAgent       func(context.Context, kdb.DataAgentCursor, func(kdb.DataAgent) (bool, error)) (kdb.DataAgentCursor, error)
-		GetAgentName             func(context.Context, string, []kdb.DataAgentMode) ([]string, error)
+		Get                func(context.Context, []string) (map[string]kdb.KnitData, error)
+		Find               func(context.Context, []kdb.Tag, string, string) ([]string, error)
+		UpdateTag          func(context.Context, string, kdb.TagDelta) error
+		NewAgent           func(context.Context, string, kdb.DataAgentMode, time.Duration) (kdb.DataAgent, error)
+		RemoveAgent        func(context.Context, string) error
+		PickAndRemoveAgent func(context.Context, kdb.DataAgentCursor, func(kdb.DataAgent) (bool, error)) (kdb.DataAgentCursor, error)
+		GetAgentName       func(context.Context, string, []kdb.DataAgentMode) ([]string, error)
 	}
 	Calls struct {
-		Get                      CallLog[struct{ KnitId []string }]
-		GetKnitIdByDataFindQuery CallLog[struct {
+		Get  CallLog[struct{ KnitId []string }]
+		Find CallLog[struct {
 			Tags     []kdb.Tag
 			Since    string
 			Duration string
@@ -59,16 +59,16 @@ func (di *DataInterface) Get(ctx context.Context, knitId []string) (map[string]k
 	panic(errors.New("it should no be called"))
 }
 
-func (di *DataInterface) GetKnitIdByDataFindQuery(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
-	di.Calls.GetKnitIdByDataFindQuery = append(di.Calls.GetKnitIdByDataFindQuery, struct {
+func (di *DataInterface) Find(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+	di.Calls.Find = append(di.Calls.Find, struct {
 		Tags     []kdb.Tag
 		Since    string
 		Duration string
 	}{
 		Tags: tags, Since: since, Duration: duration,
 	})
-	if di.Impl.GetKnitIdByDataFindQuery != nil {
-		return di.Impl.GetKnitIdByDataFindQuery(ctx, tags, since, duration)
+	if di.Impl.Find != nil {
+		return di.Impl.Find(ctx, tags, since, duration)
 	}
 	panic(errors.New("it should no be called"))
 }

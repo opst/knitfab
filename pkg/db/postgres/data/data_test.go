@@ -24,7 +24,7 @@ import (
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
-func TestData_GetKnitIdByDataFindQuery(t *testing.T) {
+func TestData_Find(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 
 	type when struct {
@@ -698,7 +698,7 @@ func TestData_GetKnitIdByDataFindQuery(t *testing.T) {
 				}
 				testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-				actual := try.To(testee.GetKnitIdByDataFindQuery(ctx, testcase.when.tags, testcase.since, testcase.duration)).OrFatal(t)
+				actual := try.To(testee.Find(ctx, testcase.when.tags, testcase.since, testcase.duration)).OrFatal(t)
 
 				if !cmp.SliceEq(actual, testcase.then.knitId) {
 					t.Errorf(
@@ -779,7 +779,7 @@ func TestData_GetKnitIdByDataFindQuery(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByDataFindQuery(
+			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
@@ -805,7 +805,7 @@ func TestData_GetKnitIdByDataFindQuery(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByDataFindQuery(
+			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
@@ -831,7 +831,7 @@ func TestData_GetKnitIdByDataFindQuery(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByDataFindQuery(
+			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					kdb.NewTimestampTag(oldTimestamp),
@@ -906,7 +906,7 @@ func TestData_GetKnitIdByDataFindQuery(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByDataFindQuery(
+			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
@@ -930,7 +930,7 @@ func TestData_GetKnitIdByDataFindQuery(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-			actual := try.To(testee.GetKnitIdByDataFindQuery(
+			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},

@@ -188,7 +188,7 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 	return result, nil
 }
 
-func (d *dataPG) getKnitIdByDataFindQuery(ctx context.Context, conn kpool.Queryer, query dataFindQuery) ([]string, error) {
+func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQuery) ([]string, error) {
 
 	knitIds := []string{}
 
@@ -324,7 +324,7 @@ func (d *dataPG) getKnitIdByDataFindQuery(ctx context.Context, conn kpool.Querye
 	return knitIds, nil
 }
 
-func (d *dataPG) makeDataFindQuery(tag []kdb.Tag, since string, duration string) *dataFindQuery {
+func makeDataFindQuery(tag []kdb.Tag, since string, duration string) *dataFindQuery {
 
 	// Remove whitespace, remove duplicates, and extract system tags for incoming tags.
 	// If more than one system tag is specified or an undefined system tag is specified,
@@ -395,22 +395,21 @@ func (d *dataPG) makeDataFindQuery(tag []kdb.Tag, since string, duration string)
 
 }
 
-func (d *dataPG) GetKnitIdByDataFindQuery(ctx context.Context, tag []kdb.Tag, since string, duration string) ([]string, error) {
-
-	conn, err := d.pool.Acquire(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-
-	query := d.makeDataFindQuery(tag, since, duration)
+func (d *dataPG) Find(ctx context.Context, tag []kdb.Tag, since string, duration string) ([]string, error) {
+	query := makeDataFindQuery(tag, since, duration)
 	if query == nil {
 		// When nil returns, it returns an empty list
 		// because it is known that
 		// there is no corresponding data for the specified tag combination.
 		return []string{}, nil
 	}
-	return d.getKnitIdByDataFindQuery(ctx, conn, *query)
+
+	conn, err := d.pool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+	return d.find(ctx, conn, *query)
 }
 
 type dataFindQuery struct {
