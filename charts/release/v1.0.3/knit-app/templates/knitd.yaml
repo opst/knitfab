@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.knitd.service }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knitd
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knitd
+    app.kubernetes.io/part-of: knitfab
+spec:
+  selector:
+    app.kubernetes.io/name: {{ .Values.knitd.service }}
+    app.kubernetes.io/component: {{ .Values.knitd.component }}
+    app.kubernetes.io/part-of: knitfab
+  type: NodePort
+  ports:
+    - name: knitd
+      protocol: TCP
+      port: 8080
+      nodePort: {{ .Values.knitd.port }}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.knitd.component }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knitd
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.knitd.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: {{ .Values.knitd.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.knitd.component }}
+      app.kubernetes.io/component: {{ .Values.knitd.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.knitd.component }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.knitd.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      containers:
+        - name: knitd
+          image: "{{ .Values.imageRepository }}/{{ .Values.knitd.image }}:{{ .Chart.AppVersion }}"
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: password
+          ports:
+            - containerPort: 8080
+          args: [
+            '--config-path', '/knit/configs/knitd.yaml',
+            '--cert', '/knit/certs/tls.crt',
+            '--certkey', '/knit/certs/tls.key',
+          ]
+          volumeMounts:
+            - name: config
+              mountPath: /knit/configs
+              readOnly: true
+            - name: cert
+              mountPath: /knit/certs
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.knitd.component }}-config
+        - name: cert
+          secret:
+            secretName: {{ .Values.certs.secret.server }}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.knitd.component }}-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.knitd.component }}-config
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.knitd.component }}
+    app.kubernetes.io/part-of: knitfab
+data:
+  knitd.yaml: |
+{{ tpl (.Files.Get "assets/knitd/knitd.yaml.tpl") . | indent 4 }}

@@ -33,7 +33,7 @@ func Reader(root string) echo.HandlerFunc {
 		prog := archive.GoTar(ctx, root, gzw)
 		<-prog.Done()
 		if err := prog.Error(); err != nil {
-			return apierr.InternalServerError(err)
+			return err
 		}
 		gzw.Close()
 		resp.Header().Add("x-checksum-md5", hex.EncodeToString(chw.Sum()))
