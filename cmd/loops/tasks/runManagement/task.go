@@ -5,8 +5,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
+	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 )
 
@@ -28,31 +30,48 @@ func Task(
 	irun kdb.RunInterface,
 	imageManager manager.Manager,
 	pseudoManagers map[kdb.PseudoPlanName]manager.Manager,
+	hook hook.Hook[api_runs.Detail],
 ) recurring.Task[kdb.RunCursor] {
 	return func(ctx context.Context, value kdb.RunCursor) (kdb.RunCursor, bool, error) {
-		nextCursor, err := irun.PickAndSetStatus(
+		nextCursor, statusChanged, err := irun.PickAndSetStatus(
 			ctx, value,
 			// The last Status set by PickAndSetStatus() is the return value of func() below.
 			func(r kdb.Run) (kdb.KnitRunStatus, error) {
-				if r.PlanBody.Pseudo != nil {
+
+				var newStatus kdb.KnitRunStatus
+				var err error
+				if r.PlanBody.Pseudo == nil {
+					newStatus, err = imageManager(ctx, hook, r)
+				} else {
 					// m is a Manager for a specific PseudoPlan
 					m, ok := pseudoManagers[r.PlanBody.Pseudo.Name]
 					if !ok {
 						return r.Status, nil
 					}
-					return m(ctx, r)
+					newStatus, err = m(ctx, hook, r)
 				}
-				return imageManager(ctx, r)
+				return newStatus, err
 			},
 		)
+
+		if statusChanged {
+			if newRuns, _ := irun.Get(ctx, []string{nextCursor.Head}); newRuns != nil {
+				if r, ok := newRuns[nextCursor.Head]; ok {
+					hookValue := api_runs.ComposeDetail(r)
+					hook.After(hookValue)
+				}
+			}
+		}
+
+		curoseMoved := !nextCursor.Equal(value)
 
 		// Context cancelled/deadline exceeded are okay. It will be retried.
 		if err == nil ||
 			errors.Is(err, context.Canceled) ||
 			errors.Is(err, context.DeadlineExceeded) ||
 			errors.Is(err, kdb.ErrInvalidRunStateChanging) {
-			return nextCursor, !value.Equal(nextCursor), nil
+			return nextCursor, curoseMoved, nil
 		}
-		return nextCursor, !value.Equal(nextCursor), err
+		return nextCursor, curoseMoved, err
 	}
 }
