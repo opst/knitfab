@@ -99,23 +99,6 @@ func TestRFC3339(t *testing.T) {
 		})
 	})
 }
-func Test_StringWithLocalTimeZone(t *testing.T) {
-	t.Run("it should return local time zone when passed format without local time zone", func(t *testing.T) {
-		s := "2024-04-02"
-		testee := rfctime.RFC3339(try.To(time.Parse(time.DateOnly, s)).OrFatal(t))
-
-		actual, err := testee.StringWithLocalTimeZone()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		expected := "2024-04-02T09:00:00+09:00"
-		if actual != expected {
-			t.Errorf("unmatch: (actual, expected) = (%s, %s)", actual, expected)
-		}
-	})
-}
-
 func Test_ParseLooseRFC3339(t *testing.T) {
 	type when struct {
 		args []string
@@ -165,11 +148,11 @@ func Test_ParseLooseRFC3339(t *testing.T) {
 				),
 				time.Date(
 					2024, 4, 22, 12, 34, 56, 987654321,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					time.Local,
 				),
 				time.Date(
 					2024, 4, 22, 12, 34, 56, 987654321,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					time.Local,
 				),
 			},
 		},
@@ -188,20 +171,20 @@ func Test_ParseLooseRFC3339(t *testing.T) {
 		then{
 			expected: []time.Time{
 				time.Date(
-					2024, 4, 22, 12, 34, 56, 000000000,
+					2024, 4, 22, 12, 34, 56, 0,
 					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
 				),
 				time.Date(
-					2024, 4, 22, 12, 34, 56, 000000000,
+					2024, 4, 22, 12, 34, 56, 0,
 					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
 				),
 				time.Date(
-					2024, 4, 22, 12, 34, 56, 000000000,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					2024, 4, 22, 12, 34, 56, 0,
+					time.Local,
 				),
 				time.Date(
-					2024, 4, 22, 12, 34, 56, 000000000,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					2024, 4, 22, 12, 34, 56, 0,
+					time.Local,
 				),
 			},
 		},
@@ -219,20 +202,20 @@ func Test_ParseLooseRFC3339(t *testing.T) {
 		then{
 			expected: []time.Time{
 				time.Date(
-					2024, 4, 22, 12, 34, 00, 000000000,
+					2024, 4, 22, 12, 34, 00, 0,
 					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
 				),
 				time.Date(
-					2024, 4, 22, 12, 34, 00, 000000000,
+					2024, 4, 22, 12, 34, 00, 0,
 					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
 				),
 				time.Date(
-					2024, 4, 22, 12, 34, 00, 000000000,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					2024, 4, 22, 12, 34, 00, 0,
+					time.Local,
 				),
 				time.Date(
-					2024, 4, 22, 12, 34, 00, 000000000,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					2024, 4, 22, 12, 34, 00, 0,
+					time.Local,
 				),
 			},
 		},
@@ -250,20 +233,20 @@ func Test_ParseLooseRFC3339(t *testing.T) {
 		then{
 			expected: []time.Time{
 				time.Date(
-					2024, 4, 22, 12, 00, 00, 000000000,
+					2024, 4, 22, 12, 00, 00, 0,
 					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
 				),
 				time.Date(
-					2024, 4, 22, 12, 00, 00, 000000000,
+					2024, 4, 22, 12, 00, 00, 0,
 					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
 				),
 				time.Date(
-					2024, 4, 22, 12, 00, 00, 000000000,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					2024, 4, 22, 12, 00, 00, 0,
+					time.Local,
 				),
 				time.Date(
-					2024, 4, 22, 12, 00, 00, 000000000,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					2024, 4, 22, 12, 00, 00, 0,
+					time.Local,
 				),
 			},
 		},
@@ -279,12 +262,12 @@ func Test_ParseLooseRFC3339(t *testing.T) {
 		then{
 			expected: []time.Time{
 				time.Date(
-					2024, 4, 22, 00, 00, 00, 000000000,
+					2024, 4, 22, 00, 00, 00, 0,
 					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
 				),
 				time.Date(
-					2024, 4, 22, 0, 00, 00, 000000000,
-					time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
+					2024, 4, 22, 0, 00, 00, 0,
+					time.Local,
 				),
 			},
 		},

@@ -24,6 +24,16 @@ import (
 // meaningless value
 type Unit interface{}
 
+// struct that contains the arguments for FindRun
+type FindRunParameter struct {
+	PlanId    []string
+	KnitIdIn  []string
+	KnitIdOut []string
+	Status    []string
+	Since     *time.Time
+	Duration  *time.Duration
+}
+
 var ValUnit Unit = struct{}{}
 
 type KnitClient interface {
@@ -205,33 +215,32 @@ type KnitClient interface {
 	// - error
 	GetRunLog(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
 
-	// FindRun find run with given planId, knitId, status, since and duration.
+	// FindRun find run with RunFindQuery.
 
 	// Args
 	//
 	// - context.Context
 	//
-	// - []string: planId which run to be found has
+	// - RunFindQuery :
 	//
-	// - []string: knitId which run to be found has as input
+	//   - []string: planId which run to be found has
 	//
-	// - []string: knitId which run to be found has as output
+	//   - []string: knitId which run to be found has as input
 	//
-	// - []string: status which run to be found is
+	//   - []string: knitId which run to be found has as output
 	//
-	// - time.Time: time which updated time of run to be found is after
+	//   - []string: status which run to be found is
 	//
-	// - time.duration: duration which updated time of run to be found is within
+	//   - time.Time: time which updated time of run to be found is later
+	//
+	//   - time.duration: duration which updated time of run to be found is within
 	//
 	// Returns
 	//
 	// - []apirun.Detail: metadata of found run
 	//
 	// - error
-	FindRun(
-		ctx context.Context, planId []string, knitIdIn []string, knitIdOut []string,
-		status []string, since time.Time, duration time.Duration,
-	) ([]apirun.Detail, error)
+	FindRun(context.Context, FindRunParameter) ([]apirun.Detail, error)
 
 	// Abort abort run with given runId.
 	//

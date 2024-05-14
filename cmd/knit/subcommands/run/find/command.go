@@ -32,12 +32,7 @@ type Command struct {
 		ctx context.Context,
 		log *log.Logger,
 		client krst.KnitClient,
-		planId []string,
-		knitIdIn []string,
-		knitIdOut []string,
-		status []string,
-		since time.Time,
-		duration time.Duration,
+		parameter krst.FindRunParameter,
 	) ([]apirun.Detail, error)
 }
 
@@ -46,12 +41,7 @@ func WithTask(
 		ctx context.Context,
 		log *log.Logger,
 		client krst.KnitClient,
-		planId []string,
-		knitIdIn []string,
-		knitIdOut []string,
-		status []string,
-		since time.Time,
-		duration time.Duration,
+		parameter krst.FindRunParameter,
 	) ([]apirun.Detail, error),
 ) func(*Command) *Command {
 	return func(dfc *Command) *Command {
@@ -98,7 +88,7 @@ If the same flags except 'since' and 'duration' are specified multiple times, it
 
 Since targets Runs that have been updated at equal to or later than since.
 The since can be described in RFC3339 date-time format, and it is also possible to omit 
-sub-seconds,seconds, minutes, and hours, in the description.
+sub-seconds, seconds, minutes, and hours, in the description.
 If the time zone is omitted, the local time zone is applied. 
 When including a date and time, the following characters are allowed as delimiters between the date and time: "T" or space.
 
@@ -145,7 +135,16 @@ func (cmd *Command) Execute(
 		return fmt.Errorf("%w: since and duration must be specified together", kcmd.ErrUsage)
 	}
 
-	run, err := cmd.task(ctx, l, c, planId, knitIdIn, knitIdOut, status, since, duration)
+	parameter := krst.FindRunParameter{
+		PlanId:    planId,
+		KnitIdIn:  knitIdIn,
+		KnitIdOut: knitIdOut,
+		Status:    status,
+		Since:     &since,
+		Duration:  &duration,
+	}
+
+	run, err := cmd.task(ctx, l, c, parameter)
 	if err != nil {
 		return err
 	}
@@ -162,15 +161,9 @@ func RunFindRun(
 	ctx context.Context,
 	logger *log.Logger,
 	client krst.KnitClient,
-	planId []string,
-	knitIdIn []string,
-	knitIdOut []string,
-	status []string,
-	since time.Time,
-	duration time.Duration,
+	parameter krst.FindRunParameter,
 ) ([]apirun.Detail, error) {
-
-	result, err := client.FindRun(ctx, planId, knitIdIn, knitIdOut, status, since, duration)
+	result, err := client.FindRun(ctx, parameter)
 	if err != nil {
 		return nil, err
 	}

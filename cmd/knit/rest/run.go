@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	"github.com/opst/knitfab/pkg/utils/rfctime"
@@ -67,12 +66,7 @@ func (c *client) GetRunLog(ctx context.Context, runId string, follow bool) (io.R
 
 func (c *client) FindRun(
 	ctx context.Context,
-	planId []string,
-	knitIdIn []string,
-	knitIdOut []string,
-	status []string,
-	since time.Time,
-	duration time.Duration,
+	query FindRunParameter,
 ) ([]apirun.Detail, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apipath("runs"), nil)
@@ -80,30 +74,23 @@ func (c *client) FindRun(
 		return nil, err
 	}
 
-	var sinceStr string
-	if since != (time.Time{}) {
-		sinceStr = since.Format(rfctime.RFC3339DateTimeFormatZ)
-	} else {
-		sinceStr = ""
-	}
-
-	var durationStr string
-	if duration != 0 {
-		durationStr = duration.String()
-	} else {
-		durationStr = ""
-	}
-
 	// set query values
 	q := req.URL.Query()
 	paramMap := map[string][]string{
-		"plan":         planId,
-		"knitIdInput":  knitIdIn,
-		"knitIdOutput": knitIdOut,
-		"status":       status,
-		"since":        {sinceStr},
-		"duration":     {durationStr},
+		"plan":         query.PlanId,
+		"knitIdInput":  query.KnitIdIn,
+		"knitIdOutput": query.KnitIdOut,
+		"status":       query.Status,
 	}
+
+	if query.Since != nil {
+		paramMap["since"] = []string{query.Since.Format(rfctime.RFC3339DateTimeFormatZ)}
+	}
+
+	if query.Duration != nil {
+		paramMap["duration"] = []string{query.Duration.String()}
+	}
+
 	for key, value := range paramMap {
 		if len(value) > 0 {
 			q.Add(key, strings.Join(value, ","))

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	handlers "github.com/opst/knitfab/cmd/knitd/handlers"
@@ -36,8 +37,12 @@ func TestRunFindHandler(t *testing.T) {
 			body  []apirun.Detail
 		}
 
-		dummySince := "2024-04-01T12:00:00+00:00"
-		dummyDuration := "2h30m45s"
+		dummyUpdatedSince := try.To(rfctime.ParseRFC3339DateTime(
+			"2024-04-01T12:00:00+00:00",
+		)).OrFatal(t).Time()
+		dummyUpdatedUntil := try.To(rfctime.ParseRFC3339DateTime(
+			"2024-04-01T12:00:00+00:00",
+		)).OrFatal(t).Time().Add(2*time.Hour + 30*time.Minute + 45*time.Second)
 
 		for name, testcase := range map[string]struct {
 			when
@@ -54,8 +59,8 @@ func TestRunFindHandler(t *testing.T) {
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
-						Since:        &dummySince,
-						Duration:     &dummyDuration,
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
@@ -411,8 +416,8 @@ func TestRunFindHandler(t *testing.T) {
 				},
 				then{
 					query: kdb.RunFindQuery{
-						Status: []kdb.KnitRunStatus{},
-						Since:  &dummySince,
+						Status:       []kdb.KnitRunStatus{},
+						UpdatedSince: &dummyUpdatedSince,
 					},
 					body: []apirun.Detail{},
 				},
@@ -425,9 +430,9 @@ func TestRunFindHandler(t *testing.T) {
 				},
 				then{
 					query: kdb.RunFindQuery{
-						Status:   []kdb.KnitRunStatus{},
-						Since:    &dummySince,
-						Duration: &dummyDuration,
+						Status:       []kdb.KnitRunStatus{},
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
@@ -442,8 +447,8 @@ func TestRunFindHandler(t *testing.T) {
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
-						Since:        &dummySince,
-						Duration:     &dummyDuration,
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
@@ -458,8 +463,8 @@ func TestRunFindHandler(t *testing.T) {
 						PlanId:       []string{"plan-x", "plan-y"},
 						OutputKnitId: []string{"out3", "out4"},
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
-						Since:        &dummySince,
-						Duration:     &dummyDuration,
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
@@ -471,11 +476,11 @@ func TestRunFindHandler(t *testing.T) {
 				},
 				then{
 					query: kdb.RunFindQuery{
-						PlanId:      []string{"plan-x", "plan-y"},
-						InputKnitId: []string{"in1", "in2"},
-						Status:      []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
-						Since:       &dummySince,
-						Duration:    &dummyDuration,
+						PlanId:       []string{"plan-x", "plan-y"},
+						InputKnitId:  []string{"in1", "in2"},
+						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
@@ -490,8 +495,8 @@ func TestRunFindHandler(t *testing.T) {
 						PlanId:       []string{"plan-x", "plan-y"},
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
-						Since:        &dummySince,
-						Duration:     &dummyDuration,
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
@@ -522,7 +527,7 @@ func TestRunFindHandler(t *testing.T) {
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
-						Since:        &dummySince,
+						UpdatedSince: &dummyUpdatedSince,
 					},
 					body: []apirun.Detail{},
 				},

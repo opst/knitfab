@@ -16,7 +16,6 @@ import (
 	xe "github.com/opst/knitfab/pkg/errors"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/combination"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 type NamingConvention interface {
@@ -530,35 +529,16 @@ func (m *runPG) Finish(ctx context.Context, runId string) error {
 
 func (m *runPG) find(
 	ctx context.Context, conn kpool.Conn,
-	planId []string,
-	knitIdIn []string,
-	knitIdOut []string,
-	status []kdb.KnitRunStatus,
-	since *string,
-	duration *string,
+	query kdb.RunFindQuery,
+	// planId []string,
+	// knitIdIn []string,
+	// knitIdOut []string,
+	// status []kdb.KnitRunStatus,
+	// updatedSince *time.Time,
+	// updatedUntil *time.Time,
 ) ([]string, error) {
 
 	runIds := []string{}
-
-	var updatedSince *time.Time
-	if since != nil {
-		t, err := rfctime.ParseRFC3339DateTime(*since)
-		if err != nil {
-			return nil, err
-		}
-		_t := t.Time()
-		updatedSince = &_t
-	}
-
-	var updatedUntil *time.Time
-	if duration != nil {
-		d, err := time.ParseDuration(*duration)
-		if err != nil {
-			return nil, err
-		}
-		_t := updatedSince.Add(d)
-		updatedUntil = &_t
-	}
 
 	rows, err := conn.Query(
 		ctx,
@@ -588,13 +568,13 @@ func (m *runPG) find(
 			and ($10::timestamp with time zone is null or "updated_at" <= $10::timestamp with time zone)
 		order by "updated_at", "run_id"
 		`,
-		len(planId) == 0, planId,
-		len(status) == 0, utils.Map(
-			status, func(s kdb.KnitRunStatus) string { return string(s) },
+		len(query.PlanId) == 0, query.PlanId,
+		len(query.Status) == 0, utils.Map(
+			query.Status, func(s kdb.KnitRunStatus) string { return string(s) },
 		),
-		len(knitIdIn) == 0, knitIdIn,
-		len(knitIdOut) == 0, knitIdOut,
-		updatedSince, updatedUntil,
+		len(query.InputKnitId) == 0, query.InputKnitId,
+		len(query.OutputKnitId) == 0, query.OutputKnitId,
+		query.UpdatedSince, query.UpdatedUntil,
 	)
 	if err != nil {
 		return nil, err
@@ -611,7 +591,7 @@ func (m *runPG) find(
 	return runIds, nil
 }
 
-func (m *runPG) Find(ctx context.Context, q kdb.RunFindQuery) ([]string, error) {
+func (m *runPG) Find(ctx context.Context, query kdb.RunFindQuery) ([]string, error) {
 
 	conn, err := m.pool.Acquire(ctx)
 	if err != nil {
@@ -619,7 +599,7 @@ func (m *runPG) Find(ctx context.Context, q kdb.RunFindQuery) ([]string, error) 
 	}
 	defer conn.Release()
 
-	return m.find(ctx, conn, q.PlanId, q.InputKnitId, q.OutputKnitId, q.Status, q.Since, q.Duration)
+	return m.find(ctx, conn, query)
 }
 
 func (m *runPG) Get(ctx context.Context, runId []string) (map[string]kdb.Run, error) {

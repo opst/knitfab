@@ -108,7 +108,7 @@ type mockKnitClient struct {
 		RegisterPlan       func(ctx context.Context, spec apiplans.PlanSpec) (apiplans.Detail, error)
 		GetRun             func(ctx context.Context, runId string) (apirun.Detail, error)
 		GetRunLog          func(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
-		FindRun            func(ctx context.Context, planId []string, knitIdIn []string, knitIdOut []string, status []string, since time.Time, duration time.Duration) ([]apirun.Detail, error)
+		FindRun            func(ctx context.Context, query rest.FindRunParameter) ([]apirun.Detail, error)
 		Abort              func(ctx context.Context, runId string) (apirun.Detail, error)
 		Tearoff            func(ctx context.Context, runId string) (apirun.Detail, error)
 		DeleteRun          func(ctx context.Context, runId string) error
@@ -282,23 +282,18 @@ func (m *mockKnitClient) GetRunLog(ctx context.Context, runId string, follow boo
 
 func (m *mockKnitClient) FindRun(
 	ctx context.Context,
-	planId []string,
-	knitIdIn []string,
-	knitIdOut []string,
-	status []string,
-	since time.Time,
-	duration time.Duration,
+	query rest.FindRunParameter,
 ) ([]apirun.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.FindRun = append(
 		m.Calls.FindRun,
-		FindRunArgs{planId, knitIdIn, knitIdOut, status, since, duration},
+		FindRunArgs{query.PlanId, query.KnitIdIn, query.KnitIdOut, query.Status, *query.Since, *query.Duration},
 	)
 	if m.Impl.FindRun == nil {
 		m.t.Fatal("FindRun is not ready to be called")
 	}
-	return m.Impl.FindRun(ctx, planId, knitIdIn, knitIdOut, status, since, duration)
+	return m.Impl.FindRun(ctx, query)
 }
 
 func (m *mockKnitClient) Abort(ctx context.Context, runId string) (apirun.Detail, error) {

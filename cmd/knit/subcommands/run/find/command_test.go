@@ -100,24 +100,19 @@ func TestFindCommand(t *testing.T) {
 				_ context.Context,
 				_ *log.Logger,
 				_ krst.KnitClient,
-				planId []string,
-				knitIdIn []string,
-				knitIdOut []string,
-				status []string,
-				since time.Time,
-				duration time.Duration,
+				parameter krst.FindRunParameter,
 			) ([]apirun.Detail, error) {
 
-				checkSliceEq(t, "planId", planId, ptr.SafeDeref(when.flag.PlanId))
-				checkSliceEq(t, "knitIdIn", knitIdIn, ptr.SafeDeref(when.flag.KnitIdIn))
-				checkSliceEq(t, "knitIdOut", knitIdOut, ptr.SafeDeref(when.flag.KnitIdOut))
-				checkSliceEq(t, "status", status, ptr.SafeDeref(when.flag.Status))
-				if since != time.Time(ptr.SafeDeref(when.flag.Since)) {
-					t.Errorf("wrong since: (actual, expected) != (%s, %s)", since, when.flag.Since)
+				checkSliceEq(t, "planId", parameter.PlanId, ptr.SafeDeref(when.flag.PlanId))
+				checkSliceEq(t, "knitIdIn", parameter.KnitIdIn, ptr.SafeDeref(when.flag.KnitIdIn))
+				checkSliceEq(t, "knitIdOut", parameter.KnitIdOut, ptr.SafeDeref(when.flag.KnitIdOut))
+				checkSliceEq(t, "status", parameter.Status, ptr.SafeDeref(when.flag.Status))
+				if *parameter.Since != time.Time(ptr.SafeDeref(when.flag.Since)) {
+					t.Errorf("wrong since: (actual, expected) != (%s, %s)", *parameter.Since, when.flag.Since)
 				}
 
-				if duration != when.flag.Duration {
-					t.Errorf("wrong duration: (actual, expected) != (%s, %s)", duration, when.flag.Duration)
+				if *parameter.Duration != when.flag.Duration {
+					t.Errorf("wrong duration: (actual, expected) != (%s, %s)", *parameter.Duration, when.flag.Duration)
 				}
 
 				return when.presentation, when.err
@@ -185,10 +180,7 @@ func TestFindCommand(t *testing.T) {
 	))
 
 	{
-		timestamp := time.Date(
-			2024, 4, 22, 0, 00, 00, 000000000,
-			time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
-		)
+		timestamp := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
 		since := kflag.LooseRFC3339(timestamp)
 		t.Run("when values for each flag are passed, it should call task with these values", theory(
 			When{
@@ -297,26 +289,27 @@ func TestRunFindRun(t *testing.T) {
 		log := logger.Null()
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
-			ctx context.Context, planId []string,
-			knitIdIn []string, knitIdOut []string, status []string, since time.Time, duration time.Duration,
+			ctx context.Context, query krst.FindRunParameter,
 		) ([]apirun.Detail, error) {
 			return expectedValue, nil
 		}
 
 		// arguments set up
-		planId := []string{"test-planId"}
-		inputKnitId := []string{"test-inputKnitId"}
-		outputKnitId := []string{"test-outputKnitId"}
-		status := []string{"test-status"}
-		since := time.Date(
-			2024, 4, 22, 12, 34, 56, 000000000,
-			time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
-		)
+		since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
 		duration := time.Duration(2 * time.Hour)
+
+		parameter := krst.FindRunParameter{
+			PlanId:    []string{"test-planId"},
+			KnitIdIn:  []string{"test-inputKnitId"},
+			KnitIdOut: []string{"test-outputKnitId"},
+			Status:    []string{"test-status"},
+			Since:     &since,
+			Duration:  &duration,
+		}
 
 		// test start
 		actual := try.To(run_find.RunFindRun(
-			ctx, log, mock, planId, inputKnitId, outputKnitId, status, since, duration)).OrFatal(t)
+			ctx, log, mock, parameter)).OrFatal(t)
 
 		//check actual
 		if !cmp.SliceContentEqWith(
@@ -338,26 +331,27 @@ func TestRunFindRun(t *testing.T) {
 
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
-			ctx context.Context, planId []string,
-			knitIdIn []string, knitIdOut []string, status []string, since time.Time, duration time.Duration,
+			ctx context.Context, query krst.FindRunParameter,
 		) ([]apirun.Detail, error) {
 			return expectedValue, expectedError
 		}
 
 		// argements set up
-		planId := []string{"test-planId"}
-		inputKnitId := []string{"test-inputKnitId"}
-		outputKnitId := []string{"test-outputKnitId"}
-		status := []string{"test-status"}
-		since := time.Date(
-			2024, 4, 22, 12, 34, 56, 000000000,
-			time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
-		)
+		since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
 		duration := time.Duration(2 * time.Hour)
+
+		parameter := krst.FindRunParameter{
+			PlanId:    []string{"test-planId"},
+			KnitIdIn:  []string{"test-inputKnitId"},
+			KnitIdOut: []string{"test-outputKnitId"},
+			Status:    []string{"test-status"},
+			Since:     &since,
+			Duration:  &duration,
+		}
 
 		// test start
 		actual, err := run_find.RunFindRun(
-			ctx, log, mock, planId, inputKnitId, outputKnitId, status, since, duration)
+			ctx, log, mock, parameter)
 
 		//check actual and err
 		if actual != nil {

@@ -1138,14 +1138,17 @@ func TestRun_Find_Add(t *testing.T) {
 		then
 	}
 
-	basedTime := "2023-04-01T13:34:45+00:00"
-	baseUpdatedAT := try.To(rfctime.ParseRFC3339DateTime(
-		basedTime,
+	dummyUpdatedSince := try.To(rfctime.ParseRFC3339DateTime(
+		"2023-04-01T13:34:45+00:00",
 	)).OrFatal(t).Time()
 
 	//  time.Duration type.
-	dummyDuration1 := "30s"
-	dummyDuration2 := "2h10m"
+	dummyUpdatedUntil_1 := try.To(rfctime.ParseRFC3339DateTime(
+		"2023-04-01T13:34:45+00:00",
+	)).OrFatal(t).Time().Add(30 * time.Minute)
+	dummyUpdatedUntil_2 := try.To(rfctime.ParseRFC3339DateTime(
+		"2023-04-01T13:34:45+00:00",
+	)).OrFatal(t).Time().Add(2*time.Hour + 10*time.Minute)
 
 	given := tables.Operation{
 		Plan: []tables.Plan{
@@ -1169,7 +1172,7 @@ func TestRun_Find_Add(t *testing.T) {
 					RunId:     th.Padding36("plan-1-pseudo/-1hour"),
 					PlanId:    th.Padding36("plan-1-pseudo"),
 					Status:    kdb.Done,
-					UpdatedAt: baseUpdatedAT.Add(-1 * time.Hour),
+					UpdatedAt: dummyUpdatedSince.Add(-1 * time.Hour),
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
@@ -1186,7 +1189,7 @@ func TestRun_Find_Add(t *testing.T) {
 					RunId:     th.Padding36("plan-1-pseudo/basedtime"),
 					PlanId:    th.Padding36("plan-1-pseudo"),
 					Status:    kdb.Done,
-					UpdatedAt: baseUpdatedAT,
+					UpdatedAt: dummyUpdatedSince,
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
@@ -1204,7 +1207,7 @@ func TestRun_Find_Add(t *testing.T) {
 					RunId:     th.Padding36("plan-1-pseudo/30s"),
 					PlanId:    th.Padding36("plan-1-pseudo"),
 					Status:    kdb.Failed,
-					UpdatedAt: baseUpdatedAT.Add(30 * time.Second),
+					UpdatedAt: dummyUpdatedSince.Add(30 * time.Second),
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
@@ -1222,7 +1225,7 @@ func TestRun_Find_Add(t *testing.T) {
 					RunId:     th.Padding36("plan-1-pseudo/1minute/1hour"),
 					PlanId:    th.Padding36("plan-1-pseudo"),
 					Status:    kdb.Failed,
-					UpdatedAt: baseUpdatedAT.Add(1*time.Minute + 1*time.Hour),
+					UpdatedAt: dummyUpdatedSince.Add(1*time.Minute + 1*time.Hour),
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
@@ -1240,8 +1243,8 @@ func TestRun_Find_Add(t *testing.T) {
 	for name, data := range map[string]testcase{
 		"when no querying, it should find all runIds": {
 			when: kdb.RunFindQuery{
-				Since:    nil,
-				Duration: nil,
+				UpdatedSince: nil,
+				UpdatedUntil: nil,
 			},
 			then: then{
 				run: []string{
@@ -1254,8 +1257,8 @@ func TestRun_Find_Add(t *testing.T) {
 		},
 		"when querying by UpdatedAt, it should find runIds matching with the query": {
 			when: kdb.RunFindQuery{
-				Since:    &basedTime,
-				Duration: nil,
+				UpdatedSince: &dummyUpdatedSince,
+				UpdatedUntil: nil,
 			},
 			then: then{
 				run: []string{
@@ -1268,8 +1271,8 @@ func TestRun_Find_Add(t *testing.T) {
 		},
 		"when querying by UpdatedAt and Duration specified minutes, it should find runIds matching with the query": {
 			when: kdb.RunFindQuery{
-				Since:    &basedTime,
-				Duration: &dummyDuration1,
+				UpdatedSince: &dummyUpdatedSince,
+				UpdatedUntil: &dummyUpdatedUntil_1,
 			},
 			then: then{
 				run: []string{
@@ -1281,8 +1284,8 @@ func TestRun_Find_Add(t *testing.T) {
 
 		"when querying by UpdatedAt and Duration specified days and weeks, it should find runIds matching with the query": {
 			when: kdb.RunFindQuery{
-				Since:    &basedTime,
-				Duration: &dummyDuration2,
+				UpdatedSince: &dummyUpdatedSince,
+				UpdatedUntil: &dummyUpdatedUntil_2,
 			},
 			then: then{
 				run: []string{

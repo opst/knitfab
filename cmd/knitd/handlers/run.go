@@ -3,11 +3,13 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	apierr "github.com/opst/knitfab/pkg/api/types/errors"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 	kstrings "github.com/opst/knitfab/pkg/utils/strings"
 )
 
@@ -22,8 +24,8 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 				InputKnitId:  kstrings.SplitIfNotEmpty(c.QueryParam("knitIdInput"), ","),
 				OutputKnitId: kstrings.SplitIfNotEmpty(c.QueryParam("knitIdOutput"), ","),
 				Status:       []kdb.KnitRunStatus{},
-				Since:        nil,
-				Duration:     nil,
+				UpdatedSince: nil,
+				UpdatedUntil: nil,
 			}
 
 			for _, p := range kstrings.SplitIfNotEmpty(c.QueryParam("status"), ",") {
@@ -39,12 +41,22 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 
 			since := c.QueryParam("since")
 			if since != "" {
-				result.Since = &since
+				t, err := rfctime.ParseRFC3339DateTime(since)
+				if err != nil {
+					return kdb.RunFindQuery{}, err
+				}
+				_t := t.Time()
+				result.UpdatedSince = &_t
 			}
 
 			duration := c.QueryParam("duration")
 			if duration != "" {
-				result.Duration = &duration
+				d, err := time.ParseDuration(duration)
+				if err != nil {
+					return kdb.RunFindQuery{}, err
+				}
+				_t := result.UpdatedSince.Add(d)
+				result.UpdatedUntil = &_t
 			}
 
 			return result, nil

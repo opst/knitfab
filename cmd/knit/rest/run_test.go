@@ -316,15 +316,6 @@ func TestFindRun(t *testing.T) {
 			return h, func() *http.Request { return request }
 		}
 
-		type when struct {
-			planId    []string
-			knitIdIn  []string
-			knitIdOut []string
-			status    []string
-			since     time.Time
-			duration  time.Duration
-		}
-
 		type then struct {
 			planIdInQuery    []string
 			knitIdInInQuery  []string
@@ -335,20 +326,17 @@ func TestFindRun(t *testing.T) {
 		}
 
 		type testcase struct {
-			when when
+			when krst.FindRunParameter
 			then then
 		}
 
+		timeStamp := "2024-04-22T12:34:56.987654321+07:00"
+		since := try.To(rfctime.ParseRFC3339DateTime(timeStamp)).OrFatal(t).Time()
+		duration := time.Duration(2 * time.Hour)
+
 		for name, testcase := range map[string]testcase{
 			"when query with nothing, server receives empty query": {
-				when: when{
-					planId:    []string{},
-					knitIdIn:  []string{},
-					knitIdOut: []string{},
-					status:    []string{},
-					since:     time.Time{},
-					duration:  time.Duration(0),
-				},
+				when: krst.FindRunParameter{},
 				then: then{
 					planIdInQuery:    []string{},
 					knitIdInInQuery:  []string{},
@@ -359,23 +347,20 @@ func TestFindRun(t *testing.T) {
 				},
 			},
 			"when query with each item, server receives all": {
-				when: when{
-					planId:    []string{"test-a", "test-b"},
-					knitIdIn:  []string{"in-a", "in-b"},
-					knitIdOut: []string{"out-a", "out-b"},
-					status:    []string{"wating", "running"},
-					since: time.Date(
-						2024, 4, 22, 12, 34, 56, 987654321,
-						time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
-					),
-					duration: time.Duration(2 * time.Hour),
+				when: krst.FindRunParameter{
+					PlanId:    []string{"test-a", "test-b"},
+					KnitIdIn:  []string{"in-a", "in-b"},
+					KnitIdOut: []string{"out-a", "out-b"},
+					Status:    []string{"wating", "running"},
+					Since:     &since,
+					Duration:  &duration,
 				},
 				then: then{
 					planIdInQuery:    []string{"test-a,test-b"},
 					knitIdInInQuery:  []string{"in-a,in-b"},
 					knitIdOutInQuery: []string{"out-a,out-b"},
 					statusInQuery:    []string{"wating,running"},
-					sinceQuery:       "2024-04-22T12:34:56.987654321+07:00",
+					sinceQuery:       timeStamp,
 					durationQuery:    "2h0m0s",
 				},
 			},
@@ -397,7 +382,7 @@ func TestFindRun(t *testing.T) {
 				//test start
 				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 				result := try.To(testee.FindRun(
-					ctx, when.planId, when.knitIdIn, when.knitIdOut, when.status, when.since, when.duration,
+					ctx, when,
 				)).OrFatal(t)
 
 				// check response
@@ -456,20 +441,22 @@ func TestFindRun(t *testing.T) {
 			}
 
 			// argements set up
-			planId := []string{"test-planId"}
-			inputKnitId := []string{"test-inputKnitId"}
-			outputKnitId := []string{"test-outputKnitId"}
-			status := []string{"test-status"}
-			since := time.Date(
-				2024, 4, 22, 12, 34, 56, 000000000,
-				time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
-			)
+			since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
 			duration := time.Duration(2 * time.Hour)
+
+			findRunParameter := krst.FindRunParameter{
+				PlanId:    []string{"test-planId"},
+				KnitIdIn:  []string{"test-inputKnitId"},
+				KnitIdOut: []string{"test-outputKnitId"},
+				Status:    []string{"test-status"},
+				Since:     &since,
+				Duration:  &duration,
+			}
 
 			//test start
 			actualResponse := try.To(
 				testee.FindRun(
-					ctx, planId, inputKnitId, outputKnitId, status, since, duration,
+					ctx, findRunParameter,
 				),
 			).OrFatal(t)
 
@@ -517,19 +504,20 @@ func TestFindRun(t *testing.T) {
 					t.Fatal(err.Error())
 				}
 
-				// argements set up
-				planId := []string{"test-planId"}
-				inputKnitId := []string{"test-inputKnitId"}
-				outputKnitId := []string{"test-outputKnitId"}
-				status := []string{"test-status"}
-				since := time.Date(
-					2024, 4, 22, 12, 34, 56, 000000000,
-					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
-				)
+				since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
 				duration := time.Duration(2 * time.Hour)
 
+				// arguments set up
+				findRunParameter := krst.FindRunParameter{
+					PlanId:    []string{"test-planId"},
+					KnitIdIn:  []string{"test-inputKnitId"},
+					KnitIdOut: []string{"test-outputKnitId"},
+					Status:    []string{"test-status"},
+					Since:     &since,
+					Duration:  &duration,
+				}
 				if _, err := testee.FindRun(
-					ctx, planId, inputKnitId, outputKnitId, status, since, duration,
+					ctx, findRunParameter,
 				); err == nil {
 					t.Errorf("no error occured")
 				}
