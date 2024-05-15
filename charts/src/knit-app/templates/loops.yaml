@@ -1,3 +1,24 @@
+# hook configure
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loops-hook-configs
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: loops-hook-configs
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: loops
+    app.kubernetes.io/part-of: knitfab
+data:
+  hook.yaml: |
+{{ tpl (.Files.Get "assets/loops/hooks.yaml.tpl") . | indent 4 }}
+
+---
+
 #
 # projection loops (leader)
 #
@@ -37,6 +58,7 @@ spec:
           image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',  '/knit/loops-configs/hook.yaml',
             '--type',   'projection',
             '--policy', 'forever:{{ .Values.loops.projection.interval }}',
           ]
@@ -52,13 +74,19 @@ spec:
                   name: {{ .Values.database.credential.secret }}
                   key: password
           volumeMounts:
-            - name: config
+            - name: knitd-backend-config
               mountPath: /knit/configs
               readOnly: true
+            - name: loops-hook-configs
+              mountPath: /knit/loops-configs
+              readOnly: true
       volumes:
-        - name: config
+        - name: knitd-backend-config
           configMap:
             name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: loops-hook-configs
+          configMap:
+            name: loops-hook-configs
 
 ---
 
@@ -103,6 +131,7 @@ spec:
           image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/loops-configs/hook.yaml',
             '--type',   'initialize',
             '--policy', 'forever:{{ .Values.loops.initialize.interval }}',
           ]
@@ -121,10 +150,16 @@ spec:
             - name: config
               mountPath: /knit/configs
               readOnly: true
+            - name: loops-hook-configs
+              mountPath: /knit/loops-configs
+              readOnly: true
       volumes:
         - name: config
           configMap:
             name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: loops-hook-configs
+          configMap:
+            name: loops-hook-configs
 
 ---
 
@@ -227,6 +262,7 @@ spec:
           image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/loops-configs/hook.yaml',
             '--type',   'run_management',
             '--policy', 'forever:{{ .Values.loops.run_management.interval }}',
           ]
@@ -245,10 +281,16 @@ spec:
             - name: config
               mountPath: /knit/configs
               readOnly: true
+            - name: loops-hook-configs
+              mountPath: /knit/loops-configs
+              readOnly: true
       volumes:
         - name: config
           configMap:
             name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: loops-hook-configs
+          configMap:
+            name: loops-hook-configs
 
 ---
 
@@ -352,6 +394,7 @@ spec:
           image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/loops-configs/hook.yaml',
             '--type',   'housekeeping',
             '--policy', 'forever:{{ .Values.loops.housekeeping.interval }}',
           ]
@@ -370,10 +413,16 @@ spec:
             - name: config
               mountPath: /knit/configs
               readOnly: true
+            - name: loops-hook-configs
+              mountPath: /knit/loops-configs
+              readOnly: true
       volumes:
         - name: config
           configMap:
             name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: loops-hook-configs
+          configMap:
+            name: loops-hook-configs
 
 ---
 
@@ -474,6 +523,7 @@ spec:
           image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/loops-configs/hook.yaml',
             '--type',   'finishing',
             '--policy', 'forever:{{ .Values.loops.finishing.interval }}',
           ]
@@ -492,10 +542,16 @@ spec:
             - name: config
               mountPath: /knit/configs
               readOnly: true
+            - name: loops-hook-configs
+              mountPath: /knit/loops-configs
+              readOnly: true
       volumes:
         - name: config
           configMap:
             name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: loops-hook-configs
+          configMap:
+            name: loops-hook-configs
 
 ---
 
@@ -595,6 +651,7 @@ spec:
           image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/loops-configs/hook.yaml',
             '--type',   'garbage_collection',
             '--policy', 'forever:{{ .Values.loops.gc.interval }}',
           ]
@@ -613,10 +670,16 @@ spec:
             - name: config
               mountPath: /knit/configs
               readOnly: true
+            - name: loops-hook-configs
+              mountPath: /knit/loops-configs
+              readOnly: true
       volumes:
         - name: config
           configMap:
             name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: loops-hook-configs
+          configMap:
+            name: loops-hook-configs
 ---
 
 apiVersion: v1
