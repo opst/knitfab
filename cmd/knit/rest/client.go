@@ -26,12 +26,18 @@ type Unit interface{}
 
 // struct that contains the arguments for FindRun
 type FindRunParameter struct {
-	PlanId    []string
-	KnitIdIn  []string
+	// planId which run to be found has
+	PlanId []string
+	// knitId which run to be found has as input
+	KnitIdIn []string
+	// knitId which run to be found has as output
 	KnitIdOut []string
-	Status    []string
-	Since     *time.Time
-	Duration  *time.Duration
+	// status which run to be found is
+	Status []string
+	// time which updated time of run to be found is equal or later than
+	Since *time.Time
+	// duration which updated time of run to be found is within
+	Duration *time.Duration
 }
 
 var ValUnit Unit = struct{}{}
@@ -215,25 +221,13 @@ type KnitClient interface {
 	// - error
 	GetRunLog(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
 
-	// FindRun find run with RunFindQuery.
+	// FindRun find run with FindRunParameter.
 
 	// Args
 	//
 	// - context.Context
 	//
-	// - RunFindQuery :
-	//
-	//   - []string: planId which run to be found has
-	//
-	//   - []string: knitId which run to be found has as input
-	//
-	//   - []string: knitId which run to be found has as output
-	//
-	//   - []string: status which run to be found is
-	//
-	//   - time.Time: time which updated time of run to be found is later
-	//
-	//   - time.duration: duration which updated time of run to be found is within
+	// - FindRunParameter
 	//
 	// Returns
 	//

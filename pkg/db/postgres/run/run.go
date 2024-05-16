@@ -527,16 +527,7 @@ func (m *runPG) Finish(ctx context.Context, runId string) error {
 	return nil
 }
 
-func (m *runPG) find(
-	ctx context.Context, conn kpool.Conn,
-	query kdb.RunFindQuery,
-	// planId []string,
-	// knitIdIn []string,
-	// knitIdOut []string,
-	// status []kdb.KnitRunStatus,
-	// updatedSince *time.Time,
-	// updatedUntil *time.Time,
-) ([]string, error) {
+func (m *runPG) find(ctx context.Context, conn kpool.Conn, query kdb.RunFindQuery) ([]string, error) {
 
 	runIds := []string{}
 
@@ -565,7 +556,7 @@ func (m *runPG) find(
 		from "assign_and_data"
 		where 
 			($9::timestamp with time zone is null or "updated_at" >= $9::timestamp with time zone)
-			and ($10::timestamp with time zone is null or "updated_at" <= $10::timestamp with time zone)
+			and ($10::timestamp with time zone is null or "updated_at" < $10::timestamp with time zone)
 		order by "updated_at", "run_id"
 		`,
 		len(query.PlanId) == 0, query.PlanId,

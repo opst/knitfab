@@ -407,7 +407,7 @@ type RunFindQuery struct {
 	// match if run's updated time is equal or later than this UpdatedSince.
 	UpdatedSince *time.Time
 
-	// match if run's updated time is equal or earlier than this UpdatedUntil.
+	// match if run's updated time is earlier than this UpdatedUntil.
 	UpdatedUntil *time.Time
 }
 
@@ -417,9 +417,9 @@ func (rfq RunFindQuery) Equal(other RunFindQuery) bool {
 		cmp.SliceContentEq(rfq.OutputKnitId, other.OutputKnitId) &&
 		cmp.SliceContentEq(rfq.Status, other.Status) &&
 		((rfq.UpdatedSince == nil && other.UpdatedSince == nil) ||
-			(rfq.UpdatedSince != nil && other.UpdatedSince != nil && *rfq.UpdatedSince == *other.UpdatedSince)) &&
+			(rfq.UpdatedSince != nil && other.UpdatedSince != nil && rfq.UpdatedSince.Equal(*other.UpdatedSince))) &&
 		((rfq.UpdatedUntil == nil && other.UpdatedUntil == nil) ||
-			(rfq.UpdatedUntil != nil && other.UpdatedUntil != nil && *rfq.UpdatedUntil == *other.UpdatedUntil))
+			(rfq.UpdatedUntil != nil && other.UpdatedUntil != nil && rfq.UpdatedUntil.Equal(*other.UpdatedUntil)))
 }
 
 // relation between run and data; "How does the run uses data?"

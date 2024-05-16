@@ -24,7 +24,7 @@ type Flag struct {
 	KnitIdOut *kflag.Argslice     `flag:"out-knitid,short=o,help=Find Run where the Output has this Knit Id. Repeatable."`
 	Status    *kflag.Argslice     `flag:"status,short=s,metavar=waiting|deactivated|starting|running|done|failed...,help=Find Run in this status. Repeatable."`
 	Since     *kflag.LooseRFC3339 `flag:"since,help=Find Run only updated at this time or later."`
-	Duration  time.Duration       `flag:"duration,help=Find Run only equal or earlier than '--since' + '--duration'."`
+	Duration  time.Duration       `flag:"duration,help=Find Run only updated at a time earlier than the sum of since and duration."`
 }
 
 type Command struct {
@@ -92,8 +92,8 @@ sub-seconds, seconds, minutes, and hours, in the description.
 If the time zone is omitted, the local time zone is applied. 
 When including a date and time, the following characters are allowed as delimiters between the date and time: "T" or space.
 
-Duration is a flag used in conjunction with Since. 
-It targets Runs for search that have been updated at equal to or earlier than 'Since + duration'.
+Duration is a flag used in conjunction with since. 
+It targets Runs for search that have been updated at a time earlier than the sum of since and duration.
 Duration can be described in Go's time.Duration type.
 Examples of duration are "300ms", "1.5h" or "2h45m". 
 `,

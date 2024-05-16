@@ -43,7 +43,10 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 			if since != "" {
 				t, err := rfctime.ParseRFC3339DateTime(since)
 				if err != nil {
-					return kdb.RunFindQuery{}, err
+					return kdb.RunFindQuery{}, apierr.BadRequest(
+						`"since" should be a RFC3339 date-time format`,
+						err,
+					)
 				}
 				_t := t.Time()
 				result.UpdatedSince = &_t
@@ -53,7 +56,10 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 			if duration != "" {
 				d, err := time.ParseDuration(duration)
 				if err != nil {
-					return kdb.RunFindQuery{}, err
+					return kdb.RunFindQuery{}, apierr.BadRequest(
+						`"duration" should be a Go duration format`,
+						err,
+					)
 				}
 				_t := result.UpdatedSince.Add(d)
 				result.UpdatedUntil = &_t

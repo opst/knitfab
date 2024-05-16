@@ -1128,7 +1128,7 @@ func TestRun_Find(t *testing.T) {
 }
 
 // Test to search using the new fields, "Since" and "Duration", added to RunFindQuery
-func TestRun_Find_Add(t *testing.T) {
+func TestRun_Find_Since_and_Duration(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 	type then struct {
 		run []string
