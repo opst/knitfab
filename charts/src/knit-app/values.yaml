@@ -92,3 +92,8 @@ loops:
     interval: 30s
     replicas: 1
     serviceAccount: "garbage-collection"
+
+hooks:
+  lifecycle-hooks:
+    before: []
+    after: []
