@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apierr "github.com/opst/knitfab/pkg/api/types/errors"
 	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
@@ -30,10 +32,36 @@ func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
 			return apierr.InternalServerError(err)
 		}
 
-		since := c.QueryParam("since")
-		duration := c.QueryParam("duration")
+		paramSicne := c.QueryParam("since")
+		var since *time.Time
 
-		knitIds, err := dbData.Find(ctx, tags, since, duration)
+		if paramSicne != "" {
+			t, err := rfctime.ParseRFC3339DateTime(paramSicne)
+			if err != nil {
+				return apierr.BadRequest(
+					`"since" should be a RFC3339 date-time format`,
+					err,
+				)
+			}
+			_t := t.Time()
+			since = &_t
+		}
+
+		paramDuration := c.QueryParam("duration")
+		var until *time.Time
+		if paramDuration != "" {
+			d, err := time.ParseDuration(paramDuration)
+			if err != nil {
+				return apierr.BadRequest(
+					`"duration" should be a Go duration format`,
+					err,
+				)
+			}
+			_t := since.Add(d)
+			until = &_t
+		}
+
+		knitIds, err := dbData.Find(ctx, tags, since, until)
 		if err != nil {
 			return apierr.InternalServerError(err)
 		}

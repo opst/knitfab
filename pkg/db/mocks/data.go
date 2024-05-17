@@ -11,7 +11,7 @@ import (
 type DataInterface struct {
 	Impl struct {
 		Get                func(context.Context, []string) (map[string]kdb.KnitData, error)
-		Find               func(context.Context, []kdb.Tag, string, string) ([]string, error)
+		Find               func(context.Context, []kdb.Tag, *time.Time, *time.Time) ([]string, error)
 		UpdateTag          func(context.Context, string, kdb.TagDelta) error
 		NewAgent           func(context.Context, string, kdb.DataAgentMode, time.Duration) (kdb.DataAgent, error)
 		RemoveAgent        func(context.Context, string) error
@@ -21,9 +21,9 @@ type DataInterface struct {
 	Calls struct {
 		Get  CallLog[struct{ KnitId []string }]
 		Find CallLog[struct {
-			Tags     []kdb.Tag
-			Since    string
-			Duration string
+			Tags  []kdb.Tag
+			Since *time.Time
+			Until *time.Time
 		}]
 		Updatetag CallLog[struct {
 			KnitId string
@@ -59,16 +59,16 @@ func (di *DataInterface) Get(ctx context.Context, knitId []string) (map[string]k
 	panic(errors.New("it should no be called"))
 }
 
-func (di *DataInterface) Find(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+func (di *DataInterface) Find(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
 	di.Calls.Find = append(di.Calls.Find, struct {
-		Tags     []kdb.Tag
-		Since    string
-		Duration string
+		Tags  []kdb.Tag
+		Since *time.Time
+		Until *time.Time
 	}{
-		Tags: tags, Since: since, Duration: duration,
+		Tags: tags, Since: since, Until: until,
 	})
 	if di.Impl.Find != nil {
-		return di.Impl.Find(ctx, tags, since, duration)
+		return di.Impl.Find(ctx, tags, since, until)
 	}
 	panic(errors.New("it should no be called"))
 }

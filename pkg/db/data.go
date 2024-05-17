@@ -51,14 +51,14 @@ type DataInterface interface {
 	// args:
 	//     - ctx: context
 	//     - []Tag: specified tags
-	//     - string: start of the time range
-	//     - string: duration of the time range
+	//     - *Time: start of the time range
+	//     - *Time: end of the time range
 	//
 	// returns:
 	//     - []string: Knitid of the data that meets the conditions
 	//     - error
 	//
-	Find(context.Context, []Tag, string, string) ([]string, error)
+	Find(context.Context, []Tag, *time.Time, *time.Time) ([]string, error)
 
 	// update tags on data.
 	//

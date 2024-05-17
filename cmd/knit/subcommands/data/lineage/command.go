@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
@@ -772,7 +771,7 @@ func TraceUpstreamForSingleNode(
 }
 
 func getData(ctx context.Context, client krst.KnitClient, knitId string) (apidata.Detail, error) {
-	datas, err := client.FindData(ctx, []apitag.Tag{knitIdTag(knitId)}, time.Time{}, 0)
+	datas, err := client.FindData(ctx, []apitag.Tag{knitIdTag(knitId)}, nil, nil)
 	if err != nil {
 		return apidata.Detail{}, ErrFindDataWithKnitId(knitId, err)
 	}

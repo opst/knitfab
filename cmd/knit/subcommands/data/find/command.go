@@ -36,8 +36,8 @@ func NewErrUnknwonTransientFlag(actualValue string) error {
 type Flag struct {
 	Tags      *kflag.Tags         `flag:"tag,short=t,metavar=KEY:VALUE...,help=Find Data with this Tag. Repeatable."`
 	Transient string              `flag:"transient,metavar=both|yes|true|no|false,help=yes|true (transient Data only) / no|false (non transient Data only) / both"`
-	Since     *kflag.LooseRFC3339 `flag:"since,help=Find Run only updated at this time or later."`
-	Duration  time.Duration       `flag:"duration,help=Find Run only equal or earlier than '--since' + '--duration'."`
+	Since     *kflag.LooseRFC3339 `flag:"since,help=Find Data only updated at this time or later."`
+	Duration  time.Duration       `flag:"duration,help=Find Data only updated at a time earlier than the sum of since and duration."`
 }
 
 type Command struct {
@@ -47,8 +47,8 @@ type Command struct {
 		krst.KnitClient,
 		[]apitag.Tag,
 		TransientValue,
-		time.Time,
-		time.Duration,
+		*time.Time,
+		*time.Duration,
 	) ([]apidata.Detail, error)
 }
 
@@ -59,8 +59,8 @@ func WithTask(
 		krst.KnitClient,
 		[]apitag.Tag,
 		TransientValue,
-		time.Time,
-		time.Duration,
+		*time.Time,
+		*time.Duration,
 	) ([]apidata.Detail, error),
 ) func(*Command) *Command {
 	return func(dfc *Command) *Command {
@@ -111,7 +111,7 @@ If the time zone is omitted, the local time zone is applied.
 When including a date and time, the following characters are allowed as delimiters between the date and time: "T" or space.
 
 Duration is a flag used in conjunction with Since. 
-It targets Data for search that have been updated at equal to or earlier than 'Since + duration'.
+It targets Data for search that have been updated at a time earlier than the sum of since and duration.
 Duration can be described in Go's time.Duration type.
 Examples of duration are "300ms", "1.5h" or "2h45m". 
 `,
@@ -182,7 +182,7 @@ func (cmd *Command) Execute(
 		return fmt.Errorf("%w: since and duration must be specified together", kcmd.ErrUsage)
 	}
 
-	data, err := cmd.task(ctx, l, c, tags, transientFlag, since, duration)
+	data, err := cmd.task(ctx, l, c, tags, transientFlag, &since, &duration)
 	if err != nil {
 		return err
 	}
@@ -217,8 +217,8 @@ func RunFindData(
 	client krst.KnitClient,
 	tags []apitag.Tag,
 	transientFlag TransientValue,
-	since time.Time,
-	duration time.Duration,
+	since *time.Time,
+	duration *time.Duration,
 ) ([]apidata.Detail, error) {
 
 	result, err := client.FindData(ctx, tags, since, duration)

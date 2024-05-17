@@ -310,7 +310,7 @@ func (ci *client) GetData(ctx context.Context, knitid string, handler func(FileE
 	})
 }
 
-func (c *client) FindData(ctx context.Context, tags []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
+func (c *client) FindData(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apipath("data"), nil)
 	if err != nil {
@@ -320,17 +320,17 @@ func (c *client) FindData(ctx context.Context, tags []apitag.Tag, since time.Tim
 	// set query values
 	q := req.URL.Query()
 
-	sinceStr := ""
-	if since != (time.Time{}) {
-		sinceStr = since.Format(rfctime.RFC3339DateTimeFormatZ)
+	sinceString := ""
+	if since != nil {
+		sinceString = since.Format(rfctime.RFC3339DateTimeFormatZ)
 	}
-	q.Add("since", sinceStr)
+	q.Add("since", sinceString)
 
-	durationStr := ""
-	if duration != 0 {
-		durationStr = duration.String()
+	durationString := ""
+	if duration != nil {
+		durationString = duration.String()
 	}
-	q.Add("duration", durationStr)
+	q.Add("duration", durationString)
 
 	tagcount := len(tags)
 	if 0 < tagcount {

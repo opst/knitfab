@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
@@ -29,7 +30,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 
 	t.Run("When data is received from the database, it should be converted to JSON format", func(t *testing.T) {
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
 			return []string{"knit-1", "knit-2"}, nil
 		}
 		mckdbdata.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
@@ -163,31 +164,32 @@ func TestGetDataForDataHandler(t *testing.T) {
 			{Key: "knit#transient", Value: "processing"},
 		}
 
-		expectedSince := "2024-04-01T12:00:00+00:00"
-		expectedDuration := "2h30m45s"
+		expectedTime := "2024-04-01T12:00:00+00:00"
+		expectedSince := try.To(rfctime.ParseRFC3339DateTime(expectedTime)).OrFatal(t).Time()
+		expectedUntil := try.To(rfctime.ParseRFC3339DateTime(expectedTime)).OrFatal(t).Time().Add(2*time.Hour + 30*time.Minute + 45*time.Second)
 
 		if !cmp.SliceEqWith(
 			mckdbdata.Calls.Find,
 			[]struct {
-				Tags     []kdb.Tag
-				Since    string
-				Duration string
+				Tags  []kdb.Tag
+				Since *time.Time
+				Until *time.Time
 			}{
-				{Tags: expectTag, Since: expectedSince, Duration: expectedDuration},
+				{Tags: expectTag, Since: &expectedSince, Until: &expectedUntil},
 			},
 			func(
 				a struct {
-					Tags     []kdb.Tag
-					Since    string
-					Duration string
+					Tags  []kdb.Tag
+					Since *time.Time
+					Until *time.Time
 				},
 				b struct {
-					Tags     []kdb.Tag
-					Since    string
-					Duration string
+					Tags  []kdb.Tag
+					Since *time.Time
+					Until *time.Time
 				}) bool {
 				return cmp.SliceContentEqWith(utils.RefOf(a.Tags), utils.RefOf(b.Tags), (*kdb.Tag).Equal) &&
-					a.Since == b.Since && a.Duration == b.Duration
+					a.Since.Equal(*b.Since) && a.Until.Equal(*b.Until)
 			},
 		) {
 			t.Error("DataInterface.Find did not call with correct userTag args.")
@@ -307,7 +309,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 		knitId := []string{}
 
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
 			d := knitId
 			return d, nil
 		}
@@ -370,7 +372,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 
 	t.Run("When Process of obtaining knitId from specified tag encounters an internal error, status code should be 500", func(t *testing.T) {
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
 			return nil, errors.New("Test Internal Error")
 		}
 
@@ -393,7 +395,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 		knitId := []string{"knit-1"}
 
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since string, duration string) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
 			d := knitId
 			return d, nil
 		}

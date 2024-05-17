@@ -28,9 +28,9 @@ func TestData_Find(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 
 	type when struct {
-		tags     []kdb.Tag
-		since    string
-		duration string
+		tags         []kdb.Tag
+		updatedSince *time.Time
+		updatedUntil *time.Time
 	}
 	type then struct {
 		knitId []string
@@ -48,13 +48,19 @@ func TestData_Find(t *testing.T) {
 		},
 	}
 
+	oldTime := "2022-11-12T13:14:15.678+09:00"
 	oldTimestamp := try.To(rfctime.ParseRFC3339DateTime(
-		"2022-11-12T13:14:15.678+09:00",
+		oldTime,
 	)).OrFatal(t).Time()
 
 	newTimestamp := try.To(rfctime.ParseRFC3339DateTime(
 		"2022-11-13T14:15:16.678+09:00",
 	)).OrFatal(t).Time()
+
+	dummyUpdatedSinceA := try.To(rfctime.ParseRFC3339DateTime(oldTime)).OrFatal(t).Time().Add(time.Hour + time.Minute)
+
+	dummyUpdatedSinceB := try.To(rfctime.ParseRFC3339DateTime(oldTime)).OrFatal(t).Time().Add(-time.Hour)
+	dummyUpdatedUntilB := try.To(rfctime.ParseRFC3339DateTime(oldTime)).OrFatal(t).Time().Add(time.Hour)
 
 	tagsetAll := []kdb.Tag{
 		{Key: "tag-a", Value: "a-value"},
@@ -467,10 +473,11 @@ func TestData_Find(t *testing.T) {
 				then{knitId: []string{}}, // empty!
 			},
 
-			// since and duration
+			// since and until
 			`when querying by "since", it returns data whose timestamp is equal or later "since"`: {
 				when{
-					since: "2022-11-13T13:15:16.678+09:00", // later than oldTimestamp earlier than newTimesamp
+					// later than oldTimestamp and earlier than new Timesamp
+					updatedSince: &dummyUpdatedSinceA,
 				},
 				then{
 					knitId: []string{
@@ -507,10 +514,10 @@ func TestData_Find(t *testing.T) {
 					},
 				},
 			},
-			`when querying by "since" and "duration", it returns data whose timestamp is equal or later "since + duration"`: {
+			`when querying by "since" and "until", it returns data whose timestamp is equal or later than "since" and earlier than "until" `: {
 				when{
-					since:    "2022-11-12T12:14:15.678+09:00", // 1 hour earlier than oldTimesamp
-					duration: "1h",                            // 1 hour
+					updatedSince: &dummyUpdatedSinceB,
+					updatedUntil: &dummyUpdatedUntilB,
 				},
 				then{
 					knitId: []string{
@@ -698,7 +705,7 @@ func TestData_Find(t *testing.T) {
 				}
 				testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
-				actual := try.To(testee.Find(ctx, testcase.when.tags, testcase.since, testcase.duration)).OrFatal(t)
+				actual := try.To(testee.Find(ctx, testcase.when.tags, testcase.updatedSince, testcase.updatedUntil)).OrFatal(t)
 
 				if !cmp.SliceEq(actual, testcase.then.knitId) {
 					t.Errorf(
@@ -779,14 +786,21 @@ func TestData_Find(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
+			dummySince := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time()
+			dummyUntil := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time().Add(1 * time.Hour)
+
 			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
 					tagsetAll[2],
 				},
-				"2022-10-11T12:13:14.567+09:00",
-				"1h",
+				&dummySince,
+				&dummyUntil,
 			)).OrFatal(t)
 
 			expected := []string{} // empty!
@@ -805,14 +819,21 @@ func TestData_Find(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
+			dummySince := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time()
+			dummyUntil := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time().Add(1 * time.Hour)
+
 			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
 					tagsetAll[0],
 				},
-				"2022-10-11T12:13:14.567+09:00",
-				"1h",
+				&dummySince,
+				&dummyUntil,
 			)).OrFatal(t)
 
 			expected := []string{} // empty!
@@ -831,14 +852,21 @@ func TestData_Find(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
+			dummySince := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time()
+			dummyUntil := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time().Add(1 * time.Hour)
+
 			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					kdb.NewTimestampTag(oldTimestamp),
 					tagsetAll[2],
 				},
-				"2022-10-11T12:13:14.567+09:00",
-				"1h",
+				&dummySince,
+				&dummyUntil,
 			)).OrFatal(t)
 
 			expected := []string{} // empty!
@@ -906,13 +934,20 @@ func TestData_Find(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
+			dummySince := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time()
+			dummyUntil := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time().Add(1 * time.Hour)
+
 			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
 				},
-				"2022-10-11T12:13:14.567+09:00",
-				"1h",
+				&dummySince,
+				&dummyUntil,
 			)).OrFatal(t)
 
 			expected := []string{} // empty!
@@ -930,13 +965,20 @@ func TestData_Find(t *testing.T) {
 			}
 			testee := kpgdata.New(pool, kpgdata.WithNominator(nom))
 
+			dummySince := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time()
+			dummyUntil := try.To(rfctime.ParseRFC3339DateTime(
+				"2022-10-11T12:13:14.567+09:00",
+			)).OrFatal(t).Time().Add(1 * time.Hour)
+
 			actual := try.To(testee.Find(
 				ctx,
 				[]kdb.Tag{
 					{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
 				},
-				"2022-10-11T12:13:14.567+09:00",
-				"1h",
+				&dummySince,
+				&dummyUntil,
 			)).OrFatal(t)
 
 			expected := []string{} // empty!

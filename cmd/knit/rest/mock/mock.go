@@ -33,8 +33,8 @@ type FindPlanArgs struct {
 
 type FindDataArgs struct {
 	Tags     []apitags.Tag
-	since    time.Time
-	duration time.Duration
+	since    *time.Time
+	duration *time.Duration
 }
 
 type FindRunArgs struct {
@@ -103,7 +103,7 @@ type mockKnitClient struct {
 		PutTagsForData func(knitId string, tags apitags.Change) (*apidata.Detail, error)
 		GetDataRaw     func(context.Context, string, func(io.Reader) error) error
 		GetData        func(context.Context, string, func(rest.FileEntry) error) error
-		FindData       func(ctx context.Context, tags []apitags.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error)
+		FindData       func(ctx context.Context, tags []apitags.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error)
 		GetPlans       func(ctx context.Context, planId string) (apiplans.Detail, error)
 		FindPlan       func(
 			ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier,
@@ -190,7 +190,7 @@ func (m *mockKnitClient) GetData(ctx context.Context, knitId string, handler fun
 	return m.Impl.GetData(ctx, knitId, handler)
 }
 
-func (m *mockKnitClient) FindData(ctx context.Context, tags []apitags.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error) {
+func (m *mockKnitClient) FindData(ctx context.Context, tags []apitags.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.FindData = append(

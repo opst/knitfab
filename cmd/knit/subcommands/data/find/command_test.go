@@ -81,8 +81,8 @@ func TestFindDataCommand(t *testing.T) {
 				_ krst.KnitClient,
 				tags []apitags.Tag,
 				transient data_find.TransientValue,
-				since time.Time,
-				duration time.Duration,
+				since *time.Time,
+				duration *time.Duration,
 			) ([]apidata.Detail, error) {
 				if !cmp.SliceContentEqWith(
 					tags, then.tags,
@@ -677,12 +677,15 @@ func TestFindData(t *testing.T) {
 			ctx := context.Background()
 			logger := logger.Null()
 			mock := mock.New(t)
-			mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s time.Time, d time.Duration) ([]apidata.Detail, error) {
+			mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s *time.Time, d *time.Duration) ([]apidata.Detail, error) {
 				return testcase.given, nil
 			}
 
+			since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
+			duration := time.Duration(2 * time.Hour)
+
 			actual := try.To(data_find.RunFindData(
-				ctx, logger, mock, testcase.when.tags, testcase.when.transientFlag, time.Time{}, time.Duration(0),
+				ctx, logger, mock, testcase.when.tags, testcase.when.transientFlag, &since, &duration,
 			)).OrFatal(t)
 
 			{
@@ -730,12 +733,15 @@ func TestFindData(t *testing.T) {
 		expectedError := errors.New("fake error")
 
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s time.Time, d time.Duration) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s *time.Time, d *time.Duration) ([]apidata.Detail, error) {
 			return nil, expectedError
 		}
 
+		since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
+		duration := time.Duration(2 * time.Hour)
+
 		actual, err := data_find.RunFindData(
-			ctx, logger, mock, []apitags.Tag{}, data_find.TransientAny, time.Time{}, time.Duration(0),
+			ctx, logger, mock, []apitags.Tag{}, data_find.TransientAny, &since, &duration,
 		)
 
 		if len(actual) != 0 {

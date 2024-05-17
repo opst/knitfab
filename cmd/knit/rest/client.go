@@ -111,7 +111,7 @@ type KnitClient interface {
 	//
 	// - []apitag.Tag: tags which data to be found has.
 	//
-	// - time.Time: The updated time of the run to be found is after.
+	// - time.Time: The updated time of the run to be found is later.
 	//
 	// - time.duration: duration which updated time of run to be found is within
 	//
@@ -120,7 +120,7 @@ type KnitClient interface {
 	// - []apidata.Detail: metadata of found data
 	//
 	// - error
-	FindData(ctx context.Context, tag []apitag.Tag, since time.Time, duration time.Duration) ([]apidata.Detail, error)
+	FindData(ctx context.Context, tag []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error)
 
 	// GetPlan get plan detail with given planId.
 	//

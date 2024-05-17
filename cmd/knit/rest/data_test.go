@@ -544,8 +544,8 @@ func TestFindData(t *testing.T) {
 
 		type when struct {
 			tags     []apitag.Tag
-			since    time.Time
-			duration time.Duration
+			since    *time.Time
+			duration *time.Duration
 		}
 
 		type then struct {
@@ -558,6 +558,9 @@ func TestFindData(t *testing.T) {
 			when when
 			then then
 		}
+
+		since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
+		duration := time.Duration(2 * time.Hour)
 
 		for name, testcase := range map[string]testcase{
 			"when query with no tags, server receives empty query string": {
@@ -576,11 +579,8 @@ func TestFindData(t *testing.T) {
 						{Key: "knit#id", Value: "some-knit-id"},
 						{Key: "owner", Value: "100% our-team&client, of cource!"},
 					},
-					since: time.Date(
-						2024, 4, 22, 12, 34, 56, 987654321,
-						time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
-					),
-					duration: time.Duration(2 * time.Hour),
+					since:    &since,
+					duration: &duration,
 				},
 				then: then{
 					// metachar: '/' '#' '?' '&' '%', ' '(space) and ',
@@ -817,14 +817,11 @@ func TestFindData(t *testing.T) {
 				{Key: "tag-a", Value: "value-a"},
 			}
 
-			since := time.Date(
-				2024, 4, 22, 12, 34, 56, 000000000,
-				time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
-			)
+			since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
 			duration := time.Duration(2 * time.Hour)
 
 			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
-			actualResponse := try.To(testee.FindData(ctx, queryTags, since, duration)).OrFatal(t)
+			actualResponse := try.To(testee.FindData(ctx, queryTags, &since, &duration)).OrFatal(t)
 
 			if !cmp.SliceContentEqWith(
 				actualResponse, expectedResponse,
@@ -869,13 +866,10 @@ func TestFindData(t *testing.T) {
 					{Key: "tag-a", Value: "value-a"},
 				}
 
-				since := time.Date(
-					2024, 4, 22, 12, 34, 56, 000000000,
-					time.FixedZone("+07:00", int((7*time.Hour).Seconds())),
-				)
+				since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
 				duration := time.Duration(2 * time.Hour)
 
-				if _, err := testee.FindData(ctx, queryTags, since, duration); err == nil {
+				if _, err := testee.FindData(ctx, queryTags, &since, &duration); err == nil {
 					t.Errorf("no error occured")
 				}
 
