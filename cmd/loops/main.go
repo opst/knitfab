@@ -11,13 +11,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
 	knit "github.com/opst/knitfab/pkg"
 	configs "github.com/opst/knitfab/pkg/configs/backend"
+	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpg "github.com/opst/knitfab/pkg/db/postgres"
 	"github.com/opst/knitfab/pkg/kubeutil"
 	"github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/pkg/utils/filewatch"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/opst/knitfab/pkg/workloads/k8s"
 )
@@ -37,6 +40,9 @@ func main() {
 	//-- path to config file
 	pconfig := flag.String(
 		"config", os.Getenv("KNIT_BACKEND_CONFIG"), "path to config file",
+	)
+	phooks := flag.String(
+		"hooks", os.Getenv("KNIT_HOOK_CONFIG"), "path to hook config file",
 	)
 	//-- which loop type to run
 	loopType := args.Parser(kdb.AsLoopType)
@@ -59,6 +65,16 @@ func main() {
 		return
 	}
 
+	{
+		// watch config & hooks
+		wctx, cancel, err := filewatch.UntilModifyContext(ctx, *pconfig, *phooks)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		defer cancel()
+		ctx = wctx
+	}
+
 	conf := try.To(configs.LoadBackendConfig(*pconfig)).OrFatal(logger)
 	kclientset := kubeutil.ConnectToK8s()
 
@@ -68,6 +84,11 @@ func main() {
 		try.To(kpg.New(ctx, conf.Cluster().Database())).OrFatal(logger),
 	)
 
+	hooks := cfg_hook.Config{}
+	if hookPath := *phooks; hookPath != "" {
+		hooks = try.To(cfg_hook.Load(hookPath)).OrFatal(logger)
+	}
+
 	logger.Printf(
 		`start loop "%s" /w policy "%s"`,
 		loopType.Value().String(), policy.Value().String(),
@@ -75,11 +96,20 @@ func main() {
 
 	err := StartLoop(
 		ctx, logger, kcluster, k8s.WrapK8sClient(kclientset),
-		loopType.Value(), recurring.UntilError(policy.Value()),
+		LoopManifest{
+			Type:   loopType.Value(),
+			Policy: recurring.UntilError(policy.Value()),
+			Hooks:  hook.Build(hooks.Lifecycle),
+		},
 	)
 
 	if err == nil || errors.Is(err, context.Canceled) {
 		return
 	}
-	logger.Fatal(err)
+
+	if ctx.Err() != nil {
+		logger.Fatal(err, "(loop context is cancelled by:", context.Cause(ctx), ")")
+	} else {
+		logger.Fatal(err)
+	}
 }

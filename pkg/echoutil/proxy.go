@@ -2,10 +2,10 @@ package echoutil
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	kio "github.com/opst/knitfab/pkg/io"
@@ -132,8 +132,7 @@ func CopyRequest(
 
 func CopyResponse(cp *echo.Context, resp *http.Response) error {
 	c := *cp
-	ctx, cancel := context.WithCancel(c.Request().Context())
-	defer cancel()
+	ctx := c.Request().Context()
 
 	dstResp := c.Response()
 	dstHeader := dstResp.Header()
@@ -162,20 +161,35 @@ func CopyResponse(cp *echo.Context, resp *http.Response) error {
 			}
 		}
 	})
-	if chunked {
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(1 * time.Second):
-					c.Response().Flush()
-				}
-			}
-
-		}()
+	if !chunked {
+		_, err := io.Copy(dstResp.Writer, src)
+		return err
 	}
 
-	_, err := io.Copy(dstResp.Writer, src)
-	return err
+	buf := make([]byte, 1024*1024)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		n, err := src.Read(buf)
+		if err != nil {
+			dstResp.Flush()
+			if errors.Is(err, io.EOF) {
+				_, err := dstResp.Write(buf[:n])
+				return err
+			}
+			return err
+		}
+		if n == 0 {
+			continue
+		}
+
+		if _, err := dstResp.Write(buf[:n]); err != nil {
+			return err
+		}
+		dstResp.Flush()
+	}
 }

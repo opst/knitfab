@@ -3,11 +3,12 @@ package initialize_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/initialize"
+	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kdbmock "github.com/opst/knitfab/pkg/db/mocks"
 	"github.com/opst/knitfab/pkg/utils"
@@ -317,218 +318,403 @@ func TestPVCinitializer(t *testing.T) {
 	})
 }
 
-func TestTask(t *testing.T) {
-	for _, pvcInitBehaviour := range []struct {
-		err error
-	}{
-		{err: nil}, {err: errors.New("fake error (pvcinit)")},
-	} {
-		ctx := context.Background()
+func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 
-		pickedRun := kdb.Run{
-			RunBody: kdb.RunBody{
-				Id:         "picked-run",
-				Status:     kdb.Waiting,
-				WorkerName: "worker-name",
-				UpdatedAt: try.To(
-					rfctime.ParseRFC3339DateTime("2021-10-11T12:13:14+09:00"),
-				).OrFatal(t).Time(),
-				PlanBody: kdb.PlanBody{
-					PlanId: "plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image:   "example.repo.invalid/image",
-						Version: "v1.0.0",
-					},
-				},
-			},
-			Inputs: []kdb.Assignment{
-				{
-					MountPoint: kdb.MountPoint{
-						Id:   100_100,
-						Path: "/in/1",
-						Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "csv"}}),
-					},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "picked-run-input-1",
-						VolumeRef: "ref-picked-run-input-1",
-						Tags: kdb.NewTagSet([]kdb.Tag{
-							{Key: "type", Value: "csv"},
-							{Key: "input", Value: "1"},
-						}),
-					},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					MountPoint: kdb.MountPoint{
-						Id:   100_010,
-						Path: "/out/1",
-						Tags: kdb.NewTagSet([]kdb.Tag{
-							{Key: "type", Value: "model"},
-							{Key: "output", Value: "1"},
-						}),
-					},
-				},
-			},
-			Log: &kdb.Log{
-				Id: 100_001,
-				Tags: kdb.NewTagSet([]kdb.Tag{
-					{Key: "type", Value: "jsonl"},
-					{Key: "log", Value: "1"},
-				}),
-			},
-		}
-		seed := kdb.RunCursor{
-			Head:   "previous-run",
-			Status: []kdb.KnitRunStatus{kdb.Waiting},
-		}
-		for _, pickAndSetStatusBehaviour := range []struct {
-			cursor kdb.RunCursor
-			err    error
-		}{
-			{
-				cursor: kdb.RunCursor{
-					Head:   pickedRun.Id,
-					Status: seed.Status,
-				},
-			},
-			{
-				cursor: kdb.RunCursor{
-					Head:   pickedRun.Id,
-					Status: seed.Status,
-				},
-				err: errors.New("fake error (pickandsetstatus)"),
-			},
-			{
-				cursor: seed,
-			},
-			{
-				cursor: seed,
-				err:    errors.New("fake error (pickandsetstatus)"),
-			},
-		} {
-			t.Run(fmt.Sprintf(
-				"[error from PVCInitializer is %v] x [PickAndSetStatus cursor=%+v, error=%v]",
-				pvcInitBehaviour.err, pickAndSetStatusBehaviour.cursor, pickAndSetStatusBehaviour.err,
-			), func(t *testing.T) {
+	type When struct {
+		Cursor            kdb.RunCursor
+		NextCursor        kdb.RunCursor
+		StatusChanged     bool
+		Err               error
+		IRunGetReturnsNil bool
+		UpdatedRun        kdb.Run
+	}
 
-				newStatus := kdb.Invalidated
-				var errInPVCInit error
-				run := kdbmock.NewRunInterface()
-				run.Impl.PickAndSetStatus = func(
-					ctx context.Context, value kdb.RunCursor,
-					f func(kdb.Run) (kdb.KnitRunStatus, error),
-				) (kdb.RunCursor, error) {
-					newStatus, errInPVCInit = f(pickedRun)
+	type Then struct {
+		Cursor   kdb.RunCursor
+		Continue bool
+		Err      error
+	}
 
-					return pickAndSetStatusBehaviour.cursor, pickAndSetStatusBehaviour.err
+	theory := func(when When, then Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			run := kdbmock.NewRunInterface()
+			run.Impl.PickAndSetStatus = func(
+				ctx context.Context, value kdb.RunCursor,
+				f func(kdb.Run) (kdb.KnitRunStatus, error),
+			) (kdb.RunCursor, bool, error) {
+				return when.NextCursor, when.StatusChanged, when.Err
+			}
+
+			run.Impl.Get = func(ctx context.Context, ids []string) (map[string]kdb.Run, error) {
+				if when.IRunGetReturnsNil {
+					return nil, errors.New("irun.Get: should be ignored")
 				}
+				return map[string]kdb.Run{when.NextCursor.Head: when.UpdatedRun}, nil
+			}
 
-				pvcInitializerHasBeenCalledWith := kdb.Run{}
-				pvcInitializer := func(ctx context.Context, r kdb.Run) error {
-					pvcInitializerHasBeenCalledWith = r
-					return pvcInitBehaviour.err
-				}
-
-				testee := initialize.Task(run, pvcInitializer)
-				value, ok, err := testee(ctx, seed)
-
-				t.Run("interaction with PVCInitializer", func(t *testing.T) {
-					if !pvcInitializerHasBeenCalledWith.Equal(&pickedRun) {
+			hookAfterHasBeenCalled := false
+			testee := initialize.Task(run, nil, hook.Func[api_runs.Detail]{
+				AfterFn: func(d api_runs.Detail) error {
+					hookAfterHasBeenCalled = true
+					want := api_runs.ComposeDetail(when.UpdatedRun)
+					if !d.Equal(&want) {
 						t.Errorf(
-							"unexpected run is passed to PVC Initializer:\n===actual==\n%+v\n===expected===\n%+v",
-							pvcInitializerHasBeenCalledWith, pickedRun,
+							"unexpected detail:\n===actual==\n%+v\n===expected===\n%+v",
+							d, want,
 						)
 					}
-
-					if !errors.Is(errInPVCInit, pvcInitBehaviour.err) {
-						t.Errorf(
-							"unexpected error: %+v (expected: %+v)",
-							errInPVCInit, pvcInitBehaviour.err,
-						)
-					}
-				})
-
-				t.Run("interaction with PickAndSetStatus", func(t *testing.T) {
-					if !errors.Is(err, pickAndSetStatusBehaviour.err) {
-						t.Errorf("unexpected error: %+v", err)
-					}
-
-					picked := !seed.Equal(pickAndSetStatusBehaviour.cursor)
-
-					if ok != picked {
-						t.Errorf("unexpected ok: %v", ok)
-					}
-
-					{
-						expected := kdb.Ready
-						if pvcInitBehaviour.err != nil {
-							expected = pickedRun.Status
-						}
-						if newStatus != expected {
-							t.Errorf("unexpected new status: %s (expected: %s)", newStatus, expected)
-						}
-					}
-
-					if picked {
-						if !value.Equal(pickAndSetStatusBehaviour.cursor) {
-							t.Errorf(
-								"unexpected value:\n===actual==\n%+v\n===expected===\n%+v",
-								value,
-								pickAndSetStatusBehaviour,
-							)
-						}
-					}
-				})
+					return errors.New("hook after: should be ignored")
+				},
 			})
+
+			value, ok, err := testee(ctx, when.Cursor)
+
+			if !errors.Is(err, then.Err) {
+				t.Errorf("unexpected error: %+v", err)
+			}
+			if ok != then.Continue {
+				t.Errorf("unexpected Continue: %v", ok)
+			}
+			if !value.Equal(then.Cursor) {
+				t.Errorf(
+					"unexpected value:\n===actual==\n%+v\n===expected===\n%+v",
+					value, then.Cursor,
+				)
+			}
+			if when.StatusChanged != hookAfterHasBeenCalled {
+				t.Errorf("unexpected hook.After has been called: %v", hookAfterHasBeenCalled)
+			}
 		}
 	}
 
-	t.Run("it ignores errors from context", func(t *testing.T) {
-		for name, testcase := range map[string]struct{ err error }{
-			"cancel":            {err: context.Canceled},
-			"deadline exceeded": {err: context.DeadlineExceeded},
-		} {
-			t.Run(name, func(t *testing.T) {
-				run := kdbmock.NewRunInterface()
+	t.Run("it continues when PickAndSetStatus returns a new cursor", theory(
+		When{
+			Cursor: kdb.RunCursor{
+				Head:   "previous-run",
+				Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
 
-				expectedCursor := kdb.RunCursor{
-					Head:   "run-id",
-					Status: []kdb.KnitRunStatus{kdb.Waiting},
-				}
-				run.Impl.PickAndSetStatus = func(
-					ctx context.Context, value kdb.RunCursor,
-					f func(kdb.Run) (kdb.KnitRunStatus, error),
-				) (kdb.RunCursor, error) {
-					return expectedCursor, testcase.err
-				}
+			NextCursor: kdb.RunCursor{
+				Head:   "next-run",
+				Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+			StatusChanged: true,
+			Err:           nil,
 
-				testee := initialize.Task(
-					run,
-					func(ctx context.Context, r kdb.Run) error { return nil },
-				)
-				seed := kdb.RunCursor{
-					Head:   "previous-run",
-					Status: []kdb.KnitRunStatus{kdb.Waiting},
-				}
-				value, ok, err := testee(context.Background(), seed)
+			UpdatedRun: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id:         "next-run",
+					Status:     kdb.Ready,
+					WorkerName: "worker-name",
+					UpdatedAt: try.To(
+						rfctime.ParseRFC3339DateTime("2021-10-11T12:13:14+09:00"),
+					).OrFatal(t).Time(),
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image:   "example.repo.invalid/image",
+							Version: "v1.0.0",
+						},
+					},
+				},
+				Inputs: []kdb.Assignment{
+					{
+						MountPoint: kdb.MountPoint{
+							Id:   100_100,
+							Path: "/in/1",
+							Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "csv"}}),
+						},
+						KnitDataBody: kdb.KnitDataBody{
+							KnitId:    "next-run-input-1",
+							VolumeRef: "ref-next-run-input-1",
+							Tags: kdb.NewTagSet([]kdb.Tag{
+								{Key: "type", Value: "csv"},
+								{Key: "input", Value: "1"},
+							}),
+						},
+					},
+				},
+				Outputs: []kdb.Assignment{
+					{
+						MountPoint: kdb.MountPoint{
+							Id:   100_010,
+							Path: "/out/1",
+							Tags: kdb.NewTagSet([]kdb.Tag{
+								{Key: "type", Value: "model"},
+								{Key: "output", Value: "1"},
+							}),
+						},
+					},
+				},
+				Log: &kdb.Log{
+					Id: 100_001,
+					Tags: kdb.NewTagSet([]kdb.Tag{
+						{Key: "type", Value: "jsonl"},
+					}),
+					KnitDataBody: kdb.KnitDataBody{
+						KnitId:    "next-run-log",
+						VolumeRef: "ref-next-run-log",
+						Tags: kdb.NewTagSet([]kdb.Tag{
+							{Key: "type", Value: "jsonl"},
+							{Key: "log", Value: "1"},
+						}),
+					},
+				},
+			},
+		},
+		Then{
+			Cursor: kdb.RunCursor{
+				Head: "next-run", Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+			Continue: true,
+			Err:      nil,
+		},
+	))
 
-				if err != nil {
-					t.Errorf("unexpected error: %+v", err)
-				}
-				if !ok {
-					t.Errorf("unexpected ok: %v", ok)
-				}
-				{
-					if !value.Equal(expectedCursor) {
-						t.Errorf(
-							"unexpected value:\n===actual==\n%+v\n===expected===\n%+v",
-							value, expectedCursor,
-						)
+	t.Run("it stops when PickAndSetStatus does not move cursor", theory(
+		When{
+			Cursor: kdb.RunCursor{
+				Head:   "previous-run",
+				Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+
+			NextCursor: kdb.RunCursor{
+				Head:   "previous-run",
+				Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+			StatusChanged: false,
+			Err:           nil,
+		},
+		Then{
+			Cursor: kdb.RunCursor{
+				Head: "previous-run", Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+			Continue: false,
+			Err:      nil,
+		},
+	))
+
+	t.Run("it ignores context.Canceled", theory(
+		When{
+			Cursor: kdb.RunCursor{
+				Head:   "previous-run",
+				Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+
+			NextCursor: kdb.RunCursor{
+				Head:   "next-run",
+				Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+			StatusChanged: false,
+			Err:           context.Canceled,
+		},
+		Then{
+			Cursor: kdb.RunCursor{
+				Head: "next-run", Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+			Continue: true,
+		},
+	))
+
+	t.Run("it ignores context.DeadlineExceeded", theory(
+		When{
+			Cursor: kdb.RunCursor{
+				Head:   "previous-run",
+				Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+
+			NextCursor: kdb.RunCursor{
+				Head:   "next-run",
+				Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+			StatusChanged: false,
+			Err:           context.DeadlineExceeded,
+		},
+		Then{
+			Cursor: kdb.RunCursor{
+				Head: "next-run", Status: []kdb.KnitRunStatus{kdb.Waiting},
+			},
+			Continue: true,
+			Err:      nil,
+		},
+	))
+}
+
+func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
+	ctx := context.Background()
+
+	pickedRun := kdb.Run{
+		RunBody: kdb.RunBody{
+			Id:         "picked-run",
+			Status:     kdb.Waiting,
+			WorkerName: "worker-name",
+			UpdatedAt: try.To(
+				rfctime.ParseRFC3339DateTime("2021-10-11T12:13:14+09:00"),
+			).OrFatal(t).Time(),
+			PlanBody: kdb.PlanBody{
+				PlanId: "plan-id",
+				Image: &kdb.ImageIdentifier{
+					Image:   "example.repo.invalid/image",
+					Version: "v1.0.0",
+				},
+			},
+		},
+		Inputs: []kdb.Assignment{
+			{
+				MountPoint: kdb.MountPoint{
+					Id:   100_100,
+					Path: "/in/1",
+					Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "csv"}}),
+				},
+				KnitDataBody: kdb.KnitDataBody{
+					KnitId:    "picked-run-input-1",
+					VolumeRef: "ref-picked-run-input-1",
+					Tags: kdb.NewTagSet([]kdb.Tag{
+						{Key: "type", Value: "csv"},
+						{Key: "input", Value: "1"},
+					}),
+				},
+			},
+		},
+		Outputs: []kdb.Assignment{
+			{
+				MountPoint: kdb.MountPoint{
+					Id:   100_010,
+					Path: "/out/1",
+					Tags: kdb.NewTagSet([]kdb.Tag{
+						{Key: "type", Value: "model"},
+						{Key: "output", Value: "1"},
+					}),
+				},
+			},
+		},
+		Log: &kdb.Log{
+			Id: 100_001,
+			Tags: kdb.NewTagSet([]kdb.Tag{
+				{Key: "type", Value: "jsonl"},
+				{Key: "log", Value: "1"},
+			}),
+		},
+	}
+	seed := kdb.RunCursor{
+		Head:   "previous-run",
+		Status: []kdb.KnitRunStatus{kdb.Waiting},
+	}
+
+	type When struct {
+		BeforeErr error
+		InitErr   error
+	}
+
+	type Then struct {
+		NewStatus kdb.KnitRunStatus
+		Err       error
+	}
+
+	theory := func(when When, then Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			run := kdbmock.NewRunInterface()
+			run.Impl.PickAndSetStatus = func(
+				ctx context.Context, value kdb.RunCursor,
+				f func(kdb.Run) (kdb.KnitRunStatus, error),
+			) (kdb.RunCursor, bool, error) {
+				gotStatus, err := f(pickedRun)
+
+				if when.BeforeErr != nil {
+					if !errors.Is(err, when.BeforeErr) {
+						t.Errorf("unexpected error: %+v", err)
+					}
+				} else {
+					if !errors.Is(err, when.InitErr) {
+						t.Errorf("unexpected error: %+v", err)
 					}
 				}
-			})
-		}
-	})
 
+				if gotStatus != then.NewStatus {
+					t.Errorf("unexpected new status: %s (expected: %s)", gotStatus, then.NewStatus)
+				}
+
+				return seed, true, err
+			}
+			run.Impl.Get = func(ctx context.Context, ids []string) (map[string]kdb.Run, error) {
+				return map[string]kdb.Run{pickedRun.Id: pickedRun}, nil
+			}
+
+			initHasBeenCalled := false
+			pvcInitializer := func(ctx context.Context, r kdb.Run) error {
+				initHasBeenCalled = true
+				if !r.Equal(&pickedRun) {
+					t.Errorf(
+						"unexpected run is passed to PVC Initializer:\n===actual==\n%+v\n===expected===\n%+v",
+						r, pickedRun,
+					)
+				}
+				return when.InitErr
+			}
+
+			beforeFnHasBeenCalled := false
+			testee := initialize.Task(run, pvcInitializer, hook.Func[api_runs.Detail]{
+				BeforeFn: func(d api_runs.Detail) error {
+					beforeFnHasBeenCalled = true
+					if want := api_runs.ComposeDetail(pickedRun); !d.Equal(&want) {
+						t.Errorf(
+							"unexpected detail:\n===actual==\n%+v\n===expected===\n%+v",
+							d, want,
+						)
+					}
+
+					return when.BeforeErr
+				},
+			})
+
+			testee(ctx, seed)
+
+			if !beforeFnHasBeenCalled {
+				t.Error("BeforeFn has not been called")
+			}
+
+			if when.BeforeErr == nil {
+				if !initHasBeenCalled {
+					t.Error("PVCInitializer has not been called")
+				}
+			}
+		}
+	}
+
+	beforeErr := errors.New("fake error (before)")
+	initErr := errors.New("fake error (init)")
+
+	t.Run("it continues when BeforeFn and PVCInitializer successes", theory(
+		When{
+			BeforeErr: nil,
+			InitErr:   nil,
+		},
+		Then{
+			NewStatus: kdb.Ready,
+			Err:       nil,
+		},
+	))
+
+	t.Run("it stops when BeforeFn returns an error", theory(
+		When{
+			BeforeErr: beforeErr,
+			InitErr:   nil,
+		},
+		Then{
+			NewStatus: pickedRun.Status,
+			Err:       beforeErr,
+		},
+	))
+
+	t.Run("it stops when PVCInitializer returns an error", theory(
+		When{
+			BeforeErr: nil,
+			InitErr:   initErr,
+		},
+		Then{
+			NewStatus: pickedRun.Status,
+			Err:       initErr,
+		},
+	))
 }

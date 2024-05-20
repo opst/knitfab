@@ -222,6 +222,8 @@ Also, if you have changed the TLD (Top-Level Domain) of the Kubernetes cluster d
 
 - `clusterTLD` in `Knitfab-install-settings/values/knit-app.yaml` (Comment in and modify)
 
+As optional parameters, you can setup WebHooks by editing `knitfab-install-settings/values/hooks.yaml`.
+For more detail, see section "Extend Knitfab".
 
 #### Step 3: Install
 
@@ -744,5 +746,482 @@ Also, for scaling in/out, you can simply scale the Kubernetes Deployment.
 You can follow the Kubernetes procedure to add a node.
 You will be able to increase the number of nodes where Workers and Data Agents can be deployed.
 
-However, as of v1.0.0, TLS certificates are not supported for newly added nodes.
+However, as of v1.0, TLS certificates are not supported for newly added nodes.
 User requests should be sent to the existing nodes. Otherwise, it will result in a certificate error.
+
+Backup and Restore
+--------------------
+
+This chapter shows you how to backup Data and lineages from Knitfab and to restore them into a newly installed Knitfab.
+
+Tools for backup and restoring are in `admin-tools` directory in this repository. "tar.gz" archive of this is also contained in the releases.
+
+Backup procedure of Knitfab consists of:
+
+1. Announce system outage
+2. Freeze Knitfab system
+3. Take backup
+  - Backup Image Registry
+  - Backup Knitfab Data
+  - Backup Database
+4. Unfreeze Knitfab system and announce it
+
+Restoring procedure of Knitfab assumes that Knitfab which is target of restoring is a newly installed Knitfab and its version is same as the version which the backup is taken.
+
+Restoring procedure of Knitfab consists of:
+
+1. Restore Image Registry
+2. Restore Knitfab Data
+3. Restore Database
+
+The restore procedure clears Image Registry and RDB, and your Knitfab is restored as the backup.
+
+### Backup
+
+#### Announce system outage
+
+For your users, announce system outage before starting backup operation.
+
+In the announcement, notice that running Runs during backup operation will be failed.
+
+#### Freeze Knitfab system
+
+To freeze system, execute `admin-tools/system-freeze.sh` (it is shell-script).
+
+This script should be executed in a directory where you have performed `knit init` with Knitfab to be frozen.
+
+```sh
+# knit init KNITPROFILE  # if you have not
+
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/system-freeze.sh
+```
+
+This script requires following tools:
+
+- `knit`
+- `helm`
+- `kubectl`
+- `jq`
+
+This script refers following environmental variables:
+
+- `NAMESPACE` **(required)**: Kubernetes Namespace where Knitfab to be frozen is installed in
+- `KUBECONFIG` (optional): declare non-default kubeconfig file if needed
+
+On executing `admin-tools/system-freeze.sh`, it does
+
+- Scale deployments of Knitfab into 0
+- Let Runs be failed, and wait for them to stop
+- Generate shell script to unfreeze Knitfab.
+
+Actually, `admin-tools/system-freeze.sh` performs scale-in of deployments which is not related with Runs' lifecycle, stopping Runs, and then scale-in of deployments related with Runs' lifecycle.
+
+By starting the operation, Knitfab suspends to create new Runs. And after the operation, Knitfab API is stopped and running `knit data push` or `knit data pull` are aborted.
+
+`admin-tools/system-freeze.sh` generates a script, `./system-unfreeze.sh`, to unfreeze  your Knitfab. This script is used later.
+
+#### Backup: Image Registry
+
+Execute `admin-tools/backup/images.sh` like below
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/backup/images.sh backup/images
+```
+
+The script requires following tools:
+
+- `helm`
+- `kubectl`
+- `jq`
+
+The script refers following envronment variables:
+
+- `NAMESPACE` **(required)**: Kubernetes Namespace where Knitfab to be frozen is installed in
+- `KUBECONFIG` (optional): declare non-default kubeconfig file if needed
+
+The script starts a Pod to perform backup, so it needs Internet access to pull image.
+
+The script saves storage content of the Image Registry of Knitfab as tar.gz archive into the directory `backup/images` in arguments (it can be renamed if you need). The directory will be created if it does not exist.
+
+During backup, a Pod named "datadumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
+
+#### Backup: Data
+
+Backup contents of Knitfab Data.
+
+Lineages or Tags are **NOT** saved by this backup. It is needed to save them that taking backup of Database.
+
+Execute shell script `admin-tools/backup/data.sh`。
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/backup/data.sh backup/data
+```
+
+The script requires following tools:
+
+- `helm`
+- `kubectl`
+- `jq`
+
+The script refers follwoing environment variables:
+
+- `NAMESPACE` **(required)**: Kubernetes Namespace where Knitfab to be frozen is installed in
+- `KUBECONFIG` (optional): declare non-default kubeconfig file if needed
+
+The script starts a Pod to perform backup, so it needs Internet access to pull image.
+
+The script saves storage content of the Image Registry of Knitfab as tar.gz archive into the directory `backup/data` in arguments (it can be renamed if you need). The directory will be created if it does not exist.
+
+During backup, a Pod named "datadumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
+
+#### Backup: Database
+
+Backup tables in Knitfab Database.
+
+Contents of Knit Data are **NOT** contained in this backup. Taking backup of Data is  also needed to resotre Knitfab.
+
+Execute shell script `admin-tools/backup/db.sh` like below:
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/backup/db.sh backup/db
+```
+
+The script requires following tools:
+
+- `helm`
+- `kubectl`
+- `jq`
+
+The script refers follwoing environment variables:
+
+- `NAMESPACE` **(required)**: Kubernetes Namespace where Knitfab to be frozen is installed in
+- `KUBECONFIG` (optional): declare non-default kubeconfig file if needed
+
+The script starts a Pod to perform backup, so it needs Internet access to pull image.
+
+The script runs [`pg_dump`](https://www.postgresql.org/docs/15/app-pgdump.html), compless the dumpped file with gzip, and saves it in the directory `backup/db` in arguments (it can be renamed if you need). The directory will be created if it does not exist.
+
+During backup, a Pod named "pgdumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
+
+#### Unfreeze Knitfab system, and announce it
+
+To unfreeze Knitfan, execute `./system-unfreeze.sh`, generated by `admin-tools/system-freeze.sh`.
+
+By this, deployments scales as number as before freezing, and Web API and Run's lifecycle are restarted.
+
+Announce that Knitfab is unfrozen for your user after deployments scales out enough.
+
+### Restore
+
+This section describes how to restore Knitfab from a backup.
+
+Knitfab which is the target of restore should be just newly installed one, and its version is same as the version which the backup has been taken. Otherwize, system consistency will be broken.
+
+#### Image Registry
+
+Execute shell script `admin-tools/restore/images.sh` like below:
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/restore/images.sh backup/images
+```
+
+`backup/images` is the directory storing backup of images.
+
+The script requires following tools:
+
+- `helm`
+- `kubectl`
+- `jq`
+
+The script refers follwoing environment variables:
+
+- `NAMESPACE` **(required)**: Kubernetes Namespace where Knitfab to be frozen is installed in
+- `KUBECONFIG` (optional): declare non-default kubeconfig file if needed
+
+The script starts a Pod to perform backup, so it needs Internet access to pull image.
+
+On starting `admin-tools/restore/images.sh`, you will see the messsage like below:
+
+```
+*** Restore Images ***
+  - SOURCE: backup/images
+  - NAMESPACE: knitfab
+  - STORAGE CLASS:  (not changed)
+  - CLEAN: yes   # (If yes, delete the existing PVC for images before restoring.)
+
+Do you want to restore? [y/N]:
+```
+
+This message describes restoring operation and ask your decision to proceed. If okay, input `y` and hit enter.
+
+After that, it goes following processes in the order:
+
+1. Scale Image Registry to 0 replicas
+2. Cleaer and overwrite PVC stores Image Registry with backup
+3. Scale Image Registry to number as it was
+
+If these processes are aborted in the middle, the last processes can not be executed.
+In such cases, you should scale Image Registry with `kubectl` directly.
+
+During restoring, to write to PV, a Pod named "dataloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
+
+#### Data
+
+Execute shell script `admin-tools/restore/data.sh` like below:
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/restore/images.sh backup/data
+```
+
+`backup/data` is the directory storing a backup of Data.
+
+The script requires following tools:
+
+- `helm`
+- `kubectl`
+- `jq`
+
+The script refers follwoing environment variables:
+
+- `NAMESPACE` **(required)**: Kubernetes Namespace where Knitfab to be frozen is installed in
+- `KUBECONFIG` (optional): declare non-default kubeconfig file if needed
+
+The script starts a Pod to perform backup, so it needs Internet access to pull image.
+
+On starting `admin-tools/restore/data.sh`, you will see the messsage like below:
+
+```
+*** Restore Knitfab Data ***
+  - SOURCE: backup/data/*  # Each directory containing pvc.json and data.tar.gz
+  - NAMESPACE: knitfab
+  - STORAGE CLASS:  (not changed)
+  - CLEAN: no   # If yes, delete the existing PVC before restoring.
+
+Do you want to restore? [y/N]:
+```
+
+This message describes restoring operation and ask your decision to proceed. If okay, input `y` and hit enter.
+
+After that, it restores PVCs for each Data from backup.
+
+During restoring, to write to PV, a Pod named "dataloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
+
+#### Database
+
+Execute shell script `admin-tools/restore/db.sh` like below;
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/restore/db.sh backup/db
+```
+
+`backup/db` is the directory storing a backup of Database.
+
+The script requires following tools:
+
+- `helm`
+- `kubectl`
+- `jq`
+
+The script refers follwoing environment variables:
+
+- `NAMESPACE` **(required)**: Kubernetes Namespace where Knitfab to be frozen is installed in
+- `KUBECONFIG` (optional): declare non-default kubeconfig file if needed
+
+The script starts a Pod to perform backup, so it needs Internet access to pull image.
+
+On starting `admin-tools/restore/db.sh`, you will see the messsage like below:
+
+```
+*** Restore database ***
+  - SOURCE: backup/db
+  - NAMESPACE: knitfab
+  - DATABASE SERVICE NAME: database
+
+Do you want to restore? [y/N]:
+```
+
+レストア中に、PV に書き込みを行うため、"pgloader" という名前の Pod を起動する。正常にレストアが進めば自動的に削除される。レストアを中断した場合には "pgloader" が削除されずに残る可能性があるが、`kubectl ` コマンドを利用して直接削除せよ。
+
+This message describes restoring operation and ask your decision to proceed. If okay, input `y` and hit enter.
+
+After that, it restores Database from backup.
+
+During restoring, to execute [pg_resotre](https://www.postgresql.org/docs/15/app-pgrestore.html), a Pod named "pgloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
+
+Extend Knitfab
+-----------------
+
+This section describes how to customise your Knitfab, for advanced usage.
+
+### WebHooks
+
+Knitfab can notify internal events as HTTP requests. It is WebHook.
+
+Events supporting WebHook are below:
+
+- Lifecycle Hooks: Send HTTP Request before and after changing Runs' status.
+
+Set up WebHooks by following steps:
+
+1. Edit a file `values/hooks.yml` in install settings directory (`knitfab-install-settings`) generated by the Knitfab installer.
+2. Update Knitfab: rerun `./installer.sh --install`.
+
+### Lifecycle Hooks
+
+Lifecycle Hooks are WebHooks invoked before and after changing each Runs' status. URLs registered as hooks receives Run's information as a POST request.
+
+Before Hooks are invoked before changing Run's status, and After Hooks are invoked after Run's status.
+
+On changing Run's status, Knitfab performs as following:
+
+1. Sends requests to Before Hooks
+    - When all of Before Hooks response with status code 2xx, goes ahead.
+2. Changes Run's status.
+    - When succeeded, goes ahead.
+3. Sends requests to After Hooks.
+    - responses are ignored.
+
+Before Hooks receive one request per one status changing, normally. These Hooks receive requests *at least once*, but it can receives more in cases of:
+
+- Some Before Hook responses non-2xx
+- Knitfab failed to change Run's status
+
+Because Knitfab retries changing Run's status in these cases, it is possible that Before Hooks receives request twice or more for a status changing.
+
+Also After Hooks receive one request per one status changing, normally. These Hooks receive requests *at most once*, but it can receives zero requests in cases of:
+
+- After changing Run's status and before invoke Hook, Knitfab's process is stopped unexpectedly.
+
+#### Setup Lifecycle Hooks
+
+To setup Lifecycle Hook, edit `values/hooks.yaml` to update entry `hooks.lifecycle-hooks`.
+
+The installer generates `hooks.lifecycle-hooks` as below:
+
+```yaml
+  # # lifecycle-hooks: lifecycle webhooks for Knitfab.
+  # #
+  # # Each URLs reveices POST requests with a Run as JSON, before or after status change of the Run.
+  # #
+  # # The Run JSON is formatted as same as output of `knit run show`.
+  lifecycle-hooks:
+
+    # # before: Webhook URLs to be called before the Knitfab changes the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status is going to be changed.
+    # #
+    # # When these hook responses non-200 status, the status changing causes an error and will be retried later.
+    before: []
+
+    # # before: Webhook URLs to be called after the Knitfab has changed the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status has been changed.
+    # #
+    # # Responses from these hooks are ignored.
+    after: []
+```
+
+
+`before` contains URLs for Before Hooks and `after` for After Hooks. At it is generated, both are empty.
+
+Update them like below, and run `./installer.sh --install` at directory where you have installed Knitfab.
+
+```yaml
+  # # lifecycle-hooks: lifecycle webhooks for Knitfab.
+  # #
+  # # Each URLs reveices POST requests with a Run as JSON, before or after status change of the Run.
+  # #
+  # # The Run JSON is formatted as same as output of `knit run show`.
+  lifecycle-hooks:
+
+    # # before: Webhook URLs to be called before the Knitfab changes the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status is going to be changed.
+    # #
+    # # When these hook responses non-200 status, the status changing causes an error and will be retried later.
+    before:
+      - https://example.com/before
+
+    # # before: Webhook URLs to be called after the Knitfab has changed the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status has been changed.
+    # #
+    # # Responses from these hooks are ignored.
+    after:
+      - https://example.com/after
+```
+
+
+You can set Before Hook only or After Hook only, or you can set 2 or more URLs for a Hook.
+
+After that, Pods invoking Lifecycle Hooks and Hooks are activated.
+
+#### Request Spec　of Lifecycle Hooks
+
+Before and After Lifecycle Hooks send `POST` requests with Run as JSON.
+Before Hooks send Run as just before changing status, and After Hooks send Run as just after status changed.
+
+The format of Run JSON, as same as outputs of `knit run show`, is below:
+
+```json
+{
+    "runId": "74372a32-165d-432b-83e8-5821ab6bf21e",
+    "status": "running",
+    "updatedAt": "2024-05-17T04:19:33.325+00:00",
+    "plan": {
+        "planId": "3328be16-5b74-400a-a918-7b2a41bc0bf8",
+        "image": "localhost:30503/knitfab-first-train:v1.0"
+    },
+    "inputs": [
+        {
+            "path": "/in/dataset",
+            "tags": [
+                "mode:training",
+                "project:first-knitfab",
+                "type:dataset"
+            ],
+            "knitId": "a07490b8-0fdf-4c75-bce1-fba8ccf81336"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "/out/model",
+            "tags": [
+                "description:2 layer CNN + 2 layer Affine",
+                "project:first-knitfab",
+                "type:model"
+            ],
+            "knitId": "7ada9346-c037-4d4a-8569-48d706edbac0"
+        }
+    ],
+    "log": {
+        "Tags": [
+            "project:first-knitfab",
+            "type:log"
+        ],
+        "knitId": "958b791c-cd56-4170-9d17-b4031ff528e6"
+    }
+}
+```
+
+- `runId`: The identfier of the Run.
+- `status`: Run's status. It is the status to be changed for Before Hook, and the new status for After Hook.
+- `updatedAt`: Timestamp when the Run is updated at.
+- `plan`: Plan summary for the Run.
+     - `planId`: The identifier of the Plan.
+     - `image`: The container image of the Plan. This and `name` are exclusive.
+     - `name`: Plan name which does not have `image`.
+- `inputs[*]`, `outputs[*]`: Data which are inputted to or outputted from this Run.
+    - `path`: Filepath where the Data is mounted on.
+    - `tags[*]`: Tags for this Input(or Output). Not Data's Tag.
+    - `knitId`: Identifier of the Data.
+- `log`: Output for STDOUT+STDERR.
+    - `tags[*]`: Tags for this Output. Not Data's Tag
+    - `knitId`: Identifier of the Data holding the log.

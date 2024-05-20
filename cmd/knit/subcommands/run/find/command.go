@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
@@ -19,12 +18,12 @@ import (
 )
 
 type Flag struct {
-	PlanId    *kflag.Argslice     `flag:"planid,short=p,help=Find Run with this Plan Id. Repeatable."`
-	KnitIdIn  *kflag.Argslice     `flag:"in-knitid,short=i,help=Find Run where the Input has this Knit Id. Repeatable."`
-	KnitIdOut *kflag.Argslice     `flag:"out-knitid,short=o,help=Find Run where the Output has this Knit Id. Repeatable."`
-	Status    *kflag.Argslice     `flag:"status,short=s,metavar=waiting|deactivated|starting|running|done|failed...,help=Find Run in this status. Repeatable."`
-	Since     *kflag.LooseRFC3339 `flag:"since,help=Find Run only updated at this time or later."`
-	Duration  time.Duration       `flag:"duration,help=Find Run only updated at a time earlier than the sum of since and duration."`
+	PlanId    *kflag.Argslice         `flag:"planid,short=p,help=Find Run with this Plan Id. Repeatable."`
+	KnitIdIn  *kflag.Argslice         `flag:"in-knitid,short=i,help=Find Run where the Input has this Knit Id. Repeatable."`
+	KnitIdOut *kflag.Argslice         `flag:"out-knitid,short=o,help=Find Run where the Output has this Knit Id. Repeatable."`
+	Status    *kflag.Argslice         `flag:"status,short=s,metavar=waiting|deactivated|starting|running|done|failed...,help=Find Run in this status. Repeatable."`
+	Since     *kflag.LooseRFC3339     `flag:"since,help=Find Run only updated at this time or later."`
+	Duration  *kflag.OptionalDuration `flag:"duration,help=Find Run only updated in '--duration' from '--since'."`
 }
 
 type Command struct {
@@ -71,7 +70,7 @@ func (*Command) Usage() usage.Usage[Flag] {
 			KnitIdOut: &kflag.Argslice{},
 			Status:    &kflag.Argslice{},
 			Since:     &kflag.LooseRFC3339{},
-			Duration:  0,
+			Duration:  &kflag.OptionalDuration{},
 		},
 		usage.Args{},
 	)
@@ -82,20 +81,21 @@ func (cmd *Command) Help() kcmd.Help {
 		Synopsis: "Find Runs that satisfy all specified conditions",
 		Detail: `
 Find Runs that satisfy all specified conditions.
-If the same flags except 'since' and 'duration' are specified multiple times, it will display Runs that satisfy any of the values.
 
-'Since' and 'duration' are used to specify the time range to search for Runs.
+If the same flags multiple times, it will display Runs that satisfy any of the values.
 
-Since targets Runs that have been updated at equal to or later than since.
-The since can be described in RFC3339 date-time format, and it is also possible to omit 
-sub-seconds, seconds, minutes, and hours, in the description.
-If the time zone is omitted, the local time zone is applied. 
-When including a date and time, the following characters are allowed as delimiters between the date and time: "T" or space.
+To limit results with a timespan, use '--since' and '--duration'.
 
-Duration is a flag used in conjunction with since. 
-It targets Runs for search that have been updated at a time earlier than the sum of since and duration.
-Duration can be described in Go's time.Duration type.
-Examples of duration are "300ms", "1.5h" or "2h45m". 
+'--since' limits a result to Runs which have been updated at equal to or later than '--since'.
+The '--since' is expected to be formatted in RFC3339, and it is also possible to omit sub-seconds, seconds, minutes, hours and ttime offsets.
+When the time offset is omitted, it is assumed the local time. Other fields omitted are assumed to be zero.
+Delimiter between the date and time can be "T" or " " (space), whichever equiverant.
+For example, "2024-10-31T01:23:45.987Z", "2024-10-31 01:23" or "2024-10-31+09:00".
+
+'--duration' limits a result to Runs which have been updated in '--duration' from '--since'.
+'--duration' should be used in conjunction with '--since'.
+Supported units are "ms" (milliseconds), "s" (seconds), "m" (minutes) and "h" (hours).
+For example, "300ms", "1.5h" or "2h45m". Units are required. Negative duration is not supported.
 `,
 		Example: `
 Finding Runs with Plan Id "plan1":
@@ -112,6 +112,13 @@ Finding runs with Plan Id "plan1" OR "plan2":
 Finding runs with Plan Id "plan1" AND Knit Id "knit1" in Input :
 
 	{{ .Command }} --planid plan1 --in-knitid knit1
+
+Scan over Runs for day by day:
+
+	{{ .Command }} --duration 24h --since 2024-01-01
+	{{ .Command }} --duration 24h --since 2024-01-02
+	{{ .Command }} --duration 24h --since 2024-01-03
+	# And so on. There are no overwraps between days.
 `,
 	}
 }
@@ -128,11 +135,11 @@ func (cmd *Command) Execute(
 	knitIdIn := ptr.SafeDeref(flags.Flags.KnitIdIn)
 	knitIdOut := ptr.SafeDeref(flags.Flags.KnitIdOut)
 	status := ptr.SafeDeref(flags.Flags.Status)
-	since := time.Time(ptr.SafeDeref(flags.Flags.Since))
-	duration := flags.Flags.Duration
+	since := flags.Flags.Since.Time()
+	duration := flags.Flags.Duration.Duration()
 
-	if since == (time.Time{}) && duration != 0 {
-		return fmt.Errorf("%w: since and duration must be specified together", kcmd.ErrUsage)
+	if since == nil && duration != nil {
+		return fmt.Errorf("%w: --duration must be together with --since", kcmd.ErrUsage)
 	}
 
 	parameter := krst.FindRunParameter{
@@ -140,8 +147,8 @@ func (cmd *Command) Execute(
 		KnitIdIn:  knitIdIn,
 		KnitIdOut: knitIdOut,
 		Status:    status,
-		Since:     &since,
-		Duration:  &duration,
+		Since:     since,
+		Duration:  duration,
 	}
 
 	run, err := cmd.task(ctx, l, c, parameter)

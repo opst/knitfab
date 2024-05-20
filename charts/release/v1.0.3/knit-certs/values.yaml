@@ -1,0 +1,9 @@
+component: certs
+secret:
+  server: certs
+  ca: ca-certs
+# eert: # mandatory
+# key: # mandatory
+
+# cacert: # mandatory
+# cakey: # mandatory
