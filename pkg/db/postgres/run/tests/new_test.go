@@ -619,7 +619,7 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 		},
-		"When single nomination triggers many runs, it should generates them all": {
+		"When single nomination triggers many runs, it should generates them all (single input)": {
 			given: tables.Operation{
 				Plan: []tables.Plan{
 					{PlanId: th.Padding36("plan:1/uploaded"), Hash: "#plan:1", Active: true},
@@ -763,7 +763,535 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 		},
-		"When nomination triggers runs but some of them are known, it generates runs except already known": {
+		"When single nomination triggers many runs, it should generates them all (multiple input)": {
+			given: tables.Operation{
+				Plan: []tables.Plan{
+					{PlanId: th.Padding36("plan:1/uploaded"), Hash: "#plan:1", Active: true},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Hash: "#plan:2", Active: true},
+					{PlanId: th.Padding36("plan:3/split"), Hash: "#plan:3", Active: true},
+				},
+				PlanPseudo: []tables.PlanPseudo{
+					{PlanId: th.Padding36("plan:1/uploaded"), Name: "knit#uploaded"},
+				},
+				PlanImage: []tables.PlanImage{
+					{PlanId: th.Padding36("plan:2/preprocessing"), Image: "repo.invalid/preprocessing", Version: "v1.0"},
+					{PlanId: th.Padding36("plan:3/split"), Image: "repo.invalid/split", Version: "v1.0"},
+				},
+				Inputs: map[tables.Input]tables.InputAttr{
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/in/raw-data-1", InputId: 2100}: {
+						UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+					},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/in/raw-data-2", InputId: 2200}: {
+						UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+					},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/in/params", InputId: 2300}: {
+						UserTag: []kdb.Tag{{Key: "type", Value: "params"}},
+					},
+					{PlanId: th.Padding36("plan:3/split"), Path: "/in/configs", InputId: 3100}: {
+						UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+					},
+				},
+				Outputs: map[tables.Output]tables.OutputAttr{
+					{PlanId: th.Padding36("plan:1/uploaded"), Path: "/out", OutputId: 1010}:      {},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/out", OutputId: 2010}: {},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/logs", OutputId: 2001}: {
+						UserTag: []kdb.Tag{
+							{Key: "key-a", Value: "tag-a"},
+						},
+						IsLog: true,
+					},
+					{PlanId: th.Padding36("plan:3/split"), Path: "/out/1", OutputId: 3010}: {},
+					{PlanId: th.Padding36("plan:3/split"), Path: "/out/2", OutputId: 3020}: {
+						UserTag: []kdb.Tag{
+							{Key: "key-b", Value: "tag-b"},
+						},
+					},
+				},
+				Steps: []tables.Step{
+					{
+						Run: tables.Run{
+							RunId: th.Padding36("run:1-1/uploaded"), Status: kdb.Done,
+							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+								"2021-04-05T10:11:12.345+00:00",
+							)).OrFatal(t).Time(),
+							PlanId: th.Padding36("plan:1/uploaded"),
+						},
+						Assign: []tables.Assign{},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								VolumeRef: "vol#data:1-1",
+								OutputId:  1010,
+								RunId:     th.Padding36("run:1-1/uploaded"),
+								PlanId:    th.Padding36("plan:1/uploaded"),
+							}: {
+								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
+									"2021-04-05T10:11:12.345+00:00",
+								)).OrFatal(t).Time()),
+								UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+							},
+						},
+					},
+					{
+						Run: tables.Run{
+							RunId: th.Padding36("run:1-2/uploaded"), Status: kdb.Done,
+							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+								"2021-04-05T10:11:12.345+00:00",
+							)).OrFatal(t).Time(),
+							PlanId: th.Padding36("plan:1/uploaded"),
+						},
+						Assign: []tables.Assign{},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:    th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								VolumeRef: "vol#data:1-2",
+								OutputId:  1010,
+								RunId:     th.Padding36("run:1-2/uploaded"),
+								PlanId:    th.Padding36("plan:1/uploaded"),
+							}: {
+								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
+									"2021-04-05T10:11:12.345+00:00",
+								)).OrFatal(t).Time()),
+								UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+							},
+						},
+					},
+					{
+						Run: tables.Run{
+							RunId: th.Padding36("run:1-3/uploaded"), Status: kdb.Done,
+							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+								"2021-04-05T10:11:12.345+00:00",
+							)).OrFatal(t).Time(),
+							PlanId: th.Padding36("plan:1/uploaded"),
+						},
+						Assign: []tables.Assign{},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:    th.Padding36("data:1-3/run:1-3/uploaded//out"),
+								VolumeRef: "vol#data:1-3",
+								OutputId:  1010,
+								RunId:     th.Padding36("run:1-3/uploaded"),
+								PlanId:    th.Padding36("plan:1/uploaded"),
+							}: {
+								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
+									"2021-04-05T10:11:12.345+00:00",
+								)).OrFatal(t).Time()),
+								UserTag: []kdb.Tag{{Key: "type", Value: "params"}},
+							},
+						},
+					},
+					{
+						Run: tables.Run{
+							RunId: th.Padding36("run:1-4/uploaded"), Status: kdb.Done,
+							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+								"2021-04-05T10:11:12.345+00:00",
+							)).OrFatal(t).Time(),
+							PlanId: th.Padding36("plan:1/uploaded"),
+						},
+						Assign: []tables.Assign{},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:    th.Padding36("data:1-4/run:1-4/uploaded//out"),
+								VolumeRef: "vol#data:1-4",
+								OutputId:  1010,
+								RunId:     th.Padding36("run:1-4/uploaded"),
+								PlanId:    th.Padding36("plan:1/uploaded"),
+							}: {
+								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
+									"2021-04-05T10:11:12.345+00:00",
+								)).OrFatal(t).Time()),
+								UserTag: []kdb.Tag{{Key: "type", Value: "params"}},
+							},
+						},
+					},
+				},
+				Nomination: []tables.Nomination{
+					{KnitId: th.Padding36("data:1-1/run:1-1/uploaded//out"), InputId: 2100, Updated: true},
+					{KnitId: th.Padding36("data:1-2/run:1-2/uploaded//out"), InputId: 2100, Updated: false},
+					{KnitId: th.Padding36("data:1-1/run:1-1/uploaded//out"), InputId: 2200, Updated: true},
+					{KnitId: th.Padding36("data:1-2/run:1-2/uploaded//out"), InputId: 2200, Updated: false},
+					{KnitId: th.Padding36("data:1-3/run:1-3/uploaded//out"), InputId: 2300, Updated: false},
+					{KnitId: th.Padding36("data:1-4/run:1-4/uploaded//out"), InputId: 2300, Updated: false},
+
+					{KnitId: th.Padding36("data:1-1/run:1-1/uploaded//out"), InputId: 3100, Updated: true},
+					{KnitId: th.Padding36("data:1-2/run:1-2/uploaded//out"), InputId: 3100, Updated: false},
+				},
+			},
+			then: expectation{
+				planLockData: map[string][]string{
+					th.Padding36("plan:2/preprocessing"): {
+						th.Padding36("data:1-1/run:1-1/uploaded//out"),
+						th.Padding36("data:1-2/run:1-2/uploaded//out"),
+						th.Padding36("data:1-3/run:1-3/uploaded//out"),
+					},
+					th.Padding36("plan:3/split"): {
+						th.Padding36("data:1-1/run:1-1/uploaded//out"),
+					},
+				},
+				newRuns: []runComponent{
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 2100,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 2200,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-3/run:1-3/uploaded//out"),
+								InputId: 2300,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							2010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2010,
+								},
+								[]kdb.Tag{}, // no tags.
+							),
+							2001: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2001,
+								},
+								[]kdb.Tag{
+									{Key: "key-a", Value: "tag-a"},
+								},
+							),
+						},
+					},
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 2100,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								InputId: 2200,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-3/run:1-3/uploaded//out"),
+								InputId: 2300,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							2010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2010,
+								},
+								[]kdb.Tag{}, // no tags.
+							),
+							2001: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2001,
+								},
+								[]kdb.Tag{
+									{Key: "key-a", Value: "tag-a"},
+								},
+							),
+						},
+					},
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								InputId: 2100,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 2200,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-3/run:1-3/uploaded//out"),
+								InputId: 2300,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							2010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2010,
+								},
+								[]kdb.Tag{}, // no tags.
+							),
+							2001: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2001,
+								},
+								[]kdb.Tag{
+									{Key: "key-a", Value: "tag-a"},
+								},
+							),
+						},
+					},
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								InputId: 2100,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								InputId: 2200,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-3/run:1-3/uploaded//out"),
+								InputId: 2300,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							2010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2010,
+								},
+								[]kdb.Tag{}, // no tags.
+							),
+							2001: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2001,
+								},
+								[]kdb.Tag{
+									{Key: "key-a", Value: "tag-a"},
+								},
+							),
+						},
+					},
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 2100,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 2200,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-4/run:1-4/uploaded//out"),
+								InputId: 2300,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							2010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2010,
+								},
+								[]kdb.Tag{}, // no tags.
+							),
+							2001: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2001,
+								},
+								[]kdb.Tag{
+									{Key: "key-a", Value: "tag-a"},
+								},
+							),
+						},
+					},
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 2100,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								InputId: 2200,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-4/run:1-4/uploaded//out"),
+								InputId: 2300,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							2010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2010,
+								},
+								[]kdb.Tag{}, // no tags.
+							),
+							2001: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2001,
+								},
+								[]kdb.Tag{
+									{Key: "key-a", Value: "tag-a"},
+								},
+							),
+						},
+					},
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								InputId: 2100,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 2200,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-4/run:1-4/uploaded//out"),
+								InputId: 2300,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							2010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2010,
+								},
+								[]kdb.Tag{}, // no tags.
+							),
+							2001: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2001,
+								},
+								[]kdb.Tag{
+									{Key: "key-a", Value: "tag-a"},
+								},
+							),
+						},
+					},
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								InputId: 2100,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								InputId: 2200,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								KnitId:  th.Padding36("data:1-4/run:1-4/uploaded//out"),
+								InputId: 2300,
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							2010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2010,
+								},
+								[]kdb.Tag{}, // no tags.
+							),
+							2001: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:2/preprocessing"),
+									OutputId: 2001,
+								},
+								[]kdb.Tag{
+									{Key: "key-a", Value: "tag-a"},
+								},
+							),
+						},
+					},
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:3/split"),
+						},
+						assign: []tables.Assign{
+							{
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								InputId: 3100,
+								PlanId:  th.Padding36("plan:3/split"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							3010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:3/split"),
+									OutputId: 3010,
+								},
+								[]kdb.Tag{},
+							),
+							3020: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:3/split"),
+									OutputId: 3020,
+								},
+								[]kdb.Tag{
+									{Key: "key-b", Value: "tag-b"},
+								},
+							),
+						},
+					},
+				},
+			},
+		},
+		"When nomination triggers runs but some of them are known, it generates runs except already known (single input)": {
 			given: tables.Operation{
 				Plan: []tables.Plan{
 					{PlanId: th.Padding36("plan:1/uploaded"), Hash: "#plan:1", Active: true},
@@ -861,6 +1389,170 @@ func TestRun_New(t *testing.T) {
 				planLockData: map[string][]string{
 					th.Padding36("plan:2/preprocessing"): {
 						th.Padding36("data:1-1/run:1-1/uploaded//out"),
+					},
+					th.Padding36("plan:3/split"): {
+						th.Padding36("data:1-1/run:1-1/uploaded//out"),
+					},
+				},
+				newRuns: []runComponent{
+					{
+						body: tables.Run{
+							Status: kdb.Waiting,
+							PlanId: th.Padding36("plan:3/split"),
+						},
+						assign: []tables.Assign{
+							{
+								InputId: 3100,
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								PlanId:  th.Padding36("plan:3/split"),
+							},
+						},
+						data: map[int]tuple.Pair[tables.Data, []kdb.Tag]{
+							3010: tuple.PairOf(
+								tables.Data{
+									PlanId:   th.Padding36("plan:3/split"),
+									OutputId: 3010,
+								},
+								[]kdb.Tag{{Key: "type", Value: "raw-data"}},
+							),
+						},
+					},
+				},
+			},
+		},
+		"When nomination triggers runs but some of them are known, it generates runs except already known (multiple input)": {
+			given: tables.Operation{
+				Plan: []tables.Plan{
+					{PlanId: th.Padding36("plan:1/uploaded"), Hash: "#plan:1", Active: true},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Hash: "#plan:2", Active: true},
+					{PlanId: th.Padding36("plan:3/split"), Hash: "#plan:3", Active: true},
+				},
+				PlanPseudo: []tables.PlanPseudo{
+					{PlanId: th.Padding36("plan:1/uploaded"), Name: "knit#uploaded"},
+				},
+				PlanImage: []tables.PlanImage{
+					{PlanId: th.Padding36("plan:2/preprocessing"), Image: "repo.invalid/preprocessing", Version: "v1.0"},
+					{PlanId: th.Padding36("plan:3/split"), Image: "repo.invalid/split", Version: "v1.0"},
+				},
+				Inputs: map[tables.Input]tables.InputAttr{
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/in/raw-data", InputId: 2100}: {
+						UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+					},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/in/parameter", InputId: 2200}: {
+						UserTag: []kdb.Tag{{Key: "type", Value: "params"}},
+					},
+					{PlanId: th.Padding36("plan:3/split"), Path: "/in/configs", InputId: 3100}: {
+						UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+					},
+				},
+				Outputs: map[tables.Output]tables.OutputAttr{
+					{PlanId: th.Padding36("plan:1/uploaded"), Path: "/out", OutputId: 1010}:      {},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/out", OutputId: 2010}: {},
+					{PlanId: th.Padding36("plan:2/preprocessing"), Path: "/logs", OutputId: 2001}: {
+						IsLog: true,
+					},
+					{PlanId: th.Padding36("plan:3/split"), Path: "/out/1", OutputId: 3010}: {
+						UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+					},
+				},
+				Steps: []tables.Step{
+					{
+						Run: tables.Run{
+							RunId: th.Padding36("run:1-1/uploaded"), Status: kdb.Done,
+							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+								"2021-04-05T10:11:12.345+00:00",
+							)).OrFatal(t).Time(),
+							PlanId: th.Padding36("plan:1/uploaded"),
+						},
+						Assign: []tables.Assign{},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								VolumeRef: "vol#data:1-1",
+								OutputId:  1010,
+								RunId:     th.Padding36("run:1-1/uploaded"),
+								PlanId:    th.Padding36("plan:1/uploaded"),
+							}: {
+								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
+									"2021-04-05T10:11:12.345+00:00",
+								)).OrFatal(t).Time()),
+								UserTag: []kdb.Tag{{Key: "type", Value: "raw-data"}},
+							},
+						},
+					},
+					{
+						Run: tables.Run{
+							RunId: th.Padding36("run:1-2/uploaded"), Status: kdb.Done,
+							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+								"2021-04-05T10:11:12.345+00:00",
+							)).OrFatal(t).Time(),
+							PlanId: th.Padding36("plan:1/uploaded"),
+						},
+						Assign: []tables.Assign{},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:    th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								VolumeRef: "vol#data:1-2",
+								OutputId:  1010,
+								RunId:     th.Padding36("run:1-2/uploaded"),
+								PlanId:    th.Padding36("plan:1/uploaded"),
+							}: {
+								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
+									"2021-04-05T10:11:12.345+00:00",
+								)).OrFatal(t).Time()),
+								UserTag: []kdb.Tag{{Key: "type", Value: "params"}},
+							},
+						},
+					},
+					{
+						Run: tables.Run{
+							RunId:  th.Padding36("run:2-1/preprocessing"),
+							Status: kdb.Ready,
+							PlanId: th.Padding36("plan:2/preprocessing"),
+							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+								"2021-04-06T10:11:12.345+00:00",
+							)).OrFatal(t).Time(),
+						},
+						Assign: []tables.Assign{
+							{
+								RunId:   th.Padding36("run:2-1/preprocessing"),
+								InputId: 2100,
+								KnitId:  th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+							{
+								RunId:   th.Padding36("run:2-1/preprocessing"),
+								InputId: 2200,
+								KnitId:  th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								PlanId:  th.Padding36("plan:2/preprocessing"),
+							},
+						},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:    th.Padding36("data:2-1/run:2-1/preprocessing//out"),
+								VolumeRef: "vol#data:2-1",
+								OutputId:  2010,
+								RunId:     th.Padding36("run:2-1/preprocessing"),
+								PlanId:    th.Padding36("plan:2/preprocessing"),
+							}: {
+								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
+									"2021-04-06T10:11:12.345+00:00",
+								)).OrFatal(t).Time()),
+							},
+						},
+					},
+				},
+				Nomination: []tables.Nomination{
+					{KnitId: th.Padding36("data:1-1/run:1-1/uploaded//out"), InputId: 2100, Updated: true},
+					{KnitId: th.Padding36("data:1-2/run:1-2/uploaded//out"), InputId: 2200, Updated: false},
+					{KnitId: th.Padding36("data:1-1/run:1-1/uploaded//out"), InputId: 3100, Updated: true},
+				},
+			},
+			then: expectation{
+				planLockData: map[string][]string{
+					th.Padding36("plan:2/preprocessing"): {
+						th.Padding36("data:1-1/run:1-1/uploaded//out"),
+						th.Padding36("data:1-2/run:1-2/uploaded//out"),
 					},
 					th.Padding36("plan:3/split"): {
 						th.Padding36("data:1-1/run:1-1/uploaded//out"),
