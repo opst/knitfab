@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -315,52 +316,52 @@ func TestFindRun(t *testing.T) {
 			return h, func() *http.Request { return request }
 		}
 
-		type when struct {
-			planId    []string
-			knitIdIn  []string
-			knitIdOut []string
-			status    []string
-		}
-
 		type then struct {
 			planIdInQuery    []string
 			knitIdInInQuery  []string
 			knitIdOutInQuery []string
 			statusInQuery    []string
+			sinceQuery       string
+			durationQuery    string
 		}
 
 		type testcase struct {
-			when when
+			when krst.FindRunParameter
 			then then
 		}
 
+		timeStamp := "2024-04-22T12:34:56.987654321+07:00"
+		since := try.To(rfctime.ParseRFC3339DateTime(timeStamp)).OrFatal(t).Time()
+		duration := time.Duration(2 * time.Hour)
+
 		for name, testcase := range map[string]testcase{
 			"when query with nothing, server receives empty query": {
-				when: when{
-					planId:    []string{},
-					knitIdIn:  []string{},
-					knitIdOut: []string{},
-					status:    []string{},
-				},
+				when: krst.FindRunParameter{},
 				then: then{
 					planIdInQuery:    []string{},
 					knitIdInInQuery:  []string{},
 					knitIdOutInQuery: []string{},
 					statusInQuery:    []string{},
+					sinceQuery:       "",
+					durationQuery:    "",
 				},
 			},
 			"when query with each item, server receives all": {
-				when: when{
-					planId:    []string{"test-a", "test-b"},
-					knitIdIn:  []string{"in-a", "in-b"},
-					knitIdOut: []string{"out-a", "out-b"},
-					status:    []string{"wating", "running"},
+				when: krst.FindRunParameter{
+					PlanId:    []string{"test-a", "test-b"},
+					KnitIdIn:  []string{"in-a", "in-b"},
+					KnitIdOut: []string{"out-a", "out-b"},
+					Status:    []string{"wating", "running"},
+					Since:     &since,
+					Duration:  &duration,
 				},
 				then: then{
 					planIdInQuery:    []string{"test-a,test-b"},
 					knitIdInInQuery:  []string{"in-a,in-b"},
 					knitIdOutInQuery: []string{"out-a,out-b"},
 					statusInQuery:    []string{"wating,running"},
+					sinceQuery:       timeStamp,
+					durationQuery:    "2h0m0s",
 				},
 			},
 		} {
@@ -381,7 +382,7 @@ func TestFindRun(t *testing.T) {
 				//test start
 				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 				result := try.To(testee.FindRun(
-					ctx, when.planId, when.knitIdIn, when.knitIdOut, when.status,
+					ctx, when,
 				)).OrFatal(t)
 
 				// check response
@@ -406,11 +407,19 @@ func TestFindRun(t *testing.T) {
 				actualKnitIdIn := getLastRequest().URL.Query()["knitIdInput"]
 				actualKnitIdOut := getLastRequest().URL.Query()["knitIdOutput"]
 				actualStatus := getLastRequest().URL.Query()["status"]
+				actualSince := getLastRequest().URL.Query().Get("since")
+				actualDuration := getLastRequest().URL.Query().Get("duration")
 
 				checkSliceContentEquality(t, "active", actualPlan, then.planIdInQuery)
 				checkSliceContentEquality(t, "image", actualKnitIdIn, then.knitIdInInQuery)
 				checkSliceContentEquality(t, "input tag", actualKnitIdOut, then.knitIdOutInQuery)
 				checkSliceContentEquality(t, "output tag", actualStatus, then.statusInQuery)
+				if actualSince != then.sinceQuery {
+					t.Errorf("query since is wrong: actual=%s, then=%s)", actualSince, then.sinceQuery)
+				}
+				if actualDuration != then.durationQuery {
+					t.Errorf("query duration is wrong: actual=%s,then=%s)", actualDuration, then.durationQuery)
+				}
 			})
 		}
 
@@ -432,13 +441,24 @@ func TestFindRun(t *testing.T) {
 			}
 
 			// argements set up
-			planId := []string{"test-planId"}
-			inputKnitId := []string{"test-inputKnitId"}
-			outputKnitId := []string{"test-outputKnitId"}
-			status := []string{"test-status"}
+			since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
+			duration := time.Duration(2 * time.Hour)
+
+			findRunParameter := krst.FindRunParameter{
+				PlanId:    []string{"test-planId"},
+				KnitIdIn:  []string{"test-inputKnitId"},
+				KnitIdOut: []string{"test-outputKnitId"},
+				Status:    []string{"test-status"},
+				Since:     &since,
+				Duration:  &duration,
+			}
 
 			//test start
-			actualResponse := try.To(testee.FindRun(ctx, planId, inputKnitId, outputKnitId, status)).OrFatal(t)
+			actualResponse := try.To(
+				testee.FindRun(
+					ctx, findRunParameter,
+				),
+			).OrFatal(t)
 
 			if !cmp.SliceContentEqWith(
 				actualResponse, expectedResponse,
@@ -484,13 +504,21 @@ func TestFindRun(t *testing.T) {
 					t.Fatal(err.Error())
 				}
 
-				// argements set up
-				planId := []string{"test-planId"}
-				inputKnitId := []string{"test-inputKnitId"}
-				outputKnitId := []string{"test-outputKnitId"}
-				status := []string{"test-status"}
+				since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
+				duration := time.Duration(2 * time.Hour)
 
-				if _, err := testee.FindRun(ctx, planId, inputKnitId, outputKnitId, status); err == nil {
+				// arguments set up
+				findRunParameter := krst.FindRunParameter{
+					PlanId:    []string{"test-planId"},
+					KnitIdIn:  []string{"test-inputKnitId"},
+					KnitIdOut: []string{"test-outputKnitId"},
+					Status:    []string{"test-status"},
+					Since:     &since,
+					Duration:  &duration,
+				}
+				if _, err := testee.FindRun(
+					ctx, findRunParameter,
+				); err == nil {
 					t.Errorf("no error occured")
 				}
 			})

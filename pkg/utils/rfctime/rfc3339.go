@@ -18,6 +18,31 @@ const RFC3339DateTimeFormat string = "2006-01-02T15:04:05.999-07:00"
 // Use it to parse RFC3339 date-time expression.
 const RFC3339DateTimeFormatZ string = time.RFC3339Nano
 
+// The following format is used to parse the abbreviated form of RFC3339 date-time.
+const (
+	RFC3339DateNano       = "2006-01-02T15:04:05.999999999"
+	RFC3339DateNanoSpace  = "2006-01-02 15:04:05.999999999"
+	RFC3339DateNanoZSpace = "2006-01-02 15:04:05.999999999Z07:00"
+
+	RFC3339DateSec       = "2006-01-02T15:04:05"
+	RFC3339DateSecZ      = "2006-01-02T15:04:05Z07:00"
+	RFC3339DateSecSpace  = "2006-01-02 15:04:05"
+	RFC3339DateSecZSpace = "2006-01-02 15:04:05Z07:00"
+
+	RFC3339DateMin       = "2006-01-02T15:04"
+	RFC3339DateMinZ      = "2006-01-02T15:04Z07:00"
+	RFC3339DateMinSpace  = "2006-01-02 15:04"
+	RFC3339DateMinZSpace = "2006-01-02 15:04Z07:00"
+
+	RFC3339DateHour       = "2006-01-02T15"
+	RFC3339DateHourZ      = "2006-01-02T15Z07:00"
+	RFC3339DateHourSpace  = "2006-01-02 15"
+	RFC3339DateHourZSpace = "2006-01-02 15Z07:00"
+
+	RFC3339DateOnly  = "2006-01-02"
+	RFC3339DateOnlyZ = "2006-01-02Z07:00"
+)
+
 // date-time in https://www.ietf.org/rfc/rfc3339.txt .
 // this is known as a subset of ISO8601 extended format.
 //
@@ -82,6 +107,47 @@ func ParseRFC3339DateTime(s string) (RFC3339, error) {
 		return *new(RFC3339), err
 	}
 	return RFC3339(t), nil
+}
+
+// When you need to parse string with the abbreviated forms of RFC3339 date-time, use this function.
+func ParseLooseRFC3339(s string) (RFC3339, error) {
+	formats := []string{
+		RFC3339DateTimeFormatZ, RFC3339DateNanoZSpace,
+		RFC3339DateSecZ, RFC3339DateSecZSpace,
+		RFC3339DateMinZ, RFC3339DateMinZSpace,
+		RFC3339DateHourZ, RFC3339DateHourZSpace,
+		RFC3339DateOnlyZ,
+	}
+
+	for _, format := range formats {
+		t, err := time.Parse(format, s)
+		if err == nil {
+			return RFC3339(t), nil
+		}
+	}
+
+	// get local timezone
+	location, err := time.LoadLocation("Local")
+	if err != nil {
+		return RFC3339{}, err
+	}
+
+	formatsWithoutTimeZone := []string{
+		RFC3339DateNano, RFC3339DateNanoSpace,
+		RFC3339DateSec, RFC3339DateSecSpace,
+		RFC3339DateMin, RFC3339DateMinSpace,
+		RFC3339DateHour, RFC3339DateHourSpace,
+		RFC3339DateOnly,
+	}
+
+	for _, format := range formatsWithoutTimeZone {
+		t, err := time.ParseInLocation(format, s, location)
+		if err == nil {
+			return RFC3339(t), nil
+		}
+	}
+
+	return RFC3339{}, fmt.Errorf("failed to parse %s", s)
 }
 
 // implement encoding/json.Marshaller

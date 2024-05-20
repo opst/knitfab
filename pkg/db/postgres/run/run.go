@@ -518,13 +518,7 @@ func (m *runPG) Finish(ctx context.Context, runId string) error {
 	return nil
 }
 
-func (m *runPG) find(
-	ctx context.Context, conn kpool.Conn,
-	planId []string,
-	knitIdIn []string,
-	knitIdOut []string,
-	status []kdb.KnitRunStatus,
-) ([]string, error) {
+func (m *runPG) find(ctx context.Context, conn kpool.Conn, query kdb.RunFindQuery) ([]string, error) {
 
 	runIds := []string{}
 
@@ -551,14 +545,18 @@ func (m *runPG) find(
 		)
 		select "run_id"
 		from "assign_and_data"
+		where 
+			($9::timestamp with time zone is null or "updated_at" >= $9::timestamp with time zone)
+			and ($10::timestamp with time zone is null or "updated_at" < $10::timestamp with time zone)
 		order by "updated_at", "run_id"
 		`,
-		len(planId) == 0, planId,
-		len(status) == 0, utils.Map(
-			status, func(s kdb.KnitRunStatus) string { return string(s) },
+		len(query.PlanId) == 0, query.PlanId,
+		len(query.Status) == 0, utils.Map(
+			query.Status, func(s kdb.KnitRunStatus) string { return string(s) },
 		),
-		len(knitIdIn) == 0, knitIdIn,
-		len(knitIdOut) == 0, knitIdOut,
+		len(query.InputKnitId) == 0, query.InputKnitId,
+		len(query.OutputKnitId) == 0, query.OutputKnitId,
+		query.UpdatedSince, query.UpdatedUntil,
 	)
 	if err != nil {
 		return nil, err
@@ -575,7 +573,7 @@ func (m *runPG) find(
 	return runIds, nil
 }
 
-func (m *runPG) Find(ctx context.Context, q kdb.RunFindQuery) ([]string, error) {
+func (m *runPG) Find(ctx context.Context, query kdb.RunFindQuery) ([]string, error) {
 
 	conn, err := m.pool.Acquire(ctx)
 	if err != nil {
@@ -583,7 +581,7 @@ func (m *runPG) Find(ctx context.Context, q kdb.RunFindQuery) ([]string, error) 
 	}
 	defer conn.Release()
 
-	return m.find(ctx, conn, q.PlanId, q.InputKnitId, q.OutputKnitId, q.Status)
+	return m.find(ctx, conn, query)
 }
 
 func (m *runPG) Get(ctx context.Context, runId []string) (map[string]kdb.Run, error) {

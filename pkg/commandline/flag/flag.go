@@ -3,9 +3,11 @@ package flag
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 type Argslice []string
@@ -41,4 +43,58 @@ func (t *Tags) Set(v string) error {
 	}
 	*t = append(*t, tag)
 	return nil
+}
+
+type LooseRFC3339 time.Time
+
+func (t *LooseRFC3339) String() string {
+	if t == nil {
+		return ""
+	}
+	return time.Time(*t).Format(rfctime.RFC3339DateTimeFormatZ)
+}
+
+func (t *LooseRFC3339) Set(v string) error {
+	parsedTime, err := rfctime.ParseLooseRFC3339(v)
+	if err != nil {
+		return err
+	}
+	*t = LooseRFC3339(parsedTime)
+	return nil
+}
+
+func (t *LooseRFC3339) Time() *time.Time {
+	if t == nil {
+		return nil
+	}
+	return (*time.Time)(t)
+}
+
+type OptionalDuration struct {
+	d     time.Duration
+	isSet bool
+}
+
+func (t *OptionalDuration) String() string {
+	if t == nil || !t.isSet {
+		return ""
+	}
+	return t.d.String()
+}
+
+func (t *OptionalDuration) Set(v string) error {
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return err
+	}
+	t.d = d
+	t.isSet = true
+	return nil
+}
+
+func (t *OptionalDuration) Duration() *time.Duration {
+	if t == nil || !t.isSet {
+		return nil
+	}
+	return &t.d
 }
