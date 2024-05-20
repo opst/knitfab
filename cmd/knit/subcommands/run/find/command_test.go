@@ -107,12 +107,20 @@ func TestFindCommand(t *testing.T) {
 				checkSliceEq(t, "knitIdIn", parameter.KnitIdIn, ptr.SafeDeref(when.flag.KnitIdIn))
 				checkSliceEq(t, "knitIdOut", parameter.KnitIdOut, ptr.SafeDeref(when.flag.KnitIdOut))
 				checkSliceEq(t, "status", parameter.Status, ptr.SafeDeref(when.flag.Status))
-				if *parameter.Since != time.Time(ptr.SafeDeref(when.flag.Since)) {
+				if want := when.flag.Since.Time(); want == nil {
+					if parameter.Since != nil {
+						t.Errorf("wrong since: (actual, expected) != (%s, %s)", parameter.Since, when.flag.Since)
+					}
+				} else if parameter.Since == nil || !want.Equal(*parameter.Since) {
 					t.Errorf("wrong since: (actual, expected) != (%s, %s)", *parameter.Since, when.flag.Since)
 				}
 
-				if *parameter.Duration != when.flag.Duration {
-					t.Errorf("wrong duration: (actual, expected) != (%s, %s)", *parameter.Duration, when.flag.Duration)
+				if want := when.flag.Duration.Duration(); want == nil {
+					if parameter.Duration != nil {
+						t.Errorf("wrong duration: (actual, expected) != (%s, %s)", parameter.Duration, want)
+					}
+				} else if parameter.Duration == nil || *want != *parameter.Duration {
+					t.Errorf("wrong duration: (actual, expected) != (%s, %s)", *parameter.Duration, want)
 				}
 
 				return when.presentation, when.err
@@ -168,7 +176,7 @@ func TestFindCommand(t *testing.T) {
 		}
 	}
 
-	t.Run("when value for flag is not passed, it should call task without flags value", theory(
+	t.Run("when value for flags is not passed, it should call task without flags value", theory(
 		When{
 			flag:         run_find.Flag{},
 			presentation: presentationItems,
@@ -182,6 +190,13 @@ func TestFindCommand(t *testing.T) {
 	{
 		timestamp := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
 		since := kflag.LooseRFC3339(timestamp)
+
+		d := 2 * time.Hour
+		duration := new(kflag.OptionalDuration)
+		if err := duration.Set(d.String()); err != nil {
+			t.Fatal(err)
+		}
+
 		t.Run("when values for each flag are passed, it should call task with these values", theory(
 			When{
 				flag: run_find.Flag{
@@ -198,7 +213,7 @@ func TestFindCommand(t *testing.T) {
 						"waiting", "running",
 					},
 					Since:    &since,
-					Duration: time.Duration(2 * time.Hour),
+					Duration: duration,
 				},
 				presentation: presentationItems,
 			},
@@ -208,17 +223,26 @@ func TestFindCommand(t *testing.T) {
 		))
 	}
 
-	t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
-		When{
-			flag: run_find.Flag{
-				Duration: time.Duration(2 * time.Hour),
+	{
+
+		d := 2 * time.Hour
+		duration := new(kflag.OptionalDuration)
+		if err := duration.Set(d.String()); err != nil {
+			t.Fatal(err)
+		}
+
+		t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
+			When{
+				flag: run_find.Flag{
+					Duration: duration,
+				},
+				presentation: presentationItems,
 			},
-			presentation: presentationItems,
-		},
-		Then{
-			err: kcmd.ErrUsage,
-		},
-	))
+			Then{
+				err: kcmd.ErrUsage,
+			},
+		))
+	}
 
 	err := errors.New("fake error")
 	t.Run("when task returns error, it should return with error", theory(

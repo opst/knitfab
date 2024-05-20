@@ -48,6 +48,9 @@ func (t *Tags) Set(v string) error {
 type LooseRFC3339 time.Time
 
 func (t *LooseRFC3339) String() string {
+	if t == nil {
+		return ""
+	}
 	return time.Time(*t).Format(rfctime.RFC3339DateTimeFormatZ)
 }
 
@@ -58,4 +61,40 @@ func (t *LooseRFC3339) Set(v string) error {
 	}
 	*t = LooseRFC3339(parsedTime)
 	return nil
+}
+
+func (t *LooseRFC3339) Time() *time.Time {
+	if t == nil {
+		return nil
+	}
+	return (*time.Time)(t)
+}
+
+type OptionalDuration struct {
+	d     time.Duration
+	isSet bool
+}
+
+func (t *OptionalDuration) String() string {
+	if t == nil || !t.isSet {
+		return ""
+	}
+	return t.d.String()
+}
+
+func (t *OptionalDuration) Set(v string) error {
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return err
+	}
+	t.d = d
+	t.isSet = true
+	return nil
+}
+
+func (t *OptionalDuration) Duration() *time.Duration {
+	if t == nil || !t.isSet {
+		return nil
+	}
+	return &t.d
 }
