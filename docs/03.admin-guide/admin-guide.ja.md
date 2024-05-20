@@ -14,7 +14,7 @@ Knitfab を管理・運用しないユーザにとっては関心の範囲を超
 他言語版/Translations
 ---------------------
 
-- 日本語: [./admin-guide.en.md](./admin-guide.en.md)
+- English: [./admin-guide.en.md](./admin-guide.en.md)
 
 
 Knitfab をインストールの事前準備
@@ -226,6 +226,8 @@ nfs:
 
 - `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメントインして書き換える)
 
+オプショナルなパラメータとして、 `knitfab-install-settings/values/hooks.yaml` を編集することで WebHook を設定できる。
+詳細は、「Knitfab を拡張する」の章を参照されたい、
 
 #### 手順3: インストールする
 
@@ -1071,3 +1073,173 @@ Do you want to restore? [y/N]:
 この後、バックアップに基づいて、データベースを復元する。
 
 レストア中に [pg_resotre](https://www.postgresql.org/docs/15/app-pgrestore.html) を実行するため、 "pgloader" という名前の Pod を起動する。正常にレストアが進めば、この Pod は自動的に削除される。レストアを中断した場合には "pgloader" が削除されずに残る可能性があるが、`kubectl ` コマンドを利用して直接削除せよ。
+
+Knitfab を拡張する
+--------------------
+
+この章では、発展的な利用法として、Knitfab をカスタマイズする方法について説明する。
+
+### ウェブフック
+
+Knitfab には、Knitfab 内部で発生したイベントを外部に HTTP リクエストの形で通知する機能（WebHook）がある。
+
+WebHook をサポートするイベントは次のものである。
+
+- ライフサイクル・フック: Run が状態遷移する前後で、HTTP リクエストを送る
+
+WebHook はいずれも、次の手順で設定する。
+
+1. Knitfab インストーラが生成したインストール設定ディレクトリ（`knitfab-install-settings`）内の `values/hooks.yaml` を編集する
+2. Knitfab を更新する: `./installer.sh --install` を再実行する
+
+### ライフサイクル・フック
+
+ライフサイクル・フックは、Run が状態変化する前後に呼び出される WebHook である。フックとして登録された URL は Run の情報を POST リクエストとして受け取る。
+状態変化前のフックを Before フック、状態変化後のフックを After フックと呼ぶ。いずれも、複数の URL を宛先として登録できる。
+
+Knitfab は、Run の状態を遷移させるにあたり、次の順序で処理を行う。
+
+1. Before フックに順次リクエストを送る
+    - すべての Before フックが 200 番台のレスポンスを返したなら、次に進む
+2. Run の状態を変化させる
+    - 状態変化に成功したら、次に進む
+3. After フックに順次リクエストを送る
+    - レスポンスは無視する
+
+Before フックは、Run の状態変化の都度、通常は 1 回リクエストを受け取る。このフックは、*少なくとも 1 回* のリクエストを受け取るが、次の場合には同じ Run の同じ状態について、複数回リクエストを受け取ることがある。
+
+- この、または他のBefore フックが 200 番台以外のレスポンスを返した場合
+- Run の状態遷移に失敗した場合
+
+これらの場合、Knitfab は Run の状態遷移をやり直すので、複数回リクエストを受け取ることがあるのである。
+
+After フックも Run の状態変化の都度、通常は 1 回リクエストを受け取る。このフックは、最大 1 回のリクエストを受け取るが、次の場合にはリクエストを受け取れない事がある。
+
+- Run の状態変化に成功したあと、After フックが呼び出される前に Knitfab のプロセスが予期せず停止した場合
+
+#### ライフサイクル・フックを設定する
+
+ライフサイクル・フックの設定は、 `values/hooks.yaml` 内のエントリ `hooks.lifecycle-hooks` に記述する。
+
+インストーラは `hooks.lifecycle-hooks` を、次の内容で生成される。
+
+```yaml
+  # # lifecycle-hooks: lifecycle webhooks for Knitfab.
+  # #
+  # # Each URLs reveices POST requests with a Run as JSON, before or after status change of the Run.
+  # #
+  # # The Run JSON is formatted as same as output of `knit run show`.
+  lifecycle-hooks:
+
+    # # before: Webhook URLs to be called before the Knitfab changes the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status is going to be changed.
+    # #
+    # # When these hook responses non-200 status, the status changing causes an error and will be retried later.
+    before: []
+
+    # # before: Webhook URLs to be called after the Knitfab has changed the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status has been changed.
+    # #
+    # # Responses from these hooks are ignored.
+    after: []
+```
+
+`"before"` が Before フックがリクエストを送る URL のリストであり、`"after"` が After フックがリクエストを送る URL のリストである。
+初期状態では、いずれも空である。
+
+ここにフックを更新するには、たとえば次のように書き換えて、Knitfab をインストールしたディレクトリで `installer.sh --install` を実行する。
+
+```yaml
+  # # lifecycle-hooks: lifecycle webhooks for Knitfab.
+  # #
+  # # Each URLs reveices POST requests with a Run as JSON, before or after status change of the Run.
+  # #
+  # # The Run JSON is formatted as same as output of `knit run show`.
+  lifecycle-hooks:
+
+    # # before: Webhook URLs to be called before the Knitfab changes the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status is going to be changed.
+    # #
+    # # When these hook responses non-200 status, the status changing causes an error and will be retried later.
+    before:
+      - https://example.com/before
+
+    # # before: Webhook URLs to be called after the Knitfab has changed the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status has been changed.
+    # #
+    # # Responses from these hooks are ignored.
+    after:
+      - https://example.com/after
+```
+
+Before フックだけ、あるいは After フックだけ設定しても構わない。また、ひとつのフックに複数の URL を設定しても構わない。
+
+その後、フックを呼び出す Pod が停止・再起動して、フックが有効になる。
+
+#### Lifecycle Hook のリクエスト仕様
+
+ライフサイクル・フックは、Before・After のいずれについても Run を JSON として `POST` する。
+Before フックは状態遷移をおこす直前の Run を受け取る。After フックは状態遷移を起こした直後の Run を受け取る。
+
+この JSON の形式は、 `knit run show` して得られる形式と同じく、次の形式を取る。
+
+```json
+{
+    "runId": "74372a32-165d-432b-83e8-5821ab6bf21e",
+    "status": "running",
+    "updatedAt": "2024-05-17T04:19:33.325+00:00",
+    "plan": {
+        "planId": "3328be16-5b74-400a-a918-7b2a41bc0bf8",
+        "image": "localhost:30503/knitfab-first-train:v1.0"
+    },
+    "inputs": [
+        {
+            "path": "/in/dataset",
+            "tags": [
+                "mode:training",
+                "project:first-knitfab",
+                "type:dataset"
+            ],
+            "knitId": "a07490b8-0fdf-4c75-bce1-fba8ccf81336"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "/out/model",
+            "tags": [
+                "description:2 layer CNN + 2 layer Affine",
+                "project:first-knitfab",
+                "type:model"
+            ],
+            "knitId": "7ada9346-c037-4d4a-8569-48d706edbac0"
+        }
+    ],
+    "log": {
+        "Tags": [
+            "project:first-knitfab",
+            "type:log"
+        ],
+        "knitId": "958b791c-cd56-4170-9d17-b4031ff528e6"
+    }
+}
+```
+
+- `runId`: この Run の識別子
+- `status`: Run の状態。Before フックでは遷移前の、After フックでは遷移後の状態がセットされる。
+- `updatedAt`: 最終更新時刻
+- `plan`: この Run が基づいている Plan
+     - `planId`: この Plan の識別子
+     - `image`: この Plan に指定されているコンテナイメージ。これと `name` は排他的である。
+     - `name`: イメージを利用しない Plan に与えられる名前。これと `image` は排他的である。
+- `inputs[*]`, `outputs[*]`: この Run に入力ないし出力された Data について
+    - `path`: Data がマウントされたファイルパス
+    - `tags[*]`: この入力（出力）に指定されている Tag（Data の Tag ではない）
+    - `knitId`: マウントされた Data の識別子。
+- `log`: 標準出力や標準エラーを記録する出力
+    - `tags[*]`: このログ出力に指定されている Tag （Data の Tag ではない）
+    - `knitId`: ログを保持している Data の Knit Id
+

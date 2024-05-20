@@ -3,6 +3,7 @@ module github.com/opst/knitfab
 go 1.22.2
 
 require (
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/google/go-containerregistry v0.19.1
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438

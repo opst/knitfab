@@ -17,7 +17,7 @@ type RunInterface struct {
 		Get              func(ctx context.Context, runId []string) (map[string]kdb.Run, error)
 		SetStatus        func(ctx context.Context, runId string, newStatus kdb.KnitRunStatus) error
 		SetExit          func(ctx context.Context, runId string, exit kdb.RunExit) error
-		PickAndSetStatus func(ctx context.Context, cursor kdb.RunCursor, callback func(kdb.Run) (kdb.KnitRunStatus, error)) (kdb.RunCursor, error)
+		PickAndSetStatus func(ctx context.Context, cursor kdb.RunCursor, callback func(kdb.Run) (kdb.KnitRunStatus, error)) (kdb.RunCursor, bool, error)
 		Delete           func(ctx context.Context, runId string) error
 		DeleteWorker     func(ctx context.Context, runId string) error
 		Retry            func(ctx context.Context, runId string) error
@@ -96,7 +96,11 @@ func (m *RunInterface) SetStatus(ctx context.Context, runId string, newStatus kd
 	panic(errors.New("it should no be called"))
 }
 
-func (m *RunInterface) PickAndSetStatus(ctx context.Context, cursor kdb.RunCursor, callback func(kdb.Run) (kdb.KnitRunStatus, error)) (kdb.RunCursor, error) {
+func (m *RunInterface) PickAndSetStatus(
+	ctx context.Context,
+	cursor kdb.RunCursor,
+	callback func(kdb.Run) (kdb.KnitRunStatus, error),
+) (kdb.RunCursor, bool, error) {
 	m.Calls.PickAndSetStatus = append(m.Calls.PickAndSetStatus, cursor)
 	if m.Impl.PickAndSetStatus != nil {
 		return m.Impl.PickAndSetStatus(ctx, cursor, callback)

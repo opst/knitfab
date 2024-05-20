@@ -3,7 +3,9 @@ package image
 import (
 	"context"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	manager "github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
+	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kw "github.com/opst/knitfab/pkg/workloads/worker"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -16,36 +18,61 @@ func New(
 	setExit func(ctx context.Context, runId string, exit kdb.RunExit) error,
 ) manager.Manager {
 	return func(
-		ctx context.Context, r kdb.Run,
+		ctx context.Context, h hook.Hook[api_runs.Detail], r kdb.Run,
 	) (kdb.KnitRunStatus, error) {
 		w, err := getWorker(ctx, r)
 		if err != nil {
 			if !kubeerr.IsNotFound(err) {
 				return r.Status, err
 			}
-			if r.Status != kdb.Ready {
-				if err := setExit(ctx, r.Id, kdb.RunExit{
-					Code:    254,
-					Message: "worker for the run is not found",
-				}); err != nil {
-					return r.Status, err
-				}
-				return kdb.Aborting, nil
+			if err := h.Before(api_runs.ComposeDetail(r)); err != nil {
+				return r.Status, err
 			}
 
-			err := startWorker(ctx, r)
-			if err == nil || kubeerr.IsAlreadyExists(err) {
+			if r.Status == kdb.Ready {
+				err := startWorker(ctx, r)
+				if err != nil && !kubeerr.IsAlreadyExists(err) {
+					return r.Status, err
+				}
 				return kdb.Starting, nil
 			}
+
+			if err := setExit(ctx, r.Id, kdb.RunExit{
+				Code:    254,
+				Message: "worker for the run is not found",
+			}); err != nil {
+				return r.Status, err
+			}
+			return kdb.Aborting, nil
+		}
+
+		var newStatus kdb.KnitRunStatus
+		switch s := w.JobStatus(); s {
+		case kw.Pending:
+			newStatus = kdb.Starting
+		case kw.Running:
+			newStatus = kdb.Running
+		case kw.Failed:
+			newStatus = kdb.Aborting
+		case kw.Done:
+			newStatus = kdb.Completing
+		default:
+			return r.Status, nil
+		}
+
+		if newStatus == r.Status {
+			// no changes.
+			return r.Status, nil
+		}
+
+		// status should be changed.
+
+		if err := h.Before(api_runs.ComposeDetail(r)); err != nil {
 			return r.Status, err
 		}
 
-		switch s := w.JobStatus(); s {
-		case kw.Pending:
-			return kdb.Starting, nil
-		case kw.Running:
-			return kdb.Running, nil
-		case kw.Done, kw.Failed:
+		switch newStatus {
+		case kdb.Aborting, kdb.Completing:
 			if exitCode, reason, ok := w.ExitCode(); ok {
 				if err := setExit(ctx, r.Id, kdb.RunExit{
 					Code:    exitCode,
@@ -54,13 +81,8 @@ func New(
 					return r.Status, err
 				}
 			}
-
-			if s == kw.Failed {
-				return kdb.Aborting, nil
-			}
-			return kdb.Completing, nil
 		}
 
-		return r.Status, nil
+		return newStatus, nil
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/finishing"
 	"github.com/opst/knitfab/cmd/loops/tasks/gc"
@@ -17,6 +18,7 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/image"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
 	knit "github.com/opst/knitfab/pkg"
+	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/loop"
 	"github.com/opst/knitfab/pkg/utils"
@@ -81,6 +83,18 @@ func monitor[T any](logger *log.Logger, task loop.Task[T]) loop.Task[T] {
 	}
 }
 
+// Manifest for starting a loop, which determines how the loop should behave.
+type LoopManifest struct {
+	// Loop type to be started
+	Type kdb.LoopType
+
+	// Policy for the looping
+	Policy recurring.Policy
+
+	// Hooks for the looping
+	Hooks hook.Hook[api_runs.Detail]
+}
+
 // Start loop if needed.
 //
 // Args:
@@ -102,18 +116,19 @@ func StartLoop(
 	logger *log.Logger,
 	kcluster knit.KnitCluster,
 	kclient k8s.K8sClient,
-	lType kdb.LoopType,
-	policy recurring.Policy,
+	manifest LoopManifest,
 ) error {
 
-	switch lType {
+	switch manifest.Type {
 	case kdb.Projection:
 		l := byLogger(logger, Copied(), WithPrefix("[projection loop]"))
 		_, err := loop.Start(
 			ctx, projection.Seed(),
 			monitor(
 				l,
-				projection.Task(l, kcluster.Database().Runs()).Applied(policy),
+				projection.Task(
+					l, kcluster.Database().Runs(),
+				).Applied(manifest.Policy),
 			),
 		)
 		return err
@@ -134,7 +149,8 @@ func StartLoop(
 							Capacity:     volumeConfig.InitialCapacity(),
 						},
 					),
-				).Applied(policy),
+					manifest.Hooks,
+				).Applied(manifest.Policy),
 			),
 			loop.WithTimeout(30*time.Second),
 		)
@@ -165,7 +181,8 @@ func StartLoop(
 					),
 					// A map of psuedo plan name to the psuedo plan manager
 					pseudoPlanManagers,
-				).Applied(policy),
+					manifest.Hooks,
+				).Applied(manifest.Policy),
 			),
 			loop.WithTimeout(30*time.Second),
 		)
@@ -190,7 +207,8 @@ func StartLoop(
 					worker.Find,
 					// A k8s cluster
 					kcluster.BaseCluster(),
-				).Applied(policy),
+					manifest.Hooks,
+				).Applied(manifest.Policy),
 			),
 		)
 		return err
@@ -200,7 +218,9 @@ func StartLoop(
 			ctx, gc.Seed(),
 			monitor(
 				byLogger(logger, Copied(), WithPrefix("[gc loop]")),
-				gc.Task(kclient, kcluster.Namespace(), kcluster.Database().Garbage()).Applied(policy),
+				gc.Task(
+					kclient, kcluster.Namespace(), kcluster.Database().Garbage(),
+				).Applied(manifest.Policy),
 			),
 		)
 		return err
@@ -213,12 +233,12 @@ func StartLoop(
 				housekeeping.Task(
 					kcluster.Database().Data(),
 					kcluster.BaseCluster(),
-				).Applied(policy),
+				).Applied(manifest.Policy),
 			),
 		)
 		return err
 
 	default:
-		return fmt.Errorf("unsupported loop type: %s", lType)
+		return fmt.Errorf("unsupported loop type: %s", manifest.Type)
 	}
 }

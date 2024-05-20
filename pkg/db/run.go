@@ -216,10 +216,11 @@ type RunInterface interface {
 	// - RunCursor: cursor points on picked (and updated, if succeeded) run.
 	// If no runs can be picked, cursor state is as it was passed.
 	//
+	// - bool: it can be true only when the status is changed and saved in database.
+	//
 	// - error
 	// ErrInvalidRunStateChanging (when the run with given runId is not completing nor aborting),
-	// ErrMissing (when run is not found for given runId)
-	PickAndSetStatus(ctx context.Context, cursorFrom RunCursor, task func(Run) (KnitRunStatus, error)) (RunCursor, error)
+	PickAndSetStatus(ctx context.Context, cursorFrom RunCursor, task func(Run) (KnitRunStatus, error)) (RunCursor, bool, error)
 
 	// update run status as "done" when completing or "failed" when aborting.
 	//

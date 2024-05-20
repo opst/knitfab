@@ -986,10 +986,10 @@ func (m *runPG) PickAndSetStatus(
 	ctx context.Context,
 	cursor kdb.RunCursor,
 	task func(r kdb.Run) (kdb.KnitRunStatus, error),
-) (kdb.RunCursor, error) {
+) (kdb.RunCursor, bool, error) {
 	tx, err := m.pool.Begin(ctx)
 	if err != nil {
-		return cursor, err
+		return cursor, false, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -1051,14 +1051,14 @@ func (m *runPG) PickAndSetStatus(
 			cursor.Head,
 		).Scan(&runId, nil); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return cursor, nil
+				return cursor, false, nil
 			}
-			return cursor, err
+			return cursor, false, err
 		}
 
 		r, err := kpgintr.GetRun(ctx, tx, []string{runId})
 		if err != nil {
-			return cursor, err
+			return cursor, false, err
 		}
 		run = r[runId]
 
@@ -1075,17 +1075,17 @@ func (m *runPG) PickAndSetStatus(
 	// exec task() and get its result.
 	newStatus, err := task(run)
 	if err != nil {
-		return cursor, err
+		return cursor, false, err
 	}
 	// according to the result above, reflect the new status to the database.
 	if err := m.setStatus(ctx, tx, run.Id, newStatus, cursor.Debounce); err != nil {
-		return cursor, err
+		return cursor, false, err
 	}
 	// commit the transaction
 	if err := tx.Commit(ctx); err != nil {
-		return cursor, err
+		return cursor, false, err
 	}
-	return cursor, nil
+	return cursor, run.Status != newStatus, nil
 }
 
 func (m *runPG) SetExit(ctx context.Context, runId string, exit kdb.RunExit) error {

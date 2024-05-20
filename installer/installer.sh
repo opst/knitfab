@@ -282,6 +282,34 @@ nfs:
   # #
   # # This value is effective only when "external: false".
   node: ""
+EOF
+
+    cat <<EOF > values/hooks.yaml
+# # # values/hooks.yaml # # #
+
+# # hooks: webhooks settings for Knitfab.
+hooks:
+
+  # # lifecycle-hooks: lifecycle webhooks for Knitfab.
+  # #
+  # # Each URLs reveices POST requests with a Run as JSON, before or after status change of the Run.
+  # #
+  # # The Run JSON is formatted as same as output of \`knit run show\`.
+  lifecycle-hooks:
+
+    # # before: Webhook URLs to be called before the Knitfab changes the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status is going to be changed.
+    # #
+    # # When these hook responses non-200 status, the status changing causes an error and will be retried later.
+    before: []
+
+    # # before: Webhook URLs to be called after the Knitfab has changed the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status has been changed.
+    # #
+    # # Responses from these hooks are ignored.
+    after: []
 
 EOF
 
@@ -597,8 +625,9 @@ run ${HELM} ${MODE} --dependency-update --wait \
 	--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
 	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
 	--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
-	${SET_PULL_SECRET} -f ${VALUES}/knit-app.yaml \
-	knit-app knitfab/knit-app
+	-f ${VALUES}/knit-app.yaml \
+	-f ${VALUES}/hooks.yaml \
+	${SET_PULL_SECRET} knit-app knitfab/knit-app
 
 mkdir -p ${SETTINGS}/handouts
 cat <<EOF > ${SETTINGS}/handouts/README.md
