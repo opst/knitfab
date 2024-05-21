@@ -28,6 +28,7 @@ import (
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -42,6 +43,8 @@ func TestFindDataCommand(t *testing.T) {
 		err       error
 		tags      []apitags.Tag
 		transient data_find.TransientValue
+		since     *time.Time
+		duration  *time.Duration
 	}
 
 	presentationItems := []apidata.Detail{
@@ -99,6 +102,38 @@ func TestFindDataCommand(t *testing.T) {
 						"wrong transient flag is passed into client:\nactual = %+v\nexpected = %+v",
 						transient, then.transient,
 					)
+				}
+
+				if then.since != nil {
+					if since == nil || !since.Equal(*then.since) {
+						t.Errorf(
+							"wrong since is passed into client:\nactual = %+v\nexpected = %+v",
+							since, then.since,
+						)
+					}
+				} else {
+					if since != nil {
+						t.Errorf(
+							"since should not be passed into client:\nactual = %+v\nexpected = nil",
+							since,
+						)
+					}
+				}
+
+				if then.duration != nil {
+					if duration == nil || *duration != *then.duration {
+						t.Errorf(
+							"wrong duration is passed into client:\nactual = %+v\nexpected = %+v",
+							duration, then.duration,
+						)
+					}
+				} else {
+					if duration != nil {
+						t.Errorf(
+							"duration should not be passed into client:\nactual = %+v\nexpected = nil",
+							duration,
+						)
+					}
 				}
 
 				return when.presentation, when.err
@@ -325,17 +360,18 @@ func TestFindDataCommand(t *testing.T) {
 	))
 
 	{
-		timestamp := time.Date(
-			2024, 4, 22, 0, 00, 00, 000000000,
-			time.FixedZone("+09:00", int((9*time.Hour).Seconds())),
-		)
+		timestamp := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
+		d := 2 * time.Hour
+		duration := new(kflag.OptionalDuration)
+		duration.Set(d.String())
+
 		since := kflag.LooseRFC3339(timestamp)
 		t.Run("when since and duration are passed, it should call task with since and duration", theory(
 			when{
 				flag: data_find.Flag{
 					Transient: "both",
 					Since:     &since,
-					Duration:  time.Duration(2 * time.Hour),
+					Duration:  duration,
 				},
 				presentation: presentationItems,
 			},
@@ -343,21 +379,25 @@ func TestFindDataCommand(t *testing.T) {
 				err:       nil,
 				tags:      []apitags.Tag{},
 				transient: data_find.TransientAny,
+				since:     &timestamp,
+				duration:  &d,
+			},
+		))
+
+		t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
+			when{
+				flag: data_find.Flag{
+					Duration: duration,
+				},
+				presentation: presentationItems,
+			},
+			then{
+				err:      kcmd.ErrUsage,
+				duration: &d,
 			},
 		))
 	}
 
-	t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
-		when{
-			flag: data_find.Flag{
-				Duration: time.Duration(2 * time.Hour),
-			},
-			presentation: presentationItems,
-		},
-		then{
-			err: kcmd.ErrUsage,
-		},
-	))
 	t.Run("when task returns no data, it should be done", theory(
 		when{
 			flag: data_find.Flag{
@@ -549,6 +589,8 @@ func TestFindData(t *testing.T) {
 	type when struct {
 		tags          []apitags.Tag
 		transientFlag data_find.TransientValue
+		since         *time.Time
+		duration      *time.Duration
 	}
 
 	for name, testcase := range map[string]struct {
@@ -672,20 +714,72 @@ func TestFindData(t *testing.T) {
 			},
 			then: []string{notTransient1.KnitId, notTransient2.KnitId},
 		},
+
+		`when since and duration are passed, it should call task with since and duration`: {
+			given: []apidata.Detail{notTransient1, notTransient2},
+			when: when{
+				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
+				transientFlag: data_find.TransientAny,
+				since:         pointer.Ref(try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()),
+				duration:      pointer.Ref(2 * time.Hour),
+			},
+			then: []string{notTransient1.KnitId, notTransient2.KnitId},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
 			logger := logger.Null()
 			mock := mock.New(t)
-			mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s *time.Time, d *time.Duration) ([]apidata.Detail, error) {
+			mock.Impl.FindData = func(ctx context.Context, tags []apitags.Tag, s *time.Time, d *time.Duration) ([]apidata.Detail, error) {
+
+				if !cmp.SliceContentEq(tags, testcase.when.tags) {
+					t.Errorf(
+						"wrong tags are passed into client:\nactual = %+v\nexpected = %+v",
+						t, testcase.when.tags,
+					)
+				}
+
+				if want := testcase.when.since; want == nil {
+					if s != nil {
+						t.Errorf(
+							"since should not be passed into client:\nactual = %+v\nexpected = nil",
+							s,
+						)
+					}
+				} else {
+					if s == nil || !s.Equal(*want) {
+						t.Errorf(
+							"wrong since is passed into client:\nactual = %+v\nexpected = %+v",
+							s, want,
+						)
+					}
+				}
+
+				if want := testcase.when.duration; want == nil {
+					if d != nil {
+						t.Errorf(
+							"duration should not be passed into client:\nactual = %+v\nexpected = nil",
+							d,
+						)
+					}
+				} else {
+					if d == nil || *d != *want {
+						t.Errorf(
+							"wrong duration is passed into client:\nactual = %+v\nexpected = %+v",
+							d, want,
+						)
+					}
+				}
+
 				return testcase.given, nil
 			}
 
-			since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
-			duration := time.Duration(2 * time.Hour)
-
 			actual := try.To(data_find.RunFindData(
-				ctx, logger, mock, testcase.when.tags, testcase.when.transientFlag, &since, &duration,
+				ctx, logger, mock,
+				testcase.when.tags,
+				testcase.when.transientFlag,
+				testcase.when.since,
+				testcase.when.duration,
 			)).OrFatal(t)
 
 			{

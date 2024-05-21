@@ -320,23 +320,16 @@ func (c *client) FindData(ctx context.Context, tags []apitag.Tag, since *time.Ti
 	// set query values
 	q := req.URL.Query()
 
-	sinceString := ""
 	if since != nil {
-		sinceString = since.Format(rfctime.RFC3339DateTimeFormatZ)
+		q.Add("since", since.Format(rfctime.RFC3339DateTimeFormatZ))
 	}
-	q.Add("since", sinceString)
 
-	durationString := ""
 	if duration != nil {
-		durationString = duration.String()
+		q.Add("duration", duration.String())
 	}
-	q.Add("duration", durationString)
 
-	tagcount := len(tags)
-	if 0 < tagcount {
-		for _, t := range tags {
-			q.Add("tag", fmt.Sprintf("%s:%s", t.Key, t.Value))
-		}
+	for _, t := range tags {
+		q.Add("tag", t.String())
 	}
 	req.URL.RawQuery = q.Encode()
 

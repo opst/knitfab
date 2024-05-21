@@ -32,10 +32,8 @@ func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
 			return apierr.InternalServerError(err)
 		}
 
-		paramSicne := c.QueryParam("since")
 		var since *time.Time
-
-		if paramSicne != "" {
+		if paramSicne := c.QueryParam("since"); paramSicne != "" {
 			t, err := rfctime.ParseRFC3339DateTime(paramSicne)
 			if err != nil {
 				return apierr.BadRequest(
@@ -47,9 +45,8 @@ func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
 			since = &_t
 		}
 
-		paramDuration := c.QueryParam("duration")
 		var until *time.Time
-		if paramDuration != "" {
+		if paramDuration := c.QueryParam("duration"); paramDuration != "" {
 			d, err := time.ParseDuration(paramDuration)
 			if err != nil {
 				return apierr.BadRequest(

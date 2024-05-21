@@ -16,7 +16,6 @@ import (
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
 	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/opst/knitfab/pkg/utils"
-	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 )
 
 type TransientValue int
@@ -34,10 +33,10 @@ func NewErrUnknwonTransientFlag(actualValue string) error {
 }
 
 type Flag struct {
-	Tags      *kflag.Tags         `flag:"tag,short=t,metavar=KEY:VALUE...,help=Find Data with this Tag. Repeatable."`
-	Transient string              `flag:"transient,metavar=both|yes|true|no|false,help=yes|true (transient Data only) / no|false (non transient Data only) / both"`
-	Since     *kflag.LooseRFC3339 `flag:"since,help=Find Data only updated at this time or later."`
-	Duration  time.Duration       `flag:"duration,help=Find Data only updated at a time earlier than the sum of since and duration."`
+	Tags      *kflag.Tags             `flag:"tag,short=t,metavar=KEY:VALUE...,help=Find Data with this Tag. Repeatable."`
+	Transient string                  `flag:"transient,metavar=both|yes|true|no|false,help=yes|true (transient Data only) / no|false (non transient Data only) / both"`
+	Since     *kflag.LooseRFC3339     `flag:"since,help=Find Data only updated at this time or later."`
+	Duration  *kflag.OptionalDuration `flag:"duration,help=Find Data only updated at a time in --duration from --since."`
 }
 
 type Command struct {
@@ -88,7 +87,7 @@ func (*Command) Usage() usage.Usage[Flag] {
 			Tags:      &kflag.Tags{},
 			Transient: "both",
 			Since:     &kflag.LooseRFC3339{},
-			Duration:  0,
+			Duration:  &kflag.OptionalDuration{},
 		},
 		usage.Args{},
 	)
@@ -100,20 +99,21 @@ func (cmd *Command) Help() kcmd.Help {
 		Detail: `
 Find Data that satisfy all specified conditions.
 
-'Tag' can be specified multiple times to search for Data that have all the specified Tags.
+'--tag' can be specified multiple times to search for Data that have all the specified Tags.
 
-'Since' and 'duration' are used to specify the time range to search for Data.
+'--since' and '--duration' limits Data in a result to a time range.
 
-Since targets Data that have been updated at equal to or later than since.
-The since can be described in RFC3339 date-time format, and it is also possible to omit 
-sub-seconds,seconds, minutes, and hours, in the description.
-If the time zone is omitted, the local time zone is applied. 
-When including a date and time, the following characters are allowed as delimiters between the date and time: "T" or space.
+'--since' limits Data in a result to what have been updated at equal to or later than it.
+'--since' value should be formatted RFC3339 date-time format.
+It is possible to omit sub-seconds, seconds, minutes, and hours, and when you do so, they are assumed as zero.
+The time offset also can be omitted, and then it is assumed as the local time.
+The delimiter between date and time can be either 'T' or ' ' (space), equivarently.
+For example: "2021-01-01T00:00:00Z", "2021-01-01 00:00:00Z", "2021-01-01T00:00Z", "2021-01-01 00Z", "2021-01-01Z" are equivalent.
 
-Duration is a flag used in conjunction with Since. 
-It targets Data for search that have been updated at a time earlier than the sum of since and duration.
-Duration can be described in Go's time.Duration type.
-Examples of duration are "300ms", "1.5h" or "2h45m". 
+'--duration' limites Data in a result to what have been updated in the duration from '--since'.
+'--duration' flag must be used in conjunction with --since.
+Following units for durations are supported: "ns", "ms", "s", "m", "h".
+For example: "300ms", "1.5h" or "2h45m".
 `,
 		Example: `
 Finding Data with tag "key1:value1":
@@ -143,6 +143,23 @@ Finding Data out of use with Tag "tag1:value1":
 	{{ .Command }} --tag key1:value1 --transient true
 
 	(both above are equivalent)
+
+Finding all Data updated after 2021-01-01T00:00:00Z:
+
+	{{ .Command }} --since 2021-01-01Z
+
+
+Finding all Data with tag "key1:value1" updated after 2021-01-01T00:00:00Z:
+
+	{{ .Command }} --since "2021-01-01 00:00:00Z" --tag key1:value1
+	# When using space as delimiter, quote the value to prevent shell from interpreting it as two arguments.
+
+Scanning Data updated after 2021-01-01T00:00:00Z day by day:
+
+	{{ .Command }} --since 2021-01-01Z --duration 24h
+	{{ .Command }} --since 2021-01-02Z --duration 24h
+	{{ .Command }} --since 2021-01-03Z --duration 24h
+	# and so on... There are no overlaps.
 
 Finding all Data:
 
@@ -176,13 +193,13 @@ func (cmd *Command) Execute(
 		return NewErrUnknwonTransientFlag(flags.Flags.Transient)
 	}
 
-	since := time.Time(ptr.SafeDeref(flags.Flags.Since))
-	duration := flags.Flags.Duration
-	if since == (time.Time{}) && duration != 0 {
+	since := flags.Flags.Since.Time()
+	duration := flags.Flags.Duration.Duration()
+	if since == nil && duration != nil {
 		return fmt.Errorf("%w: since and duration must be specified together", kcmd.ErrUsage)
 	}
 
-	data, err := cmd.task(ctx, l, c, tags, transientFlag, &since, &duration)
+	data, err := cmd.task(ctx, l, c, tags, transientFlag, since, duration)
 	if err != nil {
 		return err
 	}
