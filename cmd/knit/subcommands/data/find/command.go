@@ -101,6 +101,9 @@ Find Data that satisfy all specified conditions.
 
 '--tag' can be specified multiple times to search for Data that have all the specified Tags.
 
+'--transient' limits Data by 'knit#transient' tag.
+'--transient' can be one of "yes" or "true" (only with "knit#transient"), "no" or "false" (only without "knit#transient") and "both" (no filtering by "knit#transient"; default).
+
 '--since' and '--duration' limits Data in a result to a time range.
 
 '--since' limits Data in a result to what have been updated at equal to or later than it.
@@ -111,8 +114,8 @@ The delimiter between date and time can be either 'T' or ' ' (space), equivarent
 For example: "2021-01-01T00:00:00Z", "2021-01-01 00:00:00Z", "2021-01-01T00:00Z", "2021-01-01 00Z", "2021-01-01Z" are equivalent.
 
 '--duration' limites Data in a result to what have been updated in the duration from '--since'.
-'--duration' flag must be used in conjunction with --since.
-Following units for durations are supported: "ns", "ms", "s", "m", "h".
+'--duration' flag must be used in conjunction with '--since'.
+Following units for durations are supported: "ns", "ms", "s", "m", "h". Negative values are not supported.
 For example: "300ms", "1.5h" or "2h45m".
 `,
 		Example: `
