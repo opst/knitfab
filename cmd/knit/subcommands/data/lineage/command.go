@@ -771,7 +771,7 @@ func TraceUpstreamForSingleNode(
 }
 
 func getData(ctx context.Context, client krst.KnitClient, knitId string) (apidata.Detail, error) {
-	datas, err := client.FindData(ctx, []apitag.Tag{knitIdTag(knitId)})
+	datas, err := client.FindData(ctx, []apitag.Tag{knitIdTag(knitId)}, nil, nil)
 	if err != nil {
 		return apidata.Detail{}, ErrFindDataWithKnitId(knitId, err)
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
@@ -32,8 +33,10 @@ func NewErrUnknwonTransientFlag(actualValue string) error {
 }
 
 type Flag struct {
-	Tags      *kflag.Tags `flag:"tag,short=t,metavar=KEY:VALUE...,help=Find Data with this Tag. Repeatable."`
-	Transient string      `flag:"transient,metavar=both|yes|true|no|false,help=yes|true (transient Data only) / no|false (non transient Data only) / both"`
+	Tags      *kflag.Tags             `flag:"tag,short=t,metavar=KEY:VALUE...,help=Find Data with this Tag. Repeatable."`
+	Transient string                  `flag:"transient,metavar=both|yes|true|no|false,help=yes|true (transient Data only) / no|false (non transient Data only) / both"`
+	Since     *kflag.LooseRFC3339     `flag:"since,help=Find Data only updated at this time or later."`
+	Duration  *kflag.OptionalDuration `flag:"duration,help=Find Data only updated at a time in --duration from --since."`
 }
 
 type Command struct {
@@ -43,6 +46,8 @@ type Command struct {
 		krst.KnitClient,
 		[]apitag.Tag,
 		TransientValue,
+		*time.Time,
+		*time.Duration,
 	) ([]apidata.Detail, error)
 }
 
@@ -53,6 +58,8 @@ func WithTask(
 		krst.KnitClient,
 		[]apitag.Tag,
 		TransientValue,
+		*time.Time,
+		*time.Duration,
 	) ([]apidata.Detail, error),
 ) func(*Command) *Command {
 	return func(dfc *Command) *Command {
@@ -79,6 +86,8 @@ func (*Command) Usage() usage.Usage[Flag] {
 		Flag{
 			Tags:      &kflag.Tags{},
 			Transient: "both",
+			Since:     &kflag.LooseRFC3339{},
+			Duration:  &kflag.OptionalDuration{},
 		},
 		usage.Args{},
 	)
@@ -86,7 +95,29 @@ func (*Command) Usage() usage.Usage[Flag] {
 
 func (cmd *Command) Help() kcmd.Help {
 	return kcmd.Help{
-		Synopsis: "Find Data with specified Tags and show these metadata",
+		Synopsis: "Find Data that satisfy all specified conditions.",
+		Detail: `
+Find Data that satisfy all specified conditions.
+
+'--tag' can be specified multiple times to search for Data that have all the specified Tags.
+
+'--transient' limits Data by 'knit#transient' tag.
+'--transient' can be one of "yes" or "true" (only with "knit#transient"), "no" or "false" (only without "knit#transient") and "both" (no filtering by "knit#transient"; default).
+
+'--since' and '--duration' limits Data in a result to its 'knit#timestamp' tag is in the time range.
+
+'--since' limits Data in a result to what have 'knit#timestamp' later or same time.
+'--since' value should be formatted RFC3339 date-time format.
+It is possible to omit sub-seconds, seconds, minutes, and hours, and when you do so, they are assumed as zero.
+The time offset also can be omitted, and then it is assumed as the local time.
+The delimiter between date and time can be either 'T' or ' ' (space), equivarently.
+For example: "2021-01-01T00:00:00Z", "2021-01-01 00:00:00Z", "2021-01-01T00:00Z", "2021-01-01 00Z", "2021-01-01Z" are equivalent.
+
+'--duration' limites Data in a result to what have 'knit#timestamp' in the duration from '--since'.
+'--duration' flag must be used in conjunction with '--since'.
+Following units for durations are supported: "ns", "ms", "s", "m", "h". Negative values are not supported.
+For example: "300ms", "1.5h" or "2h45m".
+`,
 		Example: `
 Finding Data with tag "key1:value1":
 
@@ -115,6 +146,23 @@ Finding Data out of use with Tag "tag1:value1":
 	{{ .Command }} --tag key1:value1 --transient true
 
 	(both above are equivalent)
+
+Finding all Data updated after 2021-01-01T00:00:00Z:
+
+	{{ .Command }} --since 2021-01-01Z
+
+
+Finding all Data with tag "key1:value1" updated after 2021-01-01T00:00:00Z:
+
+	{{ .Command }} --since "2021-01-01 00:00:00Z" --tag key1:value1
+	# When using space as delimiter, quote the value to prevent shell from interpreting it as two arguments.
+
+Scanning Data updated after 2021-01-01T00:00:00Z day by day:
+
+	{{ .Command }} --since 2021-01-01Z --duration 24h
+	{{ .Command }} --since 2021-01-02Z --duration 24h
+	{{ .Command }} --since 2021-01-03Z --duration 24h
+	# and so on... There are no overlaps.
 
 Finding all Data:
 
@@ -148,7 +196,13 @@ func (cmd *Command) Execute(
 		return NewErrUnknwonTransientFlag(flags.Flags.Transient)
 	}
 
-	data, err := cmd.task(ctx, l, c, tags, transientFlag)
+	since := flags.Flags.Since.Time()
+	duration := flags.Flags.Duration.Duration()
+	if since == nil && duration != nil {
+		return fmt.Errorf("%w: since and duration must be specified together", kcmd.ErrUsage)
+	}
+
+	data, err := cmd.task(ctx, l, c, tags, transientFlag, since, duration)
 	if err != nil {
 		return err
 	}
@@ -183,9 +237,11 @@ func RunFindData(
 	client krst.KnitClient,
 	tags []apitag.Tag,
 	transientFlag TransientValue,
+	since *time.Time,
+	duration *time.Duration,
 ) ([]apidata.Detail, error) {
 
-	result, err := client.FindData(ctx, tags)
+	result, err := client.FindData(ctx, tags, since, duration)
 	if err != nil {
 		return nil, err
 	}
