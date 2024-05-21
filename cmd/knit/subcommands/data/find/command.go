@@ -104,16 +104,16 @@ Find Data that satisfy all specified conditions.
 '--transient' limits Data by 'knit#transient' tag.
 '--transient' can be one of "yes" or "true" (only with "knit#transient"), "no" or "false" (only without "knit#transient") and "both" (no filtering by "knit#transient"; default).
 
-'--since' and '--duration' limits Data in a result to a time range.
+'--since' and '--duration' limits Data in a result to its 'knit#timestamp' tag is in the time range.
 
-'--since' limits Data in a result to what have been updated at equal to or later than it.
+'--since' limits Data in a result to what have 'knit#timestamp' later or same time.
 '--since' value should be formatted RFC3339 date-time format.
 It is possible to omit sub-seconds, seconds, minutes, and hours, and when you do so, they are assumed as zero.
 The time offset also can be omitted, and then it is assumed as the local time.
 The delimiter between date and time can be either 'T' or ' ' (space), equivarently.
 For example: "2021-01-01T00:00:00Z", "2021-01-01 00:00:00Z", "2021-01-01T00:00Z", "2021-01-01 00Z", "2021-01-01Z" are equivalent.
 
-'--duration' limites Data in a result to what have been updated in the duration from '--since'.
+'--duration' limites Data in a result to what have 'knit#timestamp' in the duration from '--since'.
 '--duration' flag must be used in conjunction with '--since'.
 Following units for durations are supported: "ns", "ms", "s", "m", "h". Negative values are not supported.
 For example: "300ms", "1.5h" or "2h45m".
