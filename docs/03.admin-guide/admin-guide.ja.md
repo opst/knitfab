@@ -226,7 +226,11 @@ nfs:
 
 - `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメントインして書き換える)
 
-オプショナルなパラメータとして、 `knitfab-install-settings/values/hooks.yaml` を編集することで WebHook を設定できる。
+Knitfab の動作を拡張するための設定ファイルも含まれている。
+
+- `knitfab-install-settings/values/hooks.yaml` を編集することで WebHook を設定できる。
+- `knitfab-install-settings/values/extra-api.yaml` を編集することで拡張 Web API を設定できる。
+
 詳細は、「Knitfab を拡張する」の章を参照されたい、
 
 #### 手順3: インストールする
@@ -1243,3 +1247,53 @@ Before フックは状態遷移をおこす直前の Run を受け取る。After
     - `tags[*]`: このログ出力に指定されている Tag （Data の Tag ではない）
     - `knitId`: ログを保持している Data の Knit Id
 
+
+### 拡張 Web API を登録する
+
+Knitfab の WebAPI に追加の Web API (Extra API) を登録できる。
+
+Knitfab WebAPI サーバ (`knitd`) は。設定された Extra API のパスに届いたリクエストを、他の URL に転送して、その結果をリクエスト元に送り返す。
+
+この機能は、たとえば Knitfab のデータベースを読み取る必要のあるカスタムな機能を、Knitfab の本体に手を加えずに追加するうえで便利である。
+
+> [!Note]
+>
+> Knitfab のデータベースの接続情報は、 kubernetes の Secret `database-credential` に格納されている。
+>
+> データベースに書き込みを行う機能を追加することもできるが、その場合には、データベース内の情報の一貫性を破壊しないように注意する必要がある。
+
+Extra API を登録するためには、次の手順に従う。
+
+1. インストール設定ディレクトリ内のファイル `values/extraApi.yaml` を編集する
+2. `./installer.sh --install` を再実行する
+
+このファイルは、 `./installer.sh --prepare` した直後は次の内容となっている。
+
+```yaml
+# # # values/extra-api.yaml # # #
+
+extraApi:
+  # # endpoints ([{path:..., proxy_to: ...}]): extra API endpoints .
+  endpoints: []
+  #  - # path, proxy_to: Knitfab proxies requests to the path (and subpath) to proxy_to.
+  #    path: /path/to/your/api
+  #    proxy_to: "http://your-api-server/api"
+  #    # The example above works as follows:
+  #    # https://KNITFAB_HOST/path/to/your/api               -> http://your-api-server/api
+  #    # https://KNITFAB_HOST/path/to/your/api/sub           -> http://your-api-server/api/sub
+  #    # https://KNITFAB_HOST/path/to/your/api/sub/resource  -> http://your-api-server/api/sub/resource
+  #    # https://KNITFAB_HOST/path/to/your/api/sub?query     -> http://your-api-server/api/sub?query
+  #    # https://KNITFAB_HOST/path/to/your                   -> (404)
+  #    #
+  #    # For path, "/api" is reserved for Knitfab builtin API.
+  #
+  # # more extra apis can be added.
+  # # - path: ...
+  # #   proxy_to: ...
+
+```
+
+`extraApi.endpoints` の各要素は、 `path` と `proxy_to` という 2 つのキーをもつ。
+`path` には Knitfab API として公開したい URL のパス部分を指定する。`proxy_to` には、`path` に届いたリクエストを実際に処理する URL を指定する。`path` のサブパスに届いたリクエストは、 `proxy_to` を起点として対応するサブパスに送られる(上例参照)。
+
+設定変更を適用するには、 `./installer.sh --install` を再実行すればよい。

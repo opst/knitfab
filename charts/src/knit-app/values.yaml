@@ -97,3 +97,6 @@ hooks:
   lifecycle-hooks:
     before: []
     after: []
+
+extraApis:
+  endpoints: []

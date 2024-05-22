@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/go-containerregistry v0.19.1 // indirect
