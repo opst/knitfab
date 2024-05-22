@@ -313,6 +313,30 @@ hooks:
 
 EOF
 
+    cat <<EOF > values/extra-api.yaml
+# # # values/extra-api.yaml # # #
+
+extraApi:
+  # # endpoints ([{path:..., proxy_to: ...}]): extra API endpoints .
+  endpoints: []
+  #  - # path, proxy_to: Knitfab proxies requests to the path (and subpath) to proxy_to.
+  #    path: /path/to/your/api
+  #    proxy_to: "http://your-api-server/api"
+  #    # The example above works as follows:
+  #    # https://KNITFAB_HOST/path/to/your/api               -> http://your-api-server/api
+  #    # https://KNITFAB_HOST/path/to/your/api/sub           -> http://your-api-server/api/sub
+  #    # https://KNITFAB_HOST/path/to/your/api/sub/resource  -> http://your-api-server/api/sub/resource
+  #    # https://KNITFAB_HOST/path/to/your/api/sub?query     -> http://your-api-server/api/sub?query
+  #    # https://KNITFAB_HOST/path/to/your                   -> (404)
+  #    #
+  #    # For path, "/api" is reserved for Knitfab builtin API.
+  #
+  # # more extra apis can be added.
+  # # - path: ...
+  # #   proxy_to: ...
+
+EOF
+
 	if [ -n "${PULL_SECRET}" ] ; then
 		${KUBECTL} create secret generic knitfab-regcred \
 			--type=kubernetes.io/dockerconfigjson --from-file "${PULL_SECRET}" \
@@ -623,10 +647,11 @@ run ${HELM} ${MODE} --dependency-update --wait \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
 	--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
-	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
 	--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
+	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
 	-f ${VALUES}/knit-app.yaml \
 	-f ${VALUES}/hooks.yaml \
+	-f ${VALUES}/extra-api.yaml \
 	${SET_PULL_SECRET} knit-app knitfab/knit-app
 
 mkdir -p ${SETTINGS}/handouts

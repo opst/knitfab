@@ -75,7 +75,7 @@ spec:
             - containerPort: 8080
           args: [
             '--config-path', '/knit/configs/knitd.yaml',
-            '--extra-apis-config', '/knit/extra-apis/extra-apis.yaml',
+            '--extra-apis-config', '/knit/extra-api/extra-apis.yaml',
             '--cert', '/knit/certs/tls.crt',
             '--certkey', '/knit/certs/tls.key',
           ]
@@ -83,8 +83,8 @@ spec:
             - name: config
               mountPath: /knit/configs
               readOnly: true
-            - name: extra-apis
-              mountPath: /knit/extra-apis
+            - name: extra-api
+              mountPath: /knit/extra-api
               readOnly: true
             - name: cert
               mountPath: /knit/certs
@@ -92,9 +92,9 @@ spec:
         - name: config
           configMap:
             name: {{ .Values.knitd.component }}-config
-        - name: extra-apis
+        - name: extra-api
           configMap:
-            name: extra-apis-config
+            name: extra-api-config
         - name: cert
           secret:
             secretName: {{ .Values.certs.secret.server }}

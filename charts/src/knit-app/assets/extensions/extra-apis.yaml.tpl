@@ -1,1 +1,0 @@
-{{ toYaml .Values.extraApis }}
