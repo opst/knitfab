@@ -5,16 +5,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"testing"
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_resource "github.com/opst/knitfab/cmd/knit/subcommands/plan/resource"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -89,7 +90,8 @@ func TestResourceQuantityList_Set(t *testing.T) {
 
 func TestCommand(t *testing.T) {
 	type When struct {
-		Args usage.FlagSet[plan_resource.Flag]
+		Flags plan_resource.Flag
+		Args  map[string][]string
 
 		PlanReturned apiplans.Detail
 		Error        error
@@ -125,12 +127,18 @@ func TestCommand(t *testing.T) {
 			logger := logger.Null()
 
 			buf := new(bytes.Buffer)
-			cmd := plan_resource.New(
-				plan_resource.WithOutput(buf),
-			)
+			cmd := plan_resource.Task()
 
-			err := cmd.Execute(
-				context.Background(), logger, env.KnitEnv{}, client, when.Args,
+			err := cmd(
+				context.Background(), logger, env.KnitEnv{}, client,
+				commandline.MockCommandline[plan_resource.Flag]{
+					Fullname_: "knit plan resource",
+					Stdout_:   buf,
+					Stderr_:   io.Discard,
+					Flags_:    when.Flags,
+					Args_:     when.Args,
+				},
+				[]any{},
 			)
 
 			if then.WantApiCalled != (0 < len(client.Calls.UpdateResources)) {
@@ -194,11 +202,9 @@ func TestCommand(t *testing.T) {
 
 	t.Run("no --set nor --unset", theory(
 		When{
-			Args: usage.FlagSet[plan_resource.Flag]{
-				Flags: plan_resource.Flag{},
-				Args: map[string][]string{
-					plan_resource.ARGS_PLAN_ID: {"test"},
-				},
+			Flags: plan_resource.Flag{},
+			Args: map[string][]string{
+				plan_resource.ARGS_PLAN_ID: {"test"},
 			},
 			PlanReturned: planRetuened,
 		},
@@ -209,15 +215,13 @@ func TestCommand(t *testing.T) {
 
 	t.Run("with --set", theory(
 		When{
-			Args: usage.FlagSet[plan_resource.Flag]{
-				Flags: plan_resource.Flag{
-					Set: plan_resource.ResourceQuantityList{
-						"cpu": resource.MustParse("2"),
-					},
+			Flags: plan_resource.Flag{
+				Set: &plan_resource.ResourceQuantityList{
+					"cpu": resource.MustParse("2"),
 				},
-				Args: map[string][]string{
-					plan_resource.ARGS_PLAN_ID: {"test"},
-				},
+			},
+			Args: map[string][]string{
+				plan_resource.ARGS_PLAN_ID: {"test"},
 			},
 			PlanReturned: planRetuened,
 			Error:        errors.New("test"),
@@ -235,13 +239,11 @@ func TestCommand(t *testing.T) {
 
 	t.Run("with --unset", theory(
 		When{
-			Args: usage.FlagSet[plan_resource.Flag]{
-				Flags: plan_resource.Flag{
-					Unset: plan_resource.Types{"cpu"},
-				},
-				Args: map[string][]string{
-					plan_resource.ARGS_PLAN_ID: {"test"},
-				},
+			Flags: plan_resource.Flag{
+				Unset: &plan_resource.Types{"cpu"},
+			},
+			Args: map[string][]string{
+				plan_resource.ARGS_PLAN_ID: {"test"},
 			},
 			PlanReturned: planRetuened,
 		},
@@ -256,14 +258,12 @@ func TestCommand(t *testing.T) {
 
 	t.Run("with --set and --unset", theory(
 		When{
-			Args: usage.FlagSet[plan_resource.Flag]{
-				Flags: plan_resource.Flag{
-					Set:   plan_resource.ResourceQuantityList{"cpu": resource.MustParse("2")},
-					Unset: plan_resource.Types{"memory"},
-				},
-				Args: map[string][]string{
-					plan_resource.ARGS_PLAN_ID: {"test"},
-				},
+			Flags: plan_resource.Flag{
+				Set:   &plan_resource.ResourceQuantityList{"cpu": resource.MustParse("2")},
+				Unset: &plan_resource.Types{"memory"},
+			},
+			Args: map[string][]string{
+				plan_resource.ARGS_PLAN_ID: {"test"},
 			},
 			PlanReturned: planRetuened,
 		},
@@ -280,14 +280,12 @@ func TestCommand(t *testing.T) {
 	fakeError := errors.New("fake error")
 	t.Run("client returns error", theory(
 		When{
-			Args: usage.FlagSet[plan_resource.Flag]{
-				Flags: plan_resource.Flag{
-					Set:   plan_resource.ResourceQuantityList{"cpu": resource.MustParse("2")},
-					Unset: plan_resource.Types{"memory"},
-				},
-				Args: map[string][]string{
-					plan_resource.ARGS_PLAN_ID: {"test"},
-				},
+			Flags: plan_resource.Flag{
+				Set:   &plan_resource.ResourceQuantityList{"cpu": resource.MustParse("2")},
+				Unset: &plan_resource.Types{"memory"},
+			},
+			Args: map[string][]string{
+				plan_resource.ARGS_PLAN_ID: {"test"},
 			},
 			PlanReturned: planRetuened,
 			Error:        fakeError,

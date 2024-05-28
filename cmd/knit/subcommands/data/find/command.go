@@ -5,17 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/youta-t/flarc"
 )
 
 type TransientValue int
@@ -26,77 +25,62 @@ const (
 	TransientExclude
 )
 
-var ErrUnknownTransientFlag = fmt.Errorf("%w: unknown --transient value", kcmd.ErrUsage)
+var ErrUnknownTransientFlag = fmt.Errorf("%w: unknown --transient value", flarc.ErrUsage)
 
 func NewErrUnknwonTransientFlag(actualValue string) error {
 	return fmt.Errorf("%w: %s", ErrUnknownTransientFlag, actualValue)
 }
 
 type Flag struct {
-	Tags      *kflag.Tags             `flag:"tag,short=t,metavar=KEY:VALUE...,help=Find Data with this Tag. Repeatable."`
-	Transient string                  `flag:"transient,metavar=both|yes|true|no|false,help=yes|true (transient Data only) / no|false (non transient Data only) / both"`
-	Since     *kflag.LooseRFC3339     `flag:"since,help=Find Data only updated at this time or later."`
-	Duration  *kflag.OptionalDuration `flag:"duration,help=Find Data only updated at a time in --duration from --since."`
+	Tags      *kflag.Tags             `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Find Data with this Tag. Repeatable."`
+	Transient string                  `flag:"transient" metavar:"both|yes|true|no|false" help:"yes|true (transient Data only) / no|false (non transient Data only) / both"`
+	Since     *kflag.LooseRFC3339     `flag:"since" help:"Find Data only updated at this time or later."`
+	Duration  *kflag.OptionalDuration `flag:"duration" help:"Find Data only updated at a time in --duration from --since."`
 }
 
-type Command struct {
-	task func(
+type Option struct {
+	findData func(
 		context.Context,
 		*log.Logger,
 		krst.KnitClient,
-		[]apitag.Tag,
-		TransientValue,
-		*time.Time,
-		*time.Duration,
+		Query,
 	) ([]apidata.Detail, error)
 }
 
-func WithTask(
-	task func(
+func WithFindData(
+	findData func(
 		context.Context,
 		*log.Logger,
 		krst.KnitClient,
-		[]apitag.Tag,
-		TransientValue,
-		*time.Time,
-		*time.Duration,
+		Query,
 	) ([]apidata.Detail, error),
-) func(*Command) *Command {
-	return func(dfc *Command) *Command {
-		dfc.task = task
+) func(*Option) *Option {
+	return func(dfc *Option) *Option {
+		dfc.findData = findData
 		return dfc
 	}
 }
 
-func New(
-	options ...func(*Command) *Command,
-) kcmd.KnitCommand[Flag] {
-	return utils.ApplyAll(
-		&Command{task: RunFindData},
-		options...,
-	)
-}
+func New(options ...func(*Option) *Option) (flarc.Command, error) {
+	opt := &Option{
+		findData: FindData,
+	}
+	for _, o := range options {
+		opt = o(opt)
+	}
 
-func (cmd *Command) Name() string {
-	return "find"
-}
-
-func (*Command) Usage() usage.Usage[Flag] {
-	return usage.New(
+	return flarc.NewCommand(
+		"Find Data that satisfy all specified conditions.",
 		Flag{
 			Tags:      &kflag.Tags{},
 			Transient: "both",
 			Since:     &kflag.LooseRFC3339{},
 			Duration:  &kflag.OptionalDuration{},
 		},
-		usage.Args{},
-	)
-}
+		flarc.Args{},
+		knitcmd.NewTask(Task(opt.findData)),
 
-func (cmd *Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "Find Data that satisfy all specified conditions.",
-		Detail: `
+		flarc.WithDescription(`
 Find Data that satisfy all specified conditions.
 
 '--tag' can be specified multiple times to search for Data that have all the specified Tags.
@@ -117,8 +101,10 @@ For example: "2021-01-01T00:00:00Z", "2021-01-01 00:00:00Z", "2021-01-01T00:00Z"
 '--duration' flag must be used in conjunction with '--since'.
 Following units for durations are supported: "ns", "ms", "s", "m", "h". Negative values are not supported.
 For example: "300ms", "1.5h" or "2h45m".
-`,
-		Example: `
+
+Example
+-------
+
 Finding Data with tag "key1:value1":
 
 	{{ .Command }} --tag key1:value1
@@ -168,52 +154,81 @@ Finding all Data:
 
 	{{ .Command }}
 `,
+		),
+	)
+}
+
+func Task(
+	findData func(
+		ctx context.Context,
+		logger *log.Logger,
+		client krst.KnitClient,
+		q Query,
+	) ([]apidata.Detail, error),
+) knitcmd.Task[Flag] {
+	return func(
+		ctx context.Context,
+		l *log.Logger,
+		_ kenv.KnitEnv,
+		c krst.KnitClient,
+		cl flarc.Commandline[Flag],
+		_ []any,
+	) error {
+
+		flags := cl.Flags()
+		tags := []apitag.Tag{}
+		if flags.Tags != nil {
+			tags = *flags.Tags
+		}
+
+		transientFlag := TransientAny
+		switch flags.Transient {
+		case "yes", "true":
+			transientFlag = TransientOnly
+		case "no", "false":
+			transientFlag = TransientExclude
+		case "both":
+			// default value.
+		default:
+			return NewErrUnknwonTransientFlag(flags.Transient)
+		}
+
+		since := flags.Since.Time()
+		duration := flags.Duration.Duration()
+		if since == nil && duration != nil {
+			return fmt.Errorf(
+				"%w: since and duration must be specified together", flarc.ErrUsage,
+			)
+		}
+
+		data, err := findData(
+			ctx, l, c,
+			Query{
+				Tags:      tags,
+				Transient: transientFlag,
+				Since:     since,
+				Duration:  duration,
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		enc := json.NewEncoder(cl.Stdout())
+		enc.SetIndent("", "    ")
+		if err := enc.Encode(data); err != nil {
+			l.Panicf("fail to dump found Data")
+		}
+
+		return nil
 	}
 }
 
-func (cmd *Command) Execute(
-	ctx context.Context,
-	l *log.Logger,
-	e kenv.KnitEnv,
-	c krst.KnitClient,
-	flags usage.FlagSet[Flag],
-) error {
-
-	tags := []apitag.Tag{}
-	if flags.Flags.Tags != nil {
-		tags = *flags.Flags.Tags
-	}
-
-	transientFlag := TransientAny
-	switch flags.Flags.Transient {
-	case "yes", "true":
-		transientFlag = TransientOnly
-	case "no", "false":
-		transientFlag = TransientExclude
-	case "both":
-		// default value.
-	default:
-		return NewErrUnknwonTransientFlag(flags.Flags.Transient)
-	}
-
-	since := flags.Flags.Since.Time()
-	duration := flags.Flags.Duration.Duration()
-	if since == nil && duration != nil {
-		return fmt.Errorf("%w: since and duration must be specified together", kcmd.ErrUsage)
-	}
-
-	data, err := cmd.task(ctx, l, c, tags, transientFlag, since, duration)
-	if err != nil {
-		return err
-	}
-
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "    ")
-	if err := enc.Encode(data); err != nil {
-		l.Panicf("fail to dump found Data")
-	}
-
-	return nil
+type Query struct {
+	Tags      []apitag.Tag
+	Transient TransientValue
+	Since     *time.Time
+	Duration  *time.Duration
 }
 
 // find data from knit api
@@ -222,7 +237,7 @@ func (cmd *Command) Execute(
 //   - ctx: context.Context
 //   - logger: *log.Logger
 //   - client: client to be used for sending request to knit API
-//   - tags: query. RunFindData finds Data which have all of tags.
+//   - tags: query. FindData finds Data which have all of tags.
 //   - transientFlag: restriction of output.
 //     when... TransientAny, each data is returned wheather it has "knit#transient" tag or not.
 //     TransientOnly, returned data will be restricted to ones with `knit#transint` tag.
@@ -231,17 +246,14 @@ func (cmd *Command) Execute(
 // returns:
 //   - []presentation.Data: found data. they are re-formatted for printing to console.
 //   - error
-func RunFindData(
+func FindData(
 	ctx context.Context,
 	logger *log.Logger,
 	client krst.KnitClient,
-	tags []apitag.Tag,
-	transientFlag TransientValue,
-	since *time.Time,
-	duration *time.Duration,
+	q Query,
 ) ([]apidata.Detail, error) {
 
-	result, err := client.FindData(ctx, tags, since, duration)
+	result, err := client.FindData(ctx, q.Tags, q.Since, q.Duration)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +266,7 @@ func RunFindData(
 	}
 	filter := isTransient
 
-	switch transientFlag {
+	switch q.Transient {
 	case TransientAny:
 		filter = func(apidata.Detail) bool { return true }
 	case TransientOnly:

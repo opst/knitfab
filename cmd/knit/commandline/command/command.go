@@ -92,12 +92,12 @@ type KnitCommand[T any] interface {
 // ErrUsage is returned when the command is invoked with invalid flags/arguments.
 //
 // Return this from Execute.
-var ErrUsage = errors.New("usage error")
+// var ErrUsage = flarc.ErrUsage
 
 type CommonFlags struct {
-	Profile      string `flag:",help=knitprofile name to use"`
-	ProfileStore string `flag:",help=path to knitprofile store file"`
-	Env          string `flag:",help=path to knitenv file"`
+	Profile      string `flag:"profile" help:"knitprofile name to use"`
+	ProfileStore string `flag:"profile-store" help:"path to knitprofile store file"`
+	Env          string `flag:"env" help:"path to knitenv file"`
 }
 
 type commonFlagDetection struct {

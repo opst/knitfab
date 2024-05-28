@@ -1,29 +1,57 @@
 package plan
 
 import (
-	"github.com/google/subcommands"
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	plan_active "github.com/opst/knitfab/cmd/knit/subcommands/plan/active"
 	plan_apply "github.com/opst/knitfab/cmd/knit/subcommands/plan/apply"
 	plan_find "github.com/opst/knitfab/cmd/knit/subcommands/plan/find"
+
 	plan_resource "github.com/opst/knitfab/cmd/knit/subcommands/plan/resource"
 	plan_show "github.com/opst/knitfab/cmd/knit/subcommands/plan/show"
 	plan_template "github.com/opst/knitfab/cmd/knit/subcommands/plan/template"
+	"github.com/youta-t/flarc"
 )
 
-func New(cf kcmd.CommonFlags) subcommands.Command {
-	commander := kcmd.NewCommander(
-		"plan",
-		kcmd.Help{
-			Synopsis: "manipulating Plan",
-		},
-	)
-	commander.Register(kcmd.Build(plan_show.New(), cf))
-	commander.Register(kcmd.Build(plan_find.New(), cf))
-	commander.Register(kcmd.Build(plan_template.New(), cf))
-	commander.Register(kcmd.Build(plan_apply.New(), cf))
-	commander.Register(kcmd.Build(plan_active.New(), cf))
-	commander.Register(kcmd.Build(plan_resource.New(), cf))
+func New() (flarc.Command, error) {
 
-	return commander
+	show, err := plan_show.New()
+	if err != nil {
+		return nil, err
+	}
+
+	find, err := plan_find.New()
+	if err != nil {
+		return nil, err
+	}
+
+	template, err := plan_template.New()
+	if err != nil {
+		return nil, err
+	}
+
+	apply, err := plan_apply.New()
+	if err != nil {
+		return nil, err
+	}
+
+	active, err := plan_active.New()
+	if err != nil {
+		return nil, err
+	}
+
+	resource, err := plan_resource.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return flarc.NewCommandGroup(
+		"Manipulate Knitfab Plan.",
+		struct{}{},
+		flarc.WithSubcommand("show", show),
+		flarc.WithSubcommand("find", find),
+		flarc.WithSubcommand("template", template),
+		flarc.WithSubcommand("apply", apply),
+		flarc.WithSubcommand("active", active),
+		flarc.WithSubcommand("resource", resource),
+	)
+
 }

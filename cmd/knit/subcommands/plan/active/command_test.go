@@ -3,19 +3,20 @@ package plan_test
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_active "github.com/opst/knitfab/cmd/knit/subcommands/plan/active"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/youta-t/flarc"
 )
 
 func TestActiveCommand(t *testing.T) {
@@ -31,7 +32,10 @@ func TestActiveCommand(t *testing.T) {
 	}
 
 	type Then struct {
-		err error
+		planId                          string
+		updateActivenessShouldBeInvoked bool
+		toBeActive                      bool
+		err                             error
 	}
 
 	theory := func(when When, then Then) func(*testing.T) {
@@ -39,33 +43,53 @@ func TestActiveCommand(t *testing.T) {
 			profile := &kprof.KnitProfile{ApiRoot: "http://api.knit.invalid"}
 			client := try.To(krst.NewClient(profile)).OrFatal(t)
 
-			mocktask := func(
+			updateActivenessHasBeenInvoked := false
+			updateActiveness := func(
 				ctx context.Context,
 				client krst.KnitClient,
 				planId string,
 				isActive bool,
 			) (apiplan.Detail, error) {
+				updateActivenessHasBeenInvoked = true
+				if planId != then.planId {
+					t.Errorf("planId is not expected one: %s", planId)
+				}
+
+				if isActive != then.toBeActive {
+					t.Errorf("isActive is not expected one: %t", isActive)
+				}
+
 				return when.task.plan, when.task.err
 			}
 
-			testee := plan_active.New(
-				plan_active.WithTask(mocktask),
-			)
+			testee := plan_active.Task(updateActiveness)
 
 			ctx := context.Background()
 
 			// test start
-			actual := testee.Execute(
+			actual := testee(
 				ctx, logger.Null(), *env.New(), client,
-				usage.FlagSet[struct{}]{
-					Flags: struct{}{}, Args: when.args,
+				commandline.MockCommandline[struct{}]{
+					Fullname_: "knit plan active",
+					Stdout_:   io.Discard,
+					Stderr_:   io.Discard,
+					Flags_:    struct{}{},
+					Args_:     when.args,
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actual, then.err) {
 				t.Errorf(
 					"wrong status: (actual, expected) != (%d, %d)",
 					actual, then.err,
+				)
+			}
+
+			if updateActivenessHasBeenInvoked != then.updateActivenessShouldBeInvoked {
+				t.Errorf(
+					"updateActivenessHasBeenInvoked: want %v, but got %v",
+					then.updateActivenessShouldBeInvoked, updateActivenessHasBeenInvoked,
 				)
 			}
 		}
@@ -82,7 +106,12 @@ func TestActiveCommand(t *testing.T) {
 				err:  nil,
 			},
 		},
-		Then{err: nil},
+		Then{
+			err:                             nil,
+			toBeActive:                      true,
+			planId:                          "test-Id",
+			updateActivenessShouldBeInvoked: true,
+		},
 	))
 
 	t.Run("when <mode> is 'no' and task dose not cause any error, it should return exitsuccess", theory(
@@ -96,7 +125,12 @@ func TestActiveCommand(t *testing.T) {
 				err:  nil,
 			},
 		},
-		Then{err: nil},
+		Then{
+			err:                             nil,
+			toBeActive:                      false,
+			planId:                          "test-Id",
+			updateActivenessShouldBeInvoked: true,
+		},
 	))
 
 	{
@@ -112,7 +146,12 @@ func TestActiveCommand(t *testing.T) {
 					err:  expectedError,
 				},
 			},
-			Then{err: expectedError},
+			Then{
+				err:                             expectedError,
+				toBeActive:                      true,
+				planId:                          "test-Id",
+				updateActivenessShouldBeInvoked: true,
+			},
 		))
 	}
 
@@ -129,7 +168,12 @@ func TestActiveCommand(t *testing.T) {
 					err:  expectedError,
 				},
 			},
-			Then{err: expectedError},
+			Then{
+				err:                             expectedError,
+				toBeActive:                      false,
+				planId:                          "test-Id",
+				updateActivenessShouldBeInvoked: true,
+			},
 		))
 	}
 
@@ -145,7 +189,10 @@ func TestActiveCommand(t *testing.T) {
 				err:  nil,
 			},
 		},
-		Then{err: kcmd.ErrUsage},
+		Then{
+			err:                             flarc.ErrUsage,
+			updateActivenessShouldBeInvoked: false,
+		},
 	))
 
 }
@@ -164,7 +211,7 @@ func TestRunActivatePlan(t *testing.T) {
 		}
 
 		// test start
-		actual := try.To(plan_active.RunActivatePlan(ctx, mock, "test-Id", true)).OrFatal(t)
+		actual := try.To(plan_active.UpdateActivatePlan(ctx, mock, "test-Id", true)).OrFatal(t)
 		if !actual.Equal(&expectedValue) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actual, expectedValue)
 		}
@@ -185,7 +232,7 @@ func TestRunActivatePlan(t *testing.T) {
 		}
 
 		// test start
-		actual, err := plan_active.RunActivatePlan(ctx, mock, "test-Id", true)
+		actual, err := plan_active.UpdateActivatePlan(ctx, mock, "test-Id", true)
 		expectedValue := apiplan.Detail{}
 		if !actual.Equal(&expectedValue) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actual, expectedValue)

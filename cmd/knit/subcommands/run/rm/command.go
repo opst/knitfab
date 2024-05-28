@@ -4,59 +4,49 @@ import (
 	"context"
 	"log"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
-	kenv "github.com/opst/knitfab/cmd/knit/env"
+	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/pkg/commandline/usage"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/youta-t/flarc"
 )
 
-type Command struct {
-	task func(
+type Option struct {
+	remove func(
 		ctx context.Context,
 		client krst.KnitClient,
 		runId string,
 	) error
 }
 
-func WithTask(
-	task func(
+func WithRemover(
+	remove func(
 		ctx context.Context,
 		client krst.KnitClient,
 		runId string,
 	) error,
-) func(*Command) *Command {
-	return func(dfc *Command) *Command {
-		dfc.task = task
-		return dfc
-	}
-}
-
-func New(
-	options ...func(*Command) *Command,
-) kcmd.KnitCommand[struct{}] {
-	return utils.ApplyAll(
-		&Command{task: RunDeleteRun},
-		options...,
-	)
-}
-
-func (cmd *Command) Name() string {
-	return "rm"
-}
-
-func (cmd *Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "Delete Run for the specified Run Id.",
+) func(*Option) *Option {
+	return func(opt *Option) *Option {
+		opt.remove = remove
+		return opt
 	}
 }
 
 const ARG_RUNID = "runId"
 
-func (cmd *Command) Usage() usage.Usage[struct{}] {
-	return usage.New(
+func New(
+	options ...func(*Option) *Option,
+) (flarc.Command, error) {
+	option := &Option{
+		remove: RunDeleteRun,
+	}
+	for _, opt := range options {
+		option = opt(option)
+	}
+
+	return flarc.NewCommand(
+		"Delete Run for the specified Run Id.",
 		struct{}{},
-		usage.Args{
+		flarc.Args{
 			{
 				Name:       ARG_RUNID,
 				Required:   true,
@@ -64,23 +54,30 @@ func (cmd *Command) Usage() usage.Usage[struct{}] {
 				Help:       "Id of the Run to be deleted.",
 			},
 		},
+		knitcmd.NewTask(Task(option.remove)),
 	)
 }
 
-func (cmd *Command) Execute(
-	ctx context.Context,
-	l *log.Logger,
-	e kenv.KnitEnv,
-	c krst.KnitClient,
-	f usage.FlagSet[struct{}],
-) error {
-	runId := f.Args[ARG_RUNID][0]
-	if err := cmd.task(ctx, c, runId); err == nil {
-		l.Printf("deleted Run Id:%v", runId)
-	} else {
-		return err
+func Task(
+	remove func(context.Context, krst.KnitClient, string) error,
+) knitcmd.Task[struct{}] {
+	return func(
+		ctx context.Context,
+		logger *log.Logger,
+		knitEnv env.KnitEnv,
+		client krst.KnitClient,
+		cl flarc.Commandline[struct{}],
+		params []any,
+	) error {
+
+		runId := cl.Args()[ARG_RUNID][0]
+		if err := remove(ctx, client, runId); err == nil {
+			logger.Printf("deleted Run Id:%v", runId)
+		} else {
+			return err
+		}
+		return nil
 	}
-	return nil
 }
 
 func RunDeleteRun(ctx context.Context, client krst.KnitClient, runId string,

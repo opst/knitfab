@@ -10,6 +10,7 @@ require (
 	github.com/google/subcommands v1.2.0
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
 	github.com/opst/knitfab v1.0.3
+	github.com/youta-t/flarc v0.0.2
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.30.0
 )
