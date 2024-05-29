@@ -8,7 +8,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
@@ -20,8 +20,8 @@ type Flag struct {
 	KnitIdIn  *kflag.Argslice         `flag:"in-knitid" alias:"i" help:"Find Run where the Input has this Knit Id. Repeatable."`
 	KnitIdOut *kflag.Argslice         `flag:"out-knitid" alias:"o" help:"Find Run where the Output has this Knit Id. Repeatable."`
 	Status    *kflag.Argslice         `flag:"status" alias:"s" metavar:"waiting|deactivated|starting|running|done|failed..." help:"Find Run in this status. Repeatable."`
-	Since     *kflag.LooseRFC3339     `flag:"since" help:"Find Run only updated at this time or later."`
-	Duration  *kflag.OptionalDuration `flag:"duration" help:"Find Run only updated in '--duration' from '--since'."`
+	Since     *kflag.LooseRFC3339     `flag:"since" metavar:"YYYY-mm-dd[THH[:MM[:SS]]][TZ]" help:"Find Run only updated at this time or later."`
+	Duration  *kflag.OptionalDuration `flag:"duration" metavar:"DURATION" help:"Find Run only updated in '--duration' from '--since'."`
 }
 
 type Option struct {
@@ -68,7 +68,7 @@ func New(
 			Duration:  &kflag.OptionalDuration{},
 		},
 		flarc.Args{},
-		knitcmd.NewTask(Task(option.find)),
+		common.NewTask(Task(option.find)),
 		flarc.WithDescription(`
 Find Runs that satisfy all specified conditions.
 
@@ -123,7 +123,7 @@ func Task(
 		client krst.KnitClient,
 		parameter krst.FindRunParameter,
 	) ([]apirun.Detail, error),
-) knitcmd.Task[Flag] {
+) common.Task[Flag] {
 	return func(ctx context.Context, logger *log.Logger, knitEnv env.KnitEnv, client krst.KnitClient, cl flarc.Commandline[Flag], params []any) error {
 		flags := cl.Flags()
 		planId := ptr.SafeDeref(flags.PlanId)

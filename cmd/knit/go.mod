@@ -7,7 +7,6 @@ replace github.com/opst/knitfab => ../..
 require (
 	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/google/go-containerregistry v0.19.1
-	github.com/google/subcommands v1.2.0
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
 	github.com/opst/knitfab v1.0.3
 	github.com/youta-t/flarc v0.0.2

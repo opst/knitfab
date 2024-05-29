@@ -9,8 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	"github.com/youta-t/flarc"
 )
 
@@ -74,15 +73,15 @@ func New(ext ExtentionCommand) (flarc.Command, error) {
 				Help: "parameters for the extention command",
 			},
 		},
-		knitcmd.NewTaskWithCommonFlag(Task(ext)),
+		common.NewTaskWithCommonFlag(Task(ext)),
 	)
 }
 
-func Task(ext ExtentionCommand) knitcmd.KnitTaskWithCommonFlag[struct{}] {
+func Task(ext ExtentionCommand) common.KnitTaskWithCommonFlag[struct{}] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,
-		cf kcmd.CommonFlags,
+		cf common.CommonFlags,
 		cl flarc.Commandline[struct{}],
 		params []any,
 	) error {

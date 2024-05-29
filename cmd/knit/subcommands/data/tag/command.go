@@ -8,7 +8,7 @@ import (
 
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflg "github.com/opst/knitfab/pkg/commandline/flag"
 	"github.com/youta-t/flarc"
@@ -34,7 +34,7 @@ func New() (flarc.Command, error) {
 				Help: "the Knit Id of Data to be Tagged.",
 			},
 		},
-		knitcmd.NewTask(Task),
+		common.NewTask(Task),
 		flarc.WithDescription(`
 Add and/or remove Tags on Data in knitfab.
 

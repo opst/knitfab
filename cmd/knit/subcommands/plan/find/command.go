@@ -9,7 +9,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
@@ -71,7 +71,7 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 			OutTags: &kflag.Tags{},
 		},
 		flarc.Args{},
-		knitcmd.NewTask(Task(option.find)),
+		common.NewTask(Task(option.find)),
 		flarc.WithDescription(`
 Display Plans that satisfy all specified conditions.
 
@@ -117,7 +117,7 @@ func Task(
 		inTags []apitag.Tag,
 		outTags []apitag.Tag,
 	) ([]apiplan.Detail, error),
-) knitcmd.Task[Flag] {
+) common.Task[Flag] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

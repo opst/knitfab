@@ -10,9 +10,8 @@ import (
 	"github.com/youta-t/flarc"
 	"gopkg.in/yaml.v3"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	prof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 )
 
 const ARG_KNIT_PROFILE_FILE = "KNIT_PROFILE_FILE"
@@ -27,10 +26,10 @@ func New() (flarc.Command, error) {
 				Help: "filepath to knitprofile file, which you received from your admin.",
 			},
 		},
-		knitcmd.NewTaskWithCommonFlag(func(
+		common.NewTaskWithCommonFlag(func(
 			ctx context.Context,
 			logger *log.Logger,
-			cf kcmd.CommonFlags,
+			cf common.CommonFlags,
 			cl flarc.Commandline[struct{}],
 			params []any,
 		) error {

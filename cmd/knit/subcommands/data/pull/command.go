@@ -13,7 +13,7 @@ import (
 	"github.com/cheggaaa/pb/v3"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	kpath "github.com/opst/knitfab/pkg/utils/path"
 	"github.com/youta-t/flarc"
 )
@@ -50,7 +50,7 @@ Default: current directory ".".
 `,
 			},
 		},
-		knitcmd.NewTask(Task),
+		common.NewTask(Task),
 		flarc.WithDescription(`
 Example
 -------

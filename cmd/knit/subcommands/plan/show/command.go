@@ -8,7 +8,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/youta-t/flarc"
 )
@@ -56,7 +56,7 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 				Help: "Specify the Plan Id you finding",
 			},
 		},
-		knitcmd.NewTask(Task(option.show)),
+		common.NewTask(Task(option.show)),
 	)
 }
 
@@ -66,7 +66,7 @@ func Task(
 		client krst.KnitClient,
 		planId string,
 	) (apiplans.Detail, error),
-) knitcmd.Task[struct{}] {
+) common.Task[struct{}] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	kenv "github.com/opst/knitfab/cmd/knit/env"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
@@ -23,9 +23,9 @@ import (
 )
 
 type Flag struct {
-	Upstream   bool   `flag:"" alias:"u" help:"Trace the upstream of the specified Data."`
-	Downstream bool   `flag:"" alias:"d" help:"Trace the downstream of the specified Data."`
-	Numbers    string `flag:"" alias:"n" help:"Trace up to the specified depth. Trace to the upstream-most/downstream-most if 'all' is specified.,metavar=number of depth"`
+	Upstream   bool   `flag:"upstream" alias:"u" help:"Trace the upstream of the specified Data."`
+	Downstream bool   `flag:"downstream" alias:"d" help:"Trace the downstream of the specified Data."`
+	Numbers    string `flag:"numbers" alias:"n" help:"Trace up to the specified depth. Trace to the upstream-most/downstream-most if 'all' is specified.,metavar=number of depth"`
 }
 
 type Option struct {
@@ -83,7 +83,7 @@ func New(
 				Help: "Specify the Knit Id of Data you want to trace.",
 			},
 		},
-		knitcmd.NewTask(Task(opt.Traverser)),
+		common.NewTask(Task(opt.Traverser)),
 		flarc.WithDescription(
 			`
 This command traces the Data Lineage of the specified Data
@@ -130,7 +130,7 @@ Example
 	)
 }
 
-func Task(option Traverser) knitcmd.Task[Flag] {
+func Task(option Traverser) common.Task[Flag] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

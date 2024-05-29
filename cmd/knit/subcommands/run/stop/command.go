@@ -6,7 +6,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	"github.com/youta-t/flarc"
 )
 
@@ -28,7 +28,7 @@ func New() (flarc.Command, error) {
 				Help: "Run Id to be stopped",
 			},
 		},
-		knitcmd.NewTask(Task()),
+		common.NewTask(Task()),
 		flarc.WithDescription(
 			`
 Stop Run and let it be done successfully.
@@ -37,7 +37,7 @@ If you want to stop Run and let it be failed, use --fail option.
 	)
 }
 
-func Task() knitcmd.Task[Flag] {
+func Task() common.Task[Flag] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

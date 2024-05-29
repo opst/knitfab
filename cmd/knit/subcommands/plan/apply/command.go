@@ -9,7 +9,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krest "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/youta-t/flarc"
 	"gopkg.in/yaml.v3"
@@ -49,13 +49,13 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 				Help: "Path to the Plan file. If you need it, try `knit plan template`",
 			},
 		},
-		knitcmd.NewTask(Task(option.applyfunc)),
+		common.NewTask(Task(option.applyfunc)),
 	)
 }
 
 func Task(
 	applyFunc func(context.Context, krest.KnitClient, apiplans.PlanSpec) (apiplans.Detail, error),
-) knitcmd.Task[struct{}] {
+) common.Task[struct{}] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

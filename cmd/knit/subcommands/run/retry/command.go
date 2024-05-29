@@ -6,7 +6,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	"github.com/youta-t/flarc"
 )
 
@@ -22,7 +22,7 @@ func New() (flarc.Command, error) {
 				Help: "Run Id to retry",
 			},
 		},
-		knitcmd.NewTask(Task),
+		common.NewTask(Task),
 		flarc.WithDescription(
 			`
 Retry a Run.

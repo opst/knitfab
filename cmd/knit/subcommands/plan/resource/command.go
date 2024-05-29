@@ -9,7 +9,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/youta-t/flarc"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -35,7 +35,7 @@ func New() (flarc.Command, error) {
 				Help: "Specify the id of the Plan to be updated its resource limits.",
 			},
 		},
-		knitcmd.NewTask(Task()),
+		common.NewTask(Task()),
 		flarc.WithDescription(`
 Set or unset resource limits for a Plan.
 
@@ -63,7 +63,7 @@ If you pass --set and --unset for same key, --set will take precedence.`,
 	)
 }
 
-func Task() knitcmd.Task[Flag] {
+func Task() common.Task[Flag] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

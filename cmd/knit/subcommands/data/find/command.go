@@ -9,7 +9,7 @@ import (
 
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
@@ -34,8 +34,8 @@ func NewErrUnknwonTransientFlag(actualValue string) error {
 type Flag struct {
 	Tags      *kflag.Tags             `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Find Data with this Tag. Repeatable."`
 	Transient string                  `flag:"transient" metavar:"both|yes|true|no|false" help:"yes|true (transient Data only) / no|false (non transient Data only) / both"`
-	Since     *kflag.LooseRFC3339     `flag:"since" help:"Find Data only updated at this time or later."`
-	Duration  *kflag.OptionalDuration `flag:"duration" help:"Find Data only updated at a time in --duration from --since."`
+	Since     *kflag.LooseRFC3339     `flag:"since" metavar:"YYYY-mm-dd[THH[:MM[:SS]]][TZ]" help:"Find Data only updated at this time or later."`
+	Duration  *kflag.OptionalDuration `flag:"duration" metavar:"DURATION" help:"Find Data only updated at a time in --duration from --since."`
 }
 
 type Option struct {
@@ -78,7 +78,7 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 			Duration:  &kflag.OptionalDuration{},
 		},
 		flarc.Args{},
-		knitcmd.NewTask(Task(opt.findData)),
+		common.NewTask(Task(opt.findData)),
 
 		flarc.WithDescription(`
 Find Data that satisfy all specified conditions.
@@ -165,7 +165,7 @@ func Task(
 		client krst.KnitClient,
 		q Query,
 	) ([]apidata.Detail, error),
-) knitcmd.Task[Flag] {
+) common.Task[Flag] {
 	return func(
 		ctx context.Context,
 		l *log.Logger,

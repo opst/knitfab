@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab/cmd/knit/commandline/command"
+	common "github.com/opst/knitfab/cmd/knit/subcommands/common"
 	"github.com/opst/knitfab/cmd/knit/subcommands/extensions"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
@@ -159,7 +159,7 @@ func TestCommand(t *testing.T) {
 			err := testee(
 				ctx,
 				logger.Null(),
-				command.CommonFlags{
+				common.CommonFlags{
 					Profile:      "test-profile",
 					ProfileStore: "test-profile-store",
 				},

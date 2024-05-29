@@ -6,7 +6,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	"github.com/youta-t/flarc"
 )
 
@@ -31,7 +31,7 @@ func WithRemover(
 	}
 }
 
-const ARG_RUNID = "runId"
+const ARG_RUNID = "RUN_ID"
 
 func New(
 	options ...func(*Option) *Option,
@@ -54,13 +54,13 @@ func New(
 				Help:       "Id of the Run to be deleted.",
 			},
 		},
-		knitcmd.NewTask(Task(option.remove)),
+		common.NewTask(Task(option.remove)),
 	)
 }
 
 func Task(
 	remove func(context.Context, krst.KnitClient, string) error,
-) knitcmd.Task[struct{}] {
+) common.Task[struct{}] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

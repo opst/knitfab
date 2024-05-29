@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"path"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	subdata "github.com/opst/knitfab/cmd/knit/subcommands/data"
 	"github.com/opst/knitfab/cmd/knit/subcommands/extensions"
 	subinit "github.com/opst/knitfab/cmd/knit/subcommands/init"
@@ -35,8 +35,6 @@ func main() {
 	)
 	defer cancel()
 
-	cf := try.To(kcmd.DefaultCommonFlags(".")).OrFatal(logger)
-
 	init := try.To(subinit.New()).OrFatal(logger)
 	data := try.To(subdata.New()).OrFatal(logger)
 	run := try.To(subrun.New()).OrFatal(logger)
@@ -58,6 +56,7 @@ func main() {
 		subcommands = append(subcommands, flarc.WithSubcommand(extcmd.Name, x))
 	}
 
+	cf := try.To(common.Flags(".")).OrFatal(logger)
 	knit := try.To(
 		flarc.NewCommandGroup(
 			"Knitfab Commandline interface",

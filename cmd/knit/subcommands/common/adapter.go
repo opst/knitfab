@@ -1,4 +1,4 @@
-package knitcmd
+package common
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/opst/knitfab/cmd/knit/commandline/command"
 	"github.com/opst/knitfab/cmd/knit/config/profiles"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krest "github.com/opst/knitfab/cmd/knit/rest"
@@ -17,19 +16,19 @@ import (
 type KnitTaskWithCommonFlag[T any] func(
 	ctx context.Context,
 	logger *log.Logger,
-	commonFlag command.CommonFlags,
+	commonFlag CommonFlags,
 	cl flarc.Commandline[T],
 	params []any,
 ) error
 
 func NewTaskWithCommonFlag[T any](task KnitTaskWithCommonFlag[T]) flarc.Task[T] {
 	return func(ctx context.Context, cl flarc.Commandline[T], pos []any) error {
-		var commonFlag command.CommonFlags
+		var commonFlag CommonFlags
 		found := false
 		newpos := make([]any, 0, len(pos))
 		for _, p := range pos {
 			switch v := p.(type) {
-			case command.CommonFlags:
+			case CommonFlags:
 				found = true
 				commonFlag = v
 			default:
@@ -67,7 +66,7 @@ func NewTask[T any](task Task[T]) flarc.Task[T] {
 	return NewTaskWithCommonFlag(func(
 		ctx context.Context,
 		logger *log.Logger,
-		commonFlag command.CommonFlags,
+		commonFlag CommonFlags,
 		cl flarc.Commandline[T],
 		params []any,
 	) error {

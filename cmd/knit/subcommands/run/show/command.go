@@ -10,7 +10,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	"github.com/youta-t/flarc"
 )
@@ -74,7 +74,7 @@ func New(
 				Help: "Id of the Run Id to be shown",
 			},
 		},
-		knitcmd.NewTask(Task(option.showInfo, option.showLog)),
+		common.NewTask(Task(option.showInfo, option.showLog)),
 		flarc.WithDescription(`
 Return the Run information for the specified Run Id.
 
@@ -83,7 +83,7 @@ when --log is passed, it display the log of that Run on the console.
 	)
 }
 
-func Task(showInfo ShowInfo, showLog ShowLog) knitcmd.Task[Flags] {
+func Task(showInfo ShowInfo, showLog ShowLog) common.Task[Flags] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

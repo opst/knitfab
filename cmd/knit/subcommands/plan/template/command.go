@@ -12,7 +12,7 @@ import (
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/images/analyzer"
@@ -72,7 +72,7 @@ If --scratch is given, %s is prohibited.`,
 				),
 			},
 		},
-		knitcmd.NewTask(Task(option.fromScratch, option.fromImage)),
+		common.NewTask(Task(option.fromScratch, option.fromImage)),
 		flarc.WithDescription(`
 Generate a Plan file from "docker save".
 
@@ -94,7 +94,7 @@ You may need to specify image:tag explicitly when the image has multiple tags, l
 func Task(
 	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error),
 	fromImage func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error),
-) knitcmd.Task[Flag] {
+) common.Task[Flag] {
 	return func(
 		ctx context.Context,
 		logger *log.Logger,

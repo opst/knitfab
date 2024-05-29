@@ -11,7 +11,7 @@ import (
 
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflg "github.com/opst/knitfab/pkg/commandline/flag"
 	kdb "github.com/opst/knitfab/pkg/db"
@@ -43,7 +43,7 @@ func New() (flarc.Command, error) {
 				Help: `Data directory to be pushed to knitfab`,
 			},
 		},
-		knitcmd.NewTask(Task),
+		common.NewTask(Task),
 		flarc.WithDescription(`
 Register Data in your local directory to knit.
 

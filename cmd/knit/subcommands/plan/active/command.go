@@ -7,12 +7,10 @@ import (
 
 	"log"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/knitcmd"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/youta-t/flarc"
 )
 
@@ -66,7 +64,7 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 				Help: "A Plan id to be changed its activeness.",
 			},
 		},
-		knitcmd.NewTask(Task(opt.updateActiveness)),
+		common.NewTask(Task(opt.updateActiveness)),
 		flarc.WithDescription(`
 When "{{ .Command }} yes", the Plan specified by Plan id is activated.
 Runs of the Plan in "deactivated" status are changed to "waiting".
@@ -77,25 +75,6 @@ Runs of the Plan in "waiting" status are changed to "deactivated".
 If the Plan is already deactivated, do nothing and return the status as is.
 `),
 	)
-}
-
-func (*Option) Name() string {
-	return "active"
-}
-
-func (*Option) Usage() usage.Usage[struct{}] {
-	return usage.New(
-		struct{}{},
-		usage.Args{},
-	)
-}
-
-func (*Option) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "Activate or deactivate the Plan.",
-		Detail: `
-`,
-	}
 }
 
 func Task(
