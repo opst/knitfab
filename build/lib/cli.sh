@@ -15,7 +15,10 @@ case ${BUILD_MODE} in
 			EXT=".exe"
 		fi
 		echo "build cli 'knit${EXT}' @ ${DEST}" >&2
-		go build ${LDFLAGS:+-ldflags} ${LDFLAGS} -o ${DEST}/knit${EXT} .
+		(
+			cd ${ROOT}/cmd/knit
+			go build ${LDFLAGS:+-ldflags} ${LDFLAGS} -o ${DEST}/knit${EXT} .
+		)
 		exit
 	;;
 	*)
