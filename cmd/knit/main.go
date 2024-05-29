@@ -11,6 +11,7 @@ import (
 
 	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	subdata "github.com/opst/knitfab/cmd/knit/subcommands/data"
+	"github.com/opst/knitfab/cmd/knit/subcommands/extensions"
 	subinit "github.com/opst/knitfab/cmd/knit/subcommands/init"
 	sublic "github.com/opst/knitfab/cmd/knit/subcommands/license"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
@@ -35,6 +36,7 @@ func main() {
 	defer cancel()
 
 	cf := try.To(kcmd.DefaultCommonFlags(".")).OrFatal(logger)
+
 	init := try.To(subinit.New()).OrFatal(logger)
 	data := try.To(subdata.New()).OrFatal(logger)
 	run := try.To(subrun.New()).OrFatal(logger)
@@ -42,16 +44,25 @@ func main() {
 	license := try.To(sublic.New(CREDITS)).OrFatal(logger)
 	version := try.To(subver.New()).OrFatal(logger)
 
+	subcommands := []flarc.CommandGroupOption{
+		flarc.WithSubcommand("init", init),
+		flarc.WithSubcommand("data", data),
+		flarc.WithSubcommand("run", run),
+		flarc.WithSubcommand("plan", plan),
+		flarc.WithSubcommand("license", license),
+		flarc.WithSubcommand("version", version),
+	}
+
+	for _, extcmd := range extensions.FindSubcommand("knit-") {
+		x := try.To(extensions.New(extcmd)).OrFatal(logger)
+		subcommands = append(subcommands, flarc.WithSubcommand(extcmd.Name, x))
+	}
+
 	knit := try.To(
 		flarc.NewCommandGroup(
 			"Knitfab Commandline interface",
 			cf,
-			flarc.WithSubcommand("init", init),
-			flarc.WithSubcommand("data", data),
-			flarc.WithSubcommand("run", run),
-			flarc.WithSubcommand("plan", plan),
-			flarc.WithSubcommand("license", license),
-			flarc.WithSubcommand("version", version),
+			subcommands...,
 		),
 	).OrFatal(logger)
 
