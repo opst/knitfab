@@ -94,6 +94,7 @@ func Task(ext ExtentionCommand) common.KnitTaskWithCommonFlag[struct{}] {
 			os.Environ(),
 			"KNIT_PROFILE="+cf.Profile,
 			"KNIT_PROFILE_STORE="+cf.ProfileStore,
+			"KNIT_ENV="+cf.Env,
 		)
 		cmd.Env = environ
 		err := cmd.Run()

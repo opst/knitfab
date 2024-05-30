@@ -128,6 +128,7 @@ func TestCommand(t *testing.T) {
 	type Output struct {
 		KnitProfile      string   `json:"KNIT_PROFILE"`
 		KnitProfileStore string   `json:"KNIT_PROFILE_STORE"`
+		KnitEnv          string   `json:"KNIT_ENV"`
 		Stdin            string   `json:"stdin"`
 		Args             []string `json:"args"`
 	}
@@ -135,6 +136,7 @@ func TestCommand(t *testing.T) {
 	outputEq := func(a, b Output) bool {
 		return a.KnitProfile == b.KnitProfile &&
 			a.KnitProfileStore == b.KnitProfileStore &&
+			a.KnitEnv == b.KnitEnv &&
 			a.Stdin == b.Stdin &&
 			cmp.SliceEq(a.Args, b.Args)
 	}
@@ -162,6 +164,7 @@ func TestCommand(t *testing.T) {
 				common.CommonFlags{
 					Profile:      "test-profile",
 					ProfileStore: "test-profile-store",
+					Env:          "test-knit-env",
 				},
 				commandline.MockCommandline[struct{}]{
 					Fullname_: "knit extention",
@@ -187,6 +190,7 @@ func TestCommand(t *testing.T) {
 			wantStdout := Output{
 				KnitProfile:      "test-profile",
 				KnitProfileStore: "test-profile-store",
+				KnitEnv:          "test-knit-env",
 				Stdin:            "stdin message\n",
 				Args:             when.Args,
 			}

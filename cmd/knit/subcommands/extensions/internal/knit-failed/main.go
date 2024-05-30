@@ -11,6 +11,7 @@ import (
 func main() {
 	KNIT_PROFILE := os.Getenv("KNIT_PROFILE")
 	KNIT_PROFILE_STORE := os.Getenv("KNIT_PROFILE_STORE")
+	KNIT_ENV := os.Getenv("KNIT_ENV")
 	args := os.Args[1:]
 
 	stdin, err := io.ReadAll(os.Stdin)
@@ -23,6 +24,7 @@ func main() {
 	if err := json.NewEncoder(os.Stdout).Encode(map[string]any{
 		"KNIT_PROFILE":       KNIT_PROFILE,
 		"KNIT_PROFILE_STORE": KNIT_PROFILE_STORE,
+		"KNIT_ENV":           KNIT_ENV,
 		"stdin":              string(stdin),
 		"args":               args,
 	}); err != nil {
