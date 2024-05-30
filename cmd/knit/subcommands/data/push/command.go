@@ -4,85 +4,58 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflg "github.com/opst/knitfab/pkg/commandline/flag"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/youta-t/flarc"
 
 	pb "github.com/cheggaaa/pb/v3"
 )
 
 type Flags struct {
-	Tag         kflg.Tags `flag:"tag,short=t,metavar=KEY:VALUE...,help=Tags to be put on Data. It can be specified multiple times."`
-	Name        bool      `flag:"name,short=n,help=add tag name:<source>"`
-	Dereference bool      `flag:"dereference,short=L,help=Symlinks are followed and it stores target files of links. Otherwise symlinks are stored as such."`
-}
-
-type Command struct {
-	progressOut io.Writer
-	output      io.Writer
-}
-
-type Option func(*Command) *Command
-
-func WithProgressOut(w io.Writer) Option {
-	return func(c *Command) *Command {
-		c.progressOut = w
-		return c
-	}
-}
-
-func WithOutput(w io.Writer) Option {
-	return func(c *Command) *Command {
-		c.output = w
-		return c
-	}
-}
-
-func New(opt ...Option) kcmd.KnitCommand[Flags] {
-	c := &Command{
-		progressOut: os.Stderr,
-		output:      os.Stdout,
-	}
-
-	for _, o := range opt {
-		c = o(c)
-	}
-
-	return c
-}
-func (cmd *Command) Name() string {
-	return "push"
+	Tag         *kflg.Tags `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Tags to be put on Data. It can be specified multiple times."`
+	Name        bool       `flag:"name" alias:"n" help:"add tag name:<source>"`
+	Dereference bool       `flag:"dereference" short:"L" help:"Symlinks are followed and it stores target files of links. Otherwise symlinks are stored as such."`
 }
 
 const ARG_SOURCE = "source"
 
-func (*Command) Usage() usage.Usage[Flags] {
-	return usage.New(
-		Flags{},
-		usage.Args{
+func New() (flarc.Command, error) {
+	return flarc.NewCommand(
+		"Push (register) Data to Knitfab.",
+		Flags{
+			Tag:         &kflg.Tags{},
+			Name:        false,
+			Dereference: false,
+		},
+		flarc.Args{
 			{
 				Name: ARG_SOURCE, Repeatable: true, Required: true,
 				Help: `Data directory to be pushed to knitfab`,
 			},
 		},
-	)
-}
+		common.NewTask(Task),
+		flarc.WithDescription(`
+Register Data in your local directory to knit.
 
-func (*Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "push (register) Data to knitfab",
-		Example: `
+Tags are added to the registered Data.
+You can specify Tags with --tag (or -t) option and --name (or -n) option.
+If you specify --name option, the Tag "name:<SOURCE_DIRECOTRYNAME>" is added to the Data.
+
+And, knitenv Tags are also added to the Data, implicitly.
+
+Example
+-------
+
 To register directory "./data/train" to knit:
 
 	{{ .Command }} ./data/train
@@ -98,31 +71,29 @@ To register directories:
 
 For each example, Tags in knitenv file are also added to the Data.
 `,
-		Detail: `
-Register Data in your local directory to knit.
-
-Tags are added to the registered Data.
-You can specify Tags with --tag (or -t) option and --name (or -n) option.
-If you specify --name option, the Tag "name:<SOURCE_DIRECOTRYNAME>" is added to the Data.
-
-And, knitenv Tags are also added to the Data, implicitly.
-`,
-	}
+		),
+	)
 }
 
-func (cmd *Command) Execute(
+func Task(
 	ctx context.Context,
 	l *log.Logger,
 	e kenv.KnitEnv,
 	c krst.KnitClient,
-	flags usage.FlagSet[Flags],
+	cl flarc.Commandline[Flags],
+	_ []any,
 ) error {
-	tags := make(map[apitag.UserTag]struct{}, len(flags.Flags.Tag))
-	for _, t := range flags.Flags.Tag {
+	flags := cl.Flags()
+	rawtags := kflg.Tags{}
+	if flags.Tag != nil {
+		rawtags = *flags.Tag
+	}
+	tags := make(map[apitag.UserTag]struct{}, len(rawtags))
+	for _, t := range rawtags {
 		if ut := new(apitag.UserTag); t.AsUserTag(ut) {
 			tags[*ut] = struct{}{}
 		} else {
-			return fmt.Errorf("%w: Tag starting %s is reserved", kcmd.ErrUsage, kdb.SystemTagPrefix)
+			return fmt.Errorf("%w: Tag starting %s is reserved", flarc.ErrUsage, kdb.SystemTagPrefix)
 		}
 	}
 
@@ -132,9 +103,11 @@ func (cmd *Command) Execute(
 		}
 	}
 
-	toBeNamed := flags.Flags.Name
-	total := len(flags.Args[ARG_SOURCE])
-	for n, s := range flags.Args[ARG_SOURCE] {
+	toBeNamed := flags.Name
+
+	args := cl.Args()
+	total := len(args[ARG_SOURCE])
+	for n, s := range args[ARG_SOURCE] {
 		if _, err := os.Stat(s); err != nil {
 			l.Printf("%s: %s -- skipped", err, s)
 			continue
@@ -145,11 +118,11 @@ func (cmd *Command) Execute(
 			t = append(t, apitag.UserTag{Key: "name", Value: filepath.Base(s)})
 		}
 
-		prog := c.PostData(ctx, s, flags.Flags.Dereference)
+		prog := c.PostData(ctx, s, flags.Dereference)
 
 		bar := pb.New64(prog.EstimatedTotalSize())
 		bar.Set(pb.Bytes, true)
-		bar.SetWriter(cmd.progressOut)
+		bar.SetWriter(cl.Stderr())
 		if err := bar.Err(); err != nil {
 			return err
 		}
@@ -205,7 +178,7 @@ func (cmd *Command) Execute(
 				"[[%d/%d]] [WARN] partially done: %s -> %s:%s (but not Tagged)",
 				n+1, total, s, kdb.KeyKnitId, res.KnitId,
 			)
-			cmd.output.Write(buf)
+			cl.Stdout().Write(buf)
 			return err
 		}
 
@@ -217,7 +190,7 @@ func (cmd *Command) Execute(
 			"[[%d/%d]] [OK] done: %s -> %s:%s",
 			n+1, total, s, kdb.KeyKnitId, res.KnitId,
 		)
-		cmd.output.Write(buf)
+		cl.Stdout().Write(buf)
 	}
 
 	return nil

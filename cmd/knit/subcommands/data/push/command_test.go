@@ -15,13 +15,14 @@ import (
 	"github.com/opst/knitfab/cmd/knit/rest"
 	rmock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	data_push "github.com/opst/knitfab/cmd/knit/subcommands/data/push"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	"github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/opst/knitfab/pkg/api/types/runs"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/commandline/usage"
+	kflg "github.com/opst/knitfab/pkg/commandline/flag"
 	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -42,12 +43,6 @@ func TestPush(t *testing.T) {
 				{Key: "project", Value: "knitfab"},
 			},
 		}
-
-		stdout := new(strings.Builder)
-		testee := data_push.New(
-			data_push.WithProgressOut(io.Discard),
-			data_push.WithOutput(stdout),
-		)
 
 		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*apidata.Detail] {
 			if dereference {
@@ -112,20 +107,26 @@ func TestPush(t *testing.T) {
 			return outputData, nil
 		}
 
-		err := testee.Execute(
+		stdout := new(strings.Builder)
+		testee := data_push.Task
+		err := testee(
 			context.Background(),
 			logger, env, mock,
-			usage.FlagSet[data_push.Flags]{
-				Flags: data_push.Flags{
-					Tag: []apitag.Tag{
+			commandline.MockCommandline[data_push.Flags]{
+				Fullname_: "knit data push",
+				Stdout_:   stdout,
+				Stderr_:   io.Discard,
+				Flags_: data_push.Flags{
+					Tag: &kflg.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
 				},
-				Args: map[string][]string{
+				Args_: map[string][]string{
 					data_push.ARG_SOURCE: {tmp},
 				},
 			},
+			[]any{},
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -201,12 +202,6 @@ func TestPush(t *testing.T) {
 			},
 		}
 
-		stdout := new(strings.Builder)
-		testee := data_push.New(
-			data_push.WithProgressOut(io.Discard),
-			data_push.WithOutput(stdout),
-		)
-
 		nth := 0
 		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*apidata.Detail] {
 			if dereference {
@@ -270,21 +265,27 @@ func TestPush(t *testing.T) {
 			return outputData, nil
 		}
 
-		err := testee.Execute(
+		stdout := new(strings.Builder)
+		testee := data_push.Task
+		err := testee(
 			context.Background(),
 			logger, env, mock,
-			usage.FlagSet[data_push.Flags]{
-				Flags: data_push.Flags{
-					Tag: []apitag.Tag{
+			commandline.MockCommandline[data_push.Flags]{
+				Fullname_: "knit data push",
+				Stdout_:   stdout,
+				Stderr_:   io.Discard,
+				Flags_: data_push.Flags{
+					Tag: &kflg.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
 					Name: true,
 				},
-				Args: map[string][]string{
+				Args_: map[string][]string{
 					data_push.ARG_SOURCE: {tmpA, tmpB},
 				},
 			},
+			[]any{},
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -355,12 +356,6 @@ func TestPush(t *testing.T) {
 			},
 		}
 
-		stdout := new(strings.Builder)
-		testee := data_push.New(
-			data_push.WithProgressOut(io.Discard),
-			data_push.WithOutput(stdout),
-		)
-
 		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*apidata.Detail] {
 
 			if dereference {
@@ -423,21 +418,27 @@ func TestPush(t *testing.T) {
 			return outputData, nil
 		}
 
-		err := testee.Execute(
+		stdout := new(strings.Builder)
+		testee := data_push.Task
+		err := testee(
 			context.Background(),
 			logger, env, mock,
-			usage.FlagSet[data_push.Flags]{
-				Flags: data_push.Flags{
-					Tag: []apitag.Tag{
+			commandline.MockCommandline[data_push.Flags]{
+				Fullname_: "knit data push",
+				Stdout_:   stdout,
+				Stderr_:   io.Discard,
+				Flags_: data_push.Flags{
+					Tag: &kflg.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
 					Name: true,
 				},
-				Args: map[string][]string{
+				Args_: map[string][]string{
 					data_push.ARG_SOURCE: {tmp},
 				},
 			},
+			[]any{},
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -511,12 +512,6 @@ func TestPush(t *testing.T) {
 			},
 		}
 
-		stdout := new(strings.Builder)
-		testee := data_push.New(
-			data_push.WithProgressOut(io.Discard),
-			data_push.WithOutput(stdout),
-		)
-
 		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*apidata.Detail] {
 
 			if !dereference {
@@ -580,21 +575,27 @@ func TestPush(t *testing.T) {
 			return outputData, nil
 		}
 
-		err := testee.Execute(
+		stdout := new(strings.Builder)
+		testee := data_push.Task
+		err := testee(
 			context.Background(),
 			logger, env, mock,
-			usage.FlagSet[data_push.Flags]{
-				Flags: data_push.Flags{
-					Tag: []apitag.Tag{
+			commandline.MockCommandline[data_push.Flags]{
+				Fullname_: "knit data push",
+				Stdout_:   stdout,
+				Stderr_:   io.Discard,
+				Flags_: data_push.Flags{
+					Tag: &kflg.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
 					Dereference: true,
 				},
-				Args: map[string][]string{
+				Args_: map[string][]string{
 					data_push.ARG_SOURCE: {tmp},
 				},
 			},
+			[]any{},
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -662,24 +663,26 @@ func TestPush(t *testing.T) {
 			},
 		}
 
-		testee := data_push.New(
-			data_push.WithProgressOut(io.Discard),
-		)
+		testee := data_push.Task
 
-		err := testee.Execute(
+		err := testee(
 			context.Background(),
 			logger, env, mock,
-			usage.FlagSet[data_push.Flags]{
-				Flags: data_push.Flags{
-					Tag: []apitag.Tag{
+			commandline.MockCommandline[data_push.Flags]{
+				Fullname_: "knit data push",
+				Stdout_:   io.Discard,
+				Stderr_:   io.Discard,
+				Flags_: data_push.Flags{
+					Tag: &kflg.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
 				},
-				Args: map[string][]string{
+				Args_: map[string][]string{
 					data_push.ARG_SOURCE: {},
 				},
 			},
+			[]any{},
 		)
 		if err != nil {
 			t.Fatal(err)

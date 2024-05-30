@@ -4,25 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
-	"os"
+	"strings"
 	"testing"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_find "github.com/opst/knitfab/cmd/knit/subcommands/plan/find"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/commandline/flag"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/youta-t/flarc"
 )
 
 func TestFindCommand(t *testing.T) {
@@ -127,33 +128,22 @@ func TestFindCommand(t *testing.T) {
 				return when.presentation, when.err
 			}
 
-			testee := plan_find.New(
-				plan_find.WithTask(task),
-			)
+			testee := plan_find.Task(task)
 
 			ctx := context.Background()
 
-			pr, pw, err := os.Pipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer pw.Close()
-			defer pr.Close()
-
-			{
-				orig := os.Stdout
-				defer func() { os.Stdout = orig }()
-				os.Stdout = pw
-			}
+			stdout := new(strings.Builder)
 
 			//test start
-			actual := testee.Execute(
+			actual := testee(
 				ctx, logger.Null(), *kenv.New(), client,
-				usage.FlagSet[plan_find.Flag]{
-					Flags: when.flag,
+				commandline.MockCommandline[plan_find.Flag]{
+					Stdout_: stdout,
+					Stderr_: io.Discard,
+					Flags_:  when.flag,
 				},
+				[]any{},
 			)
-			pw.Close() // to tearoff writer.
 
 			if !errors.Is(actual, then.err) {
 				t.Errorf(
@@ -164,7 +154,7 @@ func TestFindCommand(t *testing.T) {
 
 			if then.err == nil {
 				var actualValue []apiplan.Detail
-				if err := json.NewDecoder(pr).Decode(&actualValue); err != nil {
+				if err := json.Unmarshal([]byte(stdout.String()), &actualValue); err != nil {
 					t.Fatal(err)
 				}
 
@@ -289,7 +279,7 @@ func TestFindCommand(t *testing.T) {
 			err:          nil,
 		},
 		Then{
-			err: kcmd.ErrUsage,
+			err: flarc.ErrUsage,
 		},
 	))
 	t.Run("when input tags and output tags are passed it should call task with all tags", theory(

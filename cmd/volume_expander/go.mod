@@ -8,6 +8,7 @@ require (
 	github.com/opst/knitfab v1.0.3
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.53.0
+	github.com/youta-t/flarc v0.0.3
 	k8s.io/api v0.30.0
 	k8s.io/apimachinery v0.30.0
 	k8s.io/client-go v0.30.0

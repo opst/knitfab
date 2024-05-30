@@ -3,14 +3,15 @@ package stop_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst_mock "github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_stop "github.com/opst/knitfab/cmd/knit/subcommands/run/stop"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 )
 
 func TestCommand_WithFail(t *testing.T) {
@@ -35,20 +36,25 @@ func TestCommand_WithFail(t *testing.T) {
 
 			l := logger.Null()
 
-			testee := run_stop.New()
-			actual := testee.Execute(
+			testee := run_stop.Task()
+
+			stdout := new(strings.Builder)
+			stderr := new(strings.Builder)
+			actual := testee(
 				context.Background(),
 				l,
 				*env.New(),
 				client,
-				usage.FlagSet[run_stop.Flag]{
-					Flags: run_stop.Flag{
-						Fail: true,
-					},
-					Args: map[string][]string{
+				commandline.MockCommandline[run_stop.Flag]{
+					Fullname_: "knit run stop",
+					Stdout_:   stdout,
+					Stderr_:   stderr,
+					Flags_:    run_stop.Flag{Fail: true},
+					Args_: map[string][]string{
 						run_stop.ARG_RUNID: {when.runId},
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actual, when.err) {
@@ -94,20 +100,26 @@ func TestCommand_WithoutFail(t *testing.T) {
 
 			l := logger.Null()
 
-			testee := run_stop.New()
-			actual := testee.Execute(
+			testee := run_stop.Task()
+
+			stdout := new(strings.Builder)
+			stderr := new(strings.Builder)
+
+			actual := testee(
 				context.Background(),
 				l,
 				*env.New(),
 				client,
-				usage.FlagSet[run_stop.Flag]{
-					Flags: run_stop.Flag{
-						Fail: false,
-					},
-					Args: map[string][]string{
+				commandline.MockCommandline[run_stop.Flag]{
+					Fullname_: "knit run stop",
+					Stdout_:   stdout,
+					Stderr_:   stderr,
+					Flags_:    run_stop.Flag{Fail: false},
+					Args_: map[string][]string{
 						run_stop.ARG_RUNID: {when.runId},
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actual, when.err) {

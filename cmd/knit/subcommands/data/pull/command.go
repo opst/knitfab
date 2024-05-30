@@ -11,46 +11,17 @@ import (
 	"path/filepath"
 
 	"github.com/cheggaaa/pb/v3"
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/pkg/commandline/usage"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	kpath "github.com/opst/knitfab/pkg/utils/path"
+	"github.com/youta-t/flarc"
 )
 
-type Command struct {
-	progressOutput io.Writer
-	defaultOutput  io.Writer
-}
+type Command struct{}
 
 type Flags struct {
-	Extract bool `flag:"extract,short=x,help=extract files from tar.gz archive"`
-}
-
-func WithProgressOutput(w io.Writer) func(com *Command) *Command {
-	return func(com *Command) *Command {
-		com.progressOutput = w
-		return com
-	}
-}
-
-func WithOutput(w io.Writer) func(com *Command) *Command {
-	return func(com *Command) *Command {
-		com.defaultOutput = w
-		return com
-	}
-}
-
-func New(taskOption ...func(com *Command) *Command) kcmd.KnitCommand[Flags] {
-	command := &Command{
-		progressOutput: os.Stderr,
-		defaultOutput:  os.Stdout,
-	}
-
-	for _, opt := range taskOption {
-		command = opt(command)
-	}
-	return command
+	Extract bool `flag:"extract" alias:"x" help:"extract files from tar.gz archive"`
 }
 
 const (
@@ -58,10 +29,13 @@ const (
 	ARG_DEST    = "DEST"
 )
 
-func (*Command) Usage() usage.Usage[Flags] {
-	return usage.New(
-		Flags{},
-		usage.Args{
+func New() (flarc.Command, error) {
+	return flarc.NewCommand(
+		"Pull (download) Data from Knitfab to your local filesystem.",
+		Flags{
+			Extract: false,
+		},
+		flarc.Args{
 			{
 				Name: ARG_KNIT_ID, Required: true,
 				Help: `Data identifier. This is same as the Tag "knit#id" of Data.`,
@@ -76,13 +50,11 @@ Default: current directory ".".
 `,
 			},
 		},
-	)
-}
+		common.NewTask(Task),
+		flarc.WithDescription(`
+Example
+-------
 
-func (*Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "download Data from knitfab to your local filesystem",
-		Example: `
 Pull Data "knit#id:foobar" as "./foobar.tar.gz":
 	{{ .Command }} foobar
 
@@ -97,32 +69,26 @@ Pull Data to stdout (-x is not allowed):
 
 
 (directory will be created if not exists)
-`,
-	}
-}
-
-func (cmd *Command) Name() string {
-	return "pull"
-}
-
-func (cmd *Command) Synopsis() string {
-	return "download Data from knit to your local filesystem"
+`),
+	)
 }
 
 const noBar pb.ProgressBarTemplate = `{{with string . "prefix"}}{{.}} {{end}}{{counters . }} {{with string . "suffix"}} {{.}}{{end}}`
 
-func (cmd *Command) Execute(
+func Task(
 	ctx context.Context,
 	l *log.Logger,
 	e kenv.KnitEnv,
 	c krst.KnitClient,
-	f usage.FlagSet[Flags],
+	cl flarc.Commandline[Flags],
+	_ []any,
 ) error {
-	knitId := f.Args[ARG_KNIT_ID][0]
+	args := cl.Args()
+	knitId := args[ARG_KNIT_ID][0]
 
 	dest := "."
-	if 0 < len(f.Args[ARG_DEST]) {
-		dest = f.Args[ARG_DEST][0]
+	if 0 < len(args[ARG_DEST]) {
+		dest = args[ARG_DEST][0]
 	}
 
 	writeDefault := false
@@ -137,11 +103,12 @@ func (cmd *Command) Execute(
 	dest = filepath.Clean(dest)
 	dest = filepath.Join(dest, knitId)
 
-	if !f.Flags.Extract {
+	flags := cl.Flags()
+	if !flags.Extract {
 		dest = dest + ".tar.gz"
 		err = c.GetDataRaw(ctx, knitId, func(r io.Reader) error {
 			if writeDefault {
-				_, err := io.Copy(cmd.defaultOutput, r)
+				_, err := io.Copy(cl.Stdout(), r)
 				return err
 			}
 
@@ -156,7 +123,7 @@ func (cmd *Command) Execute(
 			defer f.Close()
 
 			bar := noBar.New(-1)
-			bar.SetWriter(cmd.progressOutput)
+			bar.SetWriter(cl.Stderr())
 			bar.Set("prefix", fmt.Sprintf("Downloading to %s:", ellipsis(dest, 60)))
 			bar.Start()
 			w := bar.NewProxyWriter(f)
@@ -167,10 +134,10 @@ func (cmd *Command) Execute(
 			return nil
 		})
 	} else if writeDefault {
-		return fmt.Errorf("%w: cannot extract Data to stdout (-)", kcmd.ErrUsage)
+		return fmt.Errorf("%w: cannot extract Data to stdout (-)", flarc.ErrUsage)
 	} else {
 		bar := noBar.New(-1)
-		bar.SetWriter(cmd.progressOutput)
+		bar.SetWriter(cl.Stderr())
 		bar.Start()
 
 		err = c.GetData(ctx, knitId, func(fe krst.FileEntry) error {

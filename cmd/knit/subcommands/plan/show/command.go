@@ -5,90 +5,90 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	"github.com/opst/knitfab/pkg/commandline/usage"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/youta-t/flarc"
 )
 
-type Command struct {
-	task func(
+type Option struct {
+	show func(
 		ctx context.Context,
 		client krst.KnitClient,
 		planId string,
 	) (apiplans.Detail, error)
 }
 
-func WithDataShowTask(
-	task func(
+func WithShow(
+	show func(
 		ctx context.Context,
 		client krst.KnitClient,
 		planId string,
 	) (apiplans.Detail, error),
-) func(*Command) *Command {
-	return func(cmd *Command) *Command {
-		cmd.task = task
+) func(*Option) *Option {
+	return func(cmd *Option) *Option {
+		cmd.show = show
 		return cmd
 	}
-}
-
-func New(options ...func(*Command) *Command) kcmd.KnitCommand[struct{}] {
-	return utils.ApplyAll(
-		&Command{task: RunShowPlan},
-		options...,
-	)
-}
-
-func (cmd *Command) Name() string {
-	return "show"
-}
-
-func (cmd *Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "Return the Plan information for the specified Plan Id.",
-	}
-}
-
-func (*Command) Usage() usage.Usage[struct{}] {
-	return usage.New(
-		struct{}{},
-		usage.Args{
-			{
-				Name: ARG_PLAN_ID, Required: true,
-				Help: "Specify the Plan Id you finding",
-			},
-		},
-	)
 }
 
 const (
 	ARG_PLAN_ID = "PLAN_ID"
 )
 
-func (cmd *Command) Execute(
-	ctx context.Context,
-	l *log.Logger,
-	e env.KnitEnv,
-	c krst.KnitClient,
-	flags usage.FlagSet[struct{}],
-) error {
-	planId := flags.Args[ARG_PLAN_ID][0]
-	data, err := cmd.task(ctx, c, planId)
-	if err != nil {
-		return fmt.Errorf("%w: Plan Id:%v", err, planId)
+func New(options ...func(*Option) *Option) (flarc.Command, error) {
+	option := &Option{
+		show: RunShowPlan,
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "    ")
-	if err := enc.Encode(data); err != nil {
-		l.Panicf("fail to dump found Plan")
+	for _, opt := range options {
+		option = opt(option)
 	}
 
-	return nil
+	return flarc.NewCommand(
+		"Return the Plan information for the specified Plan Id.",
+		struct{}{},
+		flarc.Args{
+			{
+				Name: ARG_PLAN_ID, Required: true,
+				Help: "Specify the Plan Id you finding",
+			},
+		},
+		common.NewTask(Task(option.show)),
+	)
+}
+
+func Task(
+	show func(
+		ctx context.Context,
+		client krst.KnitClient,
+		planId string,
+	) (apiplans.Detail, error),
+) common.Task[struct{}] {
+	return func(
+		ctx context.Context,
+		logger *log.Logger,
+		knitEnv env.KnitEnv,
+		client krst.KnitClient,
+		cl flarc.Commandline[struct{}],
+		params []any,
+	) error {
+		planId := cl.Args()[ARG_PLAN_ID][0]
+		data, err := show(ctx, client, planId)
+		if err != nil {
+			return fmt.Errorf("%w: Plan Id:%v", err, planId)
+		}
+
+		enc := json.NewEncoder(cl.Stdout())
+		enc.SetIndent("", "    ")
+		if err := enc.Encode(data); err != nil {
+			logger.Panicf("fail to dump found Plan")
+		}
+
+		return nil
+	}
 }
 
 func RunShowPlan(

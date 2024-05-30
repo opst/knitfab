@@ -8,7 +8,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
-	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -17,12 +17,12 @@ import (
 	"github.com/opst/knitfab/cmd/volume_expander/flagtype"
 	"github.com/opst/knitfab/cmd/volume_expander/metrics"
 	"github.com/opst/knitfab/cmd/volume_expander/pvcs"
-	"github.com/opst/knitfab/pkg/commandline/flag/flagger"
 	"github.com/opst/knitfab/pkg/kubeutil"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/youta-t/flarc"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,12 +32,14 @@ import (
 //go:embed CREDITS
 var CREDITS string
 
+const NAMESPACE = "NAMESPACE"
+
 type Flags struct {
-	NodeName string             `flag:",help=required. node name to be monitored for resizing"`
-	Interval time.Duration      `flag:""`
-	Margin   *flagtype.Quantity `flag:",help=storage margin capacity in SI unit"`
-	Delta    *flagtype.Quantity `flag:",help=increasing delta of resizing PV in SI unit"`
-	License  bool               `flag:",help=show licenses of dependencies"`
+	NodeName string             `flag:"node-name" help:"required. node name to be monitored for resizing"`
+	Interval time.Duration      `flag:"interval"`
+	Margin   *flagtype.Quantity `flag:"margin" help:"storage margin capacity in SI unit"`
+	Delta    *flagtype.Quantity `flag:"delta" help:"increasing delta of resizing PV in SI unit"`
+	License  bool               `flag:"license" help:"show licenses of dependencies"`
 }
 
 func main() {
@@ -47,44 +49,57 @@ func main() {
 	defer cancel()
 	logger := log.Default()
 
-	flags := flagger.New(Flags{
-		NodeName: os.Getenv("NODE_NAME"),
-		Interval: 1 * time.Second,
-		Margin:   flagtype.MustParse(envFallback("MARGIN", "500Mi")),
-		Delta:    flagtype.MustParse(envFallback("DELTA", "500Mi")),
-	})
+	cmd := try.To(
+		flarc.NewCommand(
+			"Periodically check PV's available capacity and resize if needed",
+			Flags{
+				NodeName: os.Getenv("NODE_NAME"),
+				Interval: 1 * time.Second,
+				Margin:   flagtype.MustParse(envFallback("MARGIN", "500Mi")),
+				Delta:    flagtype.MustParse(envFallback("DELTA", "500Mi")),
+			},
+			flarc.Args{
+				{
+					Name: NAMESPACE, Required: false, Repeatable: true,
+					Help: "target namespaces of PVC to be monitored for resizing",
+				},
+			},
+			func(ctx context.Context, c flarc.Commandline[Flags], _ []any) error {
+				flags := c.Flags()
+				if flags.License {
+					fmt.Fprintln(c.Stdout(), CREDITS)
+					return nil
+				}
 
-	try.To(flags.SetFlags(flag.CommandLine)).
-		OrFatal(logger).
-		Parse(os.Args[1:])
+				return Vex(ctx, logger, c.Flags(), c.Args()[NAMESPACE])
+			},
+		),
+	).OrFatal(logger)
 
+	os.Exit(flarc.Run(ctx, cmd))
+}
+
+func Vex(ctx context.Context, logger *log.Logger, flags Flags, namespaces []string) error {
 	targetNamespaces := map[string]struct{}{}
-	for _, ns := range flag.Args() {
+	for _, ns := range namespaces {
 		targetNamespaces[ns] = struct{}{}
 	}
 
-	values := flags.Values
-
-	if values.License {
-		log.Println(CREDITS)
-		return
-	}
-
-	if values.NodeName == "" {
-		log.Println("flag `--node-name` (or, envvar NODE_NAME) is required")
-		flag.PrintDefaults()
-		os.Exit(2)
+	if flags.NodeName == "" {
+		return fmt.Errorf(
+			"%w: flag `--node-name` (or, envvar NODE_NAME) is required", flarc.ErrUsage,
+		)
 	}
 
 	cs := kubeutil.ConnectToK8s()
 
-	pvcsOnNode, err := pvcs.ObserveOnNode(ctx, cs, values.NodeName, utils.KeysOf(targetNamespaces)...)
+	pvcsOnNode, err := pvcs.ObserveOnNode(ctx, cs, flags.NodeName, utils.KeysOf(targetNamespaces)...)
 	if err != nil {
-		log.Fatal("failed to start observing PVCs:", err)
+		return fmt.Errorf("failed to start observing PVCs: %w", err)
 	}
 	defer pvcsOnNode.Close()
 
-	m := metrics.FromNode(cs, values.NodeName, values.Interval)
+	m := metrics.FromNode(cs, flags.NodeName, flags.Interval)
 	m.Subscribe(
 		metrics.ForKey("kubelet_volume_stats_used_bytes"),
 		func(m *dto.Metric) error {
@@ -134,7 +149,7 @@ func main() {
 			).DeepCopy()
 
 			if HasEnoughCapacity(
-				*usedQuantity, *values.Margin.AsResourceQuantity(), pvcCapacity,
+				*usedQuantity, *flags.Margin.AsResourceQuantity(), pvcCapacity,
 			) {
 				return nil // skip it
 			}
@@ -142,7 +157,7 @@ func main() {
 			newQuantity := pointer.Ref(
 				maxQuantity(pvcCapacity, *usedQuantity).DeepCopy(),
 			)
-			newQuantity.Add(*values.Delta.AsResourceQuantity())
+			newQuantity.Add(*flags.Delta.AsResourceQuantity())
 			newQuantity.RoundUp(resource.Giga)
 
 			logger.Printf(
@@ -164,9 +179,11 @@ func main() {
 
 	if err := m.Start(ctx); err != nil {
 		if !errors.Is(err, context.Canceled) {
-			log.Fatal("unexpected error:", err)
+			return err
 		}
 	}
+
+	return nil
 }
 
 func envFallback(envname string, defaultVal string) string {

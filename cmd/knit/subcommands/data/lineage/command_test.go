@@ -8,20 +8,20 @@ import (
 	"testing"
 	"time"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
+	"github.com/youta-t/flarc"
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
 	"github.com/opst/knitfab/cmd/knit/subcommands/data/lineage"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -81,20 +81,29 @@ func TestLineageCommand(t *testing.T) {
 				return mockGraphFromDownstream, when.err
 			}
 
-			testee := lineage.New(lineage.Withtask(funcForUpstream, funcForDownstream))
+			testee := lineage.Task(
+				lineage.Traverser{ForUpstream: funcForUpstream, ForDownstream: funcForDownstream},
+			)
+
+			stdout := new(strings.Builder)
+			stderr := new(strings.Builder)
 
 			ctx := context.Background()
+
 			//test start
-			actual := testee.Execute(
+			actual := testee(
 				ctx, logger.Null(),
 				*env.New(),
 				client,
-				usage.FlagSet[lineage.Flag]{
-					Flags: when.flag,
-					Args: map[string][]string{
+				commandline.MockCommandline[lineage.Flag]{
+					Stdout_: stdout,
+					Stderr_: stderr,
+					Flags_:  when.flag,
+					Args_: map[string][]string{
 						lineage.ARG_KNITID: {when.knitId},
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actual, then.err) {
@@ -105,6 +114,7 @@ func TestLineageCommand(t *testing.T) {
 			}
 		}
 	}
+
 	t.Run("when only upstream flag is specifed, it should call only task for traceupstream.", theory(
 		when{
 			knitId: "test-Id",
@@ -206,7 +216,7 @@ func TestLineageCommand(t *testing.T) {
 			err: nil,
 		},
 		then{
-			err: kcmd.ErrUsage,
+			err: flarc.ErrUsage,
 		},
 	))
 
@@ -221,7 +231,7 @@ func TestLineageCommand(t *testing.T) {
 			err: nil,
 		},
 		then{
-			err: kcmd.ErrUsage,
+			err: flarc.ErrUsage,
 		},
 	))
 

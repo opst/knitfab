@@ -3,13 +3,14 @@ package retry_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	"github.com/opst/knitfab/cmd/knit/subcommands/run/retry"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 )
 
 func TestRetry(t *testing.T) {
@@ -23,16 +24,23 @@ func TestRetry(t *testing.T) {
 				return clientError
 			}
 
-			cmd := retry.New()
+			testee := retry.Task
 			logger := logger.Null()
 
+			stdout := new(strings.Builder)
+			stderr := new(strings.Builder)
+
 			// When
-			err := cmd.Execute(
-				ctx, logger, env.KnitEnv{}, kc, usage.FlagSet[struct{}]{
-					Args: map[string][]string{
+			err := testee(
+				ctx, logger, env.KnitEnv{}, kc,
+				commandline.MockCommandline[struct{}]{
+					Stdout_: stdout,
+					Stderr_: stderr,
+					Args_: map[string][]string{
 						retry.ARG_RUNID: {"given-run-id"},
 					},
 				},
+				[]any{},
 			)
 
 			// Then

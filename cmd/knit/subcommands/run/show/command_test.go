@@ -6,18 +6,19 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_show "github.com/opst/knitfab/cmd/knit/subcommands/run/show"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -114,22 +115,27 @@ func TestShowCommand(t *testing.T) {
 				return when.funcForLogError
 			}
 
-			testee := run_show.New(
-				run_show.WithRunner(funcForInfo, funcForLog),
-			)
+			testee := run_show.Task(funcForInfo, funcForLog)
+
+			stdout := new(strings.Builder)
+			stderr := new(strings.Builder)
 
 			ctx := context.Background()
-			err := testee.Execute(
+			err := testee(
 				ctx,
 				logger.Null(),
 				*kenv.New(),
 				client,
-				usage.FlagSet[run_show.Flags]{
-					Flags: when.flags,
-					Args: map[string][]string{
+				commandline.MockCommandline[run_show.Flags]{
+					Fullname_: "knit run show",
+					Stdout_:   stdout,
+					Stderr_:   stderr,
+					Flags_:    when.flags,
+					Args_: map[string][]string{
 						run_show.ARG_RUNID: {when.runId},
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(err, then.err) {

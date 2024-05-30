@@ -4,20 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"log"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	"github.com/opst/knitfab/pkg/commandline/usage"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/youta-t/flarc"
 )
 
-type Command struct {
-	task func(
+type Option struct {
+	updateActiveness func(
 		ctx context.Context,
 		client krst.KnitClient,
 		planId string,
@@ -25,29 +23,18 @@ type Command struct {
 	) (apiplans.Detail, error)
 }
 
-func WithTask(
-	task func(
+func WithUpdateActiveness(
+	updateActiveness func(
 		ctx context.Context,
 		client krst.KnitClient,
 		planId string,
 		isActive bool,
 	) (apiplans.Detail, error),
-) func(*Command) *Command {
-	return func(cmd *Command) *Command {
-		cmd.task = task
+) func(*Option) *Option {
+	return func(cmd *Option) *Option {
+		cmd.updateActiveness = updateActiveness
 		return cmd
 	}
-}
-
-func New(options ...func(*Command) *Command) kcmd.KnitCommand[struct{}] {
-	return utils.ApplyAll(
-		&Command{task: RunActivatePlan},
-		options...,
-	)
-}
-
-func (*Command) Name() string {
-	return "active"
 }
 
 const (
@@ -55,10 +42,19 @@ const (
 	ARG_MODE    = "yes|no"
 )
 
-func (*Command) Usage() usage.Usage[struct{}] {
-	return usage.New(
+func New(options ...func(*Option) *Option) (flarc.Command, error) {
+	opt := &Option{
+		updateActiveness: UpdateActivatePlan,
+	}
+
+	for _, option := range options {
+		opt = option(opt)
+	}
+
+	return flarc.NewCommand(
+		"Activate or deactivate the Plan.",
 		struct{}{},
-		usage.Args{
+		flarc.Args{
 			{
 				Name: ARG_MODE, Required: true,
 				Help: "Set 'yes' to activate a Plan, or 'no' to deactivate.",
@@ -68,13 +64,8 @@ func (*Command) Usage() usage.Usage[struct{}] {
 				Help: "A Plan id to be changed its activeness.",
 			},
 		},
-	)
-}
-
-func (*Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "Activate or deactivate the Plan.",
-		Detail: `
+		common.NewTask(Task(opt.updateActiveness)),
+		flarc.WithDescription(`
 When "{{ .Command }} yes", the Plan specified by Plan id is activated.
 Runs of the Plan in "deactivated" status are changed to "waiting".
 If the Plan is already active, do nothing and return the status as is.
@@ -82,45 +73,64 @@ If the Plan is already active, do nothing and return the status as is.
 When "{{ .Command }} no", the Plan specified by Plan id is deactivated.
 Runs of the Plan in "waiting" status are changed to "deactivated".
 If the Plan is already deactivated, do nothing and return the status as is.
-`,
-	}
+`),
+	)
 }
 
-func (cmd *Command) Execute(
+func Task(
+	updateActiveness func(
+		ctx context.Context,
+		client krst.KnitClient,
+		planId string,
+		isActive bool,
+	) (apiplans.Detail, error),
+) func(
 	ctx context.Context,
 	logger *log.Logger,
 	e env.KnitEnv,
 	client krst.KnitClient,
-	flags usage.FlagSet[struct{}],
+	flags flarc.Commandline[struct{}],
+	_ []any,
 ) error {
-	mode := flags.Args[ARG_MODE][0]
-	planId := flags.Args[ARG_PLAN_ID][0]
+	return func(
+		ctx context.Context,
+		logger *log.Logger,
+		e env.KnitEnv,
+		client krst.KnitClient,
+		cl flarc.Commandline[struct{}],
+		_ []any,
+	) error {
+		args := cl.Args()
+		mode := args[ARG_MODE][0]
+		planId := args[ARG_PLAN_ID][0]
 
-	var isActive bool
-	switch mode {
-	case "yes":
-		isActive = true
-	case "no":
-		isActive = false
-	default:
-		logger.Println("mode should be one of: yes, no")
-		return kcmd.ErrUsage
-	}
-	data, err := cmd.task(ctx, client, planId, isActive)
-	if err != nil {
-		return fmt.Errorf("planId:%v: %w", planId, err)
+		var isActive bool
+		switch mode {
+		case "yes":
+			isActive = true
+		case "no":
+			isActive = false
+		default:
+			logger.Println("mode should be one of: yes, no")
+			return flarc.ErrUsage
+		}
+		data, err := updateActiveness(ctx, client, planId, isActive)
+		if err != nil {
+			return fmt.Errorf("planId:%v: %w", planId, err)
+		}
+
+		enc := json.NewEncoder(cl.Stdout())
+		enc.SetIndent("", "    ")
+		if err := enc.Encode(data); err != nil {
+			logger.Panicf("fail to dump found data")
+		}
+
+		return nil
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "    ")
-	if err := enc.Encode(data); err != nil {
-		logger.Panicf("fail to dump found data")
-	}
-
-	return nil
 }
 
-func RunActivatePlan(
+func UpdateActivatePlan(
 	ctx context.Context,
 	client krst.KnitClient,
 	planId string,

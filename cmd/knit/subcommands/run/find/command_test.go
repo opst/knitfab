@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
-	"os"
+	"strings"
 	"testing"
 	"time"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_find "github.com/opst/knitfab/cmd/knit/subcommands/run/find"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
@@ -21,10 +22,10 @@ import (
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/youta-t/flarc"
 )
 
 func TestFindCommand(t *testing.T) {
@@ -126,30 +127,23 @@ func TestFindCommand(t *testing.T) {
 				return when.presentation, when.err
 			}
 
-			testee := run_find.New(run_find.WithTask(task))
+			testee := run_find.Task(task)
 			ctx := context.Background()
 
-			pr, pw, err := os.Pipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer pw.Close()
-			defer pr.Close()
-
-			{
-				orig := os.Stdout
-				defer func() { os.Stdout = orig }()
-				os.Stdout = pw
-			}
+			stdout := new(strings.Builder)
 
 			//test start
-			actual := testee.Execute(
+			actual := testee(
 				ctx, logger.Null(), *kenv.New(), client,
-				usage.FlagSet[run_find.Flag]{
-					Flags: when.flag,
+				commandline.MockCommandline[run_find.Flag]{
+					Fullname_: "knit run find",
+					Stdout_:   stdout,
+					Stderr_:   io.Discard,
+					Flags_:    when.flag,
+					Args_:     nil,
 				},
+				[]any{},
 			)
-			pw.Close() // to tearoff writer.
 
 			if !errors.Is(actual, then.err) {
 				t.Errorf(
@@ -160,7 +154,7 @@ func TestFindCommand(t *testing.T) {
 
 			if then.err == nil {
 				var actualValue []apirun.Detail
-				if err := json.NewDecoder(pr).Decode(&actualValue); err != nil {
+				if err := json.Unmarshal([]byte(stdout.String()), &actualValue); err != nil {
 					t.Fatal(err)
 				}
 				if !cmp.SliceContentEqWith(
@@ -239,7 +233,7 @@ func TestFindCommand(t *testing.T) {
 				presentation: presentationItems,
 			},
 			Then{
-				err: kcmd.ErrUsage,
+				err: flarc.ErrUsage,
 			},
 		))
 	}

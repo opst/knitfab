@@ -6,70 +6,94 @@ import (
 	"html"
 	"io"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/rfctime"
+	"github.com/youta-t/flarc"
 
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 )
 
-type Command struct {
-	taskForUpstream   Runner
-	taskForDownstream Runner
-}
-
 type Flag struct {
-	Upstream   bool   `flag:"u,help=Trace the upstream of the specified Data."`
-	Downstream bool   `flag:"d,help=Trace the downstream of the specified Data."`
-	Numbers    string `flag:"n,help=Trace up to the specified depth. Trace to the upstream-most/downstream-most if 'all' is specified.,metavar=number of depth"`
+	Upstream   bool   `flag:"upstream" alias:"u" help:"Trace the upstream of the specified Data."`
+	Downstream bool   `flag:"downstream" alias:"d" help:"Trace the downstream of the specified Data."`
+	Numbers    string `flag:"numbers" alias:"n" help:"Trace up to the specified depth. Trace to the upstream-most/downstream-most if 'all' is specified.,metavar=number of depth"`
 }
 
-func Withtask(forUpstream, forDownstream Runner) func(*Command) *Command {
-	return func(cmd *Command) *Command {
-		cmd.taskForUpstream = forUpstream
-		cmd.taskForDownstream = forDownstream
-		return cmd
+type Option struct {
+	Traverser Traverser
+}
+
+type Traverser struct {
+	ForUpstream   Runner
+	ForDownstream Runner
+}
+
+type Runner func(
+	ctx context.Context,
+	client krst.KnitClient,
+	graph *DirectedGraph,
+	knitId string,
+	depth int,
+) (*DirectedGraph, error)
+
+var _ Runner = TraceUpStream
+var _ Runner = TraceDownStream
+
+func WithTraverser(trav Traverser) func(*Option) *Option {
+	return func(opt *Option) *Option {
+		opt.Traverser = trav
+		return opt
 	}
 }
 
+const ARG_KNITID = "KNIT_ID"
+
 func New(
-	options ...func(*Command) *Command,
-) kcmd.KnitCommand[Flag] {
-	return utils.ApplyAll(
-		&Command{
-			taskForUpstream:   TraceUpStream,
-			taskForDownstream: TraceDownStream,
+	options ...func(*Option) *Option,
+) (flarc.Command, error) {
+	opt := &Option{
+		Traverser: Traverser{
+			ForUpstream:   TraceUpStream,
+			ForDownstream: TraceDownStream,
 		},
-		options...,
-	)
-}
+	}
+	for _, o := range options {
+		opt = o(opt)
+	}
 
-func (cmd *Command) Name() string {
-	return "lineage"
-}
-
-// not implemented
-func (cmd *Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "Output the result of tracing the Data Lineage as dot format.",
-		Detail: `
+	return flarc.NewCommand(
+		"Output the result of tracing the Data Lineage as dot format.",
+		Flag{
+			Upstream:   false,
+			Downstream: false,
+			Numbers:    "3",
+		},
+		flarc.Args{
+			{
+				Name: ARG_KNITID, Required: true,
+				Help: "Specify the Knit Id of Data you want to trace.",
+			},
+		},
+		common.NewTask(Task(opt.Traverser)),
+		flarc.WithDescription(
+			`
 This command traces the Data Lineage of the specified Data
 and outputs the result in dot format (graphviz).
 You can specify the depth of the trace as a natural number,
 and choose whether to trace upstream, downstream, or both.
-`,
-		Example: `
+
+Example
+-------
+
 - Trace the upstream:
 
 	{{ .Command }} -u KNIT_ID
@@ -102,25 +126,66 @@ and choose whether to trace upstream, downstream, or both.
 - Generate the traced result as a dot file:
 	{{ .Command }} KNIT_ID > graph.dot
 `,
-	}
+		),
+	)
 }
 
-const ARG_KNITID = "KNIT_ID"
+func Task(option Traverser) common.Task[Flag] {
+	return func(
+		ctx context.Context,
+		logger *log.Logger,
+		knitEnv kenv.KnitEnv,
+		client krst.KnitClient,
+		cl flarc.Commandline[Flag],
+		params []any,
+	) error {
+		flags := cl.Flags()
+		numbers := flags.Numbers
+		var depth int
+		var err error
 
-func (cmd *Command) Usage() usage.Usage[Flag] {
-	return usage.New(
-		Flag{
-			Upstream:   false,
-			Downstream: false,
-			Numbers:    "3",
-		},
-		usage.Args{
-			{
-				Name: ARG_KNITID, Required: true,
-				Help: "Specify the Knit Id of Data you want to trace.",
-			},
-		},
-	)
+		if numbers == "all" {
+			depth = -1
+		} else {
+			depth, err = strconv.Atoi(numbers)
+			if err != nil {
+				return fmt.Errorf("%w: invalid number %s", flarc.ErrUsage, numbers)
+			}
+			if depth <= 0 {
+				return fmt.Errorf("%w: depth should be natural number", flarc.ErrUsage)
+			}
+		}
+
+		shoudUpstream := flags.Upstream
+		shoudDownstream := flags.Downstream
+		knitId := cl.Args()[ARG_KNITID][0]
+		graph := NewDirectedGraph()
+
+		// If both flags are not set, upstream and downstream will be traced.
+		if !shoudUpstream && !shoudDownstream {
+			shoudDownstream = true
+			shoudUpstream = true
+		}
+
+		if shoudUpstream {
+			graph, err = option.ForUpstream(ctx, client, graph, knitId, depth)
+			if err != nil {
+				return err
+			}
+		}
+		if shoudDownstream {
+			graph, err = option.ForDownstream(ctx, client, graph, knitId, depth)
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := graph.GenerateDot(cl.Stdout(), knitId); err != nil {
+			return fmt.Errorf("fail to output dot format: %w", err)
+		}
+		logger.Println("success to output dot format")
+		return nil
+	}
 }
 
 type DirectedGraph struct {
@@ -443,61 +508,6 @@ func errNotFoundData(knitId string) error {
 	return fmt.Errorf("%w: %s", ErrNotFoundData, knitId)
 }
 
-// not implemented
-func (cmd *Command) Execute(
-	ctx context.Context,
-	l *log.Logger,
-	e kenv.KnitEnv,
-	client krst.KnitClient,
-	f usage.FlagSet[Flag],
-) error {
-
-	numbers := f.Flags.Numbers
-	var depth int
-	var err error
-
-	if numbers == "all" {
-		depth = -1
-	} else {
-		depth, err = strconv.Atoi(numbers)
-		if err != nil {
-			return fmt.Errorf("%w: invalid number %s", kcmd.ErrUsage, numbers)
-		}
-		if depth <= 0 {
-			return fmt.Errorf("%w: depth should be natural number", kcmd.ErrUsage)
-		}
-	}
-
-	shoudUpstream := f.Flags.Upstream
-	shoudDownstream := f.Flags.Downstream
-	knitId := f.Args[ARG_KNITID][0]
-	graph := NewDirectedGraph()
-
-	//If both flags are not set, upstream and downstream will be traced.
-	if !shoudUpstream && !shoudDownstream {
-		shoudDownstream = true
-		shoudUpstream = true
-	}
-	if shoudUpstream {
-		graph, err = cmd.taskForUpstream(ctx, client, graph, knitId, depth)
-		if err != nil {
-			return err
-		}
-	}
-	if shoudDownstream {
-		graph, err = cmd.taskForDownstream(ctx, client, graph, knitId, depth)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := graph.GenerateDot(os.Stdout, knitId); err != nil {
-		return fmt.Errorf("fail to output dot format: %w", err)
-	}
-	l.Println("success to output dot format")
-	return nil
-}
-
 func AddEdgeFromRunToLog(
 	ctx context.Context,
 	client krst.KnitClient,
@@ -787,14 +797,3 @@ func knitIdTag(knitId string) apitag.Tag {
 		Value: knitId,
 	}
 }
-
-type Runner func(
-	ctx context.Context,
-	client krst.KnitClient,
-	graph *DirectedGraph,
-	knitId string,
-	depth int,
-) (*DirectedGraph, error)
-
-var _ Runner = TraceUpStream
-var _ Runner = TraceDownStream
