@@ -8,7 +8,6 @@ import (
 	"context"
 	_ "embed"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -33,12 +32,14 @@ import (
 //go:embed CREDITS
 var CREDITS string
 
+const NAMESPACE = "NAMESPACE"
+
 type Flags struct {
 	NodeName string             `flag:"node-name" help:"required. node name to be monitored for resizing"`
 	Interval time.Duration      `flag:"interval"`
 	Margin   *flagtype.Quantity `flag:"margin" help:"storage margin capacity in SI unit"`
 	Delta    *flagtype.Quantity `flag:"delta" help:"increasing delta of resizing PV in SI unit"`
-	License  bool               `flag:"" help:"show licenses of dependencies"`
+	License  bool               `flag:"license" help:"show licenses of dependencies"`
 }
 
 func main() {
@@ -57,7 +58,12 @@ func main() {
 				Margin:   flagtype.MustParse(envFallback("MARGIN", "500Mi")),
 				Delta:    flagtype.MustParse(envFallback("DELTA", "500Mi")),
 			},
-			flarc.Args{},
+			flarc.Args{
+				{
+					Name: NAMESPACE, Required: false, Repeatable: true,
+					Help: "target namespaces of PVC to be monitored for resizing",
+				},
+			},
 			func(ctx context.Context, c flarc.Commandline[Flags], _ []any) error {
 				flags := c.Flags()
 				if flags.License {
@@ -65,7 +71,7 @@ func main() {
 					return nil
 				}
 
-				return Vex(ctx, logger, c.Flags())
+				return Vex(ctx, logger, c.Flags(), c.Args()[NAMESPACE])
 			},
 		),
 	).OrFatal(logger)
@@ -73,9 +79,9 @@ func main() {
 	os.Exit(flarc.Run(ctx, cmd))
 }
 
-func Vex(ctx context.Context, logger *log.Logger, flags Flags) error {
+func Vex(ctx context.Context, logger *log.Logger, flags Flags, namespaces []string) error {
 	targetNamespaces := map[string]struct{}{}
-	for _, ns := range flag.Args() {
+	for _, ns := range namespaces {
 		targetNamespaces[ns] = struct{}{}
 	}
 
