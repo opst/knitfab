@@ -9,7 +9,7 @@ require (
 	github.com/google/go-containerregistry v0.19.1
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
 	github.com/opst/knitfab v1.0.3
-	github.com/youta-t/flarc v0.0.2
+	github.com/youta-t/flarc v0.0.3
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.30.0
 )

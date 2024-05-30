@@ -23,7 +23,7 @@ import (
 //
 // - environmental variable `KUBECONFIG`
 //
-// - command line flag `-kubeconfig`
+// - the file found first from the kubeConfigSearchPath
 //
 // When no files are found from above, it tries to use in-cluster config.
 func ConnectToK8s(kubeconfigSearchPath ...string) *kubernetes.Clientset {
