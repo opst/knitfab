@@ -56,5 +56,5 @@ for CHART in knit-app knit-certs knit-db-postgres knit-image-registry knit-stora
 done
 (
 	cd ${CHART_ROOT};
-	${HELM} repo index --merge ./index.yaml .;
+	${HELM} repo index --url ./ --merge ./index.yaml .;
 )

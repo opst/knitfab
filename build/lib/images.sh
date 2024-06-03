@@ -18,7 +18,7 @@ if [ -n "${DEBUG}" ]; then
 fi
 
 IMAGE_REGISTRY=${IMAGE_REGISTRY:-}  # e.g. ghcr.io
-REPOSITORY=${REPOSITORY:-}          # e.g. opst/knitfab
+export REPOSITORY=${REPOSITORY:-}          # e.g. opst/knitfab
 if [ -n "${IMAGE_REGISTRY}" ] && [ -n "${REPOSITORY}" ] ; then
 	IMAGE_REPOSITORY="${IMAGE_REGISTRY}/${REPOSITORY}"  # ghcr.io/opst/knitfab
 fi
@@ -89,13 +89,13 @@ EOF
 			VAR="${COMP}:${APP_VERSION}-${A}"
 			VARIANTS="${VARIANTS} ${IMAGE_REPOSITORY}/${VAR}"
 			echo "${DOCKER} tag \"${VAR}\" \"${IMAGE_REPOSITORY}/${VAR}\"" >> ${DEST}/publish.sh
-			echo "while !${DOCKER} push \"${IMAGE_REPOSITORY}/${VAR}\"; do echo 'retry...'; sleep 1; done" >> ${DEST}/publish.sh
+			echo "while ! ${DOCKER} push \"${IMAGE_REPOSITORY}/${VAR}\"; do echo 'retry...'; sleep 1; done" >> ${DEST}/publish.sh
 			echo "" >> ${DEST}/publish.sh
 		done
 
 		if [ -n "${VARIANTS}" ] ; then
-			echo "${DOCKER} manifest create \"${IMAGE_REPOSITORY}/${COMP}:${APP_VERSION}\" ${VARIANTS}" >> ${DEST}/publish.sh
-			echo "whils !${DOCKER} manifest push --purge \"${IMAGE_REPOSITORY}/${COMP}:${APP_VERSION}\"; do echo 'retry...'; sleep 1; done" >> ${DEST}/publish.sh
+			echo "${DOCKER} manifest create --amend \"${IMAGE_REPOSITORY}/${COMP}:${APP_VERSION}\" ${VARIANTS}" >> ${DEST}/publish.sh
+			echo "while ! ${DOCKER} manifest push --purge \"${IMAGE_REPOSITORY}/${COMP}:${APP_VERSION}\"; do echo 'retry...'; sleep 1; done" >> ${DEST}/publish.sh
 		else
 			echo "echo \"no image to publish for ${COMP}\" >&2" >> ${DEST}/publish.sh
 		fi
