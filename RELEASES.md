@@ -1,3 +1,75 @@
+v1.1.0
+======
+
+- Date: 2024-06-07
+
+This is the our first "minor update" release.
+We introduce some new features, and update CHANGE DATE in LISENCE file.
+
+Important Change
+-----------------
+
+### New Features
+
+#### Cross Build
+
+https://github.com/opst/knitfab/issues/48
+
+Knitfab Contaienr Images supports ARM in addintion to AMD(x86_64).
+
+### Timebased Query
+
+https://github.com/opst/knitfab/issues/19 and https://github.com/opst/knitfab/issues/22
+
+`knit data find` and `knit run find` can filter Data or Run by time. To do that, use uew flags, `--sicne` and `--duration`.
+
+For more detail, see `knit data find --help` or `knit run find --help`
+
+### Extentions
+
+https://github.com/opst/knitfab/issues/17
+
+Backup and Restore tools are provided.
+This toolkit supports backing up Knitfab Data, Run and Plans. You can download them from this release page.
+
+This toolkit backs up by taking a dump of RDB and copies of Persistent Volume and its Claim.
+
+https://github.com/opst/knitfab/issues/51
+
+Knitfab supports Web Hooks, for users who want to extend Knitfab.
+
+By this release, Knitfab provides "Lifecycle Hooks", which are triggerd when the status of a Run is updated. Subscriber of these Lifecycle Hooks can receive Run infomation before and after chaning status.
+
+https://github.com/opst/knitfab/issues/52
+
+Knitfab supports Extra Web API. Knitfab Web API Server, `knitd`, proxies requests sent to pathes to corresponding URL as written in configuration file.
+
+For more details of 3 features above, read `docs/03.admin-guide`.
+
+https://github.com/opst/knitfab/issues/53
+
+Knitfab CLI `knit` supports Extension Command or custom command.
+
+`knit foo` finds command `knit-foo`, `knit-foo.exe`, `knit-foo.cmd`, `knit-foo.bat` or `knit-foo.com`, and then, invoke it with all args and flags. STDIN, STDOUT and STDERR are also passed to Extension Command.
+
+It let know Knitfab's configuration via environmental variables, `KNIT_PROFILE`, `KNIT_PROFILE_STORE`, `KNIT_ENV`.
+
+For more detail, see `docs/02.user-guide`.
+
+CHANGE DATE of our license
+---------------------------
+
+This release, v1.1.0, is made at 2024-06-07.
+
+So, CHANGE DATE *for v1.1.x* is 2028-06-07, 4 years later from now. This CHANGE DATE will not changed by bugfix releases.
+
+CHANGE DATE *for v1.0.x* is not changed.
+
+Upgrade Path
+-------------
+
+Download new installer script and run `./installer.sh --install` in the directory where you installed Knitfab.
+
 v1.0.3
 =======
 
