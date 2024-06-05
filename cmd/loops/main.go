@@ -41,6 +41,9 @@ func main() {
 	pconfig := flag.String(
 		"config", os.Getenv("KNIT_BACKEND_CONFIG"), "path to config file",
 	)
+	pSchemaRepo := flag.String(
+		"schema-repo", os.Getenv("KNIT_SCHEMA"), "schema repository path",
+	)
 	phooks := flag.String(
 		"hooks", os.Getenv("KNIT_HOOK_CONFIG"), "path to hook config file",
 	)
@@ -81,8 +84,15 @@ func main() {
 	kcluster := knit.AttachKnitCluster(
 		kclientset,
 		conf.Cluster(),
-		try.To(kpg.New(ctx, conf.Cluster().Database())).OrFatal(logger),
+		try.To(kpg.New(ctx, conf.Cluster().Database(), kpg.WithSchemaRepository(*pSchemaRepo))).OrFatal(logger),
 	)
+
+	{
+		db := kcluster.Database()
+		ctx_, ccan := db.Schema().Context(ctx)
+		defer ccan()
+		ctx = ctx_
+	}
 
 	hooks := cfg_hook.Config{}
 	if hookPath := *phooks; hookPath != "" {
@@ -103,13 +113,13 @@ func main() {
 		},
 	)
 
-	if err == nil || errors.Is(err, context.Canceled) {
+	if err == nil {
 		return
+	} else if errors.Is(err, context.Canceled) {
+		logger.Fatal(err, "(loop context is cancelled by:", context.Cause(ctx), ")")
 	}
 
 	if ctx.Err() != nil {
-		logger.Fatal(err, "(loop context is cancelled by:", context.Cause(ctx), ")")
-	} else {
 		logger.Fatal(err)
 	}
 }
