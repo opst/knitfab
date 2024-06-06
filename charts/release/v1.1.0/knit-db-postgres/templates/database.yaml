@@ -1,0 +1,170 @@
+{{ if not .Values.ephemeral }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.component }}-pgdata
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}-pgdata
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: {{ .Values.component }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: {{ if .Release.IsInstall }}{{ .Values.initialCapacity }}{{ else }}{{ (lookup "v1" "PersistentVolumeClaim" .Release.Namespace (printf "%s-pgdata" .Values.component)).spec.resources.requests.storage | quote}}{{end}}
+  storageClassName: {{ .Values.storage.class.system }}
+
+---
+{{ end }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: {{ .Values.component }}
+    database.knitfab/type: postgres
+spec:
+  selector:
+    app.kubernetes.io/name: {{ .Values.component }}-postgres
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: {{ .Values.component }}
+    database.knitfab/type: postgres
+  ports:
+    - protocol: TCP
+      name: postgres
+      port: {{ .Values.port }}
+      targetPort: 5432
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.component }}-postgres
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}-postgres
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: {{ .Values.component }}
+    database.knitfab/type: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.component }}-postgres
+      app.kubernetes.io/part-of: knitfab
+      app.kubernetes.io/component: {{ .Values.component }}
+      database.knitfab/type: postgres
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.component }}-postgres
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Release.Name }}-postgres
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/part-of: knitfab
+        app.kubernetes.io/component: {{ .Values.component }}
+        database.knitfab/type: postgres
+    spec:
+      containers:
+        - name: database
+          image: "postgres:15.6-bullseye"  # the maximum major version which is supported by cloud providers (Azure,AWS,GCP) in their managed RDB service. @ 2024-03
+          readinessProbe:
+            exec:
+              command: ["psql", "-U", "{{ .Values.credential.username }}", "-d", "knit", "-c", "SELECT 1"]
+            initialDelaySeconds: 15
+            periodSeconds: 3
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credential.secret }}
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credential.secret }}
+                  key: password
+            - name: POSTGRES_DB
+              value: knit
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            {{ if not .Values.ephemeral }}
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+            {{ end }}
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+      securityContext:
+        # NOTE:
+        #   this runAs setting "nobody:nogroup" is adaptation for "root_squash" of NFS.
+        #   It get be more better when the chart provides UID/GID configuration.
+        runAsUser: 65534  # = -2 = nobody
+        runAsGroup: 65534  # = -2 = nogroup
+      volumes:
+        {{ if not .Values.ephemeral }}
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: {{ .Values.component }}-pgdata
+        {{ end }}
+        - name: initdb
+          configMap:
+            name: {{ .Values.component }}-initdb
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.component }}-initdb
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: {{ .Values.component }}
+    database.knitfab/type: postgres
+data:
+  {{ (.Files.Glob "assets/init/*" ).AsConfig | nindent 2 }}
+  {{ if not .Values.no_seeds -}}
+  {{ (.Files.Glob "assets/seeds/*" ).AsConfig | nindent 2 }}
+  {{- end }}
+
+---
+
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: {{ .Values.credential.secret }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: {{ .Values.component }}
+data:
+  username: {{ .Values.credential.username | b64enc }}
+  password: {{ .Values.credential.password | b64enc }}
