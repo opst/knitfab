@@ -16,7 +16,7 @@ services:
       target: knit-dataagt
       args:
         - LDFLAGS="-s"
-        - REPOSITORY_PATH=${REPOSITORY_PATH}
+        - REPOSITORY=${REPOSITORY}
     image: "knit-dataagt:${TAG}"
   knit-dataagt-debug:
     build:
@@ -32,7 +32,7 @@ services:
       target: knit-vex
       args:
         - LDFLAGS="-s"
-        - REPOSITORY_PATH=${REPOSITORY_PATH}
+        - REPOSITORY=${REPOSITORY}
     image: "knit-vex:${TAG}"
   knit-vex-debug:
     build:
@@ -48,7 +48,7 @@ services:
       target: knit-empty
       args:
         - LDFLAGS="-s"
-        - REPOSITORY_PATH=${REPOSITORY_PATH}
+        - REPOSITORY=${REPOSITORY}
     image: "knit-empty:${TAG}"
   knit-empty-debug:
     build:
@@ -63,7 +63,7 @@ services:
       target: knit-nurse
       args:
         - LDFLAGS="-s"
-        - REPOSITORY_PATH=${REPOSITORY_PATH}
+        - REPOSITORY=${REPOSITORY}
     image: "knit-nurse:${TAG}"
   knit-nurse-debug:
     build:
@@ -78,7 +78,7 @@ services:
       target: knit-loops
       args:
         - LDFLAGS="-s"
-        - REPOSITORY_PATH=${REPOSITORY_PATH}
+        - REPOSITORY=${REPOSITORY}
     image: "knit-loops:${TAG}"
   knit-loops-debug:
     build:
@@ -94,7 +94,7 @@ services:
       target: knitd
       args:
         - LDFLAGS="-s"
-        - REPOSITORY_PATH=${REPOSITORY_PATH}
+        - REPOSITORY=${REPOSITORY}
     image: "knitd:${TAG}"
   knitd-debug:
     build:
@@ -110,7 +110,7 @@ services:
       target: knitd-backend
       args:
         - LDFLAGS="-s"
-        - REPOSITORY_PATH=${REPOSITORY_PATH}
+        - REPOSITORY=${REPOSITORY}
     image: "knitd-backend:${TAG}"
   knitd-backend-debug:
     build:

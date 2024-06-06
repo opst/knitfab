@@ -64,15 +64,13 @@ case ${BUILD_MODE} in
 		fi
 
 		export IMAGE_REGISTRY=${IMAGE_REGISTRY:-ghcr.io}
-		export CHART_REGISTRY=${CHART_REGISTRY:-https://raw.githubusercontent.com}
-		REPOSITORY_PATH=${REPOSITORY_PATH:-opst/knitfab}
+		REPOSITORY=${REPOSITORY:-opst/knitfab}
 		export ARCH=${ARCH:-"arm64 amd64"}
 		export OS=${OS:-"linux windows darwin"}
 	;;
 	local|test)
 		export IMAGE_REGISTRY=${IMAGE_REGISTRY:-}
-		export CHART_REGISTRY=${ROOT}
-		REPOSITORY_PATH=${REPOSITORY_PATH:-}
+		REPOSITORY=${REPOSITORY:-}
 		export ARCH=${ARCH:-local}
 		export OS=${OS:-}
 	;;
@@ -84,28 +82,28 @@ esac
 export BUILD_MODE
 
 
-case ${REPOSITORY_PATH} in
+case ${REPOSITORY} in
 	git://*)
 		# git repository
-		REMOTE_URL=$(git remote get-url ${REPOSITORY_PATH:6})
+		REMOTE_URL=$(git remote get-url ${REPOSITORY:6})
 		case ${REMOTE_URL} in
 			https://*/*.git)
-				REPOSITORY_PATH=${REMOTE_URL#https://*/}
-				REPOSITORY_PATH=${REPOSITORY_PATH%.git}
+				REPOSITORY=${REMOTE_URL#https://*/}
+				REPOSITORY=${REPOSITORY%.git}
 				;;
 			*@*:*.git)
-				REPOSITORY_PATH=${REMOTE_URL#*@*:}
-				REPOSITORY_PATH=${REPOSITORY_PATH%.git}
+				REPOSITORY=${REMOTE_URL#*@*:}
+				REPOSITORY=${REPOSITORY%.git}
 				;;
 			*)
 				echo "unknown repository: ${REMOTE_URL}" >&2
 				exit 1
 				;;
 		esac
-		echo "detected REPOSITORY_PATH=${REPOSITORY_PATH}"
+		echo "detected REPOSITORY=${REPOSITORY}"
 		;;
 esac
-export REPOSITORY_PATH
+export REPOSITORY
 
 if [ -z "${EXPLICIT_BUILD_TARGET}" ] ; then
 	BUILD_IMAGE=true

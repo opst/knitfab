@@ -3,7 +3,7 @@
 ARG GOVERSION=1.22.2-bullseye
 ARG GCFLAGS=""
 ARG LDFLAGS=""
-ARG REPOSITORY_PATH=""
+ARG REPOSITORY=""
 
 #
 # build!
@@ -43,8 +43,8 @@ COPY --from=dlv-installer --chown=nobody:nobody /go/bin/dlv /go/bin/dlv
 # package!
 #
 FROM --platform=${TARGETPLATFORM} base as knitd
-ARG REPOSITORY_PATH
-LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY_PATH}"
+ARG REPOSITORY
+LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
 VOLUME /knit/configs
 ENTRYPOINT ["/knit/knitd"]
 COPY --from=builder --chown=nobody:nobody /dest/knitd /knit/knitd
@@ -56,8 +56,8 @@ COPY --from=builder --chown=nobody:nobody /dest/knitd /knit/knitd
 
 
 FROM --platform=${TARGETPLATFORM} base as knitd-backend
-ARG REPOSITORY_PATH
-LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY_PATH}"
+ARG REPOSITORY
+LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
 VOLUME /knit/configs
 ENTRYPOINT ["/knit/knitd_backend"]
 CMD ["--config", "/knit/configs/knit.backend.yml"]
@@ -71,8 +71,8 @@ COPY --from=builder --chown=nobody:nobody /dest/knitd_backend /knit/knitd_backen
 
 
 FROM --platform=${TARGETPLATFORM} base as knit-vex
-ARG REPOSITORY_PATH
-LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY_PATH}"
+ARG REPOSITORY
+LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
 VOLUME /knit/configs
 ENTRYPOINT ["/knit/vex"]
 CMD ["--storage", "5Gi", "--delta", "5Gi"]
@@ -87,8 +87,8 @@ COPY --from=builder --chown=nobody:nobody /dest/vex /knit/vex
 
 
 FROM --platform=${TARGETPLATFORM} base as knit-dataagt
-ARG REPOSITORY_PATH
-LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY_PATH}"
+ARG REPOSITORY
+LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
 EXPOSE 8080
 VOLUME /knit/mount
 ENTRYPOINT ["/knit/dataagt"]
@@ -102,8 +102,8 @@ COPY --from=builder --chown=nobody:nobody /dest/dataagt /knit/dataagt
 
 
 FROM --platform=${TARGETPLATFORM} base as knit-empty
-ARG REPOSITORY_PATH
-LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY_PATH}"
+ARG REPOSITORY
+LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
 ENTRYPOINT ["/knit/empty"]
 COPY --from=builder --chown=nobody:nobody /dest/empty /knit/empty
 
@@ -114,8 +114,8 @@ COPY --from=builder --chown=nobody:nobody /dest/empty /knit/empty
 
 
 FROM --platform=${TARGETPLATFORM} base as knit-nurse
-ARG REPOSITORY_PATH
-LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY_PATH}"
+ARG REPOSITORY
+LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
 ENTRYPOINT ["/knit/log_recorder"]
 COPY --from=builder --chown=nobody:nobody /dest/log_recorder /knit/log_recorder
 
@@ -126,8 +126,8 @@ COPY --from=builder --chown=nobody:nobody /dest/log_recorder /knit/log_recorder
 
 
 FROM --platform=${TARGETPLATFORM} base as knit-loops
-ARG REPOSITORY_PATH
-LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY_PATH}"
+ARG REPOSITORY
+LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
 ENTRYPOINT ["/knit/loops"]
 COPY --from=builder --chown=nobody:nobody /dest/loops /knit/loops
 
