@@ -1123,3 +1123,56 @@ Also, it is important to set conditions as Tags to prevent certain types of Data
 - `class:...`, `script:...`, `version:...`: (For models and hyperparameters) Class names, scripts, and versions that can be loaded.
 - `mode:train`, `mode:validation`, `mode:test`: (For datasets) The purpose of use.
     - Training with test data and evaluating with test data will result in meaningless results.
+
+Extention Command
+------------------
+
+Knitfab CLI `knit` recognize Extention Commands.
+
+You can invoke commands prefixed with `knit-` and found in environmental variable `PATH` via `knit`.
+
+> [!NOTE]
+>
+> The rule convert from command name to subcommand name of `knit`.
+>
+> 1. Trim prefix `knit-`.
+> 2. Trim following suffix, if exits: `.exe`, `.cmd`, `.bat`. `.com`
+>
+> For example:
+>
+> - `knit-example` can be invoked as `knit example`
+> - `knit-example.exe` also can be invoked as `knit example`
+> - `knit-example.exe.something` can be involed as `knit example.exe.someting` (a suffix is trimmed from the last only)
+>
+
+On invoking Extention Commands, STDIN, STDOUT and STDERR are passed through from `knit`.
+Also all args (except `--profile`, `--profile-store`, `--env`) are passed from `knit` to a Extention Command.
+
+`knit` passes environmental variables and add following:
+
+- `KNIT_PROFILE`: the current Knitfab profile name
+- `KNIT_PROFILE_STORE`: the filepath to Knitfab Profile Store
+
+The Profile Store file is a yaml file fomratted as below:
+
+```yaml
+PROFILE_NAME:
+    apiRoot: https://example.com/knitfab/api
+    cert:
+        ca: ...
+ANOTHER_PROFILE_NAME:
+    apiRoot: ...
+    cert:
+        ca: ...
+...
+```
+
+This file is structured as a mapping which each keys is a Profile name and its value is a Profile configuration.
+
+Each elements in Profile means:
+
+- `apiRoot`: the root URL of Knitfab Web API
+- `cert`: TLS Certification for `apiRoot`
+    - `ca`: CA Certificate, BASE64 encoded
+
+The host of `apiRoot` may use a self-signed certification. To request to Knitfab Web API, you may need to trust `cert.ca`.

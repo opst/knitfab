@@ -1126,3 +1126,193 @@ func TestRun_Find(t *testing.T) {
 	}
 
 }
+
+// Test to search using the new fields, "Since" and "Duration", added to RunFindQuery
+func TestRun_Find_Since_and_Duration(t *testing.T) {
+	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
+	type then struct {
+		run []string
+	}
+	type testcase struct {
+		when kdb.RunFindQuery
+		then
+	}
+
+	dummyUpdatedSince := try.To(rfctime.ParseRFC3339DateTime(
+		"2023-04-01T13:34:45+00:00",
+	)).OrFatal(t).Time()
+
+	//  time.Duration type.
+	dummyUpdatedUntil_1 := try.To(rfctime.ParseRFC3339DateTime(
+		"2023-04-01T13:34:45+00:00",
+	)).OrFatal(t).Time().Add(30 * time.Minute)
+	dummyUpdatedUntil_2 := try.To(rfctime.ParseRFC3339DateTime(
+		"2023-04-01T13:34:45+00:00",
+	)).OrFatal(t).Time().Add(2*time.Hour + 10*time.Minute)
+
+	given := tables.Operation{
+		Plan: []tables.Plan{
+			{PlanId: th.Padding36("plan-1-pseudo"), Hash: "#pseudo", Active: true},
+		},
+		PlanPseudo: []tables.PlanPseudo{
+			{PlanId: th.Padding36("plan-1-pseudo"), Name: "uploaded"},
+		},
+		Outputs: map[tables.Output]tables.OutputAttr{
+			{OutputId: 1_010, PlanId: th.Padding36("plan-1-pseudo"), Path: "/1/out/1"}: {},
+		},
+		Inputs: map[tables.Input]tables.InputAttr{},
+		Steps: []tables.Step{
+			// four run based on plan-1-pseudo
+			// one of UpdatedAt is basedtime - 1hour
+			// the other is basedtime
+			// the other is basedtime + 30s
+			// the other is basedtime + 1minute + 1hour
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-1-pseudo/-1hour"),
+					PlanId:    th.Padding36("plan-1-pseudo"),
+					Status:    kdb.Done,
+					UpdatedAt: dummyUpdatedSince.Add(-1 * time.Hour),
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-1-pseudo/-1hour/out/1"),
+						VolumeRef: "#plan-1-pseudo/-1hour/out/1",
+						RunId:     th.Padding36("plan-1-pseudo/-1hour"),
+						PlanId:    th.Padding36("plan-1-pseudo"),
+						OutputId:  1_010,
+					}: {},
+				},
+			},
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-1-pseudo/basedtime"),
+					PlanId:    th.Padding36("plan-1-pseudo"),
+					Status:    kdb.Done,
+					UpdatedAt: dummyUpdatedSince,
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-1-pseudo/basedtime/out/1"),
+						VolumeRef: "#plan-1-pseudo/basedtime/out/1",
+						RunId:     th.Padding36("plan-1-pseudo/basedtime"),
+						PlanId:    th.Padding36("plan-1-pseudo"),
+						OutputId:  1_010,
+					}: {},
+				},
+			},
+
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-1-pseudo/30s"),
+					PlanId:    th.Padding36("plan-1-pseudo"),
+					Status:    kdb.Failed,
+					UpdatedAt: dummyUpdatedSince.Add(30 * time.Second),
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-1-pseudo/30s/out/2"),
+						VolumeRef: "#plan-1-pseudo/30s/out/2",
+						RunId:     th.Padding36("plan-1-pseudo/30s"),
+						PlanId:    th.Padding36("plan-1-pseudo"),
+						OutputId:  1_010,
+					}: {},
+				},
+			},
+
+			{
+				Run: tables.Run{
+					RunId:     th.Padding36("plan-1-pseudo/1minute/1hour"),
+					PlanId:    th.Padding36("plan-1-pseudo"),
+					Status:    kdb.Failed,
+					UpdatedAt: dummyUpdatedSince.Add(1*time.Minute + 1*time.Hour),
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId:    th.Padding36("plan-1-pseudo/1minute/1hour/out/2"),
+						VolumeRef: "#plan-1-pseudo/1minute/1hour/out/2",
+						RunId:     th.Padding36("plan-1-pseudo/1minute/1hour"),
+						PlanId:    th.Padding36("plan-1-pseudo"),
+						OutputId:  1_010,
+					}: {},
+				},
+			},
+		},
+	}
+
+	for name, data := range map[string]testcase{
+		"when no querying, it should find all runIds": {
+			when: kdb.RunFindQuery{
+				UpdatedSince: nil,
+				UpdatedUntil: nil,
+			},
+			then: then{
+				run: []string{
+					th.Padding36("plan-1-pseudo/-1hour"),
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/30s"),
+					th.Padding36("plan-1-pseudo/1minute/1hour"),
+				},
+			},
+		},
+		"when querying by UpdatedAt, it should find runIds matching with the query": {
+			when: kdb.RunFindQuery{
+				UpdatedSince: &dummyUpdatedSince,
+				UpdatedUntil: nil,
+			},
+			then: then{
+				run: []string{
+
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/30s"),
+					th.Padding36("plan-1-pseudo/1minute/1hour"),
+				},
+			},
+		},
+		"when querying by UpdatedAt and Duration specified minutes, it should find runIds matching with the query": {
+			when: kdb.RunFindQuery{
+				UpdatedSince: &dummyUpdatedSince,
+				UpdatedUntil: &dummyUpdatedUntil_1,
+			},
+			then: then{
+				run: []string{
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/30s"),
+				},
+			},
+		},
+
+		"when querying by UpdatedAt and Duration specified days and weeks, it should find runIds matching with the query": {
+			when: kdb.RunFindQuery{
+				UpdatedSince: &dummyUpdatedSince,
+				UpdatedUntil: &dummyUpdatedUntil_2,
+			},
+			then: then{
+				run: []string{
+					th.Padding36("plan-1-pseudo/basedtime"),
+					th.Padding36("plan-1-pseudo/30s"),
+					th.Padding36("plan-1-pseudo/1minute/1hour"),
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			pgpool := poolBroaker.GetPool(ctx, t)
+			if err := given.Apply(ctx, pgpool); err != nil {
+				t.Fatal(err)
+			}
+
+			testee := kpgrun.New(pgpool) // only finding. no new items.
+			actual := try.To(testee.Find(ctx, data.when)).OrFatal(t)
+
+			if !cmp.SliceEq(actual, data.then.run) {
+				t.Errorf(
+					"runs does not match. (actual, expected) = \n(%+v, \n%+v)",
+					actual, data.then.run,
+				)
+			}
+		})
+	}
+
+}

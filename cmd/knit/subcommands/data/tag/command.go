@@ -6,85 +6,74 @@ import (
 	"fmt"
 	"log"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflg "github.com/opst/knitfab/pkg/commandline/flag"
-	"github.com/opst/knitfab/pkg/commandline/usage"
+	"github.com/youta-t/flarc"
 )
 
 type Flag struct {
-	AddTag    *kflg.Tags `flag:"add,metavar=KEY:VALUE...,help=add Tags to Data. It can be specified multiple times."`
-	RemoveTag *kflg.Tags `flag:"remove,metavar=KEY:VALUE...,help=remove Tags from Data. It can be specified multiple times."`
-}
-
-type Command struct{}
-
-func New() kcmd.KnitCommand[Flag] {
-	return &Command{}
-}
-
-func (cmd *Command) Name() string {
-	return "tag"
+	AddTag    *kflg.Tags `flag:"add" metavar:"KEY:VALUE..." help:"add Tags to Data. It can be specified multiple times."`
+	RemoveTag *kflg.Tags `flag:"remove" metavar:"KEY:VALUE..." help:"remove Tags from Data. It can be specified multiple times."`
 }
 
 var ARG_KNITID = "KNIT_ID"
 
-func (*Command) Usage() usage.Usage[Flag] {
-	return usage.New(
+func New() (flarc.Command, error) {
+	return flarc.NewCommand(
+		"Add and/or remove Tags on Data in knitfab.",
 		Flag{
 			AddTag:    &kflg.Tags{},
 			RemoveTag: &kflg.Tags{},
 		},
-		usage.Args{
+		flarc.Args{
 			{
 				Name: ARG_KNITID, Required: true,
 				Help: "the Knit Id of Data to be Tagged.",
 			},
 		},
-	)
-}
-
-func (*Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "add and/or remove Tags on Data in knitfab",
-		Detail: `
+		common.NewTask(Task),
+		flarc.WithDescription(`
 Add and/or remove Tags on Data in knitfab.
 
 If the same Tag is specified in both add and remove, the Tag will be removed.
-`,
-	}
+`),
+	)
 }
 
-func (cmd *Command) Execute(
+func Task(
 	ctx context.Context,
 	l *log.Logger,
 	e kenv.KnitEnv,
 	c krst.KnitClient,
-	f usage.FlagSet[Flag],
+	cl flarc.Commandline[Flag],
+	_ []any,
 ) error {
-	knitId := f.Args[ARG_KNITID][0]
+	args := cl.Args()
+	knitId := args[ARG_KNITID][0]
 
 	addTag := []apitag.UserTag{}
 	removeTag := []apitag.UserTag{}
 
-	if f.Flags.AddTag != nil {
-		for _, t := range *f.Flags.AddTag {
+	flags := cl.Flags()
+	if flags.AddTag != nil {
+		for _, t := range *flags.AddTag {
 			if ut := new(apitag.UserTag); !t.AsUserTag(ut) {
 				return fmt.Errorf(
-					"%w: tag key %s is reserved for system tags", kcmd.ErrUsage, t.Key,
+					"%w: tag key %s is reserved for system tags", flarc.ErrUsage, t.Key,
 				)
 			} else {
 				addTag = append(addTag, *ut)
 			}
 		}
 	}
-	if f.Flags.RemoveTag != nil {
-		for _, t := range *f.Flags.RemoveTag {
+	if flags.RemoveTag != nil {
+		for _, t := range *flags.RemoveTag {
 			if ut := new(apitag.UserTag); !t.AsUserTag(ut) {
 				return fmt.Errorf(
-					"%w: tag key %s is reserved for system tags", kcmd.ErrUsage, t.Key,
+					"%w: tag key %s is reserved for system tags", flarc.ErrUsage, t.Key,
 				)
 			} else {
 				removeTag = append(removeTag, *ut)

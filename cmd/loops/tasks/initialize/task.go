@@ -5,7 +5,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
+	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/retry"
 	wl "github.com/opst/knitfab/pkg/workloads"
@@ -35,11 +37,17 @@ func Seed() kdb.RunCursor {
 func Task(
 	irun kdb.RunInterface,
 	init func(context.Context, kdb.Run) error,
+	hook hook.Hook[api_runs.Detail],
 ) recurring.Task[kdb.RunCursor] {
 	return func(ctx context.Context, value kdb.RunCursor) (kdb.RunCursor, bool, error) {
-		nextCursor, err := irun.PickAndSetStatus(
+		nextCursor, statusChanged, err := irun.PickAndSetStatus(
 			ctx, value,
 			func(r kdb.Run) (kdb.KnitRunStatus, error) {
+				hookval := api_runs.ComposeDetail(r)
+				if err := hook.Before(hookval); err != nil {
+					return r.Status, err
+				}
+
 				if err := init(ctx, r); err != nil {
 					return r.Status, err
 				}
@@ -47,11 +55,21 @@ func Task(
 			},
 		)
 
+		if statusChanged {
+			if runs, _ := irun.Get(ctx, []string{nextCursor.Head}); runs != nil {
+				if r, ok := runs[nextCursor.Head]; ok {
+					hookval := api_runs.ComposeDetail(r)
+					hook.After(hookval)
+				}
+			}
+		}
+
+		cursorMoved := !value.Equal(nextCursor)
 		// Context cancelled/deadline exceeded are okay. It will be retried.
 		if err != nil && !(errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
-			return nextCursor, !value.Equal(nextCursor), err
+			return nextCursor, cursorMoved, err
 		}
-		return nextCursor, !value.Equal(nextCursor), nil
+		return nextCursor, cursorMoved, nil
 	}
 }
 

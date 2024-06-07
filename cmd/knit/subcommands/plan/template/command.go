@@ -10,53 +10,70 @@ import (
 	"regexp"
 	"strings"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	"github.com/opst/knitfab/cmd/knit/env"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/opst/knitfab/pkg/images/analyzer"
 	"github.com/opst/knitfab/pkg/utils"
 	y "github.com/opst/knitfab/pkg/utils/yamler"
+	"github.com/youta-t/flarc"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-type Command struct {
-	taskFromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error)
-	taskFromImage   func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error)
+type Option struct {
+	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error)
+	fromImage   func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error)
 }
 
-func WithTask(
+func WithTemplateMaker(
 	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error),
 	fromImage func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error),
-) func(*Command) *Command {
-	return func(cmd *Command) *Command {
-		cmd.taskFromScratch = fromScratch
-		cmd.taskFromImage = fromImage
+) func(*Option) *Option {
+	return func(cmd *Option) *Option {
+		cmd.fromScratch = fromScratch
+		cmd.fromImage = fromImage
 		return cmd
 	}
 }
 
-func New(options ...func(*Command) *Command) kcmd.KnitCommand[Flag] {
-	return utils.ApplyAll(
-		&Command{
-			taskFromScratch: FromScratch(),
-			taskFromImage:   FromImage(analyzer.Analyze),
+type Flag struct {
+	Scratch bool   `flag:"scratch" help:"Generate a Plan file without reading any image."`
+	Input   string `flag:"" alias:"i" metavar:"path/to/image.tar" help:"Tar file containing image (for example: output of 'docker save') to be used for the Plan."`
+}
+
+const (
+	ARG_IMAGE_TAG = "image:tag"
+)
+
+func New(options ...func(*Option) *Option) (flarc.Command, error) {
+	option := &Option{
+		fromScratch: FromScratch(),
+		fromImage:   FromImage(analyzer.Analyze),
+	}
+	for _, opt := range options {
+		option = opt(option)
+	}
+	return flarc.NewCommand(
+		"Generate a new Plan definition from a container image.",
+
+		Flag{Input: "-", Scratch: false},
+		flarc.Args{
+			{
+				Name: ARG_IMAGE_TAG, Required: false,
+				Help: fmt.Sprintf(`
+Specify the image tag to use for the Plan.
+This is optional when the image has just one tag.
+
+If --scratch is given, %s is prohibited.`,
+					ARG_IMAGE_TAG,
+				),
+			},
 		},
-		options...,
-	)
-}
-
-func (cmd *Command) Name() string {
-	return "template"
-}
-
-func (cmd *Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "Generate a new Plan definition from a container image.",
-		Example: `
+		common.NewTask(Task(option.fromScratch, option.fromImage)),
+		flarc.WithDescription(`
 Generate a Plan file from "docker save".
 
 	docker save image:tag | {{ .Command }} > plan.yaml
@@ -69,114 +86,95 @@ Generate a Plan file from a container image file.
 You may need to specify image:tag explicitly when the image has multiple tags, like below:
 
 	{{ .Command }} -i image-with-multiple-tag.tar image:tag > plan.yaml
-`,
-	}
-}
-
-type Flag struct {
-	Scratch bool   `flag:",help=Generate a Plan file without reading any image."`
-	Input   string `flag:",short=i,metavar=path/to/image.tar,help=Tar file containing image (for example: output of 'docker save') to be used for the Plan."`
-}
-
-const (
-	ARG_IMAGE_TAG = "image:tag"
-)
-
-func (*Command) Usage() usage.Usage[Flag] {
-	return usage.New(
-		Flag{Input: "-"},
-		usage.Args{
-			{
-				Name: ARG_IMAGE_TAG, Required: false,
-				Help: fmt.Sprintf(`
-Specify the image tag to use for the Plan.
-This is optional when the image has just one tag.
-
-If --scratch is given, %s is prohibited.`,
-					ARG_IMAGE_TAG,
-				),
-			},
-		},
+`),
 	)
+
 }
 
-func (cmd *Command) Execute(
-	ctx context.Context,
-	l *log.Logger,
-	e env.KnitEnv,
-	_ krst.KnitClient,
-	flags usage.FlagSet[Flag],
-) error {
+func Task(
+	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error),
+	fromImage func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error),
+) common.Task[Flag] {
+	return func(
+		ctx context.Context,
+		logger *log.Logger,
+		knitEnv env.KnitEnv,
+		client rest.KnitClient,
+		cl flarc.Commandline[Flag],
+		params []any,
+	) error {
+		flags := cl.Flags()
+		args := cl.Args()
 
-	var plan apiplans.PlanSpec
-	if flags.Flags.Scratch {
-		image := "image:version"
-		if l := len(flags.Args[ARG_IMAGE_TAG]); 0 < l {
-			return fmt.Errorf(
-				"%w: image:tag and --scratch are exclusive", kcmd.ErrUsage,
-			)
-		}
-
-		spec, err := cmd.taskFromScratch(ctx, l, image, e)
-		if err != nil {
-			return fmt.Errorf("can not generate Plan file: %w", err)
-		}
-		plan = spec
-	} else {
-		imageTag := ""
-		if 0 < len(flags.Args[ARG_IMAGE_TAG]) {
-			imageTag = flags.Args[ARG_IMAGE_TAG][0]
-		}
-
-		source := os.Stdin
-		if flags.Flags.Input != "-" {
-			f, err := os.Open(flags.Flags.Input)
-			if err != nil {
+		var plan apiplans.PlanSpec
+		if flags.Scratch {
+			image := "image:version"
+			if l := len(args[ARG_IMAGE_TAG]); 0 < l {
 				return fmt.Errorf(
-					"cannot open input file: %s: %w", flags.Flags.Input, err,
+					"%w: image:tag and --scratch are exclusive", flarc.ErrUsage,
 				)
 			}
-			defer f.Close()
-			source = f
+
+			spec, err := fromScratch(ctx, logger, image, knitEnv)
+			if err != nil {
+				return fmt.Errorf("can not generate Plan file: %w", err)
+			}
+			plan = spec
+		} else {
+			imageTag := ""
+			if 0 < len(args[ARG_IMAGE_TAG]) {
+				imageTag = args[ARG_IMAGE_TAG][0]
+			}
+
+			var source namedReader = _namedReader{name: "STDIN", Reader: cl.Stdin()}
+			if flags.Input != "-" {
+				f, err := os.Open(flags.Input)
+				if err != nil {
+					return fmt.Errorf(
+						"cannot open input file: %s: %w", flags.Input, err,
+					)
+				}
+				defer f.Close()
+				source = f
+			}
+
+			spec, err := fromImage(ctx, logger, source, imageTag, knitEnv)
+			if err != nil {
+				return fmt.Errorf("failed to generate Plan file: %w", err)
+			}
+			plan = spec
 		}
 
-		spec, err := cmd.taskFromImage(ctx, l, source, imageTag, e)
-		if err != nil {
-			return fmt.Errorf("failed to generate Plan file: %w", err)
+		active := true
+		if plan.Active != nil {
+			active = *plan.Active
 		}
-		plan = spec
-	}
 
-	active := true
-	if plan.Active != nil {
-		active = *plan.Active
-	}
+		res := map[string]string{}
+		for k, v := range plan.Resources {
+			res[k] = v.String()
+		}
 
-	res := map[string]string{}
-	for k, v := range plan.Resources {
-		res[k] = v.String()
-	}
+		yplan := planSpecWithDocument{
+			Image:    image(plan.Image),
+			Inputs:   utils.Map(plan.Inputs, func(i apiplans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Outputs:  utils.Map(plan.Outputs, func(i apiplans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Log:      (*logpoint)(plan.Log),
+			Resource: res,
+			Active:   active,
+		}
 
-	yplan := planSpecWithDocument{
-		Image:    image(plan.Image),
-		Inputs:   utils.Map(plan.Inputs, func(i apiplans.Mountpoint) mountpoint { return mountpoint(i) }),
-		Outputs:  utils.Map(plan.Outputs, func(i apiplans.Mountpoint) mountpoint { return mountpoint(i) }),
-		Log:      (*logpoint)(plan.Log),
-		Resource: res,
-		Active:   active,
+		os.Stdout.WriteString("\n")
+		enc := yaml.NewEncoder(os.Stdout)
+		defer enc.Close()
+		enc.SetIndent(2)
+		if err := enc.Encode(yplan); err != nil {
+			return fmt.Errorf("cannot write Plan file: %w", err)
+		}
+		os.Stdout.WriteString("\n")
+		logger.Println("# Plan file is generated. modify it as you like.")
+		return nil
 	}
-
-	os.Stdout.WriteString("\n")
-	enc := yaml.NewEncoder(os.Stdout)
-	defer enc.Close()
-	enc.SetIndent(2)
-	if err := enc.Encode(yplan); err != nil {
-		return fmt.Errorf("cannot write Plan file: %w", err)
-	}
-	os.Stdout.WriteString("\n")
-	l.Println("# Plan file is generated. modify it as you like.")
-	return nil
-
 }
 
 func FromScratch() func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error) {
@@ -373,6 +371,15 @@ func init() {
 type namedReader interface {
 	Name() string
 	io.Reader
+}
+
+type _namedReader struct {
+	name string
+	io.Reader
+}
+
+func (r _namedReader) Name() string {
+	return r.name
 }
 
 type image apiplans.Image

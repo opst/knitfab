@@ -47,14 +47,11 @@ function get_node_ip() {
 function prepare_install() {
 	mkdir -p ${SETTINGS}/{values,certs}
 	chmod -R go-rwx ${SETTINGS}
+
 	cd ${SETTINGS}
 
-	if [ -r "${TLSCACERT}" ] && [ -r "${TLSCAKEY}" ] ; then
-		CACOPIED=" (copied from ${TLSCACERT})"
-		CAKEYCOPIED=" (copied from ${TLSKEY})"
-		cp -r "${TLSCACERT}" certs/ca.crt
-		cp -r "${TLSCAKEY}" certs/ca.key
-	elif [ -z "${TLSCACERT}" ] && [ -z "${TLSCAKEY}" ] ; then
+
+	if [ -z "${TLSCACERT}" ] && [ -z "${TLSCAKEY}" ] ; then
 		message "generating self-signed CA certificate & key..."
 		# create self-signed CA certificate/key pair
 		# ... key
@@ -67,17 +64,18 @@ function prepare_install() {
 			-out certs/ca.crt \
 			-subj "/CN=knitfab/O=knitfab/OU=knitfab"
 
-		TLSCACERT=certs/ca.crt
-		TLSCAKEY=certs/ca.key
+	elif [ -r "${TLSCACERT}" ] && [ -f "${TLSCACERT}" ] && [ -r "${TLSCAKEY}" ] && [ -f "${TLSCAKEY}" ] ; then
+		cp "${TLSCACERT}" certs/ca.crt
+		echo " (CACERT copied from ${TLSCACERT})"
+		cp "${TLSCAKEY}" certs/ca.key
+		echo " (CAKEY copied from ${TLSCAKEY})"
+
 	else
 		message "ERROR: TLS CA certificate/key pair needs both. Or not set to generate new self-signed one."
 		exit 1
 	fi
 
-	if [ -r "${TLSCERT}" ] && [ -r "${TLSKEY}" ] ; then
-		cp -r "${TLSCERT}" certs/server.crt
-		cp -r "${TLSKEY}" certs/server.key
-	elif [ -z "${TLSCERT}" ] && [ -z "${TLSKEY}" ] ; then
+	if [ -z "${TLSCERT}" ] && [ -z "${TLSKEY}" ] ; then
 
 		message "generating server certificate & key..."
 		# create server key
@@ -131,6 +129,11 @@ EOF
 
 		message "cetificates generated."
 		message ""
+	elif [ -r "${TLSCERT}" ] && [ -f "${TLSCERT}" ] && [ -r "${TLSKEY}" ] && [ -f "${TLSKEY}" ] ; then
+		cp "${TLSCERT}" certs/server.crt
+		message " (CERT copied from ${TLSCERT})"
+		cp "${TLSKEY}" certs/server.key
+		message " (KEY copied from ${TLSKEY})"
 	else
 		message "ERROR: TLS certificate/key pair needs both. Or not set to generate new one."
 		exit 1
@@ -282,6 +285,58 @@ nfs:
   # #
   # # This value is effective only when "external: false".
   node: ""
+EOF
+
+    cat <<EOF > values/hooks.yaml
+# # # values/hooks.yaml # # #
+
+# # hooks: webhooks settings for Knitfab.
+hooks:
+
+  # # lifecycle-hooks: lifecycle webhooks for Knitfab.
+  # #
+  # # Each URLs reveices POST requests with a Run as JSON, before or after status change of the Run.
+  # #
+  # # The Run JSON is formatted as same as output of \`knit run show\`.
+  lifecycle-hooks:
+
+    # # before: Webhook URLs to be called before the Knitfab changes the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status is going to be changed.
+    # #
+    # # When these hook responses non-200 status, the status changing causes an error and will be retried later.
+    before: []
+
+    # # before: Webhook URLs to be called after the Knitfab has changed the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status has been changed.
+    # #
+    # # Responses from these hooks are ignored.
+    after: []
+
+EOF
+
+    cat <<EOF > values/extra-api.yaml
+# # # values/extra-api.yaml # # #
+
+extraApi:
+  # # endpoints ([{path:..., proxy_to: ...}]): extra API endpoints .
+  endpoints: []
+  #  - # path, proxy_to: Knitfab proxies requests to the path (and subpath) to proxy_to.
+  #    path: /path/to/your/api
+  #    proxy_to: "http://your-api-server/api"
+  #    # The example above works as follows:
+  #    # https://KNITFAB_HOST/path/to/your/api               -> http://your-api-server/api
+  #    # https://KNITFAB_HOST/path/to/your/api/sub           -> http://your-api-server/api/sub
+  #    # https://KNITFAB_HOST/path/to/your/api/sub/resource  -> http://your-api-server/api/sub/resource
+  #    # https://KNITFAB_HOST/path/to/your/api/sub?query     -> http://your-api-server/api/sub?query
+  #    # https://KNITFAB_HOST/path/to/your                   -> (404)
+  #    #
+  #    # For path, "/api" is reserved for Knitfab builtin API.
+  #
+  # # more extra apis can be added.
+  # # - path: ...
+  # #   proxy_to: ...
 
 EOF
 
@@ -373,14 +428,23 @@ if [ -z "${SETTINGS}" ] ; then
 fi
 export SETTINGS=$(abspath ${SETTINGS})
 
+if [ -n "${TLSCACERT}" ] ; then
+	export TLSCACERT=$(abspath ${TLSCACERT})
+fi
+if [ -n "${TLSCAKEY}" ] ; then
+	export TLSCAKEY=$(abspath ${TLSCAKEY})
+fi
+if [ -n "${TLSCERT}" ] ; then
+	export TLSCERT=$(abspath ${TLSCERT})
+fi
+if [ -n "${TLSKEY}" ] ; then
+	export TLSKEY=$(abspath ${TLSKEY})
+fi
+
 if [ -n "${PREPARE}" ] ; then
 	if [ -n "${INSTALL}" ] ; then
 		message "ERROR: --prepare and --install are exclusive."
 		exit 1
-	fi
-
-	if [ -z "${KUBECONFIG}" ] ; then
-		KUBECONFIG=$(abspath ~/.kube/config)
 	fi
 
 	KUBECONFIG=${KUBECONFIG:-~/.kube/config}
@@ -388,6 +452,7 @@ if [ -n "${PREPARE}" ] ; then
 		message "ERROR: KUBECONFIG file not found: ${KUBECONFIG}"
 		exit 1
 	fi
+	KUBECONFIG=$(abspath ${KUBECONFIG})
 	export KUBECONFIG
 
 	prepare_install
@@ -484,6 +549,7 @@ if ! [ -r "${KUBECONFIG}" ] ; then
 	exit 1
 fi
 export KUBECONFIG=$(abspath ${KUBECONFIG})
+echo kubeconfig = ${KUBECONFIG}
 
 if [ -z "${NAMESPACE}" ] ; then
 	NAMESPACE=$(cat ${SETTINGS}/namespace)
@@ -595,10 +661,12 @@ run ${HELM} ${MODE} --dependency-update --wait \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
 	--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
-	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
 	--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
-	${SET_PULL_SECRET} -f ${VALUES}/knit-app.yaml \
-	knit-app knitfab/knit-app
+	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
+	-f ${VALUES}/knit-app.yaml \
+	-f ${VALUES}/hooks.yaml \
+	-f ${VALUES}/extra-api.yaml \
+	${SET_PULL_SECRET} knit-app knitfab/knit-app
 
 mkdir -p ${SETTINGS}/handouts
 cat <<EOF > ${SETTINGS}/handouts/README.md

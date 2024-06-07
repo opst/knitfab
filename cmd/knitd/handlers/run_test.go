@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	handlers "github.com/opst/knitfab/cmd/knitd/handlers"
@@ -36,13 +37,20 @@ func TestRunFindHandler(t *testing.T) {
 			body  []apirun.Detail
 		}
 
+		dummyUpdatedSince := try.To(rfctime.ParseRFC3339DateTime(
+			"2024-04-01T12:00:00+00:00",
+		)).OrFatal(t).Time()
+		dummyUpdatedUntil := try.To(rfctime.ParseRFC3339DateTime(
+			"2024-04-01T12:00:00+00:00",
+		)).OrFatal(t).Time().Add(2*time.Hour + 30*time.Minute + 45*time.Second)
+
 		for name, testcase := range map[string]struct {
 			when
 			then
 		}{
 			"as empty when no runs are found": {
 				when{
-					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done",
+					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -51,6 +59,8 @@ func TestRunFindHandler(t *testing.T) {
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
@@ -343,7 +353,7 @@ func TestRunFindHandler(t *testing.T) {
 			},
 			"when it is queried all dimensions with empty value": {
 				when{
-					request: "/api/runs?plan=&knitIdInput=&knitIdOutput=&status=",
+					request: "/api/runs?plan=&knitIdInput=&knitIdOutput=&status=&since=&duration=",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -399,9 +409,37 @@ func TestRunFindHandler(t *testing.T) {
 					body: []apirun.Detail{},
 				},
 			},
+			"when it is queried about since": {
+				when{
+					request: "/api/runs?since=2024-04-01T12%3A00%3A00%2B00%3A00",
+					Runs:    []kdb.Run{},
+				},
+				then{
+					query: kdb.RunFindQuery{
+						Status:       []kdb.KnitRunStatus{},
+						UpdatedSince: &dummyUpdatedSince,
+					},
+					body: []apirun.Detail{},
+				},
+			},
+			// duration is assumed to be used in conjunction with since.
+			"when it is queried about since and duration": {
+				when{
+					request: "/api/runs?since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
+					Runs:    []kdb.Run{},
+				},
+				then{
+					query: kdb.RunFindQuery{
+						Status:       []kdb.KnitRunStatus{},
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
+					},
+					body: []apirun.Detail{},
+				},
+			},
 			"when it is queried about all dimensions except planId": {
 				when{
-					request: "/api/runs?knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done",
+					request: "/api/runs?knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -409,13 +447,15 @@ func TestRunFindHandler(t *testing.T) {
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except input knit id": {
 				when{
-					request: "/api/runs?plan=plan-x,plan-y&knitIdOutput=out3,out4&status=waiting,running,done",
+					request: "/api/runs?plan=plan-x,plan-y&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -423,27 +463,31 @@ func TestRunFindHandler(t *testing.T) {
 						PlanId:       []string{"plan-x", "plan-y"},
 						OutputKnitId: []string{"out3", "out4"},
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except output knit id": {
 				when{
-					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&status=waiting,running,done",
+					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
 					query: kdb.RunFindQuery{
-						PlanId:      []string{"plan-x", "plan-y"},
-						InputKnitId: []string{"in1", "in2"},
-						Status:      []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						PlanId:       []string{"plan-x", "plan-y"},
+						InputKnitId:  []string{"in1", "in2"},
+						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
 					},
 					body: []apirun.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except status": {
 				when{
-					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4",
+					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
 					Runs:    []kdb.Run{},
 				},
 				then{
@@ -451,6 +495,39 @@ func TestRunFindHandler(t *testing.T) {
 						PlanId:       []string{"plan-x", "plan-y"},
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
+						UpdatedSince: &dummyUpdatedSince,
+						UpdatedUntil: &dummyUpdatedUntil,
+					},
+					body: []apirun.Detail{},
+				},
+			},
+			"when it is queried about all dimensions except since": {
+				when{
+					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done",
+					Runs:    []kdb.Run{},
+				},
+				then{
+					query: kdb.RunFindQuery{
+						PlanId:       []string{"plan-x", "plan-y"},
+						InputKnitId:  []string{"in1", "in2"},
+						OutputKnitId: []string{"out3", "out4"},
+						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+					},
+					body: []apirun.Detail{},
+				},
+			},
+			"when it is queried about all dimensions except duration": {
+				when{
+					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00",
+					Runs:    []kdb.Run{},
+				},
+				then{
+					query: kdb.RunFindQuery{
+						PlanId:       []string{"plan-x", "plan-y"},
+						InputKnitId:  []string{"in1", "in2"},
+						OutputKnitId: []string{"out3", "out4"},
+						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						UpdatedSince: &dummyUpdatedSince,
 					},
 					body: []apirun.Detail{},
 				},

@@ -3,17 +3,18 @@ package show_test
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_show "github.com/opst/knitfab/cmd/knit/subcommands/plan/show"
 	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -60,7 +61,8 @@ func TestShowCommand(t *testing.T) {
 	}
 
 	type then struct {
-		err error
+		err    error
+		planId string
 	}
 
 	theory := func(when when, then then) func(*testing.T) {
@@ -68,27 +70,32 @@ func TestShowCommand(t *testing.T) {
 			profile := &kprof.KnitProfile{ApiRoot: "http://api.knit.invalid"}
 			client := try.To(krst.NewClient(profile)).OrFatal(t)
 
-			task := func(
+			show := func(
 				ctx context.Context,
 				client krst.KnitClient,
 				planId string,
 			) (apiplans.Detail, error) {
+				if planId != then.planId {
+					t.Errorf("wrong planId: %s", planId)
+				}
 				return when.plan, when.err
 			}
 
-			testee := plan_show.New(
-				plan_show.WithDataShowTask(task),
-			)
+			testee := plan_show.Task(show)
 
 			ctx := context.Background()
-			actual := testee.Execute(
+			actual := testee(
 				ctx, logger.Null(), *env.New(), client,
-				usage.FlagSet[struct{}]{
-					Flags: struct{}{},
-					Args: map[string][]string{
+				commandline.MockCommandline[struct{}]{
+					Fullname_: "knit plan show",
+					Stdout_:   io.Discard,
+					Stderr_:   io.Discard,
+					Flags_:    struct{}{},
+					Args_: map[string][]string{
 						plan_show.ARG_PLAN_ID: when.planId,
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actual, then.err) {
@@ -107,7 +114,8 @@ func TestShowCommand(t *testing.T) {
 			err:    nil,
 		},
 		then{
-			err: nil,
+			err:    nil,
+			planId: "test-Id",
 		},
 	))
 
@@ -120,7 +128,8 @@ func TestShowCommand(t *testing.T) {
 				err:    expectedError,
 			},
 			then{
-				err: expectedError,
+				err:    expectedError,
+				planId: "test-Id",
 			},
 		))
 	}

@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -541,28 +542,45 @@ func TestFindData(t *testing.T) {
 			return h, func() *http.Request { return request }
 		}
 
+		type when struct {
+			tags     []apitag.Tag
+			since    *time.Time
+			duration *time.Duration
+		}
+
 		type then struct {
-			tagsInQuery []string
+			tagsInQuery   []string
+			sinceQuery    string
+			durationQuery string
 		}
 
 		type testcase struct {
-			when []apitag.Tag
+			when when
 			then then
 		}
 
+		since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
+		duration := time.Duration(2 * time.Hour)
+
 		for name, testcase := range map[string]testcase{
 			"when query with no tags, server receives empty query string": {
-				when: []apitag.Tag{},
+				when: when{},
 				then: then{
-					tagsInQuery: []string{},
+					tagsInQuery:   []string{},
+					sinceQuery:    "",
+					durationQuery: "",
 				},
 			},
 			"when query with tags, server receives them": {
-				when: []apitag.Tag{
-					{Key: "key-a", Value: "value/a"},
-					{Key: "type", Value: "unknown?"},
-					{Key: "knit#id", Value: "some-knit-id"},
-					{Key: "owner", Value: "100% our-team&client, of cource!"},
+				when: when{
+					tags: []apitag.Tag{
+						{Key: "key-a", Value: "value/a"},
+						{Key: "type", Value: "unknown?"},
+						{Key: "knit#id", Value: "some-knit-id"},
+						{Key: "owner", Value: "100% our-team&client, of cource!"},
+					},
+					since:    &since,
+					duration: &duration,
 				},
 				then: then{
 					// metachar: '/' '#' '?' '&' '%', ' '(space) and ',
@@ -572,6 +590,8 @@ func TestFindData(t *testing.T) {
 						"knit#id:some-knit-id",
 						"owner:100% our-team&client, of cource!",
 					},
+					sinceQuery:    "2024-04-22T12:34:56.987654321+07:00",
+					durationQuery: "2h0m0s",
 				},
 			},
 		} {
@@ -586,8 +606,11 @@ func TestFindData(t *testing.T) {
 				// prepare for the tests
 				profile := kprof.KnitProfile{ApiRoot: ts.URL}
 
+				when := testcase.when
+				then := testcase.then
+
 				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
-				result := try.To(testee.FindData(ctx, testcase.when)).OrFatal(t)
+				result := try.To(testee.FindData(ctx, when.tags, when.since, when.duration)).OrFatal(t)
 
 				if !cmp.SliceContentEqWith(
 					utils.RefOf(result), utils.RefOf(response),
@@ -605,10 +628,10 @@ func TestFindData(t *testing.T) {
 				}
 
 				actualTags := getLastRequest().URL.Query()["tag"]
-				if !cmp.SliceContentEq(actualTags, testcase.then.tagsInQuery) {
+				if !cmp.SliceContentEq(actualTags, then.tagsInQuery) {
 					t.Errorf(
 						"query tags is wrong:\n- actual  : %s\n- expected: %s",
-						actualTags, testcase.then.tagsInQuery,
+						actualTags, then.tagsInQuery,
 					)
 				}
 
@@ -794,8 +817,11 @@ func TestFindData(t *testing.T) {
 				{Key: "tag-a", Value: "value-a"},
 			}
 
+			since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
+			duration := time.Duration(2 * time.Hour)
+
 			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
-			actualResponse := try.To(testee.FindData(ctx, queryTags)).OrFatal(t)
+			actualResponse := try.To(testee.FindData(ctx, queryTags, &since, &duration)).OrFatal(t)
 
 			if !cmp.SliceContentEqWith(
 				actualResponse, expectedResponse,
@@ -840,7 +866,10 @@ func TestFindData(t *testing.T) {
 					{Key: "tag-a", Value: "value-a"},
 				}
 
-				if _, err := testee.FindData(ctx, queryTags); err == nil {
+				since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T12:34:56.987654321+07:00")).OrFatal(t).Time()
+				duration := time.Duration(2 * time.Hour)
+
+				if _, err := testee.FindData(ctx, queryTags, &since, &duration); err == nil {
 					t.Errorf("no error occured")
 				}
 

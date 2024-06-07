@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
@@ -22,6 +23,22 @@ import (
 
 // meaningless value
 type Unit interface{}
+
+// struct that contains the arguments for FindRun
+type FindRunParameter struct {
+	// planId which run to be found has
+	PlanId []string
+	// knitId which run to be found has as input
+	KnitIdIn []string
+	// knitId which run to be found has as output
+	KnitIdOut []string
+	// status which run to be found is
+	Status []string
+	// time which updated time of run to be found is equal or later than
+	Since *time.Time
+	// duration which updated time of run to be found is within
+	Duration *time.Duration
+}
 
 var ValUnit Unit = struct{}{}
 
@@ -94,12 +111,16 @@ type KnitClient interface {
 	//
 	// - []apitag.Tag: tags which data to be found has.
 	//
+	// - time.Time: The updated time of the run to be found is later.
+	//
+	// - time.duration: duration which updated time of run to be found is within
+	//
 	// Returns
 	//
 	// - []apidata.Detail: metadata of found data
 	//
 	// - error
-	FindData(ctx context.Context, tag []apitag.Tag) ([]apidata.Detail, error)
+	FindData(ctx context.Context, tag []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error)
 
 	// GetPlan get plan detail with given planId.
 	//
@@ -204,28 +225,20 @@ type KnitClient interface {
 	// - error
 	GetRunLog(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
 
-	// FindRun find run with given planId, knitId and status.
+	// FindRun find run with FindRunParameter.
 
 	// Args
 	//
 	// - context.Context
 	//
-	// - []string: planId which run to be found has
-	//
-	// - []string: knitId which run to be found has as input
-	//
-	// - []string: knitId which run to be found has as output
-	//
-	// - []string: status which run to be found is
+	// - FindRunParameter
 	//
 	// Returns
 	//
 	// - []apirun.Detail: metadata of found run
 	//
 	// - error
-	FindRun(
-		ctx context.Context, planId []string, knitIdIn []string, knitIdOut []string, status []string,
-	) ([]apirun.Detail, error)
+	FindRun(context.Context, FindRunParameter) ([]apirun.Detail, error)
 
 	// Abort abort run with given runId.
 	//

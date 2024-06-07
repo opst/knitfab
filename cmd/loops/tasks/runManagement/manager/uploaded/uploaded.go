@@ -3,7 +3,9 @@ package uploaded
 import (
 	"context"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	manager "github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
+	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
 )
@@ -11,7 +13,7 @@ import (
 const PLAN_NAME = kdb.Uploaded
 
 func New(dbdata kdb.DataInterface) manager.Manager {
-	return func(ctx context.Context, r kdb.Run) (kdb.KnitRunStatus, error) {
+	return func(ctx context.Context, h hook.Hook[api_runs.Detail], r kdb.Run) (kdb.KnitRunStatus, error) {
 		if pp := r.RunBody.PlanBody.Pseudo; pp != nil && pp.Name != PLAN_NAME {
 			return r.Status, nil
 		}
@@ -36,6 +38,10 @@ func New(dbdata kdb.DataInterface) manager.Manager {
 			if 0 < len(agents) {
 				return r.Status, nil
 			}
+		}
+
+		if err := h.Before(api_runs.ComposeDetail(r)); err != nil {
+			return r.Status, err
 		}
 		return kdb.Aborting, nil
 	}

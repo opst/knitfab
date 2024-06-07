@@ -1,7 +1,6 @@
 package kubeutil
 
 import (
-	"flag"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,43 +17,39 @@ import (
 // *CAUTION*: If no configs are found & the process is not running in cluster,
 // IT WILL CAUSE PANIC.
 //
-// It searches kubeconfig from
+// # It searches kubeconfig from
 //
 // - `~/.kube/config`
 //
 // - environmental variable `KUBECONFIG`
 //
-// - command line flag `-kubeconfig`
+// - the file found first from the kubeConfigSearchPath
 //
 // When no files are found from above, it tries to use in-cluster config.
-func ConnectToK8s() *kubernetes.Clientset {
+func ConnectToK8s(kubeconfigSearchPath ...string) *kubernetes.Clientset {
 
 	kubeconfig := ""
 
 	// priority 1 (least): ~/.kube/config
 	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = filepath.Join(home, ".kube", "config")
+		_kubeconfig := filepath.Join(home, ".kube", "config")
+		if s, err := os.Stat(_kubeconfig); err == nil && !s.IsDir() {
+			kubeconfig = _kubeconfig
+		}
 	}
 
 	// priority 2: envvar KUBECONFIG
 	if k := os.Getenv("KUBECONFIG"); k != "" {
-		kubeconfig = k
-	}
-
-	// priority 3 (most): flag -kubeconfig
-	{
-		k := flag.String("kubeconfig", kubeconfig, "(optional) path to kubeconfig file")
-		flag.Parse()
-
-		if k != nil && *k != "" {
-			kubeconfig = *k
+		if s, err := os.Stat(k); err == nil && !s.IsDir() {
+			kubeconfig = k
 		}
 	}
 
-	if kubeconfig != "" {
-		stat, err := os.Stat(kubeconfig)
-		if os.IsNotExist(err) || stat.IsDir() {
-			kubeconfig = ""
+	// priority 3 (most): search path
+	for _, sp := range kubeconfigSearchPath {
+		if s, err := os.Stat(sp); err == nil && !s.IsDir() {
+			kubeconfig = sp
+			break
 		}
 	}
 

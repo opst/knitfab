@@ -8,28 +8,25 @@ import (
 	"log"
 	"os"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
-	kenv "github.com/opst/knitfab/cmd/knit/env"
+	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	"github.com/opst/knitfab/pkg/commandline/usage"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/youta-t/flarc"
 )
 
-type Command struct {
-	task *struct {
-		forInfo ForInfo
-		forLog  ForLog
-	}
+type Option struct {
+	showInfo ShowInfo
+	showLog  ShowLog
 }
 
-type ForInfo func(
+type ShowInfo func(
 	ctx context.Context,
 	client krst.KnitClient,
 	runId string,
 ) (apirun.Detail, error)
 
-type ForLog func(
+type ShowLog func(
 	ctx context.Context,
 	client krst.KnitClient,
 	runId string,
@@ -37,96 +34,84 @@ type ForLog func(
 ) error
 
 type Flags struct {
-	Log    bool `flag:",help=display the log of that Run"`
-	Follow bool `flag:",sho¥rt=f,help=follow log if Run is running"`
+	Log    bool `flag:"log" help:"display the log of that Run"`
+	Follow bool `flag:"follow" alias:"f" help:"follow log if Run is running"`
 }
 
 func WithRunner(
-	funcForInfo ForInfo, funcForLog ForLog,
-) func(*Command) *Command {
-	return func(dfc *Command) *Command {
-		dfc.task = &struct {
-			forInfo ForInfo
-			forLog  ForLog
-		}{
-			forInfo: funcForInfo,
-			forLog:  funcForLog,
-		}
+	showInfo ShowInfo, showLog ShowLog,
+) func(*Option) *Option {
+	return func(dfc *Option) *Option {
+		dfc.showInfo = showInfo
+		dfc.showLog = showLog
 		return dfc
 	}
 }
 
-func New(
-	options ...func(*Command) *Command,
-) kcmd.KnitCommand[Flags] {
-	return utils.ApplyAll(
-		&Command{
-			task: &struct {
-				forInfo ForInfo
-				forLog  ForLog
-			}{
-				forInfo: RunShowRunforInfo,
-				forLog:  RunShowRunforLog,
-			},
-		},
-		options...,
-	)
-}
-
 const ARG_RUNID = "RUN_ID"
 
-func (cmd *Command) Usage() usage.Usage[Flags] {
-	return usage.New(
-		Flags{},
-		usage.Args{
+func New(
+	options ...func(*Option) *Option,
+) (flarc.Command, error) {
+	option := &Option{
+		showInfo: RunShowRunforInfo,
+		showLog:  RunShowRunforLog,
+	}
+
+	for _, opt := range options {
+		option = opt(option)
+	}
+
+	return flarc.NewCommand(
+		"Return the Run information for the specified Run Id.",
+		Flags{
+			Log:    false,
+			Follow: false,
+		},
+		flarc.Args{
 			{
 				Name: ARG_RUNID, Required: true,
 				Help: "Id of the Run Id to be shown",
 			},
 		},
-	)
-}
-
-func (cmd *Command) Name() string {
-	return "show"
-}
-
-func (cmd *Command) Help() kcmd.Help {
-	return kcmd.Help{
-		Synopsis: "Return the Run information for the specified Run Id.",
-		Detail: `
+		common.NewTask(Task(option.showInfo, option.showLog)),
+		flarc.WithDescription(`
 Return the Run information for the specified Run Id.
 
 when --log is passed, it display the log of that Run on the console.
-`,
-	}
+`),
+	)
 }
 
-func (cmd *Command) Execute(
-	ctx context.Context,
-	l *log.Logger,
-	e kenv.KnitEnv,
-	client krst.KnitClient,
-	f usage.FlagSet[Flags],
-) error {
-	runId := f.Args[ARG_RUNID][0]
+func Task(showInfo ShowInfo, showLog ShowLog) common.Task[Flags] {
+	return func(
+		ctx context.Context,
+		logger *log.Logger,
+		knitEnv env.KnitEnv,
+		client krst.KnitClient,
+		cl flarc.Commandline[Flags],
+		params []any,
+	) error {
+		runId := cl.Args()[ARG_RUNID][0]
 
-	if !f.Flags.Log {
-		data, err := cmd.task.forInfo(ctx, client, runId)
-		if err != nil {
-			return fmt.Errorf("%w: Run Id:%s", err, runId)
+		flags := cl.Flags()
+		if !flags.Log {
+			data, err := showInfo(ctx, client, runId)
+			if err != nil {
+				return fmt.Errorf("%w: Run Id:%s", err, runId)
+			}
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "    ")
+			if err := enc.Encode(data); err != nil {
+				logger.Panicf("fail to dump found Run")
+			}
+		} else {
+			if err := showLog(ctx, client, runId, flags.Follow); err != nil {
+				return err
+			}
 		}
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "    ")
-		if err := enc.Encode(data); err != nil {
-			l.Panicf("fail to dump found Run")
-		}
-	} else {
-		if err := cmd.task.forLog(ctx, client, runId, f.Flags.Follow); err != nil {
-			return err
-		}
+		return nil
 	}
-	return nil
 }
 
 func RunShowRunforInfo(

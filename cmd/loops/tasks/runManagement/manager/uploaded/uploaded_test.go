@@ -5,7 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
+	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/db/mocks"
@@ -56,7 +58,17 @@ func TestManager_callGetAgentName(t *testing.T) {
 
 			ctx := context.Background()
 			testee := uploaded.New(dbdata)
-			try.To(testee(ctx, run)).OrFatal(t)
+
+			hooks := hook.Func[api_runs.Detail]{
+				BeforeFn: func(d api_runs.Detail) error {
+					return nil
+				},
+				AfterFn: func(d api_runs.Detail) error {
+					t.Error("after hook should not be called")
+					return nil
+				},
+			}
+			try.To(testee(ctx, hooks, run)).OrFatal(t)
 
 			if !cmp.SliceEq(knitIds, then.knitIds) {
 				t.Errorf(
@@ -93,7 +105,8 @@ func TestManager_callGetAgentName(t *testing.T) {
 					MountPoint:   kdb.MountPoint{Path: "/in/2", Id: 2},
 					KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-in-2"},
 				},
-			}, outputs: []kdb.Assignment{
+			},
+			outputs: []kdb.Assignment{
 				{
 					MountPoint:   kdb.MountPoint{Path: "/out/1", Id: 1},
 					KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-out-1"},
@@ -129,13 +142,15 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 	}
 
 	type When struct {
-		knitIds []string
-		err     error
+		knitIds       []string
+		errGetAgent   error
+		errBeforeHook error
 	}
 
 	type Then struct {
-		status kdb.KnitRunStatus
-		err    error
+		invokeBeforeHook bool
+		status           kdb.KnitRunStatus
+		err              error
 	}
 
 	theory := func(when When, then Then) func(*testing.T) {
@@ -146,12 +161,33 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 			dbdata.Impl.GetAgentName = func(
 				ctx context.Context, knitId string, modes []kdb.DataAgentMode,
 			) ([]string, error) {
-				return when.knitIds, when.err
+				return when.knitIds, when.errGetAgent
 			}
 
 			ctx := context.Background()
 			testee := uploaded.New(dbdata)
-			status, err := testee(ctx, given)
+
+			beforeHookHasBeenInvoked := false
+			h := hook.Func[api_runs.Detail]{
+				BeforeFn: func(d api_runs.Detail) error {
+					beforeHookHasBeenInvoked = true
+
+					want := api_runs.ComposeDetail(given)
+					if !d.Equal(&want) {
+						t.Errorf(
+							"detail should be %+v: actual = %+v",
+							want, d,
+						)
+					}
+
+					return when.errBeforeHook
+				},
+				AfterFn: func(d api_runs.Detail) error {
+					t.Error("after hook should not be called")
+					return nil
+				},
+			}
+			status, err := testee(ctx, h, given)
 
 			if status != then.status {
 				t.Errorf(
@@ -166,28 +202,68 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 					then.err, err,
 				)
 			}
+
+			if then.invokeBeforeHook != beforeHookHasBeenInvoked {
+				t.Errorf(
+					"before invoked: actual = %v, expected = %v",
+					beforeHookHasBeenInvoked, then.invokeBeforeHook,
+				)
+			}
 		}
 	}
 
 	{
 		expectedErr := errors.New("expected error")
-		t.Run("when GetAgentName returns an error, it should be returned", theory(
-			When{err: expectedErr},
-			Then{status: given.Status, err: expectedErr},
+		t.Run("when GetAgentName returns an error, the error should be returned", theory(
+			When{
+				errGetAgent:   expectedErr,
+				errBeforeHook: nil,
+			},
+			Then{
+				status:           given.Status,
+				err:              expectedErr,
+				invokeBeforeHook: false,
+			},
 		))
 	}
 
 	{
 		t.Run("when GetAgentName returns an empty list, it should return Aborting", theory(
-			When{knitIds: []string{}},
-			Then{status: kdb.Aborting, err: nil},
+			When{
+				knitIds:       []string{},
+				errBeforeHook: nil,
+			},
+			Then{
+				status:           kdb.Aborting,
+				err:              nil,
+				invokeBeforeHook: true,
+			},
+		))
+	}
+
+	{
+		expetedErr := errors.New("expected error")
+		t.Run("when before hook returns error, it should return the status as it was", theory(
+			When{
+				knitIds:       []string{},
+				errBeforeHook: expetedErr,
+			},
+			Then{
+				status:           kdb.Running,
+				err:              expetedErr,
+				invokeBeforeHook: true,
+			},
 		))
 	}
 
 	{
 		t.Run("when GetAgentName returns a non-empty list, it should return status as it was", theory(
 			When{knitIds: []string{"knitId-out-1"}},
-			Then{status: given.Status, err: nil},
+			Then{
+				status:           given.Status,
+				err:              nil,
+				invokeBeforeHook: false,
+			},
 		))
 	}
 }

@@ -53,12 +53,11 @@ func Break(err error) Next {
 // - context.Context: (sub-)context which is passed to task.Run.
 //
 // - Chain[T]
-//
 type Task[T any] func(context.Context, T) (T, Next)
 
 // Start task in loop.
 //
-// Task and Loop
+// # Task and Loop
 //
 // Task should return 2 value.
 //
@@ -71,77 +70,77 @@ type Task[T any] func(context.Context, T) (T, Next)
 // If it is enough, return Break(error). When there are no error, you can pass nil.
 // Zero value (Next{}) equals Continue(0), that is, "go next ASAP!".
 //
-// Example
+// # Example
 //
 // Count 1 to 10:
 //
-// 	Start(ctx, 1, func(_ context.Context, value int) (int, Next) {
-// 		value += 1
-// 		if 10 <= value {
-// 			return value, Break(nil)
-// 		}
-// 		return value, Continue(0)
-// 	})
+//	Start(ctx, 1, func(_ context.Context, value int) (int, Next) {
+//		value += 1
+//		if 10 <= value {
+//			return value, Break(nil)
+//		}
+//		return value, Continue(0)
+//	})
 //
 // send GET request to web server, honouring Location and Retry-After header:
 //
-// 	Start(ctx, "http://example.org", func(ctx context.Context, url string) (string, Next) {
-// 		rer, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-// 		if err != nil {
-// 			return url, Break(err)
-// 		}
-// 		resp, err := http.DefaultClient.Do(req)
-// 		if err != nil {
-// 			return url, Break(err)
-// 		}
-// 		defer resp.Body.Close()
+//	Start(ctx, "http://example.org", func(ctx context.Context, url string) (string, Next) {
+//		rer, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+//		if err != nil {
+//			return url, Break(err)
+//		}
+//		resp, err := http.DefaultClient.Do(req)
+//		if err != nil {
+//			return url, Break(err)
+//		}
+//		defer resp.Body.Close()
 //
-// 		nextUrl := url
-// 		if location := resp.Header.Get("location"); location != "" {
-// 			nextUrl = location
-// 		}
+//		nextUrl := url
+//		if location := resp.Header.Get("location"); location != "" {
+//			nextUrl = location
+//		}
 //
-// 		retryAfter := resp.Header.Get("retry-after")
+//		retryAfter := resp.Header.Get("retry-after")
 //		interval := 0
-// 		if delay, err := sttrconv.Atoi(retryAfter); err == nil {
+//		if delay, err := sttrconv.Atoi(retryAfter); err == nil {
 //			interval = delay * time.Second
 //		} else if retry, err := http.parseTime(retryAfter); err != nil {
-// 			return url, Break(err)
-// 		} else {
+//			return url, Break(err)
+//		} else {
 //			interval = time.Until(retry)
 //		}
 //		if interval < 0 {
 //			interval = 0
 //		}
 //
-// 		if 300 <= resp.StatusCode && resp.StatusCode < 400 ||  // redirection
-// 			resp.StatusCode == 201 { // get created resource
-// 			return nextUrl, Continue(interval)  // follow location
-// 		}
-// 		if resp.StatusCode == 429 ||  // Too Many Requests
-// 			500 <= resp.StatusCode {  // other serverside error
-// 			return url, Continue(interval)  // retry after interval
-// 		}
+//		if 300 <= resp.StatusCode && resp.StatusCode < 400 ||  // redirection
+//			resp.StatusCode == 201 { // get created resource
+//			return nextUrl, Continue(interval)  // follow location
+//		}
+//		if resp.StatusCode == 429 ||  // Too Many Requests
+//			500 <= resp.StatusCode {  // other serverside error
+//			return url, Continue(interval)  // retry after interval
+//		}
 //
-// 		if 200 <= resp.StatusCode && resp.StatusCode < 300 { // OK!
-// 			payload, err := io.ReadAll(resp.Body)
-// 			if err != nil {
-// 				return url, Break(err)
-// 			}
-// 			return string(payload), Break(nil)
-// 		}
-// 		if 400 <= resp.StatusCode && resp.StatusCode < 500 {  // request matters...
-// 			payload, err := io.ReadAll(resp.Body)
-// 			if err != nil {
-// 				return url, Break(err)
-// 			}
-// 			return url, Break(fmt.Errorf("error (status = %d): %s", resp.StatusCode, string(payload)))
-// 		}
+//		if 200 <= resp.StatusCode && resp.StatusCode < 300 { // OK!
+//			payload, err := io.ReadAll(resp.Body)
+//			if err != nil {
+//				return url, Break(err)
+//			}
+//			return string(payload), Break(nil)
+//		}
+//		if 400 <= resp.StatusCode && resp.StatusCode < 500 {  // request matters...
+//			payload, err := io.ReadAll(resp.Body)
+//			if err != nil {
+//				return url, Break(err)
+//			}
+//			return url, Break(fmt.Errorf("error (status = %d): %s", resp.StatusCode, string(payload)))
+//		}
 //
-// 		return url, Break(fmt.Errorf("unsupportted status code: %d", resp.StatusCode))
-// 	})
+//		return url, Break(fmt.Errorf("unsupportted status code: %d", resp.StatusCode))
+//	})
 //
-// Args
+// # Args
 //
 // - ctx : context. When this context get be Done, loop will be break with ctx.Err().
 //
@@ -149,7 +148,7 @@ type Task[T any] func(context.Context, T) (T, Next)
 //
 // - task : task receiving (context, last value), then return (new value, Continue() or Break()).
 //
-// Returns
+// # Returns
 //
 // - T: T task returns at last.
 // This value is always returned wheather or not it returns non-nil error together.
@@ -157,7 +156,6 @@ type Task[T any] func(context.Context, T) (T, Next)
 // - error: error in Break(error). It is nil when loop breaks with Break(nil).
 //
 // - options: options for loop.
-//
 func Start[T any](ctx context.Context, init T, task Task[T], options ...LoopOption) (T, error) {
 	select {
 	case <-ctx.Done():
@@ -194,9 +192,9 @@ func Start[T any](ctx context.Context, init T, task Task[T], options ...LoopOpti
 		timer := time.NewTimer(interval)
 		select {
 		case <-ctx.Done():
-			// shitting down is priority. it should come first, and checking timer later.
+			// shutting down is priority. it should come first, and checking timer later.
 			if !timer.Stop() {
-				<-timer.C // drain. see: time.Timer.Stop's document
+				go func() { <-timer.C }() // drain. see: time.Timer.Stop's document
 			}
 			return value, ctx.Err()
 

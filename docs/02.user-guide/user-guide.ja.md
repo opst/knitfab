@@ -1141,3 +1141,56 @@ knit data lineage KNIT_ID | dot -T png -o lineage-graph.png
 - `class:...`, `script:...`, `version:...`: (モデルやハイパーパラメータについて) 読み込むことができるクラス名やスクリプト、バージョン。
 - `mode:train`, `mode:validation`, `mode:test`: (データセットについて) その利用目的。
     - テストデータで訓練して、テストデータで評価してしまうと、意味のない結果が得られてしまう。
+
+拡張コマンド
+--------------
+
+Knitfab の CLI `knit` は、拡張コマンドを認識する。
+
+環境変数 `PATH` から見つかる、 `knit-` をプレフィックスにもった名前のコマンドがあれば、そのコマンドを拡張コマンドとして `knit` コマンド経由で実行することができる。
+
+> [!NOTE]
+>
+> コマンド名から `knit` のサブコマンド名への変換規則は、次のとおりである。
+>
+> 1. プレフィックス `knit-` を取り除く。
+> 2. 次の拡張子があれば、取り除く: `.exe`, `.cmd`, `.bat`. `.com`
+>
+> たとえば:
+>
+> - `knit-example` は `knit example` として実行できる。
+> - `knit-example.exe` も `knit example` として実行できる。
+> - `knit-example.exe.something` は `knit example.exe.something` として実行できる。（取り除かれる拡張子は、末尾のものだけである）
+>
+
+拡張コマンドが実行されるにあたり、標準入出力ならびに標準エラーは `knit` コマンドから引き継がれる。
+また、全てのコマンドライン引数も、拡張コマンドに引き渡される。（ただし、`--profile`, `--profile-store`, `--env` を除く。）
+
+拡張コマンドには、通常の環境変数のほか、次の環境変数が追加で渡される。
+
+- `KNIT_PROFILE`: 有効な Knitfab のプロファイル名
+- `KNIT_PROFILE_STORE`: Knitfab Profile を格納しているプロファイルストアファイルのファイルパス
+
+プロファイルストアは、次の構造をとる yaml ファイルである。
+
+```yaml
+PROFILE_NAME:
+    apiRoot: https://example.com/knitfab/api
+    cert:
+        ca: ...
+ANOTHER_PROFILE_NAME:
+    apiRoot: ...
+    cert:
+        ca: ...
+...
+```
+
+全体として、プロファイル名をキー、プロファイル内容が値となったマッピングが格納されている。
+
+各プロファイルの要素は、それぞれ次の通りの意味をもつ。
+
+- `apiRoot`: Knitfab Web API のルートとなる URL
+- `cert`: `apiRoot` に関する証明書情報
+    - `ca`: CA 証明書。BASE64 エンコードされている。
+
+`apiRoot` のホストは自己署名証明書を使っている可能性がある。Web API にリクエストを送る際には `cert.ca` を信頼する必要があるだろう。

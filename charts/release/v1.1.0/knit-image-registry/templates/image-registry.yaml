@@ -1,0 +1,160 @@
+#
+# IMAGE-REGISTRY
+#
+# Docker Image Regsitry service and its requirements.
+#
+# PVC for image registry
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.component }}-registry-root
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}-registry-root
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: {{ .Values.component }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  storageClassName: {{ .Values.storage.class.system }}
+  resources:
+    requests:
+      storage: {{if .Release.IsInstall}}{{ .Values.initialCapacity }}{{ else }}{{(lookup "v1" "PersistentVolumeClaim" .Release.Namespace (printf "%s-registry-root" .Values.component)).spec.resources.requests.storage | quote}}{{ end }}
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.component }}-registry
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}-registry
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}-registry
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: {{ .Values.component }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.component }}-registry
+      app.kubernetes.io/component: {{ .Values.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      name: image-registry
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.component }}-registry
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Release.Name }}-registry
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      containers:
+        - name: image-registry
+          image: "registry:2.8.3"
+          env:
+            - name: REGISTRY_HTTP_ADDR
+              value: "0.0.0.0:8080"
+          ports:
+           - name: image-registry
+             containerPort: 8080
+          volumeMounts:
+            - name: registry
+              mountPath: /var/lib/registry
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+        - name: gateway
+          image: "nginx:1.21.6"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/templates
+            - name: cert
+              mountPath: /etc/nginx/certs
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          env:
+            - name: TLS_CERT
+              value: /etc/nginx/certs/tls.crt
+            - name: TLS_KEY
+              value: /etc/nginx/certs/tls.key
+            - name: NODE_NAME
+              value: "{{ .Values.server }}"
+            - name: EXTERNAL_PORT
+              value: "{{ .Values.port }}"
+            - name: LISTEN_PORT
+              value: "80"
+      volumes:
+        - name: registry
+          persistentVolumeClaim:
+            claimName: {{ .Values.component }}-registry-root
+        - name: cert
+          secret:
+            secretName: {{ .Values.certs.secret.server }}
+        - name: conf
+          configMap:
+            name: {{ .Values.component }}-gateway-config
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.service }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  selector:
+    app.kubernetes.io/name: {{ .Values.component }}-registry
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+  type: NodePort
+  ports:
+    - protocol: TCP
+      name: image-registry
+      nodePort: {{ .Values.port }}
+      port: 80
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.component }}-gateway-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}-gateway-config
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+data:
+  default.conf.template: |
+{{ tpl (.Files.Get "assets/image-registry/default.conf.tpl") . | indent 4 }}

@@ -188,7 +188,7 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 	return result, nil
 }
 
-func (d *dataPG) getKnitIdByTags(ctx context.Context, conn kpool.Queryer, query tagQuery) ([]string, error) {
+func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQuery) ([]string, error) {
 
 	knitIds := []string{}
 
@@ -224,9 +224,11 @@ func (d *dataPG) getKnitIdByTags(ctx context.Context, conn kpool.Queryer, query 
 				and (cardinality($2::runStatus[]) = 0 or "status" = any($2::runStatus[]))
 				and (cardinality($3::runStatus[]) = 0 or "status" = any($3::runStatus[]))
 				and ($4::timestamp with time zone is null or "timestamp" = $4::timestamp with time zone)
+				and ($5::timestamp with time zone is null or "timestamp" >= $5::timestamp with time zone)
+				and ($6::timestamp with time zone is null or "timestamp" < $6::timestamp with time zone)
 			order by "timestamp" ASC NULLS LAST, "knit_id"
 			`,
-			query.sysKnitId, processingStatus, failedStatus, timestamp,
+			query.sysKnitId, processingStatus, failedStatus, timestamp, query.updatedSince, query.updatedUntil,
 		)
 
 		if err != nil {
@@ -277,6 +279,8 @@ func (d *dataPG) getKnitIdByTags(ctx context.Context, conn kpool.Queryer, query 
 				and (cardinality($3::runStatus[]) = 0 or "status" = any($3::runStatus[]))
 				and (cardinality($4::runStatus[]) = 0 or "status" = any($4::runStatus[]))
 				and ($5::timestamp with time zone is null or "timestamp" = $5::timestamp with time zone)
+				and ($6::timestamp with time zone is null or "timestamp" >= $6::timestamp with time zone)
+				and ($7::timestamp with time zone is null or "timestamp" < $7::timestamp with time zone)
 		)
 		select "knit_id" from "tag_data"
 		inner join "timestamped" using("knit_id")
@@ -285,7 +289,7 @@ func (d *dataPG) getKnitIdByTags(ctx context.Context, conn kpool.Queryer, query 
 		utils.Map(query.userTag, func(t kdb.Tag) [2]string {
 			return [2]string{t.Key, t.Value}
 		}),
-		query.sysKnitId, processingStatus, failedStatus, timestamp,
+		query.sysKnitId, processingStatus, failedStatus, timestamp, query.updatedSince, query.updatedUntil,
 	)
 	if err != nil {
 		return nil, err
@@ -300,7 +304,7 @@ func (d *dataPG) getKnitIdByTags(ctx context.Context, conn kpool.Queryer, query 
 	return knitIds, nil
 }
 
-func (d *dataPG) makeTagQuery(tag []kdb.Tag) *tagQuery {
+func makeDataFindQuery(tag []kdb.Tag, since *time.Time, until *time.Time) *dataFindQuery {
 
 	// Remove whitespace, remove duplicates, and extract system tags for incoming tags.
 	// If more than one system tag is specified or an undefined system tag is specified,
@@ -313,7 +317,15 @@ func (d *dataPG) makeTagQuery(tag []kdb.Tag) *tagQuery {
 		normalizedTags[normalized] = struct{}{}
 	}
 
-	result := tagQuery{}
+	result := dataFindQuery{}
+
+	if since != nil {
+		result.updatedSince = since
+	}
+
+	if until != nil {
+		result.updatedUntil = until
+	}
 
 	for t := range normalizedTags {
 		if !strings.HasPrefix(t.Key, kdb.SystemTagPrefix) {
@@ -363,30 +375,31 @@ func (d *dataPG) makeTagQuery(tag []kdb.Tag) *tagQuery {
 
 }
 
-func (d *dataPG) GetKnitIdByTags(ctx context.Context, tag []kdb.Tag) ([]string, error) {
-
-	conn, err := d.pool.Acquire(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-
-	query := d.makeTagQuery(tag)
+func (d *dataPG) Find(ctx context.Context, tag []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
+	query := makeDataFindQuery(tag, since, until)
 	if query == nil {
 		// When nil returns, it returns an empty list
 		// because it is known that
 		// there is no corresponding data for the specified tag combination.
 		return []string{}, nil
 	}
-	return d.getKnitIdByTags(ctx, conn, *query)
+
+	conn, err := d.pool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+	return d.find(ctx, conn, *query)
 }
 
-type tagQuery struct {
+type dataFindQuery struct {
 	userTag                    []kdb.Tag
 	sysKnitId                  *string
 	sysKnitTimeStamp           *string
 	sysKnitTransientProcessing *bool
 	sysKnitTransientFailed     *bool
+	updatedSince               *time.Time
+	updatedUntil               *time.Time
 }
 
 func (d *dataPG) UpdateTag(ctx context.Context, knitId string, delta kdb.TagDelta) error {

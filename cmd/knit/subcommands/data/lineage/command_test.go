@@ -6,21 +6,22 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
+	"github.com/youta-t/flarc"
 
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
 	"github.com/opst/knitfab/cmd/knit/subcommands/data/lineage"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -80,20 +81,29 @@ func TestLineageCommand(t *testing.T) {
 				return mockGraphFromDownstream, when.err
 			}
 
-			testee := lineage.New(lineage.Withtask(funcForUpstream, funcForDownstream))
+			testee := lineage.Task(
+				lineage.Traverser{ForUpstream: funcForUpstream, ForDownstream: funcForDownstream},
+			)
+
+			stdout := new(strings.Builder)
+			stderr := new(strings.Builder)
 
 			ctx := context.Background()
+
 			//test start
-			actual := testee.Execute(
+			actual := testee(
 				ctx, logger.Null(),
 				*env.New(),
 				client,
-				usage.FlagSet[lineage.Flag]{
-					Flags: when.flag,
-					Args: map[string][]string{
+				commandline.MockCommandline[lineage.Flag]{
+					Stdout_: stdout,
+					Stderr_: stderr,
+					Flags_:  when.flag,
+					Args_: map[string][]string{
 						lineage.ARG_KNITID: {when.knitId},
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actual, then.err) {
@@ -104,6 +114,7 @@ func TestLineageCommand(t *testing.T) {
 			}
 		}
 	}
+
 	t.Run("when only upstream flag is specifed, it should call only task for traceupstream.", theory(
 		when{
 			knitId: "test-Id",
@@ -205,7 +216,7 @@ func TestLineageCommand(t *testing.T) {
 			err: nil,
 		},
 		then{
-			err: kcmd.ErrUsage,
+			err: flarc.ErrUsage,
 		},
 	))
 
@@ -220,7 +231,7 @@ func TestLineageCommand(t *testing.T) {
 			err: nil,
 		},
 		then{
-			err: kcmd.ErrUsage,
+			err: flarc.ErrUsage,
 		},
 	))
 
@@ -263,7 +274,7 @@ func TestTraceDownStream(t *testing.T) {
 			// Store arguments and return values for each call
 			nthData := 0
 			mock.Impl.FindData = func(
-				ctx context.Context, tags []apitag.Tag,
+				ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration,
 			) ([]apidata.Detail, error) {
 				ret := when.FindDataReturns[nthData]
 				nthData += 1
@@ -796,7 +807,7 @@ func TestTraceDownStream(t *testing.T) {
 
 	t.Run("When FindData returns Empty array it returns ErrNotFoundData", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{}, nil
 		}
 		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -815,7 +826,7 @@ func TestTraceDownStream(t *testing.T) {
 	expectedError := errors.New("fake error")
 	t.Run("When FindData fails, it returns the error that contains that error ", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{}, expectedError
 		}
 		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -834,7 +845,7 @@ func TestTraceDownStream(t *testing.T) {
 	t.Run("When GetRun fails, it returns the error that contains that error", func(t *testing.T) {
 		mock := mock.New(t)
 		knitId := "knitId-test"
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{
 				dummyData(knitId, "run1", "run2"),
 			}, nil
@@ -872,7 +883,7 @@ func TestTraceUpStream(t *testing.T) {
 			// Store arguments and return values for each call
 			nthData := 0
 			mock.Impl.FindData = func(
-				ctx context.Context, tags []apitag.Tag) (
+				ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) (
 				[]apidata.Detail, error) {
 				ret := when.FindDataReturns[nthData]
 				nthData += 1
@@ -1274,7 +1285,7 @@ func TestTraceUpStream(t *testing.T) {
 
 	t.Run("When FindData returns Empty array it returns ErrNotFoundData", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{}, nil
 		}
 		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -1293,7 +1304,7 @@ func TestTraceUpStream(t *testing.T) {
 	expectedError := errors.New("fake error")
 	t.Run("When FindData fails, it returns the error that contains that error ", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{}, expectedError
 		}
 		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
@@ -1315,7 +1326,7 @@ func TestTraceUpStream(t *testing.T) {
 			return apirun.Detail{}, expectedError
 		}
 		knitId := "knitId-test"
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
 			return []apidata.Detail{
 				dummyData(knitId, "run0", "run2"),
 			}, nil

@@ -3,11 +3,13 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	apierr "github.com/opst/knitfab/pkg/api/types/errors"
 	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 	kstrings "github.com/opst/knitfab/pkg/utils/strings"
 )
 
@@ -15,13 +17,15 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
-
 		query, err := func(c echo.Context) (kdb.RunFindQuery, error) {
+
 			result := kdb.RunFindQuery{
 				PlanId:       kstrings.SplitIfNotEmpty(c.QueryParam("plan"), ","),
 				InputKnitId:  kstrings.SplitIfNotEmpty(c.QueryParam("knitIdInput"), ","),
 				OutputKnitId: kstrings.SplitIfNotEmpty(c.QueryParam("knitIdOutput"), ","),
 				Status:       []kdb.KnitRunStatus{},
+				UpdatedSince: nil,
+				UpdatedUntil: nil,
 			}
 
 			for _, p := range kstrings.SplitIfNotEmpty(c.QueryParam("status"), ",") {
@@ -33,6 +37,32 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 					)
 				}
 				result.Status = append(result.Status, s)
+			}
+
+			since := c.QueryParam("since")
+			if since != "" {
+				t, err := rfctime.ParseRFC3339DateTime(since)
+				if err != nil {
+					return kdb.RunFindQuery{}, apierr.BadRequest(
+						`"since" should be a RFC3339 date-time format`,
+						err,
+					)
+				}
+				_t := t.Time()
+				result.UpdatedSince = &_t
+			}
+
+			duration := c.QueryParam("duration")
+			if duration != "" {
+				d, err := time.ParseDuration(duration)
+				if err != nil {
+					return kdb.RunFindQuery{}, apierr.BadRequest(
+						`"duration" should be a Go duration format`,
+						err,
+					)
+				}
+				_t := result.UpdatedSince.Add(d)
+				result.UpdatedUntil = &_t
 			}
 
 			return result, nil

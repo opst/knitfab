@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
-	"os"
+	"strings"
 	"testing"
+	"time"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_find "github.com/opst/knitfab/cmd/knit/subcommands/run/find"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
@@ -19,10 +22,10 @@ import (
 	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/youta-t/flarc"
 )
 
 func TestFindCommand(t *testing.T) {
@@ -98,44 +101,49 @@ func TestFindCommand(t *testing.T) {
 				_ context.Context,
 				_ *log.Logger,
 				_ krst.KnitClient,
-				planId []string,
-				knitIdIn []string,
-				knitIdOut []string,
-				status []string,
+				parameter krst.FindRunParameter,
 			) ([]apirun.Detail, error) {
 
-				checkSliceEq(t, "planId", planId, ptr.SafeDeref(when.flag.PlanId))
-				checkSliceEq(t, "knitIdIn", knitIdIn, ptr.SafeDeref(when.flag.KnitIdIn))
-				checkSliceEq(t, "knitIdOut", knitIdOut, ptr.SafeDeref(when.flag.KnitIdOut))
-				checkSliceEq(t, "status", status, ptr.SafeDeref(when.flag.Status))
+				checkSliceEq(t, "planId", parameter.PlanId, ptr.SafeDeref(when.flag.PlanId))
+				checkSliceEq(t, "knitIdIn", parameter.KnitIdIn, ptr.SafeDeref(when.flag.KnitIdIn))
+				checkSliceEq(t, "knitIdOut", parameter.KnitIdOut, ptr.SafeDeref(when.flag.KnitIdOut))
+				checkSliceEq(t, "status", parameter.Status, ptr.SafeDeref(when.flag.Status))
+				if want := when.flag.Since.Time(); want == nil {
+					if parameter.Since != nil {
+						t.Errorf("wrong since: (actual, expected) != (%s, %s)", parameter.Since, when.flag.Since)
+					}
+				} else if parameter.Since == nil || !want.Equal(*parameter.Since) {
+					t.Errorf("wrong since: (actual, expected) != (%s, %s)", *parameter.Since, when.flag.Since)
+				}
+
+				if want := when.flag.Duration.Duration(); want == nil {
+					if parameter.Duration != nil {
+						t.Errorf("wrong duration: (actual, expected) != (%s, %s)", parameter.Duration, want)
+					}
+				} else if parameter.Duration == nil || *want != *parameter.Duration {
+					t.Errorf("wrong duration: (actual, expected) != (%s, %s)", *parameter.Duration, want)
+				}
 
 				return when.presentation, when.err
 			}
 
-			testee := run_find.New(run_find.WithTask(task))
+			testee := run_find.Task(task)
 			ctx := context.Background()
 
-			pr, pw, err := os.Pipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer pw.Close()
-			defer pr.Close()
-
-			{
-				orig := os.Stdout
-				defer func() { os.Stdout = orig }()
-				os.Stdout = pw
-			}
+			stdout := new(strings.Builder)
 
 			//test start
-			actual := testee.Execute(
+			actual := testee(
 				ctx, logger.Null(), *kenv.New(), client,
-				usage.FlagSet[run_find.Flag]{
-					Flags: when.flag,
+				commandline.MockCommandline[run_find.Flag]{
+					Fullname_: "knit run find",
+					Stdout_:   stdout,
+					Stderr_:   io.Discard,
+					Flags_:    when.flag,
+					Args_:     nil,
 				},
+				[]any{},
 			)
-			pw.Close() // to tearoff writer.
 
 			if !errors.Is(actual, then.err) {
 				t.Errorf(
@@ -146,7 +154,7 @@ func TestFindCommand(t *testing.T) {
 
 			if then.err == nil {
 				var actualValue []apirun.Detail
-				if err := json.NewDecoder(pr).Decode(&actualValue); err != nil {
+				if err := json.Unmarshal([]byte(stdout.String()), &actualValue); err != nil {
 					t.Fatal(err)
 				}
 				if !cmp.SliceContentEqWith(
@@ -162,7 +170,7 @@ func TestFindCommand(t *testing.T) {
 		}
 	}
 
-	t.Run("when value for flag is not passed, it should call task without flags value", theory(
+	t.Run("when value for flags is not passed, it should call task without flags value", theory(
 		When{
 			flag:         run_find.Flag{},
 			presentation: presentationItems,
@@ -173,28 +181,62 @@ func TestFindCommand(t *testing.T) {
 		},
 	))
 
-	t.Run("when values for each flag are passed, it should call task with these values", theory(
-		When{
-			flag: run_find.Flag{
-				PlanId: &kflag.Argslice{
-					"plan1", "plan2",
+	{
+		timestamp := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
+		since := kflag.LooseRFC3339(timestamp)
+
+		d := 2 * time.Hour
+		duration := new(kflag.OptionalDuration)
+		if err := duration.Set(d.String()); err != nil {
+			t.Fatal(err)
+		}
+
+		t.Run("when values for each flag are passed, it should call task with these values", theory(
+			When{
+				flag: run_find.Flag{
+					PlanId: &kflag.Argslice{
+						"plan1", "plan2",
+					},
+					KnitIdIn: &kflag.Argslice{
+						"knit1", "knit2",
+					},
+					KnitIdOut: &kflag.Argslice{
+						"knit3", "knit4",
+					},
+					Status: &kflag.Argslice{
+						"waiting", "running",
+					},
+					Since:    &since,
+					Duration: duration,
 				},
-				KnitIdIn: &kflag.Argslice{
-					"knit1", "knit2",
-				},
-				KnitIdOut: &kflag.Argslice{
-					"knit3", "knit4",
-				},
-				Status: &kflag.Argslice{
-					"waiting", "running",
-				},
+				presentation: presentationItems,
 			},
-			presentation: presentationItems,
-		},
-		Then{
-			err: nil,
-		},
-	))
+			Then{
+				err: nil,
+			},
+		))
+	}
+
+	{
+
+		d := 2 * time.Hour
+		duration := new(kflag.OptionalDuration)
+		if err := duration.Set(d.String()); err != nil {
+			t.Fatal(err)
+		}
+
+		t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
+			When{
+				flag: run_find.Flag{
+					Duration: duration,
+				},
+				presentation: presentationItems,
+			},
+			Then{
+				err: flarc.ErrUsage,
+			},
+		))
+	}
 
 	err := errors.New("fake error")
 	t.Run("when task returns error, it should return with error", theory(
@@ -265,21 +307,27 @@ func TestRunFindRun(t *testing.T) {
 		log := logger.Null()
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
-			ctx context.Context, planId []string,
-			knitIdIn []string, knitIdOut []string, status []string,
+			ctx context.Context, query krst.FindRunParameter,
 		) ([]apirun.Detail, error) {
 			return expectedValue, nil
 		}
 
 		// arguments set up
-		planId := []string{"test-planId"}
-		inputKnitId := []string{"test-inputKnitId"}
-		outputKnitId := []string{"test-outputKnitId"}
-		status := []string{"test-status"}
+		since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
+		duration := time.Duration(2 * time.Hour)
+
+		parameter := krst.FindRunParameter{
+			PlanId:    []string{"test-planId"},
+			KnitIdIn:  []string{"test-inputKnitId"},
+			KnitIdOut: []string{"test-outputKnitId"},
+			Status:    []string{"test-status"},
+			Since:     &since,
+			Duration:  &duration,
+		}
 
 		// test start
 		actual := try.To(run_find.RunFindRun(
-			ctx, log, mock, planId, inputKnitId, outputKnitId, status)).OrFatal(t)
+			ctx, log, mock, parameter)).OrFatal(t)
 
 		//check actual
 		if !cmp.SliceContentEqWith(
@@ -301,21 +349,27 @@ func TestRunFindRun(t *testing.T) {
 
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
-			ctx context.Context, planId []string,
-			knitIdIn []string, knitIdOut []string, status []string,
+			ctx context.Context, query krst.FindRunParameter,
 		) ([]apirun.Detail, error) {
 			return expectedValue, expectedError
 		}
 
 		// argements set up
-		planId := []string{"test-planId"}
-		inputKnitId := []string{"test-inputKnitId"}
-		outputKnitId := []string{"test-outputKnitId"}
-		status := []string{"test-status"}
+		since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
+		duration := time.Duration(2 * time.Hour)
+
+		parameter := krst.FindRunParameter{
+			PlanId:    []string{"test-planId"},
+			KnitIdIn:  []string{"test-inputKnitId"},
+			KnitIdOut: []string{"test-outputKnitId"},
+			Status:    []string{"test-status"},
+			Since:     &since,
+			Duration:  &duration,
+		}
 
 		// test start
 		actual, err := run_find.RunFindRun(
-			ctx, log, mock, planId, inputKnitId, outputKnitId, status)
+			ctx, log, mock, parameter)
 
 		//check actual and err
 		if actual != nil {

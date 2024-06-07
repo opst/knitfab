@@ -253,7 +253,7 @@ func CanBeChanged(
 
 		before := try.To(th.PGNow(ctx, conn)).OrFatal(t)
 		called := false
-		nextCursor, err := testee.PickAndSetStatus(
+		nextCursor, statusChanged, err := testee.PickAndSetStatus(
 			ctx, when.Cursor,
 			func(r kdb.Run) (kdb.KnitRunStatus, error) {
 				called = true
@@ -269,6 +269,9 @@ func CanBeChanged(
 		after := try.To(th.PGNow(ctx, conn)).OrFatal(t)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if wantStatusChanged := when.Target.Status != then.NewStatus; statusChanged != wantStatusChanged {
+			t.Errorf("unexpectedly status changed: want %+v, but got %+v", wantStatusChanged, statusChanged)
 		}
 		{
 			expected := kdb.RunCursor{
@@ -413,7 +416,7 @@ func CanBeChanged(
 		)
 
 		expectedError := errors.New("fake error")
-		nextCursor, err := testee.PickAndSetStatus(
+		nextCursor, statusChanged, err := testee.PickAndSetStatus(
 			ctx, when.Cursor,
 			func(r kdb.Run) (kdb.KnitRunStatus, error) {
 				if !r.Equal(&when.Target) {
@@ -425,6 +428,9 @@ func CanBeChanged(
 				return then.NewStatus, expectedError
 			},
 		)
+		if statusChanged {
+			t.Errorf("unexpectedly status changed")
+		}
 		if !errors.Is(err, expectedError) {
 			t.Errorf(
 				"unexpected error\n===actual===\n%+v\n===expected===\n%+v",
@@ -666,7 +672,7 @@ func ShouldNotBeChanged(
 			ctx, conn, `table "run"`,
 		)).OrFatal(t)
 
-		nextCursor, err := testee.PickAndSetStatus(
+		nextCursor, statusChanged, err := testee.PickAndSetStatus(
 			ctx, when.Cursor,
 			func(r kdb.Run) (kdb.KnitRunStatus, error) {
 				return then.NewStatus, nil
@@ -674,6 +680,9 @@ func ShouldNotBeChanged(
 		)
 		if err == nil || !errors.Is(err, kdb.ErrInvalidRunStateChanging) {
 			t.Errorf("unexpected error: %+v", err)
+		}
+		if statusChanged {
+			t.Errorf("unexpectedly status changed")
 		}
 		{
 			expected := kdb.RunCursor{
@@ -789,12 +798,15 @@ func ShouldNotBeChanged(
 		)).OrFatal(t)
 
 		expectedError := errors.New("fake error")
-		nextCursor, err := testee.PickAndSetStatus(
+		nextCursor, statusChanged, err := testee.PickAndSetStatus(
 			ctx, when.Cursor,
 			func(r kdb.Run) (kdb.KnitRunStatus, error) {
 				return then.NewStatus, expectedError
 			},
 		)
+		if statusChanged {
+			t.Errorf("unexpectedly status changed")
+		}
 		if err == nil || !errors.Is(err, expectedError) {
 			t.Errorf("unexpected error: %+v", err)
 		}

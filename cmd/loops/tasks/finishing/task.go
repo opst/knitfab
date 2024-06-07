@@ -5,7 +5,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
+	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/workloads"
 	k8s "github.com/opst/knitfab/pkg/workloads/k8s"
@@ -13,8 +15,7 @@ import (
 )
 
 // initial value for task
-func Seed(
-	pseudoPlans []kdb.PseudoPlanName) kdb.RunCursor {
+func Seed(pseudoPlans []kdb.PseudoPlanName) kdb.RunCursor {
 	return kdb.RunCursor{
 		// statuses of the target runs for finishing
 		Status:   []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
@@ -39,9 +40,10 @@ func Task(
 		runBody kdb.RunBody,
 	) (worker.Worker, error),
 	cluster k8s.Cluster,
+	hook hook.Hook[api_runs.Detail],
 ) recurring.Task[kdb.RunCursor] {
 	return func(ctx context.Context, cursor kdb.RunCursor) (kdb.RunCursor, bool, error) {
-		nextCursor, err := iDbRun.PickAndSetStatus(
+		nextCursor, statusChanged, err := iDbRun.PickAndSetStatus(
 			ctx, cursor,
 			func(targetRun kdb.Run) (kdb.KnitRunStatus, error) {
 				var nextState kdb.KnitRunStatus
@@ -53,6 +55,12 @@ func Task(
 				default:
 					// fatal
 					return targetRun.Status, errors.New("unexpected run status: assertion error")
+				}
+
+				hookValue := api_runs.ComposeDetail(targetRun)
+
+				if err := hook.Before(hookValue); err != nil {
+					return targetRun.Status, err
 				}
 
 				// (1) Delete the worker in k8s if it exists
@@ -86,6 +94,16 @@ func Task(
 				return nextState, nil
 			},
 		)
+
+		if statusChanged {
+			if runs, _ := iDbRun.Get(ctx, []string{nextCursor.Head}); runs != nil {
+				if r, ok := runs[nextCursor.Head]; ok {
+					hookVal := api_runs.ComposeDetail(r)
+					hook.After(hookVal)
+				}
+			}
+		}
+
 		return nextCursor, !cursor.Equal(nextCursor), err
 	}
 }

@@ -4,42 +4,27 @@ import (
 	"context"
 	"log"
 
-	"github.com/opst/knitfab/cmd/knit/commandline/command"
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/pkg/commandline/usage"
+	"github.com/opst/knitfab/cmd/knit/subcommands/common"
+	"github.com/youta-t/flarc"
 )
-
-type Command struct{}
-
-func New() command.KnitCommand[struct{}] {
-	cmd := &Command{}
-
-	return cmd
-}
-
-func (*Command) Name() string {
-	return "retry"
-}
 
 const ARG_RUNID = "RUN_ID"
 
-func (*Command) Usage() usage.Usage[struct{}] {
-	return usage.New(
+func New() (flarc.Command, error) {
+	return flarc.NewCommand(
+		"Retry a finished Run.",
 		struct{}{},
-		usage.Args{
+		flarc.Args{
 			{
 				Name: ARG_RUNID, Required: true,
 				Help: "Run Id to retry",
 			},
 		},
-	)
-}
-
-func (*Command) Help() command.Help {
-	return command.Help{
-		Synopsis: "retry a finished Run",
-		Detail: `
+		common.NewTask(Task),
+		flarc.WithDescription(
+			`
 Retry a Run.
 
 Retriable Runs are:
@@ -48,20 +33,21 @@ Retriable Runs are:
 - NOT a dependency of any other Runs, and
 - NOT a root Run.
 `,
-	}
+		),
+	)
 }
-
-func (cmd *Command) Execute(
+func Task(
 	ctx context.Context,
 	l *log.Logger,
 	_ env.KnitEnv,
 	client rest.KnitClient,
-	flags usage.FlagSet[struct{}],
+	cl flarc.Commandline[struct{}],
+	_ []any,
 ) error {
-	runId := flags.Args[ARG_RUNID][0]
+	runId := cl.Args()[ARG_RUNID][0]
 	if runId == "" {
 		l.Println("Run Id is required")
-		return command.ErrUsage
+		return flarc.ErrUsage
 	}
 
 	if err := client.Retry(ctx, runId); err != nil {

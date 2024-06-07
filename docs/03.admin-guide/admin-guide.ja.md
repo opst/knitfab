@@ -14,7 +14,7 @@ Knitfab を管理・運用しないユーザにとっては関心の範囲を超
 他言語版/Translations
 ---------------------
 
-- 日本語: [./admin-guide.en.md](./admin-guide.en.md)
+- English: [./admin-guide.en.md](./admin-guide.en.md)
 
 
 Knitfab をインストールの事前準備
@@ -226,6 +226,12 @@ nfs:
 
 - `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメントインして書き換える)
 
+Knitfab の動作を拡張するための設定ファイルも含まれている。
+
+- `knitfab-install-settings/values/hooks.yaml` を編集することで WebHook を設定できる。
+- `knitfab-install-settings/values/extra-api.yaml` を編集することで拡張 Web API を設定できる。
+
+詳細は、「Knitfab を拡張する」の章を参照されたい、
 
 #### 手順3: インストールする
 
@@ -764,5 +770,530 @@ Knitfab の Pod は、突然に終了されても整合性を損なわないよ�
 kubenetes の手順に従って追加して良い。
 Worker や Data Agent を配置できるノードを増やすことができるだろう。
 
-ただし、v1.0.0 の時点においては、TLS 証明書は新規追加されたノードには対応していない。
+ただし、v1.0 の時点においては、TLS 証明書は新規追加されたノードには対応していない。
 ユーザからのリクエストは、以前からあるノードに対して送られるべきだ。さもなければ、証明書エラーになるだろう。
+
+バックアップとレストア
+-------------------
+
+本章では、Knitfab の"データ"とリネージをバックアップし、新規にインストールされた Knitfab にレストアする方法について述べる。
+バックアップとレストアのためのスクリプトは、このリポジトリの `admin-tool` ディレクトリにある。また、これを tar.gz アーカイブしたものがリリースにある。
+
+Knitfab のバックアップは次の手順から構成される。
+
+1. システムの停止をアナウンスする
+2. システムを停止する
+3. バックアップをとる
+  - イメージレジストリのバックアップ
+  - "データ" のバックアップ
+  - データベースのバックアップ
+4. システムを復旧して、利用可能になったことをアナウンスする
+
+Knitfab のレストアは、新規にインストールした Knitfab に対して適用することを想定している。
+また、その際の Knitfab のバージョンは、バックアップを取ったバージョンと同一であることを想定している。
+
+Knitfab のレストアは、次の手順から構成される。
+
+1. イメージレジストリをレストアする
+2. "データ" をレストアする
+3. データベースをレストアする
+
+レストア手順を実行することで、イメージレジストリと RDB の内容は抹消され、バックアップ時の内容に復元される。
+
+### バックアップ
+
+#### システムの停止をアナウンスする
+
+ユーザに対して、バックアップのためにシステムが利用できなくなることを事前に告知する。
+この際、当該期間に実行中であった"ラン"は失敗する可能性があることを含め、ユーザに注意を促す。
+
+#### システムを停止する
+
+シェルスクリプト `admin-tools/system-freeze.sh` を実行することでシステムを停止する。
+停止したい Knitfab に対して `knit init` したディレクトリで実行せよ。
+
+```sh
+knit init KNITPROFILE
+
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/system-freeze.sh
+```
+
+このスクリプトは次のツールを要求する。
+
+- `knit`
+- `helm`
+- `kubectl`
+- `jq`
+
+このスクリプトは次の環境変数を参照する。
+
+- `NAMESPACE` **(required)**: 凍結対象の Knitfab がインストールされている Kubernetes Namespace
+- `KUBECONFIG` (optional): デフォルト以外の kubeconfig ファイルを指定する必要がある場合には、明示せよ
+
+シェルスクリプト `admin-tools/system-freeze.sh` を実行すると、
+
+- Knitfab を構成する deployment を 0 に scale-in する。
+- 実行中の "ラン" を強制的に失敗させ、停止を待つ。
+- 凍結解除用のスクリプトを生成する。
+
+という 3 つのタスクが実行される。実際には、"ラン" のライフサイクルに関わらない deployment を scale in してから "ラン" を停止させて、残りの deployment を scale in する、という順序で進む。
+
+この操作を始めると、Knitfab は新しい "ラン" を生成しなくなる。また、この操作が完了すると、Knitfab API は停止する。もし進行中の `knit data push` や `knit data pull` があっても、中断させられる。
+
+`admin-tools/system-freeze.sh` は、カレントディレクトリにシステム復旧用のスクリプト `./system-unfreeze.sh` を生成する。このシステム復旧用スクリプトは、後でまた利用する。
+
+#### バックアップ: イメージレジストリ
+
+次のようにシェルスクリプト `admin-tools/backup/images.sh` を実行する。
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/backup/images.sh backup/images
+```
+
+このスクリプトは、次のコマンドを必要とする。
+
+- `helm`
+- `kubectl`
+- `jq`
+
+このスクリプトは、次の環境変数を参照する。
+
+- `NAMESPACE` **(required)**: 凍結対象の Knitfab がインストールされている Kubernetes Namespace
+- `KUBECONFIG` (optional): デフォルト以外の kubeconfig ファイルを指定する必要がある場合には、明示せよ
+
+このスクリプトはバックアップ処理用に Pod を起動するので、そのイメージを pull するためにインターネットアクセスを必要とする。
+
+このスクリプトは、引数に指定したディレクトリ `backup/images` (適宜管理しやすい名前を指定せよ)に、Knitfab のイメージレジストリのストレージを tar.gz アーカイブしたものを書き出す。書き出し先ディレクトリが存在しなければ、作成される。
+
+バックアップ中に、PV の内容を読み出すため "datadumper" という Pod を生成する。正常に処理が終了すれば、自動的に削除される。バックアップを中断した場合には、この Pod が削除されないことがあるので、`kubectl` コマンドを利用して削除せよ。
+
+#### バックアップ: "データ"
+
+Knitfab の "データ" の内容をバックアップする。
+
+このバックアップには、 リネージやタグは **含まれない**。リネージやタグをバックアップするには、データベースのバックアップが必要である。
+
+次のようにシェルスクリプト `admin-tools/backup/data.sh` を実行する。
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/backup/data.sh backup/data
+```
+
+このスクリプトは、次のコマンドを必要とする。
+
+- `helm`
+- `kubectl`
+- `jq`
+
+このスクリプトは、次の環境変数を参照する。
+
+- `NAMESPACE` **(required)**: 凍結対象の Knitfab がインストールされている Kubernetes Namespace
+- `KUBECONFIG` (optional): デフォルト以外の kubeconfig ファイルを指定する必要がある場合には、明示せよ
+
+このスクリプトはバックアップ処理用に Pod を起動するので、そのイメージを pull するためにインターネットアクセスを必要とする。
+
+このスクリプトを実行すると、引数に指定したディレクトリ `backup/data` (適宜管理しやすい名前を指定せよ) に、"データ" の内容を保持している各 PVC のリソース定義と、当該 PVC にバインドされている PV の内容の tar.gz アーカイブを書き出す。
+
+この処理中に、PV の内容を読み出すため "datadumper" という Pod を生成する。正常に処理が終了すれば、自動的に削除される。バックアップを中断した場合には、この Pod が削除されないことがあるので、`kubectl` コマンドを利用して削除せよ。
+
+#### バックアップ: データベース
+
+Knitfab のデータベースの内容をバックアップする。
+
+このバックアップには、 **"データ" の内容は含まれない**。
+レストアのためには "データ" のバックアップも必要である。
+
+次のようにシェルスクリプト `admin-tools/backup/db.sh` を実行する。
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/backup/db.sh backup/db
+```
+
+このスクリプトは、次のコマンドを必要とする。
+
+- `helm`
+- `kubectl`
+- `jq`
+
+このスクリプトは、次の環境変数を参照する。
+
+- `NAMESPACE` **(required)**: 凍結対象の Knitfab がインストールされている Kubernetes Namespace
+- `KUBECONFIG` (optional): デフォルト以外の kubeconfig ファイルを指定する必要がある場合には、明示せよ
+
+このスクリプトはバックアップ処理用に Pod を起動するので、そのイメージを pull するためにインターネットアクセスを必要とする。
+
+このスクリプトを実行すると、引数に指定したディレクトリ `backup/db` (適宜管理しやすい名前を指定せよ)は配下に [`pg_dump`](https://www.postgresql.org/docs/15/app-pgdump.html) を tar 形式で出力したものを、gzip 圧縮したものを書き出す。もし書き出し先ディレクトリが存在しなければ、自動的に作成する。
+
+この処理中に、PV の内容を読み出すため "pgdumper" という Pod を生成する。正常に処理が終了すれば、自動的に削除される。バックアップを中断した場合には、この Pod が削除されないことがあるので、`kubectl` コマンドを利用して削除せよ。
+
+
+#### システムを復旧して、復旧をアナウンスする
+
+`admin-tools/system-freeze.sh` が生成したシステム復旧用のスクリプト `./system-unfreeze.sh` を実行する。
+
+これによって、各 deployment のレプリカ数を停止前の数に復元して、Web API や Run のライフサイクルが再開する。
+
+各 deployment が十分な数に復旧したのち、ユーザにシステム復旧をアナウンスせよ。
+
+### レストア
+
+過去に取得したバックアップで Knitfab を再構築する手順について述べる。
+
+レストア先の Knitfab は、バックアップ取得時と同じバージョンである必要がある。また、レストア先の Knitfab は、新規にインストールされたばかりのものである必要がある。
+それ以外の条件でレストアを行った場合、レストアが失敗したり、システムの整合性が失われる可能性がある。
+
+#### イメージレジストリ
+
+次のようにシェルスクリプト `admin-tools/restore/images.sh` を実行する。
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/restore/images.sh backup/images
+```
+
+ここで、`backup/images` は、イメージのバックアップを記録したディレクトリである、
+
+このスクリプトは、次のコマンドを必要とする。
+
+- `helm`
+- `kubectl`
+- `jq`
+
+このスクリプトは、次の環境変数を参照する。
+
+- `NAMESPACE` **(required)**: 凍結対象の Knitfab がインストールされている Kubernetes Namespace
+- `KUBECONFIG` (optional): デフォルト以外の kubeconfig ファイルを指定する必要がある場合には、明示せよ
+
+このスクリプトはレストア処理用に Pod を起動するので、そのイメージを pull するためにインターネットアクセスを必要とする。
+
+`admin-tools/restore/images.sh` を実行すると、次のように表示される。
+
+```
+*** Restore Images ***
+  - SOURCE: backup/images
+  - NAMESPACE: knitfab
+  - STORAGE CLASS:  (not changed)
+  - CLEAN: yes   # (If yes, delete the existing PVC for images before restoring.)
+
+Do you want to restore? [y/N]:
+```
+
+このメッセージは、レストア処理の内容を示しつつ、最終確認を求めるものである。もし良いようなら、 `y` を入力して enter する。
+
+この後、次の処理が順に実行される。
+
+1. イメージレジストリのレプリカ数を 0 にする
+2. イメージレジストリ用の PVC を抹消して、バックアップで上書きする
+3. イメージレジストリのレプリカ数を元に戻す
+
+途中で中断・再試行した場合には、最後の手順で正常にレプリカ数が復元されない可能性がある。
+その場合には、`kubectl` コマンドを利用して、直接レプリカ数を調整されたい。
+
+レストア中に、PV に書き込みを行うため、"dataloader" という名前の Pod を起動する。正常にレストアが進めば自動的に削除される。レストアを中断した場合には "dataloader" が削除されずに残る可能性があるが、`kubectl ` コマンドを利用して直接削除せよ。
+
+#### "データ"
+
+次のようにシェルスクリプト `admin-tools/restore/data.sh` を実行する。
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/restore/images.sh backup/data
+```
+
+ここで、`backup/data` は、"データ"のバックアップを記録したディレクトリである、
+
+このスクリプトは、次のコマンドを必要とする。
+
+- `helm`
+- `kubectl`
+- `jq`
+
+このスクリプトは、次の環境変数を参照する。
+
+- `NAMESPACE` **(required)**: 凍結対象の Knitfab がインストールされている Kubernetes Namespace
+- `KUBECONFIG` (optional): デフォルト以外の kubeconfig ファイルを指定する必要がある場合には、明示せよ
+
+このスクリプトはレストア処理用に Pod を起動するので、そのイメージを pull するためにインターネットアクセスを必要とする。
+
+`admin-tools/restore/data.sh` を実行すると、次のように表示される。
+
+```
+*** Restore Knitfab Data ***
+  - SOURCE: backup/data/*  # Each directory containing pvc.json and data.tar.gz
+  - NAMESPACE: knitfab
+  - STORAGE CLASS:  (not changed)
+  - CLEAN: no   # If yes, delete the existing PVC before restoring.
+
+Do you want to restore? [y/N]:
+```
+
+このメッセージは、レストア処理の内容を示しつつ、最終確認を求めるものである。もし良いようなら、 `y` を入力して enter する。
+
+この後、バックアップに基づいて、各 PVC を再構築する。
+
+レストア中に、PV に書き込みを行うため、"dataloader" という名前の Pod を起動する。正常にレストアが進めば自動的に削除される。レストアを中断した場合には "dataloader" が削除されずに残る可能性があるが、`kubectl ` コマンドを利用して直接削除せよ。
+
+#### データベース
+
+次のようにシェルスクリプト `admin-tools/restore/db.sh` を実行する。
+
+```sh
+KUBECONFIG=${KUBECONFIG:-~/.kube/config} NAMESPACE=${YOUR_KNITFAB_NAMESPACE} \
+    admin-tools/restore/db.sh backup/db
+```
+
+ここで、`backup/db` は、データベースのバックアップを記録したディレクトリである、
+
+このスクリプトは、次のコマンドを必要とする。
+
+- `helm`
+- `kubectl`
+- `jq`
+
+このスクリプトは、次の環境変数を参照する。
+
+- `NAMESPACE` **(required)**: 凍結対象の Knitfab がインストールされている Kubernetes Namespace
+- `KUBECONFIG` (optional): デフォルト以外の kubeconfig ファイルを指定する必要がある場合には、明示せよ
+
+このスクリプトはレストア処理用に Pod を起動するので、そのイメージを pull するためにインターネットアクセスを必要とする。
+
+`admin-tools/restore/db.sh` を実行すると、次のように表示される。
+
+```
+*** Restore database ***
+  - SOURCE: backup/db
+  - NAMESPACE: knitfab
+  - DATABASE SERVICE NAME: database
+
+Do you want to restore? [y/N]:
+```
+
+このメッセージは、レストア処理の内容を示しつつ、最終確認を求めるものである。もし良いようなら、 `y` を入力して enter する。
+
+この後、バックアップに基づいて、データベースを復元する。
+
+レストア中に [pg_resotre](https://www.postgresql.org/docs/15/app-pgrestore.html) を実行するため、 "pgloader" という名前の Pod を起動する。正常にレストアが進めば、この Pod は自動的に削除される。レストアを中断した場合には "pgloader" が削除されずに残る可能性があるが、`kubectl ` コマンドを利用して直接削除せよ。
+
+Knitfab を拡張する
+--------------------
+
+この章では、発展的な利用法として、Knitfab をカスタマイズする方法について説明する。
+
+### ウェブフック
+
+Knitfab には、Knitfab 内部で発生したイベントを外部に HTTP リクエストの形で通知する機能（WebHook）がある。
+
+WebHook をサポートするイベントは次のものである。
+
+- ライフサイクル・フック: Run が状態遷移する前後で、HTTP リクエストを送る
+
+WebHook はいずれも、次の手順で設定する。
+
+1. Knitfab インストーラが生成したインストール設定ディレクトリ（`knitfab-install-settings`）内の `values/hooks.yaml` を編集する
+2. Knitfab を更新する: `./installer.sh --install` を再実行する
+
+### ライフサイクル・フック
+
+ライフサイクル・フックは、Run が状態変化する前後に呼び出される WebHook である。フックとして登録された URL は Run の情報を POST リクエストとして受け取る。
+状態変化前のフックを Before フック、状態変化後のフックを After フックと呼ぶ。いずれも、複数の URL を宛先として登録できる。
+
+Knitfab は、Run の状態を遷移させるにあたり、次の順序で処理を行う。
+
+1. Before フックに順次リクエストを送る
+    - すべての Before フックが 200 番台のレスポンスを返したなら、次に進む
+2. Run の状態を変化させる
+    - 状態変化に成功したら、次に進む
+3. After フックに順次リクエストを送る
+    - レスポンスは無視する
+
+Before フックは、Run の状態変化の都度、通常は 1 回リクエストを受け取る。このフックは、*少なくとも 1 回* のリクエストを受け取るが、次の場合には同じ Run の同じ状態について、複数回リクエストを受け取ることがある。
+
+- この、または他のBefore フックが 200 番台以外のレスポンスを返した場合
+- Run の状態遷移に失敗した場合
+
+これらの場合、Knitfab は Run の状態遷移をやり直すので、複数回リクエストを受け取ることがあるのである。
+
+After フックも Run の状態変化の都度、通常は 1 回リクエストを受け取る。このフックは、最大 1 回のリクエストを受け取るが、次の場合にはリクエストを受け取れない事がある。
+
+- Run の状態変化に成功したあと、After フックが呼び出される前に Knitfab のプロセスが予期せず停止した場合
+
+#### ライフサイクル・フックを設定する
+
+ライフサイクル・フックの設定は、 `values/hooks.yaml` 内のエントリ `hooks.lifecycle-hooks` に記述する。
+
+インストーラは `hooks.lifecycle-hooks` を、次の内容で生成される。
+
+```yaml
+  # # lifecycle-hooks: lifecycle webhooks for Knitfab.
+  # #
+  # # Each URLs reveices POST requests with a Run as JSON, before or after status change of the Run.
+  # #
+  # # The Run JSON is formatted as same as output of `knit run show`.
+  lifecycle-hooks:
+
+    # # before: Webhook URLs to be called before the Knitfab changes the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status is going to be changed.
+    # #
+    # # When these hook responses non-200 status, the status changing causes an error and will be retried later.
+    before: []
+
+    # # before: Webhook URLs to be called after the Knitfab has changed the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status has been changed.
+    # #
+    # # Responses from these hooks are ignored.
+    after: []
+```
+
+`"before"` が Before フックがリクエストを送る URL のリストであり、`"after"` が After フックがリクエストを送る URL のリストである。
+初期状態では、いずれも空である。
+
+ここにフックを更新するには、たとえば次のように書き換えて、Knitfab をインストールしたディレクトリで `installer.sh --install` を実行する。
+
+```yaml
+  # # lifecycle-hooks: lifecycle webhooks for Knitfab.
+  # #
+  # # Each URLs reveices POST requests with a Run as JSON, before or after status change of the Run.
+  # #
+  # # The Run JSON is formatted as same as output of `knit run show`.
+  lifecycle-hooks:
+
+    # # before: Webhook URLs to be called before the Knitfab changes the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status is going to be changed.
+    # #
+    # # When these hook responses non-200 status, the status changing causes an error and will be retried later.
+    before:
+      - https://example.com/before
+
+    # # before: Webhook URLs to be called after the Knitfab has changed the status of a Run.
+    # #
+    # # The webhook receives POST requests with JSON for each Runs whose status has been changed.
+    # #
+    # # Responses from these hooks are ignored.
+    after:
+      - https://example.com/after
+```
+
+Before フックだけ、あるいは After フックだけ設定しても構わない。また、ひとつのフックに複数の URL を設定しても構わない。
+
+その後、フックを呼び出す Pod が停止・再起動して、フックが有効になる。
+
+#### Lifecycle Hook のリクエスト仕様
+
+ライフサイクル・フックは、Before・After のいずれについても Run を JSON として `POST` する。
+Before フックは状態遷移をおこす直前の Run を受け取る。After フックは状態遷移を起こした直後の Run を受け取る。
+
+この JSON の形式は、 `knit run show` して得られる形式と同じく、次の形式を取る。
+
+```json
+{
+    "runId": "74372a32-165d-432b-83e8-5821ab6bf21e",
+    "status": "running",
+    "updatedAt": "2024-05-17T04:19:33.325+00:00",
+    "plan": {
+        "planId": "3328be16-5b74-400a-a918-7b2a41bc0bf8",
+        "image": "localhost:30503/knitfab-first-train:v1.0"
+    },
+    "inputs": [
+        {
+            "path": "/in/dataset",
+            "tags": [
+                "mode:training",
+                "project:first-knitfab",
+                "type:dataset"
+            ],
+            "knitId": "a07490b8-0fdf-4c75-bce1-fba8ccf81336"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "/out/model",
+            "tags": [
+                "description:2 layer CNN + 2 layer Affine",
+                "project:first-knitfab",
+                "type:model"
+            ],
+            "knitId": "7ada9346-c037-4d4a-8569-48d706edbac0"
+        }
+    ],
+    "log": {
+        "Tags": [
+            "project:first-knitfab",
+            "type:log"
+        ],
+        "knitId": "958b791c-cd56-4170-9d17-b4031ff528e6"
+    }
+}
+```
+
+- `runId`: この Run の識別子
+- `status`: Run の状態。Before フックでは遷移前の、After フックでは遷移後の状態がセットされる。
+- `updatedAt`: 最終更新時刻
+- `plan`: この Run が基づいている Plan
+     - `planId`: この Plan の識別子
+     - `image`: この Plan に指定されているコンテナイメージ。これと `name` は排他的である。
+     - `name`: イメージを利用しない Plan に与えられる名前。これと `image` は排他的である。
+- `inputs[*]`, `outputs[*]`: この Run に入力ないし出力された Data について
+    - `path`: Data がマウントされたファイルパス
+    - `tags[*]`: この入力（出力）に指定されている Tag（Data の Tag ではない）
+    - `knitId`: マウントされた Data の識別子。
+- `log`: 標準出力や標準エラーを記録する出力
+    - `tags[*]`: このログ出力に指定されている Tag （Data の Tag ではない）
+    - `knitId`: ログを保持している Data の Knit Id
+
+
+### 拡張 Web API を登録する
+
+Knitfab の WebAPI に追加の Web API (Extra API) を登録できる。
+
+Knitfab WebAPI サーバ (`knitd`) は。設定された Extra API のパスに届いたリクエストを、他の URL に転送して、その結果をリクエスト元に送り返す。
+
+この機能は、たとえば Knitfab のデータベースを読み取る必要のあるカスタムな機能を、Knitfab の本体に手を加えずに追加するうえで便利である。
+
+> [!Note]
+>
+> Knitfab のデータベースの接続情報は、 kubernetes の Secret `database-credential` に格納されている。
+>
+> データベースに書き込みを行う機能を追加することもできるが、その場合には、データベース内の情報の一貫性を破壊しないように注意する必要がある。
+
+Extra API を登録するためには、次の手順に従う。
+
+1. インストール設定ディレクトリ内のファイル `values/extraApi.yaml` を編集する
+2. `./installer.sh --install` を再実行する
+
+このファイルは、 `./installer.sh --prepare` した直後は次の内容となっている。
+
+```yaml
+# # # values/extra-api.yaml # # #
+
+extraApi:
+  # # endpoints ([{path:..., proxy_to: ...}]): extra API endpoints .
+  endpoints: []
+  #  - # path, proxy_to: Knitfab proxies requests to the path (and subpath) to proxy_to.
+  #    path: /path/to/your/api
+  #    proxy_to: "http://your-api-server/api"
+  #    # The example above works as follows:
+  #    # https://KNITFAB_HOST/path/to/your/api               -> http://your-api-server/api
+  #    # https://KNITFAB_HOST/path/to/your/api/sub           -> http://your-api-server/api/sub
+  #    # https://KNITFAB_HOST/path/to/your/api/sub/resource  -> http://your-api-server/api/sub/resource
+  #    # https://KNITFAB_HOST/path/to/your/api/sub?query     -> http://your-api-server/api/sub?query
+  #    # https://KNITFAB_HOST/path/to/your                   -> (404)
+  #    #
+  #    # For path, "/api" is reserved for Knitfab builtin API.
+  #
+  # # more extra apis can be added.
+  # # - path: ...
+  # #   proxy_to: ...
+
+```
+
+`extraApi.endpoints` の各要素は、 `path` と `proxy_to` という 2 つのキーをもつ。
+`path` には Knitfab API として公開したい URL のパス部分を指定する。`proxy_to` には、`path` に届いたリクエストを実際に処理する URL を指定する。`path` のサブパスに届いたリクエストは、 `proxy_to` を起点として対応するサブパスに送られる(上例参照)。
+
+設定変更を適用するには、 `./installer.sh --install` を再実行すればよい。

@@ -8,16 +8,17 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	mock "github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/youta-t/flarc"
 
 	data_pull "github.com/opst/knitfab/cmd/knit/subcommands/data/pull"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	"github.com/opst/knitfab/pkg/cmp"
 )
@@ -72,19 +73,23 @@ func TestCommand_with_x(t *testing.T) {
 				dest = filepath.Join(dest, when.subdir)
 			}
 
-			testee := data_pull.New(
-				data_pull.WithProgressOutput(io.Discard),
-			)
+			testee := data_pull.Task
 
-			actualErr := testee.Execute(
+			stdout := new(strings.Builder)
+
+			actualErr := testee(
 				ctx, logger, *kenv.New(), client,
-				usage.FlagSet[data_pull.Flags]{
-					Flags: data_pull.Flags{Extract: true},
-					Args: map[string][]string{
+				commandline.MockCommandline[data_pull.Flags]{
+					Fullname_: "knit data pull",
+					Stdout_:   stdout,
+					Stderr_:   io.Discard,
+					Flags_:    data_pull.Flags{Extract: true},
+					Args_: map[string][]string{
 						data_pull.ARG_KNIT_ID: {when.knitId},
 						data_pull.ARG_DEST:    {dest},
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actualErr, then.err) {
@@ -215,23 +220,27 @@ func TestCommand_with_x(t *testing.T) {
 		ctx := context.Background()
 		client := mock.New(t)
 
-		testee := data_pull.New(
-			data_pull.WithProgressOutput(io.Discard),
-		)
+		testee := data_pull.Task
 
-		actualErr := testee.Execute(
+		stdout := new(strings.Builder)
+
+		actualErr := testee(
 			ctx, logger, *kenv.New(), client,
-			usage.FlagSet[data_pull.Flags]{
-				Flags: data_pull.Flags{Extract: true},
-				Args: map[string][]string{
+			commandline.MockCommandline[data_pull.Flags]{
+				Fullname_: "knit data pull",
+				Stdout_:   stdout,
+				Stderr_:   io.Discard,
+				Flags_:    data_pull.Flags{Extract: true},
+				Args_: map[string][]string{
 					data_pull.ARG_KNIT_ID: {"knit-id"},
 					data_pull.ARG_DEST:    {"-"},
 				},
 			},
+			[]any{},
 		)
 
-		if !errors.Is(actualErr, kcmd.ErrUsage) {
-			t.Errorf("err: (actual, expected) = (%d, %d)", actualErr, kcmd.ErrUsage)
+		if !errors.Is(actualErr, flarc.ErrUsage) {
+			t.Errorf("err: (actual, expected) = (%d, %d)", actualErr, flarc.ErrUsage)
 		}
 	})
 }
@@ -263,19 +272,23 @@ func TestCommand_without_x(t *testing.T) {
 			if when.subpath != "" {
 				dest = filepath.Join(dest, when.subpath)
 			}
-			testee := data_pull.New(
-				data_pull.WithProgressOutput(io.Discard),
-			)
+			testee := data_pull.Task
 
-			actualErr := testee.Execute(
+			stdout := new(strings.Builder)
+
+			actualErr := testee(
 				ctx, logger, *kenv.New(), client,
-				usage.FlagSet[data_pull.Flags]{
-					Flags: data_pull.Flags{},
-					Args: map[string][]string{
+				commandline.MockCommandline[data_pull.Flags]{
+					Fullname_: "knit data pull",
+					Stdout_:   stdout,
+					Stderr_:   io.Discard,
+					Flags_:    data_pull.Flags{},
+					Args_: map[string][]string{
 						data_pull.ARG_KNIT_ID: {when.knitId},
 						data_pull.ARG_DEST:    {dest},
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actualErr, then.err) {
@@ -339,22 +352,22 @@ func TestCommand_without_x(t *testing.T) {
 				return handler(bytes.NewReader([]byte(payload)))
 			}
 
-			output := new(bytes.Buffer)
+			stdout := new(bytes.Buffer)
 
-			testee := data_pull.New(
-				data_pull.WithProgressOutput(io.Discard),
-				data_pull.WithOutput(output),
-			)
-
-			actualErr := testee.Execute(
+			testee := data_pull.Task
+			actualErr := testee(
 				ctx, logger, *kenv.New(), client,
-				usage.FlagSet[data_pull.Flags]{
-					Flags: data_pull.Flags{},
-					Args: map[string][]string{
+				commandline.MockCommandline[data_pull.Flags]{
+					Fullname_: "knit data pull",
+					Stdout_:   stdout,
+					Stderr_:   io.Discard,
+					Flags_:    data_pull.Flags{},
+					Args_: map[string][]string{
 						data_pull.ARG_KNIT_ID: {"knit-id"},
 						data_pull.ARG_DEST:    {"-"},
 					},
 				},
+				[]any{},
 			)
 			if actualErr != nil {
 				t.Fatal(actualErr)
@@ -367,7 +380,7 @@ func TestCommand_without_x(t *testing.T) {
 				)
 			}
 
-			if actual := output.String(); actual != payload {
+			if actual := stdout.String(); actual != payload {
 				t.Errorf("actual: %s, expected: %s", actual, payload)
 			}
 		}

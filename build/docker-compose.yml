@@ -7,123 +7,115 @@ version: "3.4"
 services:
   knit-builder:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: builder
-    image: "knit-builder:${APP_VERSION}"
+    image: "knit-builder:${TAG}"
   knit-dataagt:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-dataagt
       args:
         - LDFLAGS="-s"
-    image: "knit-dataagt:${APP_VERSION}"
+        - REPOSITORY=${REPOSITORY}
+    image: "knit-dataagt:${TAG}"
   knit-dataagt-debug:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-dataagt-debug
       args:
         - GCFLAGS=all="-N -l"
-    image: "knit-dataagt:${APP_VERSION}"
+    image: "knit-dataagt:${TAG}-debug"
 
   knit-vex:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-vex
       args:
         - LDFLAGS="-s"
-    image: "knit-vex:${APP_VERSION}"
+        - REPOSITORY=${REPOSITORY}
+    image: "knit-vex:${TAG}"
   knit-vex-debug:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-vex-debug
       args:
         - GCFLAGS=all="-N -l"
-    image: "knit-vex:${APP_VERSION}"
+    image: "knit-vex:${TAG}-debug"
 
   knit-empty:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-empty
       args:
         - LDFLAGS="-s"
-    image: "knit-empty:${APP_VERSION}"
+        - REPOSITORY=${REPOSITORY}
+    image: "knit-empty:${TAG}"
   knit-empty-debug:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-empty-debug
       args:
         - GCFLAGS=all="-N -l"
-    image: "knit-empty:${APP_VERSION}"
+    image: "knit-empty:${TAG}-debug"
   knit-nurse:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-nurse
       args:
         - LDFLAGS="-s"
-    image: "knit-nurse:${APP_VERSION}"
+        - REPOSITORY=${REPOSITORY}
+    image: "knit-nurse:${TAG}"
   knit-nurse-debug:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-nurse-debug
       args:
         - GCFLAGS=all="-N -l"
-    image: "knit-nurse:${APP_VERSION}"
+    image: "knit-nurse:${TAG}-debug"
   knit-loops:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-loops
       args:
         - LDFLAGS="-s"
-    image: "knit-loops:${APP_VERSION}"
+        - REPOSITORY=${REPOSITORY}
+    image: "knit-loops:${TAG}"
   knit-loops-debug:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knit-loops-debug
       args:
         - GCFLAGS=all="-N -l"
-    image: "knit-loops:${APP_VERSION}"
+    image: "knit-loops:${TAG}-debug"
 
   knitd:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knitd
       args:
         - LDFLAGS="-s"
-    image: "knitd:${APP_VERSION}"
+        - REPOSITORY=${REPOSITORY}
+    image: "knitd:${TAG}"
   knitd-debug:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knitd-debug
       args:
         - GCFLAGS=all="-N -l"
-    image: "knitd:${APP_VERSION}"
+    image: "knitd:${TAG}-debug"
 
   knitd-backend:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knitd-backend
       args:
         - LDFLAGS="-s"
-    image: "knitd-backend:${APP_VERSION}"
+        - REPOSITORY=${REPOSITORY}
+    image: "knitd-backend:${TAG}"
   knitd-backend-debug:
     build:
-      context: ../
       dockerfile: ./build/Dockerfile
       target: knitd-backend-debug
       args:
         - GCFLAGS=all="-N -l"
-    image: "knitd-backend:${APP_VERSION}"
+    image: "knitd-backend:${TAG}-debug"

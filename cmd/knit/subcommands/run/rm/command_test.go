@@ -3,15 +3,16 @@ package rm_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_rm "github.com/opst/knitfab/cmd/knit/subcommands/run/rm"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -22,7 +23,8 @@ func TestDeleteCommand(t *testing.T) {
 	}
 
 	type then struct {
-		err error
+		runId string
+		err   error
 	}
 
 	theory := func(when when, then then) func(*testing.T) {
@@ -30,28 +32,38 @@ func TestDeleteCommand(t *testing.T) {
 			profile := &kprof.KnitProfile{ApiRoot: "http://api.knit.invalid"}
 			client := try.To(krst.NewClient(profile)).OrFatal(t)
 
-			task := func(
+			removeMock := func(
 				ctx context.Context,
 				client krst.KnitClient,
 				runId string,
 			) error {
+				if runId != then.runId {
+					t.Errorf("runId: got %s, but want %s", runId, then.runId)
+				}
 				return when.err
 			}
 
-			testee := run_rm.New(run_rm.WithTask(task))
+			testee := run_rm.Task(removeMock)
+
+			stdout := new(strings.Builder)
+			stderr := new(strings.Builder)
 
 			ctx := context.Background()
-			err := testee.Execute(
+			err := testee(
 				ctx,
 				logger.Null(),
 				*kenv.New(),
 				client,
-				usage.FlagSet[struct{}]{
-					Flags: struct{}{},
-					Args: map[string][]string{
+				commandline.MockCommandline[struct{}]{
+					Fullname_: "knit run rm",
+					Stdout_:   stdout,
+					Stderr_:   stderr,
+					Flags_:    struct{}{},
+					Args_: map[string][]string{
 						run_rm.ARG_RUNID: when.runId,
 					},
 				},
+				[]any{},
 			)
 
 			if !errors.Is(err, then.err) {
@@ -68,7 +80,8 @@ func TestDeleteCommand(t *testing.T) {
 			err:   nil,
 		},
 		then{
-			err: nil,
+			err:   nil,
+			runId: "test-Id",
 		},
 	))
 	{
@@ -79,7 +92,8 @@ func TestDeleteCommand(t *testing.T) {
 				err:   expectedError,
 			},
 			then{
-				err: expectedError,
+				err:   expectedError,
+				runId: "test-Id",
 			},
 		))
 	}

@@ -4,21 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"log"
-	"os"
+	"strings"
 	"testing"
+	"time"
 
-	kcmd "github.com/opst/knitfab/cmd/knit/commandline/command"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
+	"github.com/youta-t/flarc"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	mock "github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/pkg/commandline/usage"
 
 	data_find "github.com/opst/knitfab/cmd/knit/subcommands/data/find"
+	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
@@ -27,6 +27,7 @@ import (
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -41,6 +42,8 @@ func TestFindDataCommand(t *testing.T) {
 		err       error
 		tags      []apitags.Tag
 		transient data_find.TransientValue
+		since     *time.Time
+		duration  *time.Duration
 	}
 
 	presentationItems := []apidata.Detail{
@@ -74,57 +77,75 @@ func TestFindDataCommand(t *testing.T) {
 				&kprof.KnitProfile{ApiRoot: "http://api.knit.invalid"},
 			)).OrFatal(t)
 
-			task := func(
-				_ context.Context,
-				_ *log.Logger,
-				_ krst.KnitClient,
-				tags []apitags.Tag,
-				transient data_find.TransientValue,
+			mockFindData := func(
+				_ context.Context, _ *log.Logger, _ krst.KnitClient,
+				q data_find.Query,
 			) ([]apidata.Detail, error) {
 				if !cmp.SliceContentEqWith(
-					tags, then.tags,
+					q.Tags, then.tags,
 					func(a, b apitags.Tag) bool { return a.Equal(&b) },
 				) {
 					t.Errorf(
 						"wrong tags are passed into client:\nactual = %+v\nexpected = %+v",
-						tags, then.tags,
+						q.Tags, then.tags,
 					)
 				}
 
-				if transient != then.transient {
+				if q.Transient != then.transient {
 					t.Errorf(
 						"wrong transient flag is passed into client:\nactual = %+v\nexpected = %+v",
-						transient, then.transient,
+						q.Transient, then.transient,
 					)
+				}
+
+				if then.since != nil {
+					if q.Since == nil || !q.Since.Equal(*then.since) {
+						t.Errorf(
+							"wrong since is passed into client:\nactual = %+v\nexpected = %+v",
+							q.Since, then.since,
+						)
+					}
+				} else {
+					if q.Since != nil {
+						t.Errorf(
+							"since should not be passed into client:\nactual = %+v\nexpected = nil",
+							q.Since,
+						)
+					}
+				}
+
+				if then.duration != nil {
+					if q.Duration == nil || *q.Duration != *then.duration {
+						t.Errorf(
+							"wrong duration is passed into client:\nactual = %+v\nexpected = %+v",
+							q.Duration, then.duration,
+						)
+					}
+				} else {
+					if q.Duration != nil {
+						t.Errorf(
+							"duration should not be passed into client:\nactual = %+v\nexpected = nil",
+							q.Duration,
+						)
+					}
 				}
 
 				return when.presentation, when.err
 			}
 
-			testee := data_find.New(
-				data_find.WithTask(task),
-			)
+			stdout := new(strings.Builder)
 
-			pr, pw, err := os.Pipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer pw.Close()
-			defer pr.Close()
-			{
-				orig := os.Stdout
-				defer func() {
-					os.Stdout = orig
-				}()
-				os.Stdout = pw
-			}
+			testee := data_find.Task(mockFindData)
 			ctx := context.Background()
-			actual := testee.Execute(
+			actual := testee(
 				ctx, logger.Null(), *kenv.New(), client,
-				usage.FlagSet[data_find.Flag]{
-					Flags: when.flag,
-					Args:  nil,
+				commandline.MockCommandline[data_find.Flag]{
+					Fullname_: "knit data find",
+					Stdout_:   stdout,
+					Flags_:    when.flag,
+					Args_:     nil,
 				},
+				[]any{},
 			)
 
 			if !errors.Is(actual, then.err) {
@@ -134,12 +155,9 @@ func TestFindDataCommand(t *testing.T) {
 				)
 			}
 
-			pw.Sync()
-			pw.Close()
 			if then.err == nil {
-				buf := string(try.To(io.ReadAll(pr)).OrFatal(t))
 				actual := []apidata.Detail{}
-				if err := json.Unmarshal([]byte(buf), &actual); err != nil {
+				if err := json.Unmarshal([]byte(stdout.String()), &actual); err != nil {
 					t.Fatal(err)
 				}
 				if !cmp.SliceContentEqWith(
@@ -190,7 +208,6 @@ func TestFindDataCommand(t *testing.T) {
 		},
 	))
 
-	// for name, testcase := range map[string]testcase{
 	t.Run("when '--transient true' is passed, it should call task with TransientOnly", theory(
 		when{
 			flag: data_find.Flag{
@@ -321,6 +338,46 @@ func TestFindDataCommand(t *testing.T) {
 			transient: data_find.TransientExclude,
 		},
 	))
+
+	{
+		timestamp := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
+		d := 2 * time.Hour
+		duration := new(kflag.OptionalDuration)
+		duration.Set(d.String())
+
+		since := kflag.LooseRFC3339(timestamp)
+		t.Run("when since and duration are passed, it should call task with since and duration", theory(
+			when{
+				flag: data_find.Flag{
+					Transient: "both",
+					Since:     &since,
+					Duration:  duration,
+				},
+				presentation: presentationItems,
+			},
+			then{
+				err:       nil,
+				tags:      []apitags.Tag{},
+				transient: data_find.TransientAny,
+				since:     &timestamp,
+				duration:  &d,
+			},
+		))
+
+		t.Run("when since is not specified and duration is specified, it should return ErrUage", theory(
+			when{
+				flag: data_find.Flag{
+					Duration: duration,
+				},
+				presentation: presentationItems,
+			},
+			then{
+				err:      flarc.ErrUsage,
+				duration: &d,
+			},
+		))
+	}
+
 	t.Run("when task returns no data, it should be done", theory(
 		when{
 			flag: data_find.Flag{
@@ -374,7 +431,7 @@ func TestFindDataCommand(t *testing.T) {
 			presentation: presentationItems,
 		},
 		then{
-			err: kcmd.ErrUsage,
+			err: flarc.ErrUsage,
 		},
 	))
 }
@@ -512,6 +569,8 @@ func TestFindData(t *testing.T) {
 	type when struct {
 		tags          []apitags.Tag
 		transientFlag data_find.TransientValue
+		since         *time.Time
+		duration      *time.Duration
 	}
 
 	for name, testcase := range map[string]struct {
@@ -635,17 +694,74 @@ func TestFindData(t *testing.T) {
 			},
 			then: []string{notTransient1.KnitId, notTransient2.KnitId},
 		},
+
+		`when since and duration are passed, it should call task with since and duration`: {
+			given: []apidata.Detail{notTransient1, notTransient2},
+			when: when{
+				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
+				transientFlag: data_find.TransientAny,
+				since:         pointer.Ref(try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()),
+				duration:      pointer.Ref(2 * time.Hour),
+			},
+			then: []string{notTransient1.KnitId, notTransient2.KnitId},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
 			logger := logger.Null()
 			mock := mock.New(t)
-			mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag) ([]apidata.Detail, error) {
+			mock.Impl.FindData = func(ctx context.Context, tags []apitags.Tag, s *time.Time, d *time.Duration) ([]apidata.Detail, error) {
+
+				if !cmp.SliceContentEq(tags, testcase.when.tags) {
+					t.Errorf(
+						"wrong tags are passed into client:\nactual = %+v\nexpected = %+v",
+						t, testcase.when.tags,
+					)
+				}
+
+				if want := testcase.when.since; want == nil {
+					if s != nil {
+						t.Errorf(
+							"since should not be passed into client:\nactual = %+v\nexpected = nil",
+							s,
+						)
+					}
+				} else {
+					if s == nil || !s.Equal(*want) {
+						t.Errorf(
+							"wrong since is passed into client:\nactual = %+v\nexpected = %+v",
+							s, want,
+						)
+					}
+				}
+
+				if want := testcase.when.duration; want == nil {
+					if d != nil {
+						t.Errorf(
+							"duration should not be passed into client:\nactual = %+v\nexpected = nil",
+							d,
+						)
+					}
+				} else {
+					if d == nil || *d != *want {
+						t.Errorf(
+							"wrong duration is passed into client:\nactual = %+v\nexpected = %+v",
+							d, want,
+						)
+					}
+				}
+
 				return testcase.given, nil
 			}
 
-			actual := try.To(data_find.RunFindData(
-				ctx, logger, mock, testcase.when.tags, testcase.when.transientFlag,
+			actual := try.To(data_find.FindData(
+				ctx, logger, mock,
+				data_find.Query{
+					Tags:      testcase.when.tags,
+					Transient: testcase.when.transientFlag,
+					Since:     testcase.when.since,
+					Duration:  testcase.when.duration,
+				},
 			)).OrFatal(t)
 
 			{
@@ -678,11 +794,10 @@ func TestFindData(t *testing.T) {
 					len(mock.Calls.FindData),
 				)
 			}
-
-			if !cmp.SliceContentEq(mock.Calls.FindData[0], testcase.when.tags) {
+			if !cmp.SliceContentEq(mock.Calls.FindData[0].Tags, testcase.when.tags) {
 				t.Errorf(
 					"wrong tags are passed into client:\nactual = %+v\nexpected = %+v",
-					mock.Calls.FindData[0], testcase.when.tags,
+					mock.Calls.FindData[0].Tags, testcase.when.tags,
 				)
 			}
 		})
@@ -694,12 +809,21 @@ func TestFindData(t *testing.T) {
 		expectedError := errors.New("fake error")
 
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s *time.Time, d *time.Duration) ([]apidata.Detail, error) {
 			return nil, expectedError
 		}
 
-		actual, err := data_find.RunFindData(
-			ctx, logger, mock, []apitags.Tag{}, data_find.TransientAny,
+		since := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
+		duration := time.Duration(2 * time.Hour)
+
+		actual, err := data_find.FindData(
+			ctx, logger, mock,
+			data_find.Query{
+				Tags:      []apitags.Tag{},
+				Transient: data_find.TransientAny,
+				Since:     &since,
+				Duration:  &duration,
+			},
 		)
 
 		if len(actual) != 0 {
