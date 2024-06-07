@@ -4,7 +4,7 @@ cluster:
     namespace: {{ .Release.Namespace | quote }}
     database: "postgres://{{ .Values.database.service }}/knit"
     dataAgent:
-        image: "{{ .Values.imageRepository }}/{{ .Values.dataagt.image }}:{{ .Chart.AppVersion }}"
+        image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.dataagt.image }}:{{ .Chart.AppVersion }}"
         port: {{ .Values.dataagt.port }}
         volume:
             storageClassName: "{{ .Values.storage.class.data }}"
@@ -12,7 +12,7 @@ cluster:
     worker:
         priority: "{{ .Values.worker.priorityClassName }}"
         init:
-            image: "{{ .Values.imageRepository }}/{{ .Values.empty.image }}:{{ .Chart.AppVersion }}"
+            image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.empty.image }}:{{ .Chart.AppVersion }}"
         nurse:
             serviceAccount: "{{ .Values.nurse.serviceAccount }}"
-            image: "{{ .Values.imageRepository }}/{{ .Values.nurse.image }}:{{ .Chart.AppVersion }}"
+            image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.nurse.image }}:{{ .Chart.AppVersion }}"

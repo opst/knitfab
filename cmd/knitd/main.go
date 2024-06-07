@@ -7,6 +7,8 @@ import (
 	"flag"
 	"log"
 	"net/url"
+	"os"
+	"os/signal"
 	"path"
 	"strings"
 	"time"
@@ -15,7 +17,6 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	kcx "github.com/opst/knitfab/pkg/configs/extras"
 	kcf "github.com/opst/knitfab/pkg/configs/frontend"
-	kdb "github.com/opst/knitfab/pkg/db"
 	kpg "github.com/opst/knitfab/pkg/db/postgres"
 	"github.com/opst/knitfab/pkg/echoutil"
 	"github.com/opst/knitfab/pkg/utils/filewatch"
@@ -31,6 +32,7 @@ func main() {
 
 	configPath := flag.String("config-path", "", "frontend config path")
 	extraConfigPath := flag.String("extra-apis-config", "", "path to extra api config file")
+	schemaRepo := flag.String("schema-repo", os.Getenv("KNIT_SCHEMA"), "schema repository path")
 	loglevel := flag.String("loglevel", "info", "log level. debug|info|warn|error|off")
 	pcert := flag.String("cert", "", "certification file for TLS")
 	pkey := flag.String("certkey", "", "key of certification file for TLS")
@@ -41,6 +43,9 @@ func main() {
 		log.Println(CREDITS)
 		return
 	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancel()
 
 	e := echo.New()
 	e.Pre(middleware.AddTrailingSlash())
@@ -95,12 +100,17 @@ func main() {
 	}
 
 	// get dbaccesor
-	ctx := context.Background()
-	db, err := getDBAccesor(ctx, conf.DBURI)
+	db, err := kpg.New(ctx, conf.DBURI, kpg.WithSchemaRepository(*schemaRepo))
 	if err != nil {
 		log.Fatalf("can not read configration: %s", err.Error())
 	}
 	defer db.Close()
+
+	{
+		ctx_, ccan := db.Schema().Context(ctx)
+		defer ccan()
+		ctx = ctx_
+	}
 
 	// handlers
 	{
@@ -171,16 +181,43 @@ func main() {
 		}
 	}
 
-	cert, key := *pcert, *pkey
-	if cert != "" && key != "" {
-		e.Logger.Fatal(e.StartTLS(":"+conf.ServerPort, cert, key))
-	} else {
-		e.Logger.Fatal(e.Start(":" + conf.ServerPort))
-	}
-}
+	quitch := make(chan error, 1)
+	defer close(quitch)
+	go func() {
+		cert, key := *pcert, *pkey
+		var err error
+		if cert != "" && key != "" {
+			err = e.StartTLS(":"+conf.ServerPort, cert, key)
+		} else {
+			err = e.Start(":" + conf.ServerPort)
+		}
+		quitch <- err
+	}()
 
-func getDBAccesor(ctx context.Context, dburi string) (kdb.KnitDatabase, error) {
-	return kpg.New(ctx, dburi)
+	exit := 0
+	select {
+	case <-ctx.Done():
+		if err := ctx.Err(); err != nil {
+			log.Printf("context has been done: %s, cause: %s", err, context.Cause(ctx))
+			exit = 1
+		}
+	case err := <-quitch:
+		if err != nil {
+			log.Printf("server stops with error: %s", err)
+			exit = 1
+		}
+	}
+
+	{
+		log.Println("shutting down...")
+		graceful, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := e.Shutdown(graceful); err != nil {
+			log.Fatalf("Shutdown with error. %+v", err)
+			os.Exit(1)
+		}
+		os.Exit(exit)
+	}
 }
 
 // create api URL factory

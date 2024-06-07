@@ -171,12 +171,15 @@ func Portforward(
 		return nil, err
 	}
 
-	var podPort string
+	var podPort int
 	for _, p := range svc.Spec.Ports {
 		if p.Name != portName {
 			continue
 		}
-		podPort = p.TargetPort.String()
+		podPort = p.TargetPort.IntValue()
+		if podPort <= 0 {
+			return nil, fmt.Errorf("invalid port: %s", p.TargetPort.String())
+		}
 		break
 	}
 
@@ -192,7 +195,21 @@ func Portforward(
 	if len(pods.Items) <= 0 {
 		return nil, errors.New("no pods found")
 	}
-	pod := pods.Items[0]
+	pod := &pods.Items[0]
+
+	return PortforwardWithPod(ctx, pod, podPort, opts...)
+}
+
+func PortforwardWithPod(
+	ctx context.Context,
+	pod *kubecore.Pod,
+	podPort int,
+	opts ...PortForwardOption,
+) (Portforwarding, error) {
+	opt := &pfoption{}
+	for _, o := range opts {
+		opt = o(opt)
+	}
 
 	config, err := getConfig()
 	if err != nil {
@@ -215,7 +232,7 @@ func Portforward(
 			Scheme: "https",
 			Host:   host,
 			Path: fmt.Sprintf(
-				"/api/v1/namespaces/%s/pods/%s/portforward", namespace, pod.Name,
+				"/api/v1/namespaces/%s/pods/%s/portforward", pod.Namespace, pod.Name,
 			),
 		},
 	)
@@ -259,7 +276,7 @@ func Portforward(
 	}
 
 	forwarder, err := portforward.New(
-		d, []string{"0:" + podPort}, ctx.Done(), readyChan, out, out,
+		d, []string{fmt.Sprintf("0:%d", podPort)}, ctx.Done(), readyChan, out, out,
 	)
 	if err != nil {
 		return nil, err

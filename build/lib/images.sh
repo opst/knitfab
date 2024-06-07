@@ -13,10 +13,6 @@ if [ -z "${APP_VERSION}" ] ; then
 	exit 1
 fi
 
-if [ -n "${DEBUG}" ]; then
-	SUFFIX="-debug"
-fi
-
 IMAGE_REGISTRY=${IMAGE_REGISTRY:-}  # e.g. ghcr.io
 export REPOSITORY=${REPOSITORY:-}          # e.g. opst/knitfab
 if [ -n "${IMAGE_REGISTRY}" ] && [ -n "${REPOSITORY}" ] ; then
@@ -30,12 +26,12 @@ for A in ${ARCH} ; do
 	case ${A} in
 		amd64|arm64)
 			PLATFORM="linux/${A}"
-			TAG="${TAG}-${A}${SUFFIX}"
+			TAG="${TAG}-${A}"
 			;;
 		local)
-			TAG="${TAG}-${A}${SUFFIX}"
+			TAG="${TAG}"
 			;;
-		test)
+		test|"")
 			;;
 		*)
 			echo "unknown ARCH: ${A}" >&2
@@ -43,7 +39,7 @@ for A in ${ARCH} ; do
 		;;
 	esac
 
-	COMPONENT="knitd knitd-backend knit-vex knit-empty knit-nurse knit-dataagt knit-loops"
+	COMPONENT="knitd knitd-backend knit-vex knit-empty knit-nurse knit-dataagt knit-loops knit-schema-upgrader"
 
 	TARGET=
 	for COMP in ${COMPONENT} ; do

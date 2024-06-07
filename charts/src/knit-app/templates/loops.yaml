@@ -34,12 +34,13 @@ spec:
     spec:
       containers:
         - name: projection-leader
-          image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
             '--hooks',  '/knit/hooks/hooks.yaml',
             '--type',   'projection',
             '--policy', 'forever:{{ .Values.loops.projection.interval }}',
+            '--schema-repo', '/knit/schema-repo',
           ]
           env:
             - name: PGUSER
@@ -59,6 +60,9 @@ spec:
             - name: hooks-config
               mountPath: /knit/hooks
               readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
       volumes:
         - name: knitd-backend-config
           configMap:
@@ -66,6 +70,9 @@ spec:
         - name: hooks-config
           configMap:
             name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
 
 ---
 
@@ -107,12 +114,13 @@ spec:
       serviceAccountName: {{ .Values.loops.initialize.serviceAccount }}
       containers:
         - name: initialize-leader
-          image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
             '--hooks',   '/knit/hooks/hooks.yaml',
             '--type',   'initialize',
             '--policy', 'forever:{{ .Values.loops.initialize.interval }}',
+            '--schema-repo', '/knit/schema-repo',
           ]
           env:
             - name: PGUSER
@@ -132,6 +140,9 @@ spec:
             - name: hooks-config
               mountPath: /knit/hooks
               readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -139,6 +150,9 @@ spec:
         - name: hooks-config
           configMap:
             name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
 
 ---
 
@@ -238,12 +252,13 @@ spec:
       serviceAccountName: {{ .Values.loops.run_management.serviceAccount }}
       containers:
         - name: knit-loop-run-management-leader
-          image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
             '--hooks',   '/knit/hooks/hooks.yaml',
             '--type',   'run_management',
             '--policy', 'forever:{{ .Values.loops.run_management.interval }}',
+            '--schema-repo', '/knit/schema-repo',
           ]
           env:
             - name: PGUSER
@@ -263,6 +278,9 @@ spec:
             - name: hooks-config
               mountPath: /knit/hooks
               readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -270,6 +288,9 @@ spec:
         - name: hooks-config
           configMap:
             name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
 
 ---
 
@@ -370,12 +391,13 @@ spec:
       serviceAccountName: {{ .Values.loops.housekeeping.serviceAccount }}
       containers:
         - name: housekeeping-leader
-          image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
             '--hooks',   '/knit/hooks/hooks.yaml',
             '--type',   'housekeeping',
             '--policy', 'forever:{{ .Values.loops.housekeeping.interval }}',
+            '--schema-repo', '/knit/schema-repo',
           ]
           env:
             - name: PGUSER
@@ -395,6 +417,9 @@ spec:
             - name: hooks-config
               mountPath: /knit/hooks
               readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -402,6 +427,9 @@ spec:
         - name: hooks-config
           configMap:
             name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
 
 ---
 
@@ -499,12 +527,13 @@ spec:
       serviceAccountName: {{ .Values.loops.finishing.serviceAccount }}
       containers:
         - name: finishing-leader
-          image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
             '--hooks',   '/knit/hooks/hooks.yaml',
             '--type',   'finishing',
             '--policy', 'forever:{{ .Values.loops.finishing.interval }}',
+            '--schema-repo', '/knit/schema-repo',
           ]
           env:
             - name: PGUSER
@@ -524,6 +553,9 @@ spec:
             - name: hooks-config
               mountPath: /knit/hooks
               readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -531,6 +563,9 @@ spec:
         - name: hooks-config
           configMap:
             name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
 
 ---
 
@@ -627,12 +662,13 @@ spec:
       serviceAccountName: {{ .Values.loops.gc.serviceAccount }}
       containers:
         - name: gc-leader
-          image: "{{ .Values.imageRepository }}/{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
           args: [
             '--config', '/knit/configs/knitd.backend.yaml',
             '--hooks',   '/knit/hooks/hooks.yaml',
             '--type',   'garbage_collection',
             '--policy', 'forever:{{ .Values.loops.gc.interval }}',
+            '--schema-repo', '/knit/schema-repo',
           ]
           env:
             - name: PGUSER
@@ -652,6 +688,9 @@ spec:
             - name: hooks-config
               mountPath: /knit/hooks
               readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -659,6 +698,9 @@ spec:
         - name: hooks-config
           configMap:
             name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
 ---
 
 apiVersion: v1

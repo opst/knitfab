@@ -141,8 +141,13 @@ func Vex(ctx context.Context, logger *log.Logger, flags Flags, namespaces []stri
 				PersistentVolumeClaims(namespace).
 				Get(ctx, pvcName, metav1.GetOptions{})
 			if err != nil {
+				return err
+			}
+			if anManage := pvc.GetAnnotations()["vex.knitfab/managed"]; anManage == "false" {
+				// this PVC is not managed by vex
 				return nil
 			}
+
 			pvcCapacity := maxQuantity(
 				pvc.Spec.Resources.Requests["storage"],
 				pvc.Status.Capacity["storage"],

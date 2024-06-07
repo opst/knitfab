@@ -59,7 +59,7 @@ spec:
     spec:
       containers:
         - name: knitd
-          image: "{{ .Values.imageRepository }}/{{ .Values.knitd.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.knitd.image }}:{{ .Chart.AppVersion }}"
           env:
             - name: PGUSER
               valueFrom:
@@ -78,10 +78,14 @@ spec:
             '--extra-apis-config', '/knit/extra-api/extra-apis.yaml',
             '--cert', '/knit/certs/tls.crt',
             '--certkey', '/knit/certs/tls.key',
+            '--schema-repo', '/knit/schema-repo',
           ]
           volumeMounts:
             - name: config
               mountPath: /knit/configs
+              readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
               readOnly: true
             - name: extra-api
               mountPath: /knit/extra-api
@@ -92,6 +96,9 @@ spec:
         - name: config
           configMap:
             name: {{ .Values.knitd.component }}-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
         - name: extra-api
           configMap:
             name: extra-api-config

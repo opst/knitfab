@@ -140,7 +140,7 @@ spec:
         - operator: Exists  # allow to run on every nodes
       containers:
         - name: vex
-          image: "{{ .Values.imageRepository }}/{{ .Values.vex.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.vex.image }}:{{ .Chart.AppVersion }}"
           args: [
             "--margin", "{{ .Values.vex.margin }}",
             "--delta", "{{ .Values.vex.delta }}",

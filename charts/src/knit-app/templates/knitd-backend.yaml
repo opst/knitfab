@@ -125,12 +125,13 @@ spec:
       serviceAccountName: knitd-backend
       containers:
         - name: knitd-backend
-          image: "{{ .Values.imageRepository }}/{{ .Values.knitd_backend.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.knitd_backend.image }}:{{ .Chart.AppVersion }}"
           ports:
             - containerPort: 8080
           args: [
             "--config", "/knit/configs/knitd.backend.yaml",
             "--loglevel", {{ .Values.knitd_backend.logLevel }},
+            "--schema-repo", "/knit/schema-repo",
           ]
           env:
             - name: PGUSER
@@ -147,10 +148,16 @@ spec:
             - name: config
               mountPath: /knit/configs/
               readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo/
+              readOnly: true
       volumes:
         - name: config
           configMap:
             name: {{ .Values.knitd_backend.component }}-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
 
 ---
 

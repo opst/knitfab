@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	configs "github.com/opst/knitfab/pkg/configs/backend"
@@ -29,6 +28,7 @@ func main() {
 		"config", os.Getenv("KNIT_BACKEND_CONFIG"), "path to config file",
 	)
 	plic := flag.Bool("license", false, "show licenses of dependencies")
+	schemaRepo := flag.String("schema-repo", os.Getenv("KNIT_SCHEMA"), "schema repository path")
 	loglevel := flag.String("loglevel", "warn", "log level. debug|info|warn|error|off")
 
 	flag.Parse()
@@ -38,9 +38,8 @@ func main() {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
-	go startTraps(ctx, cancel)
 
 	conf, err := configs.LoadBackendConfig(*pconfig)
 	if err != nil {
@@ -49,9 +48,14 @@ func main() {
 
 	clientset := kubeutil.ConnectToK8s()
 
-	db, err := kpg.New(ctx, conf.Cluster().Database())
+	db, err := kpg.New(ctx, conf.Cluster().Database(), kpg.WithSchemaRepository(*schemaRepo))
 	if err != nil {
 		panic(err)
+	}
+	{
+		ctx_, ccan := db.Schema().Context(ctx)
+		defer ccan()
+		ctx = ctx_
 	}
 
 	knitCluster := knit.AttachKnitCluster(clientset, conf.Cluster(), db)
@@ -62,6 +66,7 @@ func main() {
 	}
 
 	ch := make(chan error, 1)
+	defer close(ch)
 	go func() {
 		defer close(ch)
 		if err := server.Start(fmt.Sprintf(":%d", conf.Port())); err != nil && err != http.ErrServerClosed {
@@ -70,30 +75,29 @@ func main() {
 		ch <- nil
 	}()
 
+	exit := 0
 	select {
 	case <-ctx.Done(): // wait
+		if err := ctx.Err(); err != nil {
+			server.Logger.Infof("context has been done: %s, cause: %s", err, context.Cause(ctx))
+			exit = 1
+		}
 	case err := <-ch:
-		server.Logger.Error("server stops with error:", err)
-	}
-	server.Logger.Info("shutting down...")
-	qctx, qcancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
-	defer qcancel()
-	if err := server.Shutdown(qctx); err != nil {
-		server.Logger.Fatalf("Shutdown with error. %+v", err)
+		if err != nil {
+			server.Logger.Error("server stops with error:", err)
+			exit = 1
+		}
 	}
 
-	os.Exit(0)
-}
+	{
+		server.Logger.Info("shutting down...")
+		qctx, qcancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer qcancel()
 
-func startTraps(ctx context.Context, cancel func()) {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGINT)
-
-	select {
-	case s := <-sig:
-		fmt.Printf("Signal received: %s \n", s.String())
-		cancel()
-	case <-ctx.Done():
-		// cancel with others.
+		if err := server.Shutdown(qctx); err != nil {
+			server.Logger.Fatalf("Shutdown with error. %+v", err)
+			os.Exit(1)
+		}
+		os.Exit(exit)
 	}
 }

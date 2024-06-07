@@ -114,8 +114,6 @@ spec:
             - name: pgdata
               mountPath: /var/lib/postgresql/data
             {{ end }}
-            - name: initdb
-              mountPath: /docker-entrypoint-initdb.d
       securityContext:
         # NOTE:
         #   this runAs setting "nobody:nogroup" is adaptation for "root_squash" of NFS.
@@ -128,30 +126,6 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Values.component }}-pgdata
         {{ end }}
-        - name: initdb
-          configMap:
-            name: {{ .Values.component }}-initdb
-
----
-
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Values.component }}-initdb
-  namespace: {{ .Release.Namespace | quote }}
-  labels:
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
-    app.kubernetes.io/part-of: knitfab
-    app.kubernetes.io/component: {{ .Values.component }}
-    database.knitfab/type: postgres
-data:
-  {{ (.Files.Glob "assets/init/*" ).AsConfig | nindent 2 }}
-  {{ if not .Values.no_seeds -}}
-  {{ (.Files.Glob "assets/seeds/*" ).AsConfig | nindent 2 }}
-  {{- end }}
-
 ---
 
 apiVersion: v1

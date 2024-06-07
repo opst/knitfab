@@ -87,7 +87,7 @@ EOF
 
 # ------
 
-message "phase 1/4: ${MODE} knit storage driver"
+message "phase 1/5: ${MODE} knit storage driver"
 
 message ""
 message "------"
@@ -114,11 +114,11 @@ else
 fi
 message "======"
 message ""
-message "phase 1/4: OK."
+message "phase 1/5: OK."
 message ""
 
 # # # # # # PHASE 2 # # # # # #
-message "phase 2/4: ${MODE} knit middlewares"
+message "phase 2/5: ${MODE} knit middlewares"
 
 message ""
 message "------"
@@ -182,11 +182,11 @@ else
 fi
 sleep 10
 
-message "phase 2/4: OK."
+message "phase 2/5: OK."
 message ""
 
 # # # # # # PHASE 3 # # # # # #
-message "phase 3/4: push knit images"
+message "phase 3/5: push knit images"
 
 # FIXME: image registry should have authentiaction.
 cat ${CHARTS}/images/index | \
@@ -208,11 +208,30 @@ while read APP TAG ; do
 done
 
 message ""
-message "phase 3/4: OK."
+message "phase 3/5: OK."
 message ""
 
 # # # # # # PHASE 4 # # # # # #
-message "phase 4/4: ${MODE} knit app"
+message "phase 4/4: ${MODE} knit schema upgrader"
+message ""
+message "------"
+if [ "${MODE}" = "install" ] && ${HELM} status knit-schema-upgrader -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
+	message "already installed: knit-schema-upgrader"
+else
+	run ${HELM} ${MODE} --dependency-update --wait \
+		--create-namespace -n ${NAMESPACE} \
+		--set-json "storage=$(${HELM} -n ${NAMESPACE} get values -o json --all knit-storage-nfs)" \
+		--set-json "database=$(${HELM} -n ${NAMESPACE} get values -o json --all knit-db-postgres)" \
+		--set "clusterTLD=cluster.local" \
+		--set "imageRepository=localhost:${KNIT_REGISTRY_PORT}" \
+		knit-schema-upgrader ${CHARTS}/${CHART_VERSION}/knit-schema-upgrader
+fi
+message ""
+message "phase 4/5: OK."
+message ""
+
+# # # # # # PHASE 4 # # # # # #
+message "phase 5/5: ${MODE} knit app"
 message ""
 message "------"
 if [ "${MODE}" = "install" ] && ${HELM} status knit-app -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
@@ -224,6 +243,7 @@ else
 		--set-json "certs=$(${HELM} -n ${NAMESPACE} get values -o json --all knit-certs)" \
 		--set-json "database=$(${HELM} -n ${NAMESPACE} get values -o json --all knit-db-postgres)" \
 		--set-json "registry=$(${HELM} -n ${NAMESPACE} get values -o json --all knit-image-registry)" \
+		-f <(${HELM} -n ${NAMESPACE} get values -o json --all knit-schema-upgrader) \
 		--set "clusterTLD=cluster.local" \
 		--set "imageRepository=localhost:${KNIT_REGISTRY_PORT}" \
 		--set "knitd.port=${KNIT_API_PORT}" \
@@ -232,16 +252,17 @@ else
 fi
 message "======"
 message ""
-message "phase 4/4: OK."
+message "phase 5/5: OK."
 message ""
 
 message "Applied Helm Releases:"
 message ""
-message " * knit-storage-nfs    : NFS bases storage driver for knitfab"
-message " * knit-certs          : TLS Certifications for knitfab"
-message " * knit-image-registry : in-cluster image registry"
-message " * knit-db-postgres    : database for knitfab"
-message " * knit-app            : knitfab api and backend services"
+message " * knit-storage-nfs     : NFS bases storage driver for knitfab"
+message " * knit-certs           : TLS Certifications for knitfab"
+message " * knit-image-registry  : in-cluster image registry"
+message " * knit-db-postgres     : database for knitfab"
+message " * knit-schema-upgrader : maintain database schema for knitfab"
+message " * knit-app             : knitfab api and backend services"
 message ""
 ${HELM} list -n ${NAMESPACE} | sed 's/^/> /'
 message ""
