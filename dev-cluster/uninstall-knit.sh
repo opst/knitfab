@@ -15,6 +15,7 @@ export KUBECONFIG=${KUBECONFIG:-${HERE}/.sync/kubeconfig/kubeconfig}
 NAMESPACE=${NAMESPACE:-knit-dev}
 
 ${HELM} uninstall -n ${NAMESPACE} knit-app || :
+${HELM} uninstall -n ${NAMESPACE} knit-schema-upgrader || :
 ${HELM} uninstall -n ${NAMESPACE} knit-db-postgres || :
 ${HELM} uninstall -n ${NAMESPACE} knit-certs || :
 ${HELM} uninstall -n ${NAMESPACE} knit-image-registry || :

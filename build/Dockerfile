@@ -17,13 +17,14 @@ ENV GOCACHE=/root/.cache/go-build GOOS=linux
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod/ --mount=type=cache,target=/root/.cache/go-build \
     mkdir /dest && \
-    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/knitd           -o /dest/knitd         . && \
-    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/knitd_backend   -o /dest/knitd_backend . && \
-    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/dataagt         -o /dest/dataagt       . && \
-    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/volume_expander -o /dest/vex           . && \
-    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/empty           -o /dest/empty         . && \
-    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/log_recorder    -o /dest/log_recorder  . && \
-    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/loops           -o /dest/loops         .
+    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/knitd           -o /dest/knitd           . && \
+    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/knitd_backend   -o /dest/knitd_backend   . && \
+    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/dataagt         -o /dest/dataagt         . && \
+    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/volume_expander -o /dest/vex             . && \
+    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/empty           -o /dest/empty           . && \
+    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/log_recorder    -o /dest/log_recorder    . && \
+    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/loops           -o /dest/loops           . && \
+    go build ${GCFLAGS:+-gcflags} ${GCFLAGS} ${LDFLAGS:+-trimpath -ldflags} ${LDFLAGS} -C ./cmd/schema_upgrader -o /dest/schema_upgrader .
 
 FROM --platform=${TARGETPLATFORM} golang:${GOVERSION} as dlv-installer
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.22.1
@@ -134,3 +135,11 @@ COPY --from=builder --chown=nobody:nobody /dest/loops /knit/loops
 FROM --platform=${TARGETPLATFORM} debugger as knit-loops-debug
 ENTRYPOINT ["/go/bin/dlv", "exec", "--continue", "--accept-multiclient", "--log", "--headless", "-l", ":19999", "--api-version", "2", "/knit/loops", "--"]
 COPY --from=builder --chown=nobody:nobody /dest/loops /knit/loops
+
+FROM --platform=${TARGETPLATFORM} base as knit-schema-upgrader
+ARG REPOSITORY
+LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
+ENTRYPOINT ["/knit/schema_upgrader"]
+COPY --from=builder --chown=nobody:nobody /dest/schema_upgrader /knit/schema_upgrader
+COPY --chown=nobody:nobody ./db/postgres/schema/versions /knit/schema_repository
+ENV KNIT_SCHEMA=/knit/schema_repository

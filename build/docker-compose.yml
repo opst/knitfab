@@ -119,3 +119,12 @@ services:
       args:
         - GCFLAGS=all="-N -l"
     image: "knitd-backend:${TAG}-debug"
+
+  knit-schema-upgrader:
+    build:
+      dockerfile: ./build/Dockerfile
+      target: knit-schema-upgrader
+      args:
+        - LDFLAGS="-s"
+        - REPOSITORY=${REPOSITORY}
+    image: "knit-schema-upgrader:${TAG}"

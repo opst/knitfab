@@ -159,6 +159,13 @@ if [ -z "${APP_VERSION}" ] ; then
 	fi
 fi
 
+if [ "release" != "${BUILD_MODE}" ] ; then
+	APP_VERSION=${APP_VERSION}-${BUILD_MODE}
+fi
+if [ -n "${DEBUG}" ] ; then
+	APP_VERSION=${APP_VERSION}-debug
+fi
+
 export APP_VERSION
 
 mkdir -p ${ROOT}/bin
