@@ -1,4 +1,4 @@
-v1.1.0
+v1.1.1
 ======
 
 - Date: 2024-06-11
@@ -7,7 +7,7 @@ Release v1.1.1, as a security update.
 
 # Affected Users
 
-No. Only Develppers are affected by this security issue.
+No. Only developer are affected by this security issue.
 
 We using Ansibel as the provisioner for dev-cluser. This release upgrade ansible and solve vulnabilites in old ansible.
 
@@ -20,7 +20,6 @@ Nothing.
 Nothing. This release has no change in Knitfab CLI, Containers nor Installer.
 
 To all users, use v1.1.0. Knitfab binaries are independent from these vulnabilities comes from old ansible.
-
 
 v1.1.0
 ======
