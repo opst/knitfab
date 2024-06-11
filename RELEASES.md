@@ -19,7 +19,9 @@ Nothing.
 
 Nothing. This release has no change in Knitfab CLI, Containers nor Installer.
 
-To all users, use v1.1.0. Knitfab binaries are independent from these vulnabilities comes from old ansible.
+Knitfab binaries are independent from these vulnabilities comes from old ansible.
+
+To all users, use v1.1.0 for CLI and admin-tools. Installer and Container Images are not changed from v1.1.0 .
 
 v1.1.0
 ======
