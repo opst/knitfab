@@ -75,6 +75,7 @@ Vagrant.configure("2") do |config|
         master.vm.synced_folder SYNC_KNIT_CONFIG_HOST, SYNC_KNIT_CONFIG, create:"true"
         is_nfs = master_node == nfs_node
         master.vm.provision "ansible" do |ansible|
+            ansible.compatibility_mode = "2.0"
             ansible.playbook = "playbooks/master-playbook.yml"
             ansible.extra_vars = {
                 apt_mirror: APT_MIRROR,
