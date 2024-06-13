@@ -2,8 +2,8 @@ component: certs
 secret:
   server: certs
   ca: ca-certs
-# eert: # mandatory
-# key: # mandatory
+# cert: # if set, also set key
+# key: # if set, also set cert
 
-# cacert: # mandatory
-# cakey: # mandatory
+# cacert: # if set, also set cakey
+# cakey: # if set, also set cacert

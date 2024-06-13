@@ -12,6 +12,7 @@ secret: database-credential
 # initialCapacity: initial capcity of PVC for database storage(PGDATA)
 initialCapacity: 1Gi
 
+# ephemeral: use ephemeral (not PV backed) storage for database.
 ephemeral: false
 
 # credential: credential for database.

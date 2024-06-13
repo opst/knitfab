@@ -76,8 +76,10 @@ spec:
           args: [
             '--config-path', '/knit/configs/knitd.yaml',
             '--extra-apis-config', '/knit/extra-api/extra-apis.yaml',
+            {{ if and .Values.certs.cert .Values.certs.key }}
             '--cert', '/knit/certs/tls.crt',
             '--certkey', '/knit/certs/tls.key',
+            {{ end }}
             '--schema-repo', '/knit/schema-repo',
           ]
           volumeMounts:
@@ -90,8 +92,10 @@ spec:
             - name: extra-api
               mountPath: /knit/extra-api
               readOnly: true
+            {{ if and .Values.certs.cert .Values.certs.key }}
             - name: cert
               mountPath: /knit/certs
+            {{ end }}
       volumes:
         - name: config
           configMap:
@@ -102,9 +106,11 @@ spec:
         - name: extra-api
           configMap:
             name: extra-api-config
+        {{ if and .Values.certs.cert .Values.certs.key }}
         - name: cert
           secret:
             secretName: {{ .Values.certs.secret.server }}
+        {{ end }}
 
 ---
 
