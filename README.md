@@ -142,14 +142,14 @@ image will be suffixed with `-diff-${TIMESTAMP}`.
 ./build/bulld.sh --release
 ```
 
-perform release build.
+performs release build.
 
 - Generates CLIs for OSes and ARCHs in `./bin/clis/*`
 - Generates Helm Chart in `./charts/release/<VERSION>` and update chart index.
 - Builds Knitfab images for ARCHs.
 - Generates `./bin/images/publish.sh`, which is shell script bundling multiatch image manifest and publishing images & manifests.
 
-`./build/build.sh --relrease` prints instructions to release operations.
+`./build/build.sh --release` prints instructions to release operations.
 
 Release build would not go when your working copy has diffs.
 **Before releasing, you should merge (via Pull Req.) your change into main.**
@@ -166,7 +166,7 @@ When you would like to make your custom build and *publish*, pass build options 
 - `IMAGE_REGISTRY` (Default: `ghcr.io`)
 - `CHART_VERSION` (Default: content of `./VERSION`)
     - Overwrite chart version you building.
-- `RESPOTIRORY_PATH` (Default: "opst/knitfab")
+- `RESPOTIRORY` (Default: "opst/knitfab")
     - Your repository name.
     - Special value `git://<REMOTE-NAME>` (e.g., `git://origin`, `git://upstream`, ...) is acceptable. Build script detects your repo from git.
 - `BRANCH` (Default: `main`)
@@ -177,8 +177,8 @@ When you would like to make your custom build and *publish*, pass build options 
 After publishing, to install your custom release, do like
 
 ```
-CHART_VERSION=... REPOSITORY_PATH=... BRANCH=... ./installer/install.sh --prepare ...
-CHART_VERSION=... REPOSITORY_PATH=... BRANCH=... ./installer/install.sh --install ...
+CHART_VERSION=... REPOSITORY=... BRANCH=... ./installer/install.sh --prepare ...
+CHART_VERSION=... REPOSITORY=... BRANCH=... ./installer/install.sh --install ...
 ```
 
 For more detail, read `./build/build.sh` and `./installer/installer.sh`
@@ -195,31 +195,77 @@ You can use the cluster to try out or debug Knitfab.
 - [vagrant](https://www.vagrantup.com/docs/installation)
 - [virtualbox](https://www.virtualbox.org/) : A dependency of vagrant, to create virtual machiness.
 - [poetry](https://python-poetry.org/) : Used to install ansible.
-- [python](https://www.python.org/) (3.8+) : A dependency of Poetry.
+- [python](https://www.python.org/) (3.10+) : A dependency of Poetry.
 - [docker, docker compose](https://docs.docker.com/) : Build and push image.
 - (optional) [pyenv](https://github.com/pyenv/pyenv) : Used to manage your python installation.
 
 Additionaly, `dev-cluster` uses [ansible](https://docs.ansible.com/ansible/latest/index.html), but it will be installed by Poetry.
 
-### To start k8s cluster
+### To start dev-cluster
 
 To start, move to the `dev-cluster` directry, and run:
 
 ```
-$ poetry install
-$ poetry shell
+$ ./dev-cluster/up.sh
 ```
-(to install ansible)
 
-and
+This command does...
 
-```
-$ vagrant up
-```
-(create vms & start provisioning with ansible)
+- Provision Kubernetes Cluster (with Vagrant+Ansible) of 3 VMs (VirtualBox)
+- Deploy CNI (calico)
+- Deploy Image Registry (at `:30005` on each nodes).
+    - This Image Registry is *not a part of Knitfab*. Knitfab emploies anothor Registry for itself.
+- Put CA certification at `~/.docker/certs.d/${VM-IP}:30005/ca.crt` .
+    - Colima may load the certification on starting.
+    - You may need to copy the certification to `/etc/docker/certs.d/${VM-IP}:30005/ca.crt`.
 
 It takes 10+ minutes at least, and can be over 30 minutes. Please be patient.
 If you want to throw away them all, just do `vagrant destroy -f` and the VMs and k8s clusters will be destroyed.
+
+> [!NOTE]
+>
+> It can be experienced that provisioning hangs with message below:
+>
+> ```
+> VirtualBox Guest Additions: To build modules for other installed kernels, run
+> VirtualBox Guest Additions:   /sbin/rcvboxadd quicksetup <version>
+> VirtualBox Guest Additions: or
+> VirtualBox Guest Additions:   /sbin/rcvboxadd quicksetup all
+> VirtualBox Guest Additions: Building the modules for kernel 6.5.0-15-generic.
+> update-initramfs: Generating /boot/initrd.img-6.5.0-15-generic
+> VirtualBox Guest Additions: Running kernel modules will not be replaced until
+> the system is restarted or 'rcvboxadd reload' triggered
+> VirtualBox Guest Additions: reloading kernel modules and services
+> VirtualBox Guest Additions: kernel modules and services 7.0.18 r162988 reloaded
+> VirtualBox Guest Additions: NOTE: you may still consider to re-login if some
+> user session specific services (Shared Clipboard, Drag and Drop, Seamless or
+> Guest Screen Resize) were not restarted automatically
+> ```
+>
+> In such case, for workaround, attach VM with ssh and run
+>
+> ```
+> sudo rcvboxadd reload
+> ```
+>
+> You can attach VM with `./dev-cluster/ssh.sh <VM Name>`.
+>
+
+### To suspend/destroy your dev-cluster
+
+To suspend,
+
+```
+./dev-clsuter/suspend.sh
+```
+
+To destroy,
+
+```
+./dev-cluster/destroy.sh [-f]
+```
+
+In either case, you can restart your cluster with `./dev-cluster/up.sh`.
 
 ### How is the dev-cluster provisioned?
 
@@ -235,22 +281,38 @@ The dev-cluster is a k8s cluster with the following nodes (VirtualBox VM):
 
 During provisioning, it generates records of the cluster's configurations in the `.sync` directory:
 
-- `.sync/cert/{ca,server}.{crt,key}`: A self-signed certificate and key pair, including the certificated IP address of the `knit-gateway` node.
 - `.sync/kubeconfig/kubeconfig`: kubeconfig
 - `.sync/kubeadm`: output of `kubeadm token`
-- `.sync/knit/install_setting`: Knitfab installation setting (used by `./dev-cluster/install-knit.sh`)
 
 ### Install Knitfab into the dev-cluster
 
-1. Copy `./dev-cluster/.sync/certs/ca.crt` to your `/etc/docker/certs.d/${VM-KNIT-GATEWAY-IP}:${IMAGE-REGISTRY-PORT}` (only when dev-cluster recreating)
-    - By default, `${VM-KNIT-GATEWAY-IP}:${IMAGE-REGITRY-PORT}` is `10.10.0.3:30503`.
-    - `${VM-KNIT-GATEWAY-IP}` should be the IP address of VirtualBox's VM instance "knit-gateway".
-    - `${IMAGE-REGISTRY-PORT}` is defined in the chart value `./charts/local/v*/knit-image-registry/values.yaml` .
-2. Run `./build/build.sh`
-3. Then run `./dev-cluster/install-knit.sh`
-    - It generates the `./configure/handout` directory, which contains the knitprofile file.
-4. Start using Knitfab:
-    - `./bin/knit init ./configure/handout/knitprofile`
+1. Copy `./dev-cluster/docker-certs/meta/ca.crt` to your `/etc/docker/certs.d/${VM-KNIT-GATEWAY-IP}:${IMAGE-REGISTRY-PORT}`
+    - By default, `${VM-KNIT-GATEWAY-IP}:${IMAGE-REGITRY-PORT}` is `10.10.0.3:30005`.
+    - You needs this operation only when on delete `./dev-cluster/docker-certs/*`.
+2. Then run `./dev-cluster/install-knit.sh --prepare` (once)
+3. Edit install setting directory (once)
+4. Import CA certification to your docker (once)
+    - Copy `./dev-cluster/knitfab-install-settings/docker/certs.d/${VM-IP}:${PORT}/ca.crt` to `/etc/docker/certs.d/${VM-IP}:${PORT}/ca.crt`
+5. Then run `./dev-cluster/install-knit.sh`
+
+In step 2, it generates an install setting directory as `./dev-cluster/knitfab-install-settings`.
+
+As step 3, Edit `./dev-cluster/knitfab-install-settings/values/knit-storage-nfs.yaml` like below:
+
+```yaml
+#
+# ......
+nfs:
+  # ...
+  external: true      # set true here
+  # ...
+  server: "10.10.0.3" # set IP address of your "knit-gateway" VM.
+  # ...
+  node: ""            # leave empty
+  # ...
+```
+
+For more anothor config, consult `docs/03.admin-guide`.
 
 > **Note**
 >
@@ -260,14 +322,6 @@ During provisioning, it generates records of the cluster's configurations in the
 > For example, in the case of colima, `ca.crt` should place `/etc/docker/certs.d/...` *IN COLIMA*.
 > You may need to `colima ssh` and copy the file.
 >
-
-#### local install to a cluster but dev-cluster
-
-`./dev-cluster/install-knit.sh` recognise some environmental variables.
-
-- `KUBECONFIG`: kubeconfig file pointing kubernetes cluster to be installed Knitfab into.
-- `CERTSDIR`: a directory contains CA Cert Pair(`ca.crt`, `ca.key`) and Server Cert Pair(`server.crt`, `server.key`).
-    - The (server) certs are used by the in-cluster image registry and knitd.
 
 #### `./dev-cluster/knitctl.sh`
 
