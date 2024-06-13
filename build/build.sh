@@ -70,7 +70,7 @@ case ${BUILD_MODE} in
 	;;
 	local|test)
 		export IMAGE_REGISTRY=${IMAGE_REGISTRY:-}
-		REPOSITORY=${REPOSITORY:-}
+		REPOSITORY=${REPOSITORY:-local}
 		export ARCH=${ARCH:-local}
 		export OS=${OS:-}
 	;;

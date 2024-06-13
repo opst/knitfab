@@ -1,0 +1,9 @@
+name: "file-downloader"
+version: "0.0.0"
+usage: "helm repo add REPO_NAME file://..."
+description: "repo downloader for file://"
+ignoreFlags: false
+downloaders:
+  - command: "bin/downloader.sh"
+    protocols:
+      - "file"

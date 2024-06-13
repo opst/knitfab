@@ -24,12 +24,3 @@
   service:
     name: nfs-kernel-server
     state: restarted
-
-- name: update knit config (related NFS)
-  shell: |
-    mkdir -p {{ knit_config }}/
-    touch {{ knit_config }}/install_setting
-    sed -Eie '/^KNIT_NFS_(HOST|EXPORT|MOUNTOPTIONS)=/d' {{ knit_config }}/install_setting
-    echo "KNIT_NFS_HOST={{ node_ip }}" >> {{ knit_config }}/install_setting
-    echo "KNIT_NFS_EXPORT=/" >> {{ knit_config }}/install_setting
-    echo "KNIT_NFS_MOUNTOPTIONS=nfsvers=4.1,rsize=8192,wsize=8192,hard" >> {{ knit_config }}/install_setting
