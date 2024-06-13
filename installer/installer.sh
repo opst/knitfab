@@ -651,15 +651,22 @@ run ${HELM} ${MODE} --dependency-update --wait \
 	-f ${VALUES}/knit-image-registry.yaml \
 	knit-image-registry knitfab/knit-image-registry
 
+message "[3 / 3] install Knitfab app"
+message "[3 / 3] #1 cleanup old Knitfab"
 message "[3 / 4] run database upgrade job"
-run ${HELM} upgrade --wait \
+MODE=install
+if ${HELM} status knit-schema-upgrader -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
+	MODE=upgrade
+fi
+run ${HELM} ${MODE} --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
 	--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
+	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
 	knit-schema-upgrader knitfab/knit-schema-upgrader
 
-message "[3 / 4] install knit app"
+message "[3 / 5] install knit app"
 MODE=install
 if ${HELM} status knit-app -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
 	MODE=upgrade
@@ -670,7 +677,7 @@ run ${HELM} ${MODE} --dependency-update --wait \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
 	--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
 	--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
-	--f <(${HELM} get values knit-schema-upgrader -n ${NAMESPACE} -o json --all) \
+	-f <(${HELM} get values knit-schema-upgrader -n ${NAMESPACE} -o json --all) \
 	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
 	-f ${VALUES}/knit-app.yaml \
 	-f ${VALUES}/hooks.yaml \

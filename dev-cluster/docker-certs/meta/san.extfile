@@ -1,0 +1,20 @@
+[req]
+distinguished_name = req_distinguished_name
+prompt = no
+
+[req_distinguished_name]
+CN = knitfab
+
+
+[ v3_ext ]
+authorityKeyIdentifier=keyid,issuer:always
+basicConstraints=CA:FALSE
+keyUsage=keyEncipherment,dataEncipherment
+extendedKeyUsage=serverAuth,clientAuth
+subjectAltName=@alt_names
+
+[alt_names]
+IP.1=10.10.0.3
+IP.2=10.10.0.2
+IP.3=10.10.0.4
+DNS.4=10.10.0.4

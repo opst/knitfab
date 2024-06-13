@@ -43,15 +43,6 @@ SYNC_KUBECONFIG_HOST = "./.sync/kubeconfig"
 
 NFS_EXPORT_ROOT         = "/exports"
 
-SYNC_DOCKER_CERTS = "/etc/containerd/certs.d"
-SYNC_DOCKER_CERTS_HOST = "#{__dir__}/.sync/docker-certs"
-
-SYNC_CA_CERTS = "/home/vagrant/certs"
-SYNC_CA_CERTS_HOST = "#{__dir__}/.sync/certs"
-
-SYNC_KNIT_CONFIG = "/home/vagrant/knit"
-SYNC_KNIT_CONFIG_HOST = "#{__dir__}/.sync/knit"
-
 Vagrant.configure("2") do |config|
     config.ssh.insert_key = false
 
@@ -71,8 +62,6 @@ Vagrant.configure("2") do |config|
         master.vm.hostname = master_node_name
         master.vm.synced_folder SYNC_KUBEADM_HOST,     SYNC_KUBEADM,     create:"true"
         master.vm.synced_folder SYNC_KUBECONFIG_HOST,  SYNC_KUBECONFIG,  create:"true"
-        master.vm.synced_folder SYNC_CA_CERTS_HOST,    SYNC_CA_CERTS,    create:"true"
-        master.vm.synced_folder SYNC_KNIT_CONFIG_HOST, SYNC_KNIT_CONFIG, create:"true"
         is_nfs = master_node == nfs_node
         master.vm.provision "ansible" do |ansible|
             ansible.compatibility_mode = "2.0"
@@ -84,7 +73,6 @@ Vagrant.configure("2") do |config|
                 gateway_ip: gateway_node.to_s,
                 share_kubeadm: SYNC_KUBEADM,
                 share_kubeconfig: SYNC_KUBECONFIG,
-                knit_config: SYNC_KNIT_CONFIG,
 
                 # NFS related.
                 is_nfs: is_nfs,
@@ -104,8 +92,6 @@ Vagrant.configure("2") do |config|
         gateway.vm.network "private_network", ip: node_ip
         gateway.vm.hostname = gateway_node_name
         gateway.vm.synced_folder SYNC_KUBEADM_HOST,     SYNC_KUBEADM,     create:"true"
-        gateway.vm.synced_folder SYNC_CA_CERTS_HOST,    SYNC_CA_CERTS,    create:"true"
-        gateway.vm.synced_folder SYNC_KNIT_CONFIG_HOST, SYNC_KNIT_CONFIG, create:"true"
         is_nfs = gateway_node == nfs_node
         gateway.vm.provision "ansible" do |ansible|
             ansible.playbook = "playbooks/gateway-playbook.yml"
@@ -115,10 +101,6 @@ Vagrant.configure("2") do |config|
                 node_ip: node_ip,
                 gateway_ip: gateway_node.to_s,
                 share_kubeadm: SYNC_KUBEADM,
-                ca_certs_dir: SYNC_CA_CERTS,
-                ca_certs_dir_in_host: SYNC_CA_CERTS_HOST,
-                knit_config: SYNC_KNIT_CONFIG,
-
                 # NFS related.
                 is_nfs: is_nfs,
                 nfs_export_root: NFS_EXPORT_ROOT,
@@ -138,8 +120,6 @@ Vagrant.configure("2") do |config|
             node.vm.hostname = node_name
 
             node.vm.synced_folder SYNC_KUBEADM_HOST,     SYNC_KUBEADM,     create:"true"
-            node.vm.synced_folder SYNC_CA_CERTS_HOST,    SYNC_CA_CERTS,    create:"true"
-            node.vm.synced_folder SYNC_KNIT_CONFIG_HOST, SYNC_KNIT_CONFIG, create:"true"
             is_nfs = worker_node == nfs_node
             node.vm.provision "ansible" do |ansible|
                 ansible.playbook = "playbooks/node-playbook.yml"
@@ -149,8 +129,6 @@ Vagrant.configure("2") do |config|
                     node_ip: node_ip,
                     gateway_ip: gateway_node.to_s,
                     share_kubeadm: SYNC_KUBEADM,
-                    ca_certs_dir: SYNC_CA_CERTS,
-                    knit_config: SYNC_KNIT_CONFIG,
 
                     # NFS related.
                     is_nfs: is_nfs,

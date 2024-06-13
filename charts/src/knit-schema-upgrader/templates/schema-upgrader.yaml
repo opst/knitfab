@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Values.schemaUpgrader.component }}
+  name: {{ .Values.schemaUpgrader.component }}-{{ randAlphaNum 6 | lower }}
   labels:
     app.kubernetes.io/name: {{ .Values.schemaUpgrader.component }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
