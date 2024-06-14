@@ -1,4 +1,4 @@
-
+{{ if and .Values.cert .Values.key}}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -14,9 +14,10 @@ type: kubernetes.io/tls
 data:
   tls.crt: {{ .Values.cert }}
   tls.key: {{ .Values.key }}
+{{ end }}
 
+{{ if and .Values.cacert .Values.cakey }}
 ---
-
 apiVersion: v1
 kind: Secret
 metadata:
@@ -32,3 +33,4 @@ type: kubernetes.io/tls
 data:
   tls.crt: {{ .Values.cacert }}
   tls.key: {{ .Values.cakey }}
+{{ end }}

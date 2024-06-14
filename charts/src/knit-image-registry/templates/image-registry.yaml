@@ -4,6 +4,8 @@
 # Docker Image Regsitry service and its requirements.
 #
 # PVC for image registry
+
+{{ if not .Values.external }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -84,20 +86,24 @@ spec:
           volumeMounts:
             - name: conf
               mountPath: /etc/nginx/templates
+            {{ if and .Values.certs.cert .Values.certs.key }}
             - name: cert
               mountPath: /etc/nginx/certs
+            {{ end }}
           readinessProbe:
             httpGet:
-              scheme: HTTPS
+              scheme: HTTP{{ if and .Values.certs.cert .Values.certs.key }}S{{ end }}
               path: /
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 5
           env:
+            {{ if and .Values.certs.cert .Values.certs.key }}
             - name: TLS_CERT
               value: /etc/nginx/certs/tls.crt
             - name: TLS_KEY
               value: /etc/nginx/certs/tls.key
+            {{ end }}
             - name: NODE_NAME
               value: "{{ .Values.server }}"
             - name: EXTERNAL_PORT
@@ -108,9 +114,11 @@ spec:
         - name: registry
           persistentVolumeClaim:
             claimName: {{ .Values.component }}-registry-root
+        {{ if and .Values.certs.cert .Values.certs.key }}
         - name: cert
           secret:
             secretName: {{ .Values.certs.secret.server }}
+        {{ end }}
         - name: conf
           configMap:
             name: {{ .Values.component }}-gateway-config
@@ -158,3 +166,5 @@ metadata:
 data:
   default.conf.template: |
 {{ tpl (.Files.Get "assets/image-registry/default.conf.tpl") . | indent 4 }}
+
+{{ end }}

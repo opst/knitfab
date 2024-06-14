@@ -7,17 +7,19 @@ map $upstream_http_docker_distribution_api_version $docker_distribution_api_vers
 }
 
 server {
-    listen              80 ssl;
+    listen              80{{ if and .Values.certs.cert .Values.certs.key }} ssl{{ end }};
 
     # 497 comes from https://nginx.org/en/docs/http/ngx_http_ssl_module.html
     error_page 497 301 =307 https://$host:${EXTERNAL_PORT}$request_uri;
 
+    {{ if and .Values.certs.cert .Values.certs.key }}
     ssl_certificate     ${TLS_CERT};
     ssl_certificate_key ${TLS_KEY};
     ssl_protocols       TLSv1.1 TLSv1.2;
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
     ssl_ciphers         'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+    {{ end }}
 
     access_log /var/log/nginx/access.log  proxy;
 
