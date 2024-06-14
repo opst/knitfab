@@ -81,6 +81,20 @@ NFS 機能を有する NAS でよいはずだが、既存の計算機に nfsd �
 Knitfab をインストールする
 -----------------------
 
+### インストールされるもの
+
+次のものが Kubernetes クラスタにインストールされる。
+
+|  | 対応する Helm Chart |
+|:------|:------------|
+| Knitfab アプリケーション本体 | knit-app, knit-schema-upgrader |
+| データベース | knit-db-postgres |
+| クラスタ内イメージレジストリ | knit-image-registry |
+| TLS 証明書類 | knit-certs |
+| ストレージクラス | knit-storage-nfs |
+
+また、 Helm Chart "knit-storage-nfs" は [CSI "csi-driver-nfs"](https://github.com/kubernetes-csi/csi-driver-nfs/) に依存しているので、この Chart も Knitfab とおなじ Namespace にインストールされる。
+
 ### 事前に用意するもの
 
 Knitfab をインストールするためには、次のツールが必要である。
@@ -96,7 +110,7 @@ Knitfab をインストールするためには、次のツールが必要であ
 
 ####  (選択) TLS 証明書を用意する
 
-Knitfab API やクラスタ内イメージレジストリは https で通信を行う。
+Knitfab Web API やクラスタ内イメージレジストリは、原則として https で通信を行う。
 インストールスクリプトはそのための証明書を生成するが、代わりに特定の証明書を指定して使うこともできる。
 
 - CA 証明書とその鍵があれば、それを使う
@@ -104,7 +118,7 @@ Knitfab API やクラスタ内イメージレジストリは https で通信を�
 
 たとえば「 kubernetes クラスタのノードに対して特定のドメイン名が使いたい」などといった要求があるなら、事前にサーバ証明書とそれに署名した CA 証明書 (およびそれらの鍵) が必要である。
 
-証明書類が与えられない場合、インストーラは自己署名証明書と、それで署名したサーバ証明書を生成する。
+証明書類が与えられない場合、インストーラは自己署名証明書と、それで署名したサーバ証明書を生成する。サーバ証明書は、Knitfab をインストールした際の Kubernetes クラスタのノードの IP アドレスを SAN に持つように生成される。
 
 ### 手順
 
@@ -139,7 +153,7 @@ chmod +x ./installer.sh
 > もし特定の TLS 証明書類を利用したいなら、代わりに次のコマンドを実行する。
 >
 > ```
-> TLSCACERT=path/to/ca.crt TLSCAKEY=path/to/ca.key TLSCERT=path/to/server.crt TLSKEY=path/to/server.key ./installler.sh --prepare
+> TLSCACERT=path/to/ca.crt TLSCAKEY=path/to/ca.key TLSCERT=path/to/server.crt TLSKEY=path/to/server.key ./installler.sh --prepare --kubeconfig ${KUBECONFIG}
 > ```
 >
 > サーバ証明書について指定がないなら、環境変数 `TLSCERT`, `TLSKEY` を省略して、次のようにする。
@@ -148,17 +162,42 @@ chmod +x ./installer.sh
 > TLSCACERT=path/to/ca.crt TLSCAKEY=path/to/ca.key ./installler.sh --prepare
 > ```
 >
->
 > CA 証明書が指定されなかった場合には、インストーラは 自己署名証明書を自動的に生成する。
 > サーバ証明書が指定されなかった場合には、インストーラは CA 証明書から自動的に生成する。
 
+> [!Note]
+>
+> **Advanced**
+>
+> 以上の手順は、 Knitfab Web API を https として公開するように設定するものである。
+>
+> 一方で、Knitfab 自身が https 化されていると不都合な場合もある。たとえば、Knitfab Web API の前にロードバランサーを設置して、TLS終端化はそちらで行いたい、という場合がそうだ。
+>
+> そうした場合には、次のように、フラグ `--no-tls` を付加して step 2. を実行せよ。
+>
+> ```
+> ./installer.sh --prepare --no-tls --kubeconfig ${YOUR_KUBECONFIG}
+> ```
+>
+> これによって、 `./installer.sh --prepare` が TLS 証明書ならびに関連する設定を生成しないようになり、続くインストール時にも Knitfab Web API は https 化されない。
+>
+> なお、こうしたときには、クラスタ内イメージレジストリも https 化されないので、各ユーザはインセキュアレジストリ(insecure registry)として dockerd に登録する必要がある。詳細は、次のリンクを参照されたい。
+>
+> - https://docs.docker.com/reference/cli/dockerd/#insecure-registries
+> - https://docs.docker.com/reference/cli/dockerd/#daemon-configuration-file
+>
+
 > [!Caution]
 >
-> **TLS証明書を指定した場合、それら証明書と鍵がインストール設定の一部として複製される。**
+> **TLS証明書を指定した場合、それら証明書や秘密鍵がインストール設定の一部として複製される。**
 >
-> - `knitfab-install-settings/certs/*` (ファイルのコピーとして)
-> - `knitfab-install-settings/values/knit-certs.yaml` (base64エンコードされたテキストとして)
+> - `knitfab-install-settings/certs/*` (キーペア; ファイルのコピーとして)
+> - `knitfab-install-settings/values/knit-certs.yaml` (キーペア; base64エンコードされたテキストとして)
+> - `knitfab-install-settings/knitprofile` (証明書のみ; base64エンコードされたテキストとして)
 >
+> また、証明書を生成した場合も、その生成された証明書は上記の箇所に記録される。
+>
+> 特に、キーペアには **秘密鍵** が含まれるので、取り扱いには注意してほしい。
 
 ##### NFS を使うように設定する
 
@@ -276,7 +315,7 @@ cert:
 
 のように、 `apiRoot` のホスト部分を書き換えればよい。
 
-また、**クラスタ内リポジトリ** の証明書についても対処が必要である。
+また、**クラスタ内イメージレジストリ** の証明書についても対処が必要である。
 
 `knitfab-install-settings/handout/docker/certs.d/IP-ADDRESS:PORT` のような名前のディレクトリが見つかるだろう。
 このディレクトリは、やはり適当な kubernertes ノードの IP とポート名を `:` でつないだものである。
