@@ -4,6 +4,7 @@ set -e
 HERE=$(cd ${0%/*}; pwd)
 ROOT=$(cd ${HERE}/../; pwd)
 JQ=${JQ:-jq}
+HELM=${HELM:-helm}
 KUBECTL=${KUBECTL:-kubectl}
 export KUBECONFIG=${KUBECONFIG:-${HERE}/.sync/kubeconfig/kubeconfig}
 export NAMESPACE=${NAMESPACE:-knit-dev}
@@ -38,3 +39,4 @@ export IMAGE_REPOSITORY_HOST="localhost:30005"
 export REPOSITORY=local
 export CHART_REPOSITORY_ROOT="file://${ROOT}/charts/local"
 ${ROOT}/installer/installer.sh --install -s ${HERE}/knitfab-install-settings --version ${VERSION} ${ARGS}
+${HELM} repo remove knitfab
