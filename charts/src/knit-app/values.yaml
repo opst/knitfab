@@ -25,7 +25,14 @@ knitd_backend:
 vex:
   component: vex
   image: "knit-vex"
+
+  # use: if true, vex will be deployed.
+  use: false
+
+  # margin: the minimum size of the volume capacity reminder.
   margin: 1Gi
+
+  # delta: the volume growth size for a step.
   delta: 5Gi
 
 # # # empty container # # #

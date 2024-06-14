@@ -183,7 +183,7 @@ EOF
 
 	echo ${NAMESPACE:-knitfab} > ./namespace
 
-	cat <<EOF >> values/knit-app.yaml
+	cat <<EOF > values/knit-app.yaml
 # # # values/knit-app.yaml # # #
 
 # this file declares install paramaters for knit-app.
@@ -197,10 +197,22 @@ knitd:
   # port: Port number of knit-api service, exposed from k8s cluster node.
   port: 30803
 
+vex:
+  # use: If true, vex is deployed. default: false
+  use: false
+
+  # # # items below are effective only when vex.use is true. # # #
+
+  # # margin: the minimum size of the volume capacity reminder.
+  # margin: 1Gi
+
+  # # delta: the volume growth size for a step.
+  # delta: 5Gi
+
 EOF
 
 	cat <<EOF >> values/knit-db-postgres.yaml
-# # # values/knit-app.yaml # # #
+# # # values/knit-db-postgres.yaml # # #
 
 # # this file declares install paramaters for Database of Knitfab.
 
