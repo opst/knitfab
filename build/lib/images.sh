@@ -27,10 +27,10 @@ for A in ${ARCH} ; do
 	case ${A} in
 		amd64|arm64)
 			PLATFORM="linux/${A}"
-			TAG="${TAG}-${A}"
+			TAG="${APP_VERSION}-${A}"
 			;;
 		local)
-			TAG="${TAG}"
+			TAG="${APP_VERSION}-${A}"
 			;;
 		test|"")
 			;;
@@ -97,7 +97,7 @@ for COMP in ${COMPONENT} ; do
 	echo "echo \"publishing ${COMP}...\" >&2"
 	VARIANTS=
 	for A in ${ARCH} ; do
-		VAR="${COMP}:${APP_VERSION}"
+		VAR="${COMP}:${APP_VERSION}-${A}"
 		VARIANTS="${VARIANTS} \${IMAGE_REPOSITORY}/${VAR}"
 		echo "${DOCKER} tag \"${VAR}\" \"\${IMAGE_REPOSITORY}/${VAR}\""
 		echo "while ! ${DOCKER} push \"\${IMAGE_REPOSITORY}/${VAR}\"; do echo 'retry...'; sleep 1; done"
