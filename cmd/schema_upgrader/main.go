@@ -82,11 +82,18 @@ func main() {
 				}
 			}
 
+			if flags.User != "" {
+				os.Setenv("PGUSER", flags.User)
+			}
+			if flags.Password != "" {
+				os.Setenv("PGPASSWORD", flags.Password)
+			}
+
 			db, err := postgres.New(
 				ctx,
 				fmt.Sprintf(
-					"postgres://%s:%s@%s:%d/%s",
-					flags.User, flags.Password, flags.Host, flags.Port, flags.Database,
+					"postgres://%s:%d/%s",
+					flags.Host, flags.Port, flags.Database,
 				),
 				postgres.WithSchemaRepository(flags.Schema),
 			)
