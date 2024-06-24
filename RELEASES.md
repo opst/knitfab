@@ -1,21 +1,43 @@
+v1.1.2
+======
+
+- Date: 2024-06-24
+
+Release v1.1.2 as re-release of v1.1.1.
+
+This release retracts v1.1.1.
+
+## Changes
+
+Nothing, but Charts and Images which v1.1.1 have missed are published.
+
 v1.1.1
 ======
 
 - Date: 2024-06-11
+- Retracted: 2024-06-24
 
 Release v1.1.1, as a security update.
 
-# Affected Users
+> [!Important]
+>
+> This release has a probrem to install.
+>
+> We have not deploy charts and images for this version, so installer fails to install v1.1.1.
+>
+> Sorry for inconvinient. Please use v1.1.2. There are no change of features.
+
+## Affected Users
 
 No. Only developer are affected by this security issue.
 
 We using Ansibel as the provisioner for dev-cluser. This release upgrade ansible and solve vulnabilites in old ansible.
 
-# New Feature
+## New Feature
 
 Nothing.
 
-# Upgrade Path
+## Upgrade Path
 
 Nothing. This release has no change in Knitfab CLI, Containers nor Installer.
 
