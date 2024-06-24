@@ -1,0 +1,44 @@
+# Default values for knit-storage-nfs.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+component: "knitfab-storage"
+
+class:
+  data: "knitfab-storage-data"
+  system: "knitfab-storage-system"
+
+nfs:
+  # external: (default: false)
+  #   Set to true when you use the NFS server you own.
+  #   Set to false when you use the NFS server provided by the chart.
+  #   When false, PVs are stored in the host computer's "hostPath".
+  external: false
+
+  # server: (default: "knit-nfs")
+  #   The hostname of the NFS server.
+  #   When "external" is true, this chart expects the NFS server to be running at this hostname:2049.
+  #   When "external" is false, this chart creates an NFS server service with this name.
+  server: "knit-nfs"
+
+  # share: (default: "/")
+  #   The root directory of the NFS server.
+  share: "/"
+
+  # mountOptions: (default: "nfsvers=4.1,rsize=8192,wsize=8192,hard")
+  #   The mount options for the NFS client.
+  mountOptions: nfsvers=4.1,rsize=8192,wsize=8192,hard,nolock
+
+  # node: (default: "nfs-server")
+  #   The name of the node where the NFS server runs.
+  #
+  #   If you set this with blank explicitly,
+  #   the NFS server may run in an undetermined node.
+  node: "nfs-server"
+
+  # hostPath: (default: "/var/lib/knitfab/storage")
+  #
+  # The backend directory where the NFS server stores the PVs.
+  #
+  # If you set this with blank explicitly,
+  # the NFS server stores in-container directory, and data shares life with the contaner .
+  hostPath: "/var/lib/knitfab/storage"
