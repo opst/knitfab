@@ -99,17 +99,10 @@ func (p *progress) Sent() <-chan struct{} {
 	return p.sent
 }
 
-func (c *client) PostData(ctx context.Context, source string, dereference bool) Progress[*apidata.Detail] {
-	ctx, cancel := context.WithCancel(ctx)
+func (c *client) PostData(sendingCtx context.Context, source string, dereference bool) Progress[*apidata.Detail] {
+	sendingCtx, cancel := context.WithCancel(sendingCtx)
 
-	started := false
 	r, w := io.Pipe()
-	defer func() {
-		if !started {
-			r.Close()
-			w.Close()
-		}
-	}()
 
 	md5writer := kio.NewMD5Writer(w)
 	gzwriter := gzip.NewWriter(md5writer)
@@ -120,11 +113,18 @@ func (c *client) PostData(ctx context.Context, source string, dereference bool) 
 	prog := &progress{
 		sent: make(chan struct{}, 1),
 		done: make(chan struct{}, 1),
-		p:    archive.GoTar(ctx, source, gzwriter, taropts...),
+		p:    archive.GoTar(sendingCtx, source, gzwriter, taropts...),
+	}
+
+	if err := prog.Error(); err != nil {
+		cancel()
+		prog.e = fmt.Errorf("failed to archive %s: %w", source, err)
+		close(prog.done)
+		return prog
 	}
 
 	treader := kio.NewTriggerReader(r)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apipath("data"), treader)
+	req, err := http.NewRequestWithContext(sendingCtx, http.MethodPost, c.apipath("data"), treader)
 	if err != nil {
 		cancel()
 		prog.e = err
@@ -132,7 +132,6 @@ func (c *client) PostData(ctx context.Context, source string, dereference bool) 
 	}
 	treader.OnEnd(func() {
 		req.Trailer.Add("x-checksum-md5", hex.EncodeToString(md5writer.Sum()))
-		close(prog.sent)
 	})
 
 	req.Trailer = http.Header{}
@@ -141,18 +140,20 @@ func (c *client) PostData(ctx context.Context, source string, dereference bool) 
 	req.Header.Add("Trailer", "x-checksum-md5")
 
 	go func() {
-		<-prog.p.Done()
-		if err := prog.p.Error(); err != nil {
-			cancel()
+		select {
+		case <-prog.p.Done():
+		case <-sendingCtx.Done():
 		}
-		gzwriter.Close()
+		if err := prog.Error(); err == nil {
+			gzwriter.Close()
+		}
 		w.Close()
+		close(prog.sent)
 	}()
 
-	started = true
 	go func() {
 		defer close(prog.done)
-		defer r.Close()
+		defer cancel()
 
 		// send data to api/data.
 		resp, err := c.httpclient.Do(req)
