@@ -1,3 +1,4 @@
+{{ if .Values.vex.use }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -151,3 +152,4 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+{{ end }}
