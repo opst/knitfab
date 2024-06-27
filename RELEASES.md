@@ -1,7 +1,7 @@
 v1.2.0
 =======
 
-- Date: 2024-07-03
+- Date: 2024-07-09
 
 Release v1.2.0 as preparation for the future releases.
 This release also includes a **security update** .
@@ -58,7 +58,7 @@ It supports schema changing in the future.
 
 Knitfab v1.2.0 is released under BSL 1.1, as written in the LICENSE file.
 
-CHANGE DATE for `v1.2.x` is 2028-07-03.
+CHANGE DATE for `v1.2.x` is 2028-07-09.
 
 Previous releases, `v1.1.x` or brefore, are not changed in their CHANGE DATE.
 
