@@ -1,0 +1,6 @@
+apiVersion: v2
+name: knit-schema-upgrader
+description: knitfab databsae schema upgrader
+type: application
+version: v1.2.0
+appVersion: v1.2.0-7bb428d
