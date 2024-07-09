@@ -1,0 +1,757 @@
+#
+# projection loops (leader)
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.loops.projection.component }}-leader
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.loops.projection.component }}-leader
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.loops.projection.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: {{ .Values.loops.projection.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.loops.projection.component }}-leader
+      app.kubernetes.io/component: {{ .Values.loops.projection.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.loops.projection.component }}-leader
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Values.loops.projection.component }}-leader
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.loops.projection.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      containers:
+        - name: projection-leader
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          args: [
+            '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',  '/knit/hooks/hooks.yaml',
+            '--type',   'projection',
+            '--policy', 'forever:{{ .Values.loops.projection.interval }}',
+            '--schema-repo', '/knit/schema-repo',
+          ]
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: password
+          volumeMounts:
+            - name: knitd-backend-config
+              mountPath: /knit/configs
+              readOnly: true
+            - name: hooks-config
+              mountPath: /knit/hooks
+              readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
+      volumes:
+        - name: knitd-backend-config
+          configMap:
+            name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: hooks-config
+          configMap:
+            name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
+
+---
+
+#
+# initialize loops (leader)
+#
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.loops.initialize.component }}-leader
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.loops.initialize.component }}-leader
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.loops.initialize.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: {{ .Values.loops.initialize.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.loops.initialize.component }}-leader
+      app.kubernetes.io/component: {{ .Values.loops.initialize.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.loops.initialize.component }}-leader
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Values.loops.initialize.component }}-leader
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.loops.initialize.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      serviceAccountName: {{ .Values.loops.initialize.serviceAccount }}
+      containers:
+        - name: initialize-leader
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          args: [
+            '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/hooks/hooks.yaml',
+            '--type',   'initialize',
+            '--policy', 'forever:{{ .Values.loops.initialize.interval }}',
+            '--schema-repo', '/knit/schema-repo',
+          ]
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: password
+          volumeMounts:
+            - name: config
+              mountPath: /knit/configs
+              readOnly: true
+            - name: hooks-config
+              mountPath: /knit/hooks
+              readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: hooks-config
+          configMap:
+            name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.loops.initialize.serviceAccount }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.loops.initialize.component }}
+    app.kubernetes.io/name: {{ .Values.loops.initialize.serviceAccount }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: initialize-volume
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "create"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grant-initialize-volume
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.loops.initialize.component }}
+    app.kubernetes.io/name: grant-initialize-volume
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: initialize-volume
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.loops.initialize.serviceAccount }}
+
+---
+
+#
+# run managed loops (leader)
+#
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.loops.run_management.component }}-leader
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.loops.run_management.component }}-leader
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.loops.run_management.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: {{ .Values.loops.run_management.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.loops.run_management.component }}-leader
+      app.kubernetes.io/component: {{ .Values.loops.run_management.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.loops.run_management.component }}-leader
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Values.loops.run_management.component }}-leader
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.loops.run_management.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      serviceAccountName: {{ .Values.loops.run_management.serviceAccount }}
+      containers:
+        - name: knit-loop-run-management-leader
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          args: [
+            '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/hooks/hooks.yaml',
+            '--type',   'run_management',
+            '--policy', 'forever:{{ .Values.loops.run_management.interval }}',
+            '--schema-repo', '/knit/schema-repo',
+          ]
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret}}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret}}
+                  key: password
+          volumeMounts:
+            - name: config
+              mountPath: /knit/configs
+              readOnly: true
+            - name: hooks-config
+              mountPath: /knit/hooks
+              readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: hooks-config
+          configMap:
+            name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.loops.run_management.serviceAccount }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knit-loops
+    app.kubernetes.io/name: {{ .Values.loops.run_management.serviceAccount }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: read-worker-status
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "create"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grant-read-worker-status
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knit-loops
+    app.kubernetes.io/name: run-management
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: read-worker-status
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.loops.run_management.serviceAccount }}
+
+---
+
+#
+# Housekeeping loops (leader)
+#
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.loops.housekeeping.component }}-leader
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knit-loop-housekeeping-leader
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.loops.housekeeping.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: {{ .Values.loops.housekeeping.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.loops.housekeeping.component }}-leader
+      app.kubernetes.io/component: {{ .Values.loops.housekeeping.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.loops.housekeeping.component }}-leader
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Values.loops.housekeeping.component }}-leader
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.loops.housekeeping.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      serviceAccountName: {{ .Values.loops.housekeeping.serviceAccount }}
+      containers:
+        - name: housekeeping-leader
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          args: [
+            '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/hooks/hooks.yaml',
+            '--type',   'housekeeping',
+            '--policy', 'forever:{{ .Values.loops.housekeeping.interval }}',
+            '--schema-repo', '/knit/schema-repo',
+          ]
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: password
+          volumeMounts:
+            - name: config
+              mountPath: /knit/configs
+              readOnly: true
+            - name: hooks-config
+              mountPath: /knit/hooks
+              readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: hooks-config
+          configMap:
+            name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.loops.housekeeping.serviceAccount }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knit-loops
+    app.kubernetes.io/name: {{ .Values.loops.housekeeping.serviceAccount }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: housekeep-dataagt
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "delete"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grant-housekeep-dataagt
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knit-loops
+    app.kubernetes.io/name: housekeeping
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: housekeep-dataagt
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.loops.housekeeping.serviceAccount }}
+
+
+---
+
+#
+# finishing loops (leader)
+#
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.loops.finishing.component }}-leader
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: knit-loop-finishing-leader
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.loops.finishing.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: {{ .Values.loops.finishing.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.loops.finishing.component }}-leader
+      app.kubernetes.io/component: {{ .Values.loops.finishing.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.loops.finishing.component }}-leader
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Values.loops.finishing.component }}-leader
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.loops.finishing.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      serviceAccountName: {{ .Values.loops.finishing.serviceAccount }}
+      containers:
+        - name: finishing-leader
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          args: [
+            '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/hooks/hooks.yaml',
+            '--type',   'finishing',
+            '--policy', 'forever:{{ .Values.loops.finishing.interval }}',
+            '--schema-repo', '/knit/schema-repo',
+          ]
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: password
+          volumeMounts:
+            - name: config
+              mountPath: /knit/configs
+              readOnly: true
+            - name: hooks-config
+              mountPath: /knit/hooks
+              readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: hooks-config
+          configMap:
+            name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.loops.finishing.serviceAccount }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knit-loops
+    app.kubernetes.io/name: {{ .Values.loops.finishing.serviceAccount }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: finishing-dataagt
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "delete"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grant-finishing-dataagt
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knit-loops
+    app.kubernetes.io/name: finishing
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: finishing-dataagt
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.loops.finishing.serviceAccount }}
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.loops.gc.component }}-leader
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.loops.gc.component }}-leader
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.loops.projection.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: {{ .Values.loops.gc.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.loops.gc.component }}-leader
+      app.kubernetes.io/component: {{ .Values.loops.gc.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.loops.gc.component }}-leader
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Values.loops.gc.component }}-leader
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.loops.gc.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      serviceAccountName: {{ .Values.loops.gc.serviceAccount }}
+      containers:
+        - name: gc-leader
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.loops.image }}:{{ .Chart.AppVersion }}"
+          args: [
+            '--config', '/knit/configs/knitd.backend.yaml',
+            '--hooks',   '/knit/hooks/hooks.yaml',
+            '--type',   'garbage_collection',
+            '--policy', 'forever:{{ .Values.loops.gc.interval }}',
+            '--schema-repo', '/knit/schema-repo',
+          ]
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: password
+          volumeMounts:
+            - name: config
+              mountPath: /knit/configs
+              readOnly: true
+            - name: hooks-config
+              mountPath: /knit/hooks
+              readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.knitd_backend.component }}-config  # defined in knitd-backend.yaml
+        - name: hooks-config
+          configMap:
+            name: hooks-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.loops.gc.serviceAccount }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knit-loops
+    app.kubernetes.io/name: {{ .Values.loops.gc.serviceAccount }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: drop-pvc
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "delete"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grant-drop-pvc
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: knit-loops
+    app.kubernetes.io/name: grant-drop-pvc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: drop-pvc
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.loops.gc.serviceAccount }}
