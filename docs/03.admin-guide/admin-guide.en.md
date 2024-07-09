@@ -80,6 +80,20 @@ It should be sufficient to use an NAS with NFS capabilities, but it is also poss
 Installing Knitfab
 -----------------------
 
+### What is installed
+
+Following items are installed in your Kubernetes cluster.
+
+|  | Corresponding Helm Chart |
+|:------|:------------|
+| Knitfab Application | knit-app, knit-schema-upgrader |
+| Database | knit-db-postgres |
+| In-cluster Image Registry | knit-image-registry |
+| TLS Certifications | knit-certs |
+| StorageClass | knit-storage-nfs |
+
+[CSI "csi-driver-nfs"](https://github.com/kubernetes-csi/csi-driver-nfs/) is also installed in the same Namespace as Knitfab, since "knit-storage-nfs" depends on it.
+
 ### Prerequisites
 
 To install Knitfab, the following tools are required:
@@ -95,7 +109,7 @@ Note that this requirement is only the minimum for Knitfab to start. Depending o
 
 #### (Optional) Prepare TLS Certificates
 
-Knitfab API and the cluster-internal image registry communicate over HTTPS.
+Knitfab Web API and the in-cluster Image Registry communicate over HTTPS, by default.
 The installer script generates certificates for this purpose, but you can also specify specific certificates to use.
 
 - If you have a CA certificate and its key, you can use them.
@@ -103,7 +117,7 @@ The installer script generates certificates for this purpose, but you can also s
 
 For example, if you have a requirement such as "I want to use a specific domain name for the nodes in the Kubernetes cluster," you will need a server certificate and a CA certificate signed by it (along with their keys).
 
-If no certificates are provided, the installer will generate self-signed certificates and a server certificate signed by them.
+If no certificates are provided, the installer will generate self-signed certificates and a server certificate signed by them. The server sertificate has SAN with IP Addresses of nodes of the Kubernetes cluster where Knitfab is installed in.
 
 ### Installation steps
 
@@ -148,13 +162,41 @@ The following Command generates the installation settings for Knitfab in the `./
 > ```
 >
 
+> [!Note]
+>
+> **Advanced**
+>
+> By the step above, Knitfab Web API is exposed as an https endpoint.
+>
+> However, it might be inconvinient that Knitfab itself is https. For example, deploying a load balancer front of Knitfab Web API, and you want for the LB to terminate TLS.
+>
+> In a case like that, add a flag `--no-tls` to step 2.
+>
+> ```
+> ./installer.sh --prepare --no-tls --kubeconfig ${YOUR_KUBECONFIG}
+> ```
+>
+> By `--no-tls`, `./installer.sh` does not generate TLS certificates and related configurations, then Knitfab Web API is not to be https on installing.
+>
+> If you do so, the in-cluster Image Repository is not https, either.
+>
+> Your users should register it as "insecure registry" to dockerd. For more details, see following links:
+>
+> - https://docs.docker.com/reference/cli/dockerd/#insecure-registries
+> - https://docs.docker.com/reference/cli/dockerd/#daemon-configuration-file
+>
+
 > [!Caution]
 >
-> **If you specify TLS certificates, those certificates and keys will be copied as part of the installation settings.**
+> **If you specify TLS certificates, those certificates and secret keys will be copied as part of the installation settings.**
 >
-> - `Knitfab-install-settings/certs/*` (as file copies)
-> - `Knitfab-install-settings/values/knit-certs.yaml` (as base64-encoded text)
+> - `knitfab-install-settings/certs/*` (key pair; as file copies)
+> - `knitfab-install-settings/values/knit-certs.yaml` (key pair; as base64-encoded text)
+> - `knitfab-install-settings/knitprofile` (only cert; as base64-encoded text)
 >
+> Also, when key pair is generated, the key pair or certificaiton are stored as above.
+>
+> Especially, key pair has **secret key**. Handle with care.
 
 ##### Configure to use NFS
 
@@ -213,14 +255,14 @@ For other files as well, you can modify the parameters as needed.
 
 The following are particularly impactful for usage:
 
-- `Knitfab-install-settings/values/knit-app.yaml`'s `knitd.port`
-- `Knitfab-install-settings/values/knit-image-registry.yaml`'s `port`
+- `knitfab-install-settings/values/knit-app.yaml`'s `knitd.port`
+- `knitfab-install-settings/values/knit-image-registry.yaml`'s `port`
 
 The former is the listening port for the Knitfab API, and the latter is the listening port for the in-cluster image registry.
 
 Also, if you have changed the TLD (Top-Level Domain) of the Kubernetes cluster during its setup from the default value (`cluster.local`), set the custom TLD in the following item.
 
-- `clusterTLD` in `Knitfab-install-settings/values/knit-app.yaml` (Comment in and modify)
+- `clusterTLD` in `knitfab-install-settings/values/knit-app.yaml` (Comment in and modify)
 
 There are configuration files to extend Knitfab's behavior.
 
@@ -239,7 +281,7 @@ By executing this command, the installer script will sequentially install Knitfa
 
 #### Step 4: Distribute handouts to users
 
-The connection information to the installed Knitfab is generated in the `Knitfab-install-settings/handout` folder.
+The connection information to the installed Knitfab is generated in the `knitfab-install-settings/handout` folder.
 
 Distribute this folder to users who want to use Knitfab.
 
@@ -249,7 +291,7 @@ The usage instructions for this handout are described in the user guide.
 
 If you want to access Knitfab with a specific domain name (e.g., when a specified server certificate is configured), you need to modify the connection settings before distributing the handout to users.
 
-The connection settings to the Knitfab API, called **knitprofil file**, can be found in `Knitfab-install-settings/handout/knitprofile`. This file is a YAML file with the following structure:
+The connection settings to the Knitfab API, called **knitprofil file**, can be found in `knitfab-install-settings/handout/knitprofile`. This file is a YAML file with the following structure:
 
 ```yaml
 apiRoot: https://IP-ADDRESS:PORT/api
@@ -270,15 +312,15 @@ cert:
     ca: ...Certification....
 ```
 
-Also, you need to address the certificate for the **in-cluster repository**.
+Also, you need to address the certificate for the **in-cluster Image Registry**.
 
-You will find a directory named `Knitfab-install-settings/handout/docker/certs.d/10.10.0.3:30503`.
+You will find a directory named `knitfab-install-settings/handout/docker/certs.d/10.10.0.3:30503`.
 This directory is also named after the IP address of a appropriate Kubernetes node concatenated with the port number using `:` as a separator.
 Rename the part with this IP to the desired domain name for access.
 
 ### Uninstall Knitfab
 
-When you execute the installation, an uninstaller will be generated as `Knitfab-install-settings/uninstall.sh`.
+When you execute the installation, an uninstaller will be generated as `knitfab-install-settings/uninstall.sh`.
 
 ```
 Knitfab-install-settings/uninstall.sh
@@ -357,16 +399,16 @@ helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
 
 The pattern `--set-json "...=$(helm get values ...)"` that appears frequently in the middle is used to read installation parameters ([Helm Values](https://helm.sh/docs/chart_template_guide/values_files/)) from installed charts and ensure consistency between charts.
 
-In addition, `./Knitfab-install-settings/values/CHART_NAME.yaml` is incorporated as the Values for that chart.
+In addition, `./knitfab-install-settings/values/CHART_NAME.yaml` is incorporated as the Values for that chart.
 Therefore, if you need to reinstall or update only a specific chart, you should follow this approach.
 
 > [!Caution]
 >
 > Uninstalling the following charts will result in the loss of lineage and data in Knitfab. Please be cautious when uninstalling charts.
 >
-> - Knitfab/knit-storage-nfs
-> - Knitfab/knit-db-postgres
-> - Knitfab/knit-image-registry
+> - knitfab/knit-storage-nfs
+> - knitfab/knit-db-postgres
+> - knitfab/knit-image-registry
 >
 > knit-db-postgres and knit-image-registry also define PVCs, so uninstalling these charts will result in the loss of the previous database content and `docker push`ed images.
 > As a result, the relationship between PVCs and Knitfab data, as well as the images referenced by Plans, will be lost, and the premise of Knitfab's lineage management will not be met.
@@ -630,7 +672,7 @@ Users push their privately created container images to the cluster's internal im
 
 > [!Warning]
 >
-> As mentioned earlier, dynamic components are launched by pulling images from `ghcr.io/opst/Knitfab`.
+> As mentioned earlier, dynamic components are launched by pulling images from `ghcr.io/opst/knitfab`.
 >
 > Therefore, if there is no internet access or if there is a problem with ghcr.io, there is a possibility of failure in launching the dynamic components.
 

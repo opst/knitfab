@@ -1,2 +1,4 @@
 .vagrant
 .sync
+knitfab-install-settings
+docker-certs

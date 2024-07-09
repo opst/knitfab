@@ -13,35 +13,64 @@ function message() {
 	echo "$@" >&2
 }
 
-
 function get_node_ip() {
 	${KUBECTL} get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'
 }
 
 function alt_names() {
-    for NAME in $(get_node_ip) ; do
+    COUNT=0
+    if [ -n "${USE_NODE_IPS}" ] ; then
+        for NAME in $(get_node_ip) ; do
+            COUNT=$((COUNT + 1))
+            echo "IP.${COUNT}=${NAME}"
+        done
+    fi
+    for N in ${NAME} ; do
         COUNT=$((COUNT + 1))
-        echo "IP.${COUNT}=${NAME}"
+        echo "DNS.${COUNT}=${N}"
     done
 }
+
+while [ ${#} -gt 0 ] ; do
+    ARG=${1}; shift
+    case ${ARG} in
+        --dest)
+            DEST=${1}; shift
+            ;;
+        --node-ips)
+            USE_NODE_IPS=1
+            ;;
+        --no-node-ips)
+            USE_NODE_IPS=
+            ;;
+        --name)
+            NAME="${NAME} ${1}"; shift
+            ;;
+        --name=*)
+            NAME="${NAME} ${ARG#--name=}"
+            ;;
+        *)
+            message "unknown argument: ${ARG}"
+            exit 1
+            ;;
+    esac
+done
 
 # ------
 mkdir -p ${DEST}
 
 # ... certificate
-if [ -n "${RENEW_CA}" ] ; then
-   message "generating self-signed CA certificate & key..."
-    # create self-signed CA certificate/key pair
-    # ... key
+message "generating self-signed CA certificate & key..."
+# create self-signed CA certificate/key pair
+# ... key
 
-    ${OPENSSL} genrsa -out ${DEST}/ca.key 4096
+${OPENSSL} genrsa -out ${DEST}/ca.key 4096
 
-    ${OPENSSL} req -new -x509 -nodes \
-        -key ${DEST}/ca.key \
-        -sha256 -days 3650 \
-        -out ${DEST}/ca.crt \
-        -subj "/CN=knitfab/O=knitfab/OU=knitfab"
-fi
+${OPENSSL} req -new -x509 -nodes \
+    -key ${DEST}/ca.key \
+    -sha256 -days 3650 \
+    -out ${DEST}/ca.crt \
+    -subj "/CN=knitfab/O=knitfab/OU=knitfab"
 
 
 message "generating server certificate & key..."
@@ -52,18 +81,10 @@ ${OPENSSL} genrsa -out ${DEST}/server.key 4096
 cat <<EOF > ${DEST}/san.extfile
 [req]
 distinguished_name = req_distinguished_name
-req_extensions = req_ext
 prompt = no
 
 [req_distinguished_name]
 CN = knitfab
-
-[ req_ext ]
-subjectAltName=@alt_names
-
-[ SAN ]
-subjectAltName=@alt_names
-basicConstraints=CA:FALSE
 
 [ v3_ext ]
 authorityKeyIdentifier=keyid,issuer:always

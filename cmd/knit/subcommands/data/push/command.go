@@ -140,6 +140,7 @@ func Task(
 				bar.SetTotal(prog.EstimatedTotalSize())
 				bar.SetCurrent(prog.ProgressedSize())
 				bar.Set("prefix", "")
+			case <-prog.Done():
 			}
 			break
 		}

@@ -54,6 +54,13 @@ case ${1} in
 
 		${HELM} ${HELMOPTS} install --namespace ${KNIT_TEST_NAMESPACE} --create-namespace --dependency-update --wait \
 			--set-json "storage=$(${HELM} ${HELMOPTS} --namespace ${KNIT_TEST_NAMESPACE} get values -o json --all knit-storage-nfs)" \
+			--set-json "database=$(${HELM} ${HELMOPTS} --namespace ${KNIT_TEST_NAMESPACE} get values -o json --all knit-db-postgres)" \
+			knit-schema-upgrader ./charts/test/v0.0.0/knit-schema-upgrader
+
+		echo "" >&2
+
+		${HELM} ${HELMOPTS} install --namespace ${KNIT_TEST_NAMESPACE} --create-namespace --dependency-update --wait \
+			--set-json "storage=$(${HELM} ${HELMOPTS} --namespace ${KNIT_TEST_NAMESPACE} get values -o json --all knit-storage-nfs)" \
 			knit-test ./charts/src/knit-test
 
 		echo "" >&2
@@ -72,6 +79,7 @@ case ${1} in
 		;;
 	uninstall)
 		${HELM} ${HELMOPTS} uninstall --namespace ${KNIT_TEST_NAMESPACE} --wait knit-test || :
+		${HELM} ${HELMOPTS} uninstall --namespace ${KNIT_TEST_NAMESPACE} --wait knit-schema-upgrader || :
 		${HELM} ${HELMOPTS} uninstall --namespace ${KNIT_TEST_NAMESPACE} --wait knit-db-postgres || :
 		${KUBECTL} ${KUBEOPTS} --namespace ${KNIT_TEST_NAMESPACE} delete pvc --all
 		${KUBECTL} ${KUBEOPTS} delete pv --all

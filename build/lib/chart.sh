@@ -28,17 +28,15 @@ mkdir -p ${CHART_DEST}
 
 echo "building charts @ ${CHART_DEST}" >&2
 
-APP_VERSION=${APP_VERSION}
-if [ "release" != ${BUILD_MODE} ] ; then
-	APP_VERSION=${APP_VERSION}-${BUILD_MODE}
+if [ -z "${APP_VERSION}" ] ; then
+	echo "knit app version is not specified!" >&2
+	exit 1
 fi
-if [ -n "${DEBUG}" ] ; then
-	APP_VERSION=${APP_VERSION}-debug
-fi
+
 export APP_VERSION
-for CHART in knit-app knit-certs knit-db-postgres knit-image-registry knit-storage-nfs ; do
-	mkdir -p ${CHART_DEST}/${CHART}
-	cp -r ${ROOT}/charts/src/${CHART}/* ${CHART_DEST}/${CHART}
+for CHART in knit-app knit-certs knit-db-postgres knit-image-registry knit-storage-nfs knit-schema-upgrader ; do
+	mkdir -p "${CHART_DEST}/${CHART}"
+	cp -r "${ROOT}/charts/src/${CHART}/"* "${CHART_DEST}/${CHART}"
 
 	cat ${ROOT}/charts/src/${CHART}/Chart.yaml | envsubst > ${CHART_DEST}/${CHART}/Chart.yaml
 done
@@ -48,7 +46,7 @@ if [ -n "${DEBUG}" ] ; then
 	cp -r ${HERE}/../debugger-extras/* ${CHART_DEST}/knit-app/templates
 fi
 
-for CHART in knit-app knit-certs knit-db-postgres knit-image-registry knit-storage-nfs ; do
+for CHART in knit-app knit-certs knit-db-postgres knit-image-registry knit-storage-nfs knit-schema-upgrader ; do
 	(
 		cd ${CHART_DEST};
 		${HELM} package -u ${CHART};

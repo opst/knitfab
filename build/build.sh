@@ -70,7 +70,7 @@ case ${BUILD_MODE} in
 	;;
 	local|test)
 		export IMAGE_REGISTRY=${IMAGE_REGISTRY:-}
-		REPOSITORY=${REPOSITORY:-}
+		REPOSITORY=${REPOSITORY:-local}
 		export ARCH=${ARCH:-local}
 		export OS=${OS:-}
 	;;
@@ -157,6 +157,13 @@ if [ -z "${APP_VERSION}" ] ; then
 
 		APP_VERSION=${APP_VERSION}-${LOCALDIFF}
 	fi
+fi
+
+if [ "release" != "${BUILD_MODE}" ] ; then
+	APP_VERSION=${APP_VERSION}-${BUILD_MODE}
+fi
+if [ -n "${DEBUG}" ] ; then
+	APP_VERSION=${APP_VERSION}-debug
 fi
 
 export APP_VERSION

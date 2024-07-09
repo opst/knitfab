@@ -1,3 +1,71 @@
+v1.2.0
+=======
+
+- Date: 2024-07-09
+
+Release v1.2.0 as preparation for the future releases.
+This release also includes a **security update** .
+
+## Important Change
+
+### Pod "vex" is opt-in
+
+https://github.com/opst/knitfab/issues/91
+
+Before this release, we emploied pods called "vex", a volume expandar.
+Vex watches usage of Persistent Volumes (of Kubernetes) and expands them if needed.
+
+But, our standard deployment depends on NFS, and
+Persistent Volume based NFS does not need to be expanded. They can be written to unless NFS becomes full, regardless of the capacity of the PV.
+
+Therefore, vex is not effective. We omitted it in standard installeation. Your computing resources are used more efficiently.
+
+### TLS can be opted out
+
+https://github.com/opst/knitfab/issues/92
+
+Sometimes, Knitfab Web API does not need to be HTTPS. For example, when a Load Balancer performing TLS Termination is employed in front of Knitfab + Image Registry, Knitfab itself can be plain HTTP Web API.
+
+So, with this release, enabling TLS can be opted out.
+
+For more details, see `docs/03.admin-guide` .
+
+## Bug Fixes
+
+### `knit data push` could not be inturrupted during sending a file
+
+https://github.com/opst/knitfab/issues/104
+
+`knit data push` ignored Ctrl+C signal during sendin a file. Fixed.
+
+## Security Update
+
+Knitfab `< v1.2.0` is affected by CVE-2024-29018.
+
+We resolved it by updating dependencies.
+
+## Internal Change
+
+### Schema Upgrader
+
+https://github.com/opst/knitfab/pull/112
+
+The Schema Upgrader Job is introduced. Schema Upgrader maintains that tables and types in RDB are up tp date.
+
+It supports schema changing in the future.
+
+## License
+
+Knitfab v1.2.0 is released under BSL 1.1, as written in the LICENSE file.
+
+CHANGE DATE for `v1.2.x` is 2028-07-09.
+
+Previous releases, `v1.1.x` or brefore, are not changed in their CHANGE DATE.
+
+## Upgrade Path
+
+Get the latest installer, and run `installer.sh --install` in the directory where you installed Knitfab.
+
 v1.1.2
 ======
 

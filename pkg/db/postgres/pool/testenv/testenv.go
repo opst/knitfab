@@ -26,12 +26,58 @@ func (p *pg) GetPool(ctx context.Context, t *testing.T) kpool.Pool {
 	return kpool.Wrap(p.pool)
 }
 
+type pgNoClean struct {
+	pool *pgxpool.Pool
+	pf   k8stestenv.Portforwarding
+}
+
+func (p *pgNoClean) GetPool(ctx context.Context, t *testing.T) kpool.Pool {
+	return kpool.Wrap(p.pool)
+}
+
 // PoolBroaker is a interface to get a pool.
 type PoolBroaker interface {
 	// GetPool returns a pool.
 	//
 	// Tables are cleaned up before returning and after t.
 	GetPool(ctx context.Context, t *testing.T) kpool.Pool
+}
+
+type pgConnOptions struct {
+	User         string
+	Password     string
+	Dbname       string
+	DoNotCleanup bool
+}
+
+type PgConnOption func(*pgConnOptions) *pgConnOptions
+
+func WithUser(user string) PgConnOption {
+	return func(o *pgConnOptions) *pgConnOptions {
+		o.User = user
+		return o
+	}
+}
+
+func WithPassword(password string) PgConnOption {
+	return func(o *pgConnOptions) *pgConnOptions {
+		o.Password = password
+		return o
+	}
+}
+
+func WithDbname(dbname string) PgConnOption {
+	return func(o *pgConnOptions) *pgConnOptions {
+		o.Dbname = dbname
+		return o
+	}
+}
+
+func WithDoNotCleanup() PgConnOption {
+	return func(o *pgConnOptions) *pgConnOptions {
+		o.DoNotCleanup = true
+		return o
+	}
 }
 
 // NewPoolBroaker returns a PoolBroaker.
@@ -45,16 +91,13 @@ type PoolBroaker interface {
 //
 // - t: scope of the PoolBroaker.
 // When this test is finished, the broaker will be shutdown.
-func NewPoolBroaker(ctx context.Context, t *testing.T) PoolBroaker {
+func NewPoolBroaker(ctx context.Context, t *testing.T, options ...PgConnOption) PoolBroaker {
 	t.Helper()
 
 	// see template "pkg-db-postgres.yaml"
 	namespace := k8stestenv.Namespace()
 	postgresSvcName := "database"
 	postgresPortName := "postgres"
-	pguser := "test-user"
-	pgpass := "test-pass"
-	dbname := "knit"
 
 	pgctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
@@ -68,17 +111,37 @@ func NewPoolBroaker(ctx context.Context, t *testing.T) PoolBroaker {
 		t.Fatal(err)
 	}
 
+	return NewPoolBroakerWithForwarder(ctx, t, pf, options...)
+}
+
+func NewPoolBroakerWithForwarder(
+	ctx context.Context,
+	t *testing.T,
+	pf k8stestenv.Portforwarding,
+	options ...PgConnOption,
+) PoolBroaker {
+	t.Helper()
 	t.Cleanup(func() {
 		if err := pf.Err(); err != nil {
 			t.Logf("error caused in port-forwarding: %v", err)
 		}
 	})
 
+	opts := &pgConnOptions{
+		// default values; see template "pkg-db-postgres.yaml"
+		User:     "test-user",
+		Password: "test-pass",
+		Dbname:   "knit",
+	}
+	for _, o := range options {
+		opts = o(opts)
+	}
+
 	pool, err := pgxpool.Connect(
 		ctx,
 		fmt.Sprintf(
 			"postgres://%s:%s@%s/%s",
-			pguser, pgpass, pf.LocalAddr(), dbname,
+			opts.User, opts.Password, pf.LocalAddr(), opts.Dbname,
 		),
 	)
 	if err != nil {
@@ -86,7 +149,11 @@ func NewPoolBroaker(ctx context.Context, t *testing.T) PoolBroaker {
 	}
 	t.Cleanup(pool.Close)
 
-	return &pg{pool: pool, pf: pf}
+	if opts.DoNotCleanup {
+		return &pgNoClean{pool: pool, pf: pf}
+	} else {
+		return &pg{pool: pool, pf: pf}
+	}
 }
 
 func ClearTables(ctx context.Context, p *pgxpool.Pool, t *testing.T) {

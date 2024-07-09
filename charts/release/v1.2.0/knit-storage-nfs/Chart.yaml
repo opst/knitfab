@@ -1,0 +1,19 @@
+apiVersion: v2
+name: knit-storage-nfs
+description: storage classes with nfs provisioner and opt-in in-cluster NFS server
+type: application
+
+keywords:
+  - knitfab
+  - MLOps
+  - Lineage Tracking
+  - Workflow
+  - Tag Based Workflow
+
+dependencies:
+  - name: csi-driver-nfs
+    version: v4.6.0
+    repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+
+version: v1.2.0
+appVersion: v1.2.0-7bb428d
