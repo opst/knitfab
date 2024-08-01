@@ -2,10 +2,10 @@ module github.com/opst/knitfab/cmd/schema_manager
 
 go 1.22.2
 
-replace github.com/opst/knitfab => ../..
+replace github.com/opst/knitfab v1.2.1 => ../..
 
 require (
-	github.com/opst/knitfab v1.1.2
+	github.com/opst/knitfab v1.2.1
 	github.com/youta-t/flarc v0.0.3
 )
 
@@ -22,9 +22,9 @@ require (
 	github.com/jackc/pgtype v1.14.3 // indirect
 	github.com/jackc/pgx/v4 v4.18.3 // indirect
 	github.com/jackc/puddle v1.3.0 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/crypto v0.25.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/apimachinery v0.30.2 // indirect
+	k8s.io/apimachinery v0.30.3 // indirect
 )
