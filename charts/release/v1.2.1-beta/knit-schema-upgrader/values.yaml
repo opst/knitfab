@@ -1,0 +1,4 @@
+schemaUpgrader:
+  component: schema-upgrader
+  image: "knit-schema-upgrader"
+  ttlSecondsAfterFinished: 300

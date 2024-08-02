@@ -1,0 +1,179 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.knitd_backend.service }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  selector:
+    app.kubernetes.io/name: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/part-of: knitfab
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.knitd_backend.component }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/part-of: knitfab
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.knitd_backend.component }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/part-of: knitfab
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims", "persistentvolumes"]
+    verbs: ["create", "delete", "get", "list"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "delete", "get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grant-{{ .Values.knitd_backend.component }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: grant-{{ .Values.knitd_backend.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/part-of: knitfab
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.knitd_backend.component }}
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.knitd_backend.component }}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.knitd_backend.component }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: {{ .Values.knitd_backend.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.knitd_backend.component }}
+      app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+      app.kubernetes.io/part-of: knitfab
+
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.knitd_backend.component }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      serviceAccountName: knitd-backend
+      containers:
+        - name: knitd-backend
+          image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.knitd_backend.image }}:{{ .Chart.AppVersion }}"
+          ports:
+            - containerPort: 8080
+          args: [
+            "--config", "/knit/configs/knitd.backend.yaml",
+            "--loglevel", {{ .Values.knitd_backend.logLevel }},
+            "--schema-repo", "/knit/schema-repo",
+          ]
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: password
+          volumeMounts:
+            - name: config
+              mountPath: /knit/configs/
+              readOnly: true
+            - name: schema-repo
+              mountPath: /knit/schema-repo/
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.knitd_backend.component }}-config
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.knitd_backend.component }}-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.knitd_backend.component }}-config
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.knitd_backend.component }}
+    app.kubernetes.io/part-of: knitfab
+data:
+  knitd.backend.yaml: |
+{{ tpl (.Files.Get "assets/knitd-backend/knitd.backend.yaml.tpl") . | indent 4 }}
