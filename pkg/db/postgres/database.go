@@ -7,6 +7,7 @@ import (
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpgdata "github.com/opst/knitfab/pkg/db/postgres/data"
 	kpggbg "github.com/opst/knitfab/pkg/db/postgres/garbage"
+	kpgkeychain "github.com/opst/knitfab/pkg/db/postgres/keychain"
 	kpgnom "github.com/opst/knitfab/pkg/db/postgres/nominator"
 	kpgplan "github.com/opst/knitfab/pkg/db/postgres/plan"
 	kpool "github.com/opst/knitfab/pkg/db/postgres/pool"
@@ -16,12 +17,13 @@ import (
 )
 
 type knitDBPostgres struct {
-	pool    *pgxpool.Pool
-	data    kdb.DataInterface
-	runs    kdb.RunInterface
-	plan    kdb.PlanInterface
-	garbage kdb.GarbageInterface
-	schema  kdb.SchemaInterface
+	pool     *pgxpool.Pool
+	data     kdb.DataInterface
+	runs     kdb.RunInterface
+	plan     kdb.PlanInterface
+	garbage  kdb.GarbageInterface
+	keychain kdb.KeychainInterface
+	schema   kdb.SchemaInterface
 }
 
 type Config struct {
@@ -73,12 +75,13 @@ func New(
 	}
 
 	return &knitDBPostgres{
-		pool:    pool,
-		data:    kpgdata.New(p, kpgdata.WithNominator(c.Nominator)),
-		runs:    kpgrun.New(p, kpgrun.WithNominator(c.Nominator)),
-		plan:    kpgplan.New(p, kpgplan.WithNominator(c.Nominator)),
-		schema:  schema,
-		garbage: kpggbg.New(p),
+		pool:     pool,
+		data:     kpgdata.New(p, kpgdata.WithNominator(c.Nominator)),
+		runs:     kpgrun.New(p, kpgrun.WithNominator(c.Nominator)),
+		plan:     kpgplan.New(p, kpgplan.WithNominator(c.Nominator)),
+		schema:   schema,
+		garbage:  kpggbg.New(p),
+		keychain: kpgkeychain.New(p),
 	}, nil
 }
 
@@ -100,6 +103,10 @@ func (k *knitDBPostgres) Garbage() kdb.GarbageInterface {
 
 func (k *knitDBPostgres) Schema() kdb.SchemaInterface {
 	return k.schema
+}
+
+func (k *knitDBPostgres) Keychain() kdb.KeychainInterface {
+	return k.keychain
 }
 
 func (k *knitDBPostgres) Close() error {

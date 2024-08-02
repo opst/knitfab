@@ -702,3 +702,22 @@ func (f *Tables) InsertDataAgent(da *DataAgent) error {
 	}
 	return shouldEffect(ctag, 1)
 }
+
+func (f *Tables) InsertKeychain(name string) error {
+	conn, err := f.acquire()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ctag, err := conn.Exec(
+		f.ctx,
+		`insert into "keychain" ("name") values ($1)`,
+		name,
+	)
+
+	if err != nil {
+		return withCause(struct{ Name string }{Name: name}, err)
+	}
+	return shouldEffect(ctag, 1)
+}
