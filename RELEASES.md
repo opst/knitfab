@@ -1,3 +1,34 @@
+v1.2.1-beta
+============
+
+- Date: 2024-08-02
+
+Pre Release v1.2.1-beta as a security update.
+
+This is beta version, and it is not stable release.
+
+## Important Change
+
+Before this update, Knitfab depended on `github.com/docker/docker v25.0.3+incompatible`. The module is affected by a vulnability reported in the https://www.docker.com/blog/docker-security-advisory-docker-engine-authz-plugin/ .
+
+Althogh Knitfab does not use authz feature, we update Knitfab to ensure security.
+
+We have upgraded dependencies, adn as a result, `github.com/docker/docker` is removed from dependencies.
+
+## Feature Changes, License Changes
+
+None.
+
+## Upgrade Path
+
+### Knitfab System
+
+Download the latest installer, and run `installer.sh --install` in the directory where you have installed Knitfab.
+
+### CLI `knit`
+
+Download from assets of this release.
+
 v1.2.0
 =======
 
