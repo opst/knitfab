@@ -19,11 +19,17 @@ We have upgraded dependencies, adn as a result, `github.com/docker/docker` is re
 
 None.
 
-## Upgrade Path
+## How to Try
 
 ### Knitfab System
 
-Download the latest installer, and run `installer.sh --install` in the directory where you have installed Knitfab.
+Download the installer from branch [develop/v1.2.1](https://github.com/opst/knitfab/tree/develop/v1.2.1), and run
+
+```
+BRANCH=develop/v1.2.1 CHART_VERSION=v1.2.1-beta installer.sh --install
+```
+
+in the directory where you have installed Knitfab.
 
 ### CLI `knit`
 
