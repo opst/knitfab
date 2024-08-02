@@ -1,0 +1,109 @@
+# relatedCharts:
+#   infra: "..."  # set chart name of knit-infra
+
+clusterTLD: cluster.local
+
+# # # Setting for knitd # # #
+knitd:
+  component: knitd
+  service: knitd
+  image: knitd
+  port: 18080
+  replicas: 1
+  gatewayReplicas: 1
+
+# # # Setting for knitd backend # # #
+knitd_backend:
+  component: knitd-backend
+  service: knitd-backend
+  image: knitd-backend
+  port: 18081
+  logLevel: debug
+  replicas: 1
+
+# # # Setting for knit volume expander (vex) # # #
+vex:
+  component: vex
+  image: "knit-vex"
+
+  # use: if true, vex will be deployed.
+  use: false
+
+  # margin: the minimum size of the volume capacity reminder.
+  margin: 1Gi
+
+  # delta: the volume growth size for a step.
+  delta: 5Gi
+
+# # # empty container # # #
+# verify directories are empty.
+# this container runs before user's workload (run) and check outputs in a worker pod.
+empty:
+  image: "knit-empty"
+
+# # # nurse container # # #
+# read pod's log and store as a file.
+#
+# this container runs beside of user workload in a worker pod
+nurse:
+  image: "knit-nurse"
+
+  # this SA must be able to get pod/log.
+  serviceAccount: "knit-nurse"
+
+# # # Setting for knit dataagt # # #
+dataagt:
+  image: "knit-dataagt"
+  port: 18082
+
+worker:
+  priorityClassName: "knit-worker-priority"
+
+# # # Setting for knit looper # # #
+loops:
+  image: "knit-loops"
+
+  # configurations for projection looper
+  projection:
+    component: projection
+    interval: 5s
+    replicas: 1
+
+  # configurations for init looper
+  initialize:
+    component: initialize
+    interval: 5s
+    replicas: 1
+    serviceAccount: "loop-initialize"
+
+  run_management:
+    component: run-management
+    interval: 5s
+    replicas: 1
+    serviceAccount: "loop-run-management"
+
+  housekeeping:
+    component: housekeeping
+    interval: 5s
+    replicas: 1
+    serviceAccount: "loop-housekeep"
+
+  finishing:
+    component: finishing
+    interval: 5s
+    replicas: 1
+    serviceAccount: "loop-finishing"
+
+  gc:
+    component: garbage-collection
+    interval: 30s
+    replicas: 1
+    serviceAccount: "garbage-collection"
+
+hooks:
+  lifecycle-hooks:
+    before: []
+    after: []
+
+extraApis:
+  endpoints: []
