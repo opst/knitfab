@@ -3,7 +3,7 @@ v.1.2.1
 
 - Date: 2024-08-05
 
-Release v1.2.0 as a **security update** .
+Release v1.2.1 as a **security update** .
 
 ## Important Change
 
