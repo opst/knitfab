@@ -1,0 +1,17 @@
+# extra apis configure
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: extra-api-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: extra-api-config
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+data:
+  extra-apis.yaml: |
+{{ tpl (.Files.Get "assets/extensions/extra-api.yaml.tpl") . | indent 4 }}

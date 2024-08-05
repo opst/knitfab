@@ -2,19 +2,19 @@ module github.com/opst/knitfab/cmd/knitd
 
 go 1.22.2
 
-replace github.com/opst/knitfab => ../..
+replace github.com/opst/knitfab v1.2.1 => ../..
 
 require (
 	github.com/labstack/echo/v4 v4.12.0
-	github.com/opst/knitfab v1.1.2
-	k8s.io/apimachinery v0.30.2
+	github.com/opst/knitfab v1.2.1
+	k8s.io/apimachinery v0.30.3
 )
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/google/go-containerregistry v0.19.2 // indirect
+	github.com/google/go-containerregistry v0.20.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.3 // indirect
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438 // indirect
@@ -31,9 +31,9 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
-	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/crypto v0.25.0 // indirect
+	golang.org/x/net v0.27.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

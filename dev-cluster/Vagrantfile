@@ -1,7 +1,7 @@
 require "ipaddr"
 require "net/http"
 
-IMAGE_NAME = "bento/ubuntu-23.10"
+IMAGE_NAME = "bento/ubuntu-24.04"
 APT_MIRROR = ENV["APT_MIRROR"]
 IGNORE_MIRRORS = Set.new([
     # mirror not to be used                                  # reason why not to be used
