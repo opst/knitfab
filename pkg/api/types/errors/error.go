@@ -175,3 +175,11 @@ func InternalServerError(err error) *echo.HTTPError {
 		WithError(err),
 	)
 }
+
+func Unauthorized(message string, err error) *echo.HTTPError {
+	return NewErrorMessage(
+		http.StatusUnauthorized,
+		message,
+		WithError(err),
+	)
+}

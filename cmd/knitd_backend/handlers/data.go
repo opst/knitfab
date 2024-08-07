@@ -4,16 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
+	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	keyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider"
+	backendapidata "github.com/opst/knitfab/pkg/api/backends/types/data"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	apierr "github.com/opst/knitfab/pkg/api/types/errors"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/echoutil"
+	"github.com/opst/knitfab/pkg/utils/retry"
 	"github.com/opst/knitfab/pkg/workloads"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"
+	"github.com/opst/knitfab/pkg/workloads/k8s"
+	"github.com/opst/knitfab/pkg/workloads/keychain"
 )
 
 func PostDataHandler(
@@ -161,5 +169,149 @@ func GetDataHandler(
 		}
 
 		return echoutil.CopyResponse(&c, bresp)
+	}
+}
+
+func ImportDataBeginHandler(
+	kp keyprovider.KeyProvider,
+	dbRun kdb.RunInterface,
+) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		deadline := time.Now().Add(30 * time.Minute)
+
+		runId, err := dbRun.NewPseudo(ctx, kdb.Imported, time.Until(deadline))
+		if err != nil {
+			return apierr.InternalServerError(err)
+		}
+
+		runs, err := dbRun.Get(ctx, []string{runId})
+		if err != nil {
+			return apierr.InternalServerError(err)
+		}
+		run, ok := runs[runId]
+		if !ok {
+			return apierr.InternalServerError(
+				errors.New("failed to get the newly created run"),
+			)
+		}
+
+		out := run.Outputs
+		if len(out) != 1 {
+			return apierr.InternalServerError(
+				fmt.Errorf("plan %s requires %d data, not 1", kdb.Imported, len(out)),
+			)
+		}
+		data := out[0]
+
+		kid, key, err := kp.Provide(ctx, keychain.WithExpAfter(deadline))
+		if err != nil {
+			return apierr.InternalServerError(err)
+		}
+
+		token, err := keychain.NewJWS(
+			kid, key,
+			backendapidata.DataImportClaim{
+				RegisteredClaims: jwt.RegisteredClaims{
+					// jti
+					ID: uuid.NewString(),
+
+					// sub
+					Subject: data.KnitDataBody.VolumeRef,
+				},
+
+				// private claims
+				KnitId: data.KnitDataBody.KnitId,
+				RunId:  runId,
+			},
+		)
+		if err != nil {
+			return apierr.InternalServerError(err)
+		}
+
+		resp := c.Response()
+		resp.Header().Set("Content-Type", "application/jwt")
+		resp.WriteHeader(http.StatusOK)
+		_, err = resp.Write([]byte(token))
+		return err
+	}
+}
+
+func ImportDataEndHandler(
+	cluster k8s.Cluster,
+	kp keyprovider.KeyProvider,
+	dbRun kdb.RunInterface,
+	dbData kdb.DataInterface,
+) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		req := c.Request()
+		ctx := req.Context()
+
+		if req.Header.Get("Content-Type") != "application/jwt" {
+			return apierr.BadRequest(`"Content-Type" should be "application/jwt"`, nil)
+		}
+		if req.Body == nil {
+			return apierr.BadRequest(`token given by "import/begin" is required in Body`, nil)
+		}
+
+		payload, err := io.ReadAll(req.Body)
+		if err != nil {
+			return apierr.InternalServerError(err)
+		}
+
+		kc, err := kp.GetKeychain(ctx)
+		if err != nil {
+			return apierr.InternalServerError(err)
+		}
+
+		claims, err := keychain.VerifyJWS[*backendapidata.DataImportClaim](kc, string(payload))
+		if err != nil {
+			if errors.Is(err, keychain.ErrInvalidToken) {
+				return apierr.Unauthorized("invalid token", err)
+			}
+			return apierr.InternalServerError(err)
+		}
+
+		knitId := claims.KnitId
+		data, err := dbData.Get(ctx, []string{knitId})
+		if err != nil {
+			return apierr.InternalServerError(err)
+		}
+
+		if _, ok := data[knitId]; !ok {
+			return apierr.InternalServerError(errors.New("data not found"))
+		}
+
+		if err := func() error {
+			_ctx, cancel := context.WithTimeout(ctx, 3*time.Second) // we expects that PVC has been bound.
+			defer cancel()
+			result := <-cluster.GetPVC(
+				_ctx, retry.StaticBackoff(1*time.Second), data[knitId].KnitDataBody.VolumeRef,
+				k8s.PVCIsBound,
+			)
+			return result.Err
+		}(); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) || workloads.AsMissingError(err) {
+				return apierr.BadRequest(
+					fmt.Sprintf("retry after that PVC %s is bound", data[knitId].KnitDataBody.VolumeRef),
+					err,
+				)
+			}
+			return apierr.InternalServerError(err)
+		}
+
+		runId := claims.RunId
+		if err := dbRun.SetStatus(ctx, runId, kdb.Completing); err != nil {
+			if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
+				return apierr.Conflict("", apierr.WithError(err))
+			}
+			if errors.Is(err, kdb.ErrMissing) {
+				return apierr.Conflict("missing Run", apierr.WithError(err))
+			}
+			return apierr.InternalServerError(err)
+		}
+
+		return c.JSON(http.StatusOK, apidata.ComposeDetail(data[knitId]))
 	}
 }

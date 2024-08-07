@@ -997,6 +997,9 @@ func (c *k8sCluster) GetPVC(
 		_pvc, err := c.client.GetPVC(ctx, c.namespace, pvcname)
 		ret := &pvc{resource: _pvc, onClose: _close}
 		if err != nil {
+			if kubeerr.IsNotFound(err) {
+				return ret, wl.NewMissingCausedBy("", err)
+			}
 			return ret, err
 		}
 		return ret, satisfyAll(_pvc, requirements)
