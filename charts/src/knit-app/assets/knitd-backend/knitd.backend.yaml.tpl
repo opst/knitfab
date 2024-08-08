@@ -16,3 +16,6 @@ cluster:
         nurse:
             serviceAccount: "{{ .Values.nurse.serviceAccount }}"
             image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.nurse.image }}:{{ .Chart.AppVersion }}"
+    keychains:
+        signKeyForImportToken:
+            name: "{{ .Values.knitd_backend.component }}-signer-for-import-token"
