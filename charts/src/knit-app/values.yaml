@@ -59,6 +59,10 @@ dataagt:
 worker:
   priorityClassName: "knit-worker-priority"
 
+keychains:
+  signKeyForImportToken:
+    name: "knit-import-token-signer"
+
 # # # Setting for knit looper # # #
 loops:
   image: "knit-loops"

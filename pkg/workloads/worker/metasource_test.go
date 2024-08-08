@@ -43,6 +43,11 @@ func TestRunExecutable(t *testing.T) {
 				Image:          "repo.invalid/nurse:latest",
 			},
 		},
+		Keychains: &bconf.KeychainsConfigMarshall{
+			SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+				Name: "signe-for-import-token",
+			},
+		},
 	})
 
 	theoryOk := func(when kdb.Run, then kubebatch.JobSpec) func(*testing.T) {

@@ -107,6 +107,11 @@ func TestWorkerRunning(t *testing.T) {
 					ServiceAccount: "fake-serviceAccount",
 				},
 			},
+			Keychains: &bconf.KeychainsConfigMarshall{
+				SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+					Name: "signe-for-import-token",
+				},
+			},
 		},
 	)
 
@@ -248,7 +253,7 @@ func TestWorkerStoppedInSuccess(t *testing.T) {
 		},
 	}
 
-	conf := bconf.TrySeal[*bconf.KnitClusterConfig](
+	conf := bconf.TrySeal(
 		&bconf.KnitClusterConfigMarshall{
 			Namespace: "test-namespace",
 			Domain:    "cluster.local",
@@ -269,6 +274,11 @@ func TestWorkerStoppedInSuccess(t *testing.T) {
 				Nurse: &bconf.NurseContainerConfigMarshall{
 					Image:          testenv.Images().Nurse,
 					ServiceAccount: "fake-serviceAccount",
+				},
+			},
+			Keychains: &bconf.KeychainsConfigMarshall{
+				SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+					Name: "signe-for-import-token",
 				},
 			},
 		},
@@ -403,7 +413,7 @@ func TestWorkerStoppedInFailure(t *testing.T) {
 		},
 	}
 
-	conf := bconf.TrySeal[*bconf.KnitClusterConfig](
+	conf := bconf.TrySeal(
 		&bconf.KnitClusterConfigMarshall{
 			Namespace: "test-namespace",
 			Domain:    "cluster.local",
@@ -424,6 +434,11 @@ func TestWorkerStoppedInFailure(t *testing.T) {
 				Nurse: &bconf.NurseContainerConfigMarshall{
 					Image:          testenv.Images().Nurse,
 					ServiceAccount: "fake-serviceAccount",
+				},
+			},
+			Keychains: &bconf.KeychainsConfigMarshall{
+				SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+					Name: "signe-for-import-token",
 				},
 			},
 		},

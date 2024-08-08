@@ -71,6 +71,11 @@ func TestSpawn(t *testing.T) {
 								ServiceAccount: "fake-sa",
 							},
 						},
+						Keychains: &bconf.KeychainsConfigMarshall{
+							SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+								Name: "signe-for-import-token",
+							},
+						},
 					}).TrySeal()
 
 					targetData := kdb.KnitDataBody{
@@ -167,6 +172,11 @@ func TestSpawn(t *testing.T) {
 								ServiceAccount: "fake-sa",
 							},
 						},
+						Keychains: &bconf.KeychainsConfigMarshall{
+							SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+								Name: "signe-for-import-token",
+							},
+						},
 					}).TrySeal()
 
 					targetData := kdb.KnitDataBody{
@@ -231,6 +241,11 @@ func TestSpawn(t *testing.T) {
 							Nurse: &bconf.NurseContainerConfigMarshall{
 								Image:          "repo.invalid/nurse-image:latest",
 								ServiceAccount: "fake-sa",
+							},
+						},
+						Keychains: &bconf.KeychainsConfigMarshall{
+							SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+								Name: "signe-for-import-token",
 							},
 						},
 					}).TrySeal()
@@ -494,6 +509,11 @@ func TestSpawn(t *testing.T) {
 					ServiceAccount: "fake-sa",
 				},
 			},
+			Keychains: &bconf.KeychainsConfigMarshall{
+				SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+					Name: "signe-for-import-token",
+				},
+			},
 		}).TrySeal()
 
 		suffixies := []string{"a", "b"}
@@ -541,6 +561,11 @@ func TestSpawn(t *testing.T) {
 				Nurse: &bconf.NurseContainerConfigMarshall{
 					Image:          "repo.invalid/nurse-image:latest",
 					ServiceAccount: "fake-sa",
+				},
+			},
+			Keychains: &bconf.KeychainsConfigMarshall{
+				SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+					Name: "signe-for-import-token",
 				},
 			},
 		}).TrySeal()
@@ -604,6 +629,11 @@ func TestSpawn(t *testing.T) {
 				Nurse: &bconf.NurseContainerConfigMarshall{
 					Image:          "repo.invalid/nurse-image:latest",
 					ServiceAccount: "fake-sa",
+				},
+			},
+			Keychains: &bconf.KeychainsConfigMarshall{
+				SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+					Name: "signe-for-import-token",
 				},
 			},
 		}).TrySeal()

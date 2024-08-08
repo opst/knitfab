@@ -170,6 +170,7 @@ func ClearTables(ctx context.Context, p *pgxpool.Pool, t *testing.T) {
 		`truncate "plan" RESTART IDENTITY cascade`,
 		`truncate "knit_id" RESTART IDENTITY cascade`,
 		`truncate "tag_key" RESTART IDENTITY cascade`,
+		`truncate "keychain" RESTART IDENTITY cascade`,
 		// by cascade, all row in tables should be deleted.
 	} {
 		_, err = conn.Exec(ctx, command)

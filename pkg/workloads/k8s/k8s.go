@@ -13,6 +13,7 @@ import (
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapiresouce "k8s.io/apimachinery/pkg/api/resource"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	applyconfigurations "k8s.io/client-go/applyconfigurations/core/v1"
 	k8s "k8s.io/client-go/kubernetes"
 
 	"github.com/opst/knitfab/pkg/utils/retry"
@@ -41,6 +42,10 @@ type K8sClient interface {
 	GetPod(ctx context.Context, namespace string, name string) (*kubecore.Pod, error)
 	DeletePod(ctx context.Context, namespace string, name string) error
 	FindPods(ctx context.Context, namespace string, labelSelector LabelSelector) ([]kubecore.Pod, error)
+
+	UpsertSecret(ctx context.Context, namespace string, spec *applyconfigurations.SecretApplyConfiguration) (*kubecore.Secret, error)
+	GetSecret(ctx context.Context, namespace string, name string) (*kubecore.Secret, error)
+	DeleteSecret(ctx context.Context, namespace string, name string) error
 
 	Log(ctx context.Context, namespace string, podname string, container string) (io.ReadCloser, error)
 }
@@ -134,6 +139,20 @@ func (k *k8sClient) FindPods(ctx context.Context, namespace string, labels Label
 		return nil, err
 	}
 	return resp.Items, nil
+}
+
+func (k *k8sClient) UpsertSecret(ctx context.Context, namespace string, secret *applyconfigurations.SecretApplyConfiguration) (*kubecore.Secret, error) {
+	return k.client.CoreV1().Secrets(namespace).Apply(ctx, secret, kubeapimeta.ApplyOptions{
+		FieldManager: "knitfab",
+	})
+}
+
+func (k *k8sClient) GetSecret(ctx context.Context, namespace string, name string) (*kubecore.Secret, error) {
+	return k.client.CoreV1().Secrets(namespace).Get(ctx, name, kubeapimeta.GetOptions{})
+}
+
+func (k *k8sClient) DeleteSecret(ctx context.Context, namespace string, name string) error {
+	return k.client.CoreV1().Secrets(namespace).Delete(ctx, name, *kubeapimeta.NewDeleteOptions(0))
 }
 
 func WrapK8sClient(c *k8s.Clientset) K8sClient {
@@ -709,6 +728,36 @@ type Cluster interface {
 	// Whether or not the Promise has Error, Pod can be found.
 	// So, you may need to Close() it.
 	GetPod(context.Context, retry.Backoff, string, ...Requirement[*kubecore.Pod]) retry.Promise[Pod]
+
+	// GetSecret gets a k8s Secrets from the cluster.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string: name of secret
+	//
+	// Return
+	//
+	// - Secret: the secret
+	//
+	// - error: error if any
+	GetSecret(context.Context, string) (Secret, error)
+
+	// CreateSecret creates a k8s Secrets in the cluster.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - *applyconfigurations.SecretApplyConfiguration: spec of the Secret to be
+	//
+	// Return
+	//
+	// - Secret: the secret
+	//
+	// - error: error if any
+	UpsertSecret(context.Context, *applyconfigurations.SecretApplyConfiguration) (Secret, error)
 }
 
 type k8sCluster struct {
@@ -948,6 +997,9 @@ func (c *k8sCluster) GetPVC(
 		_pvc, err := c.client.GetPVC(ctx, c.namespace, pvcname)
 		ret := &pvc{resource: _pvc, onClose: _close}
 		if err != nil {
+			if kubeerr.IsNotFound(err) {
+				return ret, wl.NewMissingCausedBy("", err)
+			}
 			return ret, err
 		}
 		return ret, satisfyAll(_pvc, requirements)
@@ -1114,4 +1166,42 @@ func (c *k8sCluster) GetPod(
 		}
 		return ret, satisfyAll(_pod, requirements)
 	})
+}
+
+type Secret interface {
+	Name() string
+	Namespace() string
+	Data() map[string][]byte
+}
+
+type secretImpl struct {
+	secret *kubecore.Secret
+}
+
+func (s *secretImpl) Name() string {
+	return s.secret.Name
+}
+
+func (s *secretImpl) Namespace() string {
+	return s.secret.Namespace
+}
+
+func (s *secretImpl) Data() map[string][]byte {
+	return s.secret.Data
+}
+
+func (c *k8sCluster) GetSecret(ctx context.Context, name string) (Secret, error) {
+	secret, err := c.client.GetSecret(ctx, c.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	return &secretImpl{secret: secret}, nil
+}
+
+func (c *k8sCluster) UpsertSecret(ctx context.Context, secret *applyconfigurations.SecretApplyConfiguration) (Secret, error) {
+	ksec, err := c.client.UpsertSecret(ctx, c.namespace, secret)
+	if err != nil {
+		return nil, err
+	}
+	return &secretImpl{secret: ksec}, nil
 }

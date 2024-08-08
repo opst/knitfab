@@ -26,6 +26,7 @@ type KnitClusterConfig struct {
 	database  string
 	dataAgent *DataAgentConfig
 	worker    *WorkerConfig
+	keychains *KeychainsConfig
 }
 
 // k8s namespace where Knit is deploied.
@@ -51,6 +52,10 @@ func (k *KnitClusterConfig) DataAgent() *DataAgentConfig {
 // Configration for Worker
 func (k *KnitClusterConfig) Worker() *WorkerConfig {
 	return k.worker
+}
+
+func (l *KnitClusterConfig) Keychains() *KeychainsConfig {
+	return l.keychains
 }
 
 // Configuration for Dataagt
@@ -127,4 +132,20 @@ func (ncc *NurseContainerConfig) Image() string {
 
 func (ncc *NurseContainerConfig) ServiceAccount() string {
 	return ncc.serviceAccount
+}
+
+type KeychainsConfig struct {
+	signKeyForImportToken *HS256KeychainsConfig
+}
+
+func (kc *KeychainsConfig) SignKeyForImportToken() *HS256KeychainsConfig {
+	return kc.signKeyForImportToken
+}
+
+type HS256KeychainsConfig struct {
+	name string
+}
+
+func (kc *HS256KeychainsConfig) Name() string {
+	return kc.name
 }

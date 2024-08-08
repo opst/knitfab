@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,9 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/opst/knitfab/cmd/knitd_backend/handlers"
+	mockkeyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider/mockKeyprovider"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
+	backendapidata "github.com/opst/knitfab/pkg/api/backends/types/data"
 	apidata "github.com/opst/knitfab/pkg/api/types/data"
 	"github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/opst/knitfab/pkg/api/types/runs"
@@ -26,6 +30,12 @@ import (
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/opst/knitfab/pkg/workloads"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"
+	"github.com/opst/knitfab/pkg/workloads/k8s/mock"
+	"github.com/opst/knitfab/pkg/workloads/keychain"
+	"github.com/opst/knitfab/pkg/workloads/keychain/key"
+	mockkeychain "github.com/opst/knitfab/pkg/workloads/keychain/mockKeychain"
+	kubecore "k8s.io/api/core/v1"
+	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGetDataHandler(t *testing.T) {
@@ -1686,4 +1696,893 @@ func TestPostDataHandler(t *testing.T) {
 		}
 	})
 
+}
+
+func TestImportDataBeginHandler(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+		kp := mockkeyprovider.New(t)
+		kp.Impl.Provide = func(ctx context.Context, req ...keychain.KeyRequirement) (string, key.Key, error) {
+			return "test-key", k, nil
+		}
+
+		run := kdb.Run{
+			RunBody: kdb.RunBody{
+				Id:     "run-id",
+				Status: kdb.Running,
+				PlanBody: kdb.PlanBody{
+					PlanId: "test-plan-id",
+					Pseudo: &kdb.PseudoPlanDetail{Name: kdb.Imported},
+				},
+			},
+			Outputs: []kdb.Assignment{
+				{
+					KnitDataBody: kdb.KnitDataBody{
+						KnitId:    "test-knit-id",
+						VolumeRef: "test-volume-ref",
+					},
+				},
+			},
+		}
+
+		irun := dbmock.NewRunInterface()
+		irun.Impl.NewPseudo = func(ctx context.Context, planName kdb.PseudoPlanName, d time.Duration) (string, error) {
+			if planName != kdb.Imported {
+				t.Errorf("NewPseudo should be called with Imported. actual = %s", planName)
+			}
+			return run.Id, nil
+		}
+		irun.Impl.Get = func(context.Context, []string) (map[string]kdb.Run, error) {
+			if !cmp.SliceContentEq([]string{"run-id"}, []string{run.Id}) {
+				t.Errorf("Get should be called with {run-id}. actual = %s", run.Id)
+			}
+			return map[string]kdb.Run{run.Id: run}, nil
+		}
+		testee := handlers.ImportDataBeginHandler(kp, irun)
+
+		e := echo.New()
+		ectx, resprec := httptestutil.Post(e, "/api/backends/data/import/begin", nil)
+		ectx.SetPath("/api/backends/data/import/begin")
+
+		if err := testee(ectx); err != nil {
+			t.Fatalf("ImportDataBeginHandler does not cause error. resp = %+v", resprec)
+		}
+
+		if got := resprec.Result().StatusCode; got != http.StatusOK {
+			t.Errorf("status code is not 200. actual = %d", got)
+		}
+
+		if got := resprec.Header().Get("Content-Type"); got != "application/jwt" {
+			t.Errorf("Content-Type is not application/jwt. actual = %s", got)
+		}
+
+		body := resprec.Body.String()
+
+		claim := try.To(jwt.ParseWithClaims(
+			body,
+			&backendapidata.DataImportClaim{},
+			func(t *jwt.Token) (interface{}, error) { return k.ToVerify(), nil },
+		)).OrFatal(t)
+
+		{
+			header := claim.Header
+			if got := header["kid"]; got != "test-key" {
+				t.Errorf("kid is not expected. actual = %s", got)
+			}
+
+			if got := header["alg"]; got != k.Alg() {
+				t.Errorf("alg is not expected. actual = %s", got)
+			}
+		}
+
+		if c, ok := claim.Claims.(*backendapidata.DataImportClaim); !ok {
+			t.Fatalf("claim is not DataImportClaim. actual = %T", claim.Claims)
+		} else {
+			if c.ID == "" {
+				t.Error("ID is empty")
+			}
+			if c.RunId != run.Id {
+				t.Errorf("RunId is not expected. actual = %s, expected = %s", c.RunId, run.Id)
+			}
+			if c.KnitId != run.Outputs[0].KnitDataBody.KnitId {
+				t.Errorf("KnitId is not expected. actual = %s, expected = %s", c.KnitId, run.Outputs[0].KnitDataBody.KnitId)
+			}
+			if c.Subject != run.Outputs[0].KnitDataBody.VolumeRef {
+				t.Errorf("VolumeRef is not expected. actual = %s, expected = %s", c.Subject, run.Outputs[0].KnitDataBody.VolumeRef)
+			}
+		}
+	})
+
+	t.Run("when KeyProvider.Provide cause error, response 500", func(t *testing.T) {
+		kp := mockkeyprovider.New(t)
+		fakeError := errors.New("fake error")
+		kp.Impl.Provide = func(context.Context, ...keychain.KeyRequirement) (string, key.Key, error) {
+			return "", nil, fakeError
+		}
+
+		run := kdb.Run{
+			RunBody: kdb.RunBody{
+				Id:     "run-id",
+				Status: kdb.Running,
+				PlanBody: kdb.PlanBody{
+					PlanId: "test-plan-id",
+					Pseudo: &kdb.PseudoPlanDetail{Name: kdb.Imported},
+				},
+			},
+			Outputs: []kdb.Assignment{
+				{
+					KnitDataBody: kdb.KnitDataBody{
+						KnitId:    "test-knit-id",
+						VolumeRef: "test-volume-ref",
+					},
+				},
+			},
+		}
+		irun := dbmock.NewRunInterface()
+		irun.Impl.NewPseudo = func(context.Context, kdb.PseudoPlanName, time.Duration) (string, error) {
+			return run.Id, nil
+		}
+		irun.Impl.Get = func(context.Context, []string) (map[string]kdb.Run, error) {
+			if !cmp.SliceContentEq([]string{"run-id"}, []string{run.Id}) {
+				t.Errorf("Get should be called with {run-id}. actual = %s", run.Id)
+			}
+			return map[string]kdb.Run{run.Id: run}, nil
+		}
+
+		testee := handlers.ImportDataBeginHandler(kp, irun)
+
+		e := echo.New()
+		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/begin", nil)
+		ectx.SetPath("/api/backends/data/import/begin")
+
+		err := testee(ectx)
+		if !errors.Is(err, fakeError) {
+			t.Fatalf("ImportDataBeginHandler does not cause unexpected error: %+v", err)
+		}
+
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %+v", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+
+	t.Run("when RunInterface.NewPseudo returns non single output Run, response 500", func(t *testing.T) {
+		kp := mockkeyprovider.New(t)
+
+		run := kdb.Run{
+			RunBody: kdb.RunBody{
+				Id:     "run-id",
+				Status: kdb.Running,
+				PlanBody: kdb.PlanBody{
+					PlanId: "test-plan-id",
+					Pseudo: &kdb.PseudoPlanDetail{Name: kdb.Imported},
+				},
+			},
+			Outputs: []kdb.Assignment{
+				{
+					KnitDataBody: kdb.KnitDataBody{
+						KnitId:    "test-knit-id",
+						VolumeRef: "test-volume-ref",
+					},
+				},
+				{
+					KnitDataBody: kdb.KnitDataBody{
+						KnitId:    "test-knit-id-2",
+						VolumeRef: "test-volume-ref-2",
+					},
+				},
+			},
+		}
+		irun := dbmock.NewRunInterface()
+		irun.Impl.NewPseudo = func(context.Context, kdb.PseudoPlanName, time.Duration) (string, error) {
+			return run.Id, nil
+		}
+		irun.Impl.Get = func(context.Context, []string) (map[string]kdb.Run, error) {
+			if !cmp.SliceContentEq([]string{"run-id"}, []string{run.Id}) {
+				t.Errorf("Get should be called with {run-id}. actual = %s", run.Id)
+			}
+			return map[string]kdb.Run{run.Id: run}, nil
+		}
+
+		testee := handlers.ImportDataBeginHandler(kp, irun)
+
+		e := echo.New()
+		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/begin", nil)
+		ectx.SetPath("/api/backends/data/import/begin")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %+v", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+
+	t.Run("when RunInterface.Get cause error, response 500", func(t *testing.T) {
+		kp := mockkeyprovider.New(t)
+		irun := dbmock.NewRunInterface()
+		irun.Impl.NewPseudo = func(context.Context, kdb.PseudoPlanName, time.Duration) (string, error) {
+			return "run-id", nil
+		}
+
+		fakeError := errors.New("fake error")
+		irun.Impl.Get = func(context.Context, []string) (map[string]kdb.Run, error) {
+			return nil, fakeError
+		}
+
+		testee := handlers.ImportDataBeginHandler(kp, irun)
+
+		e := echo.New()
+		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/begin", nil)
+		ectx.SetPath("/api/backends/data/import/begin")
+
+		err := testee(ectx)
+		if !errors.Is(err, fakeError) {
+			t.Fatalf("ImportDataBeginHandler does not cause unexpected error: %+v", err)
+		}
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %+v", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+
+	t.Run("when RunInterface.Get does not return a map contains the new Run, response 500", func(t *testing.T) {
+		kp := mockkeyprovider.New(t)
+		irun := dbmock.NewRunInterface()
+		irun.Impl.NewPseudo = func(context.Context, kdb.PseudoPlanName, time.Duration) (string, error) {
+			return "run-id", nil
+		}
+		irun.Impl.Get = func(context.Context, []string) (map[string]kdb.Run, error) {
+			return map[string]kdb.Run{}, nil
+		}
+
+		testee := handlers.ImportDataBeginHandler(kp, irun)
+
+		e := echo.New()
+		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/begin", nil)
+		ectx.SetPath("/api/backends/data/import/begin")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %+v", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+
+	t.Run("when RunInterface.NewPseudo cause error, response 500", func(t *testing.T) {
+		kp := mockkeyprovider.New(t)
+		fakeError := errors.New("fake error")
+		irun := dbmock.NewRunInterface()
+		irun.Impl.NewPseudo = func(context.Context, kdb.PseudoPlanName, time.Duration) (string, error) {
+			return "", fakeError
+		}
+
+		testee := handlers.ImportDataBeginHandler(kp, irun)
+
+		e := echo.New()
+		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/begin", nil)
+		ectx.SetPath("/api/backends/data/import/begin")
+
+		err := testee(ectx)
+		if !errors.Is(err, fakeError) {
+			t.Fatalf("ImportDataBeginHandler does not cause unexpected error: %+v", err)
+		}
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %+v", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+}
+
+func TestImpoerDataEndHandler(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		cluster, client := mock.NewCluster()
+		client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
+			return &kubecore.PersistentVolumeClaim{
+				ObjectMeta: kubeapimeta.ObjectMeta{
+					Name:      "test-volume-ref",
+					Namespace: "test-namespace",
+				},
+				Spec: kubecore.PersistentVolumeClaimSpec{
+					VolumeName: "test-volume",
+				},
+				Status: kubecore.PersistentVolumeClaimStatus{
+					Phase: kubecore.ClaimBound,
+				},
+			}, nil
+		}
+
+		claim := &backendapidata.DataImportClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:      "nonce",
+				Subject: "test-volume-ref",
+			},
+			RunId:  "test-run-id",
+			KnitId: "test-knit-id",
+		}
+
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+		token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+		kp := mockkeyprovider.New(t)
+		kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+			mkc := mockkeychain.New(t)
+			mkc.Impl.GetKey = func(options ...keychain.KeyRequirement) (string, key.Key, bool) {
+				return "test-key", k, true
+			}
+			return mkc, nil
+		}
+
+		dbRun := dbmock.NewRunInterface()
+		dbRun.Impl.SetStatus = func(ctx context.Context, runId string, newStatus kdb.KnitRunStatus) error {
+			if runId != claim.RunId {
+				t.Errorf("RunId is not expected. actual = %s, expected = %s", runId, claim.RunId)
+			}
+			if newStatus != kdb.Completing {
+				t.Errorf("NewStatus is not expected. actual = %s, expected = %s", newStatus, kdb.Completing)
+			}
+			return nil
+		}
+
+		data := kdb.KnitData{
+			KnitDataBody: kdb.KnitDataBody{
+				KnitId:    claim.KnitId,
+				VolumeRef: claim.Subject,
+			},
+			Upsteram: kdb.Dependency{
+				MountPoint: kdb.MountPoint{Id: 1, Path: "/imported"},
+				RunBody: kdb.RunBody{
+					Id: claim.RunId, Status: kdb.Completing,
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Pseudo: &kdb.PseudoPlanDetail{Name: kdb.Imported},
+					},
+				},
+			},
+		}
+
+		dbData := dbmock.NewDataInterface()
+		dbData.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
+			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
+				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
+			}
+			return map[string]kdb.KnitData{claim.KnitId: data}, nil
+		}
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, resprec := httptestutil.Post(
+			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+			httptestutil.ContentType("application/jwt"),
+		)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		if err := testee(ectx); err != nil {
+			t.Fatalf("ImportDataEndHandler should not cause error:%s", err)
+		}
+
+		if got := resprec.Result().StatusCode; got != http.StatusOK {
+			t.Errorf("status code is not 200. actual = %d", got)
+		}
+
+		if got := resprec.Header().Get("Content-Type"); got != "application/json" {
+			t.Errorf("Content-Type is not application/json. actual = %s", got)
+		}
+
+		parsed := new(apidata.Detail)
+		if err := json.NewDecoder(resprec.Body).Decode(parsed); err != nil {
+			t.Fatalf("response body is not JSON: %s", err)
+		}
+		want := apidata.ComposeDetail(data)
+		if !want.Equal(parsed) {
+			t.Errorf("response body is not expected. actual = %+v, expected = %+v", parsed, want)
+		}
+	})
+
+	for name, testcase := range map[string]struct {
+		expecterErr error
+		statusCode  int
+	}{
+		"ErrInvalidRunStateChanging": {
+			expecterErr: kdb.ErrInvalidRunStateChanging,
+			statusCode:  http.StatusConflict,
+		},
+		"ErrMissing": {
+			expecterErr: kdb.ErrMissing,
+			statusCode:  http.StatusConflict,
+		},
+		"unexpected one": {
+			expecterErr: errors.New("unexpected error"),
+			statusCode:  http.StatusInternalServerError,
+		},
+	} {
+		t.Run(fmt.Sprintf("when dbRun.SetStatus cause error %s, it responses 409", name), func(t *testing.T) {
+			cluster, client := mock.NewCluster()
+			client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
+				return &kubecore.PersistentVolumeClaim{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "test-volume-ref",
+						Namespace: "test-namespace",
+					},
+					Spec: kubecore.PersistentVolumeClaimSpec{
+						VolumeName: "test-volume",
+					},
+					Status: kubecore.PersistentVolumeClaimStatus{
+						Phase: kubecore.ClaimBound,
+					},
+				}, nil
+			}
+
+			claim := &backendapidata.DataImportClaim{
+				RegisteredClaims: jwt.RegisteredClaims{
+					ID:      "nonce",
+					Subject: "test-volume-ref",
+				},
+				RunId:  "test-run-id",
+				KnitId: "test-knit-id",
+			}
+
+			k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+			token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+			kp := mockkeyprovider.New(t)
+			kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+				mkc := mockkeychain.New(t)
+				mkc.Impl.GetKey = func(options ...keychain.KeyRequirement) (string, key.Key, bool) {
+					return "test-key", k, true
+				}
+				return mkc, nil
+			}
+
+			dbRun := dbmock.NewRunInterface()
+			dbRun.Impl.SetStatus = func(ctx context.Context, runId string, newStatus kdb.KnitRunStatus) error {
+				if runId != claim.RunId {
+					t.Errorf("RunId is not expected. actual = %s, expected = %s", runId, claim.RunId)
+				}
+				return testcase.expecterErr
+			}
+
+			data := kdb.KnitData{
+				KnitDataBody: kdb.KnitDataBody{
+					KnitId:    claim.KnitId,
+					VolumeRef: claim.Subject,
+				},
+				Upsteram: kdb.Dependency{
+					MountPoint: kdb.MountPoint{Id: 1, Path: "/imported"},
+					RunBody: kdb.RunBody{
+						Id: claim.RunId, Status: kdb.Completing,
+						PlanBody: kdb.PlanBody{
+							PlanId: "test-plan-id",
+							Pseudo: &kdb.PseudoPlanDetail{Name: kdb.Imported},
+						},
+					},
+				},
+			}
+			dbData := dbmock.NewDataInterface()
+			dbData.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
+				if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
+					t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
+				}
+				return map[string]kdb.KnitData{claim.KnitId: data}, nil
+			}
+
+			testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+			e := echo.New()
+			ectx, _ := httptestutil.Post(
+				e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+				httptestutil.ContentType("application/jwt"),
+			)
+			ectx.SetPath("/api/backends/data/import/end")
+
+			err := testee(ectx)
+			if !errors.Is(err, testcase.expecterErr) {
+				t.Fatalf("ImportDataEndHandler does not cause unexpected error: %s", err)
+			}
+			if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+				t.Fatalf("error is not echo.HTTPError: %s", err)
+			} else if herr.Code != testcase.statusCode {
+				t.Errorf("error code is not %d. actual = %d", testcase.statusCode, herr.Code)
+			}
+		})
+	}
+
+	t.Run("when PVC is not bound, it responses 400", func(t *testing.T) {
+		cluster, client := mock.NewCluster()
+		client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
+			return nil, context.DeadlineExceeded
+		}
+
+		claim := &backendapidata.DataImportClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:      "nonce",
+				Subject: "test-volume-ref",
+			},
+			RunId:  "test-run-id",
+			KnitId: "test-knit-id",
+		}
+
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+		token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+		kp := mockkeyprovider.New(t)
+		kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+			mkc := mockkeychain.New(t)
+			mkc.Impl.GetKey = func(options ...keychain.KeyRequirement) (string, key.Key, bool) {
+				return "test-key", k, true
+			}
+			return mkc, nil
+		}
+
+		dbRun := dbmock.NewRunInterface()
+		dbData := dbmock.NewDataInterface()
+		dbData.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
+			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
+				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
+			}
+			return map[string]kdb.KnitData{claim.KnitId: {}}, nil
+		}
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(
+			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+			httptestutil.WithHeader("Content-Type", "application/jwt"),
+		)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusBadRequest {
+			t.Errorf("error code is not %d. actual = %d", http.StatusBadRequest, herr.Code)
+		}
+	})
+
+	t.Run("when PVC is missing, it responses 400", func(t *testing.T) {
+		cluster, client := mock.NewCluster()
+		client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
+			return nil, &workloads.ErrMissing{}
+		}
+
+		claim := &backendapidata.DataImportClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:      "nonce",
+				Subject: "test-volume-ref",
+			},
+			RunId:  "test-run-id",
+			KnitId: "test-knit-id",
+		}
+
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+		token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+		kp := mockkeyprovider.New(t)
+		kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+			mkc := mockkeychain.New(t)
+			mkc.Impl.GetKey = func(options ...keychain.KeyRequirement) (string, key.Key, bool) {
+				return "test-key", k, true
+			}
+			return mkc, nil
+		}
+
+		dbRun := dbmock.NewRunInterface()
+		dbData := dbmock.NewDataInterface()
+		dbData.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
+			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
+				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
+			}
+			return map[string]kdb.KnitData{claim.KnitId: {}}, nil
+		}
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(
+			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+			httptestutil.WithHeader("Content-Type", "application/jwt"),
+		)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusBadRequest {
+			t.Errorf("error code is not %d. actual = %d", http.StatusBadRequest, herr.Code)
+		}
+	})
+
+	t.Run("when GetPVC cause error, it responses 500", func(t *testing.T) {
+		cluster, client := mock.NewCluster()
+		expectedError := errors.New("fake error")
+		client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
+			return nil, expectedError
+		}
+
+		claim := &backendapidata.DataImportClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:      "nonce",
+				Subject: "test-volume-ref",
+			},
+			RunId:  "test-run-id",
+			KnitId: "test-knit-id",
+		}
+
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+		token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+		kp := mockkeyprovider.New(t)
+		kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+			mkc := mockkeychain.New(t)
+			mkc.Impl.GetKey = func(options ...keychain.KeyRequirement) (string, key.Key, bool) {
+				return "test-key", k, true
+			}
+			return mkc, nil
+		}
+
+		dbRun := dbmock.NewRunInterface()
+		dbData := dbmock.NewDataInterface()
+		dbData.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
+			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
+				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
+			}
+			return map[string]kdb.KnitData{claim.KnitId: {}}, nil
+		}
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(
+			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+			httptestutil.WithHeader("Content-Type", "application/jwt"),
+		)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if !errors.Is(err, expectedError) {
+			t.Fatalf("ImportDataEndHandler does not cause unexpected error: %s", err)
+		}
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+
+	t.Run("when dbData.Get does not return Data in token, it responses 500", func(t *testing.T) {
+		cluster, _ := mock.NewCluster()
+
+		claim := &backendapidata.DataImportClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:      "nonce",
+				Subject: "test-volume-ref",
+			},
+			RunId:  "test-run-id",
+			KnitId: "test-knit-id",
+		}
+
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+		token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+		kp := mockkeyprovider.New(t)
+		kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+			mkc := mockkeychain.New(t)
+			mkc.Impl.GetKey = func(options ...keychain.KeyRequirement) (string, key.Key, bool) {
+				return "test-key", k, true
+			}
+			return mkc, nil
+		}
+
+		dbRun := dbmock.NewRunInterface()
+
+		dbData := dbmock.NewDataInterface()
+		dbData.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
+			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
+				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
+			}
+			return map[string]kdb.KnitData{}, nil
+		}
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(
+			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+			httptestutil.WithHeader("Content-Type", "application/jwt"),
+		)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+
+	t.Run("when dbData.Get cause error, it responses 500", func(t *testing.T) {
+		cluster, _ := mock.NewCluster()
+
+		claim := &backendapidata.DataImportClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:      "nonce",
+				Subject: "test-volume-ref",
+			},
+			RunId:  "test-run-id",
+			KnitId: "test-knit-id",
+		}
+
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+		token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+		kp := mockkeyprovider.New(t)
+		kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+			mkc := mockkeychain.New(t)
+			mkc.Impl.GetKey = func(options ...keychain.KeyRequirement) (string, key.Key, bool) {
+				return "test-key", k, true
+			}
+			return mkc, nil
+		}
+
+		dbRun := dbmock.NewRunInterface()
+
+		fakeError := errors.New("fake error")
+		dbData := dbmock.NewDataInterface()
+		dbData.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
+			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
+				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
+			}
+			return nil, fakeError
+		}
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(
+			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+			httptestutil.ContentType("application/jwt"),
+		)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if !errors.Is(err, fakeError) {
+			t.Fatalf("ImportDataEndHandler does not cause unexpected error: %s", err)
+		}
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+
+	t.Run("when token is invalid, it responses 400", func(t *testing.T) {
+		cluster, _ := mock.NewCluster()
+
+		claim := &backendapidata.DataImportClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:      "nonce",
+				Subject: "test-volume-ref",
+			},
+			RunId:  "test-run-id",
+			KnitId: "test-knit-id",
+		}
+
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+		token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+		kp := mockkeyprovider.New(t)
+		kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+			kc := mockkeychain.New(t)
+			kc.Impl.GetKey = func(options ...keychain.KeyRequirement) (string, key.Key, bool) {
+				wrongKey := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+				return "test-key-id", wrongKey, true
+			}
+			return kc, nil
+		}
+
+		dbRun := dbmock.NewRunInterface()
+		dbData := dbmock.NewDataInterface()
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(
+			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+			httptestutil.ContentType("application/jwt"),
+		)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusUnauthorized {
+			t.Errorf("error code is not %d. actual = %d", http.StatusUnauthorized, herr.Code)
+		}
+	})
+
+	t.Run("when key provider's GetKeychain cause error, it responses 500", func(t *testing.T) {
+		cluster, _ := mock.NewCluster()
+
+		claim := &backendapidata.DataImportClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:      "nonce",
+				Subject: "test-volume-ref",
+			},
+			RunId:  "test-run-id",
+			KnitId: "test-knit-id",
+		}
+
+		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
+
+		token := try.To(keychain.NewJWS("test-key-id", k, claim)).OrFatal(t)
+
+		kp := mockkeyprovider.New(t)
+		kp.Impl.GetKeychain = func(context.Context) (keychain.Keychain, error) {
+			return nil, errors.New("fake error")
+		}
+
+		dbRun := dbmock.NewRunInterface()
+		dbData := dbmock.NewDataInterface()
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(
+			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
+			httptestutil.ContentType("application/jwt"),
+		)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusInternalServerError {
+			t.Errorf("error code is not %d. actual = %d", http.StatusInternalServerError, herr.Code)
+		}
+	})
+
+	t.Run("when no content body, it responses 400", func(t *testing.T) {
+		cluster, _ := mock.NewCluster()
+
+		kp := mockkeyprovider.New(t)
+		dbRun := dbmock.NewRunInterface()
+		dbData := dbmock.NewDataInterface()
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/end", nil)
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusBadRequest {
+			t.Errorf("error code is not %d. actual = %d", http.StatusBadRequest, herr.Code)
+		}
+	})
+
+	t.Run("when content type is not application/jwt, it responses 400", func(t *testing.T) {
+		cluster, _ := mock.NewCluster()
+
+		kp := mockkeyprovider.New(t)
+		dbRun := dbmock.NewRunInterface()
+		dbData := dbmock.NewDataInterface()
+
+		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		e := echo.New()
+		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/end", nil, httptestutil.ContentType("application/json"))
+		ectx.SetPath("/api/backends/data/import/end")
+
+		err := testee(ectx)
+		if herr := new(echo.HTTPError); !errors.As(err, &herr) {
+			t.Fatalf("error is not echo.HTTPError: %s", err)
+		} else if herr.Code != http.StatusBadRequest {
+			t.Errorf("error code is not %d. actual = %d", http.StatusBadRequest, herr.Code)
+		}
+	})
 }
