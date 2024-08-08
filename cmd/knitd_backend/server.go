@@ -90,22 +90,25 @@ func BuildServer(knit knit.KnitCluster, loglevel string) *echo.Echo {
 		"knitId",
 	))
 
-	signKeyProviderForImportToken := keyprovider.New(
-		knit.Config().Keychains().SignKeyForImportToken().Name(),
+	keyProviderForImportToken := keyprovider.New(
 		knit.Database().Keychain(),
-		func(ctx context.Context, s string) (keychain.Keychain, error) {
-			return keychain.Get(ctx, knit.BaseCluster(), s)
+		func(ctx context.Context) (keychain.Keychain, error) {
+			return keychain.Get(
+				ctx,
+				knit.BaseCluster(),
+				knit.Config().Keychains().SignKeyForImportToken().Name(),
+			)
 		},
 		keyprovider.WithPolicy(key.HS256(3*time.Hour, 2048/8)),
 	)
 	e.POST(api("data/import/begin"), handlers.ImportDataBeginHandler(
-		signKeyProviderForImportToken,
+		keyProviderForImportToken,
 		knit.Database().Runs(),
 	))
 
 	e.POST(api("data/import/end"), handlers.ImportDataEndHandler(
 		knit.BaseCluster(),
-		signKeyProviderForImportToken,
+		keyProviderForImportToken,
 		knit.Database().Runs(),
 		knit.Database().Data(),
 	))

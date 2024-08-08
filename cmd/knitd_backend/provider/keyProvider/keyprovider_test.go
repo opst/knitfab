@@ -61,15 +61,9 @@ func TestKeyLocker(t *testing.T) {
 			return nil
 		}
 
-		keychainNameForGetKeyChain := "keychainNameForGetKeyChain"
-
 		getKeyChainHasBeenCalled := false
-		getKeyChain := func(ctx context.Context, name string) (keychain.Keychain, error) {
+		getKeyChain := func(ctx context.Context) (keychain.Keychain, error) {
 			getKeyChainHasBeenCalled = true
-
-			if name != keychainNameForGetKeyChain {
-				t.Errorf("expected keychain name 'test', got %s", name)
-			}
 			return mkc, nil
 		}
 
@@ -78,8 +72,7 @@ func TestKeyLocker(t *testing.T) {
 		}
 
 		testee := keyprovider.New(
-			keychainNameForGetKeyChain, mdbkc, getKeyChain,
-			options...,
+			mdbkc, getKeyChain, options...,
 		)
 		_, got, err := testee.Provide(context.Background())
 		if err != nil {
@@ -149,14 +142,9 @@ func TestKeyLocker(t *testing.T) {
 			return nil
 		}
 
-		keychainNameForGetKeyChain := "keychainNameForGetKeyChain"
-
 		getKeyChainHasBeenCalled := false
-		getKeyChain := func(ctx context.Context, name string) (keychain.Keychain, error) {
+		getKeyChain := func(ctx context.Context) (keychain.Keychain, error) {
 			getKeyChainHasBeenCalled = true
-			if name != keychainNameForGetKeyChain {
-				t.Errorf("expected keychain name %s, got %s", keychainNameForGetKeyChain, name)
-			}
 			return mkc, nil
 		}
 
@@ -164,10 +152,7 @@ func TestKeyLocker(t *testing.T) {
 			keyprovider.WithPolicy(keyPolicy),
 		}
 
-		testee := keyprovider.New(
-			keychainNameForGetKeyChain, mdbkc, getKeyChain,
-			options...,
-		)
+		testee := keyprovider.New(mdbkc, getKeyChain, options...)
 
 		kid, got, err := testee.Provide(context.Background())
 		if err != nil {
@@ -216,15 +201,9 @@ func TestKeyLocker(t *testing.T) {
 			return "", nil, false // empty keychain
 		}
 
-		keychainNameForGetKeyChain := "keychainNameForGetKeyChain"
-
 		getKeyChainHasBeenCalled := false
-		getKeyChain := func(ctx context.Context, name string) (keychain.Keychain, error) {
+		getKeyChain := func(ctx context.Context) (keychain.Keychain, error) {
 			getKeyChainHasBeenCalled = true
-
-			if name != keychainNameForGetKeyChain {
-				t.Errorf("expected keychain name 'test', got %s", name)
-			}
 			return mkc, nil
 		}
 
@@ -232,10 +211,7 @@ func TestKeyLocker(t *testing.T) {
 			keyprovider.WithPolicy(keyPolicy),
 		}
 
-		testee := keyprovider.New(
-			keychainNameForGetKeyChain, mdbkc, getKeyChain,
-			options...,
-		)
+		testee := keyprovider.New(mdbkc, getKeyChain, options...)
 		_, _, err := testee.Provide(context.Background())
 		if !errors.Is(err, errorOnIssueKey) {
 			t.Fatalf("unexpected error: %v", err)
@@ -259,13 +235,8 @@ func TestKeyLocker(t *testing.T) {
 		k := try.To(key.HS256(3*time.Hour, 2048/8).Issue()).OrFatal(t)
 		keyPolicy := key.Fixed(k)
 
-		keychainNameForGetKeyChain := "keychainNameForGetKeyChain"
-
 		errorOnGetKeyChain := errors.New("error on get keychain")
-		getKeyChain := func(ctx context.Context, name string) (keychain.Keychain, error) {
-			if name != keychainNameForGetKeyChain {
-				t.Errorf("expected keychain name 'test', got %s", name)
-			}
+		getKeyChain := func(ctx context.Context) (keychain.Keychain, error) {
 			return nil, errorOnGetKeyChain
 		}
 
@@ -273,10 +244,7 @@ func TestKeyLocker(t *testing.T) {
 			keyprovider.WithPolicy(keyPolicy),
 		}
 
-		testee := keyprovider.New(
-			keychainNameForGetKeyChain, mdbkc, getKeyChain,
-			options...,
-		)
+		testee := keyprovider.New(mdbkc, getKeyChain, options...)
 		_, _, err := testee.Provide(context.Background())
 		if !errors.Is(err, errorOnGetKeyChain) {
 			t.Fatalf("unexpected error: %v", err)
@@ -328,12 +296,7 @@ func TestKeyLocker(t *testing.T) {
 			return errorOnUpdate
 		}
 
-		keychainNameForGetKeyChain := "keychainNameForGetKeyChain"
-
-		getKeyChain := func(ctx context.Context, name string) (keychain.Keychain, error) {
-			if name != keychainNameForGetKeyChain {
-				t.Errorf("expected keychain name 'test', got %s", name)
-			}
+		getKeyChain := func(ctx context.Context) (keychain.Keychain, error) {
 			return mkc, nil
 		}
 
@@ -341,10 +304,7 @@ func TestKeyLocker(t *testing.T) {
 			keyprovider.WithPolicy(keyPolicy),
 		}
 
-		testee := keyprovider.New(
-			keychainNameForGetKeyChain, mdbkc, getKeyChain,
-			options...,
-		)
+		testee := keyprovider.New(mdbkc, getKeyChain, options...)
 		_, _, err := testee.Provide(context.Background())
 		if !errors.Is(err, errorOnUpdate) {
 			t.Fatalf("unexpected error: %v", err)
@@ -382,12 +342,7 @@ func TestKeyLocker(t *testing.T) {
 			return "", nil, false // empty keychain
 		}
 
-		keychainNameForGetKeyChain := "keychainNameForGetKeyChain"
-
-		getKeyChain := func(ctx context.Context, name string) (keychain.Keychain, error) {
-			if name != keychainNameForGetKeyChain {
-				t.Errorf("expected keychain name 'test', got %s", name)
-			}
+		getKeyChain := func(ctx context.Context) (keychain.Keychain, error) {
 			return mkc, nil
 		}
 
@@ -397,10 +352,7 @@ func TestKeyLocker(t *testing.T) {
 			keyprovider.WithPolicy(keyPolicy),
 		}
 
-		testee := keyprovider.New(
-			keychainNameForGetKeyChain, mdbkc, getKeyChain,
-			options...,
-		)
+		testee := keyprovider.New(mdbkc, getKeyChain, options...)
 		_, _, err := testee.Provide(context.Background(), func(kid string, k key.Key) bool {
 			return false // never satisfy
 		})

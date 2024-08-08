@@ -17,7 +17,10 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
+// ErrNoKeyFound is an error when no key is found in the Keychain
 var ErrNoKeyFound error = errors.New("no key found")
+
+// ErrInvalidToken is an error when the token is invalid (format error, wrong signature, expired, etc.)
 var ErrInvalidToken error = errors.New("invalid token")
 
 const keychainItem = "keychain"
@@ -132,6 +135,7 @@ func WithKeyId(kid string) KeyRequirement {
 	}
 }
 
+// Keychain is a container of keys for a specific purpose.
 type Keychain interface {
 	// Name of the keychain
 	Name() string
@@ -177,12 +181,28 @@ type Keychain interface {
 	Update(ctx context.Context) error
 }
 
+// keychain backed by Kubernetes Secret
 type keychain struct {
 	name    string
 	keys    map[string]key.Key
 	cluster k8s.Cluster
 }
 
+// Get a keychain from the Kubernetes cluster
+//
+// # Args
+//
+// - ctx: Context
+//
+// - cluster: Kubernetes cluster
+//
+// - keychainName: Name of the keychain
+//
+// # Returns
+//
+// - Keychain: Keychain found. If not found, it returns an empty keychain
+//
+// - error: from [k8s.Cluster.GetSecret] (except NotFound) or [json.Unmarshal]
 func Get(ctx context.Context, cluster k8s.Cluster, keychainName string) (Keychain, error) {
 	kc := &keychain{
 		name:    keychainName,
@@ -197,19 +217,13 @@ func Get(ctx context.Context, cluster k8s.Cluster, keychainName string) (Keychai
 		return nil, err
 	}
 
-	mkeys := make(map[string]internal.MarshalKey)
 	kcraw, ok := secret.Data()[keychainItem]
 	if ok {
-		if err := json.Unmarshal(kcraw, &mkeys); err != nil {
+		keys, err := key.UnmarshalKeys(kcraw)
+		if err != nil {
 			return nil, err
 		}
-		for kid, m := range mkeys {
-			k, err := key.Unmarshal(m)
-			if err != nil {
-				return nil, err
-			}
-			kc.keys[kid] = k
-		}
+		kc.keys = keys
 	}
 	return kc, nil
 }
@@ -266,21 +280,15 @@ func (kc *keychain) Update(ctx context.Context) error {
 	if s, err := kc.cluster.UpsertSecret(ctx, s); err != nil {
 		return err
 	} else {
-		marshalKeys := make(map[string]internal.MarshalKey)
 		kcraw, ok := s.Data()[keychainItem]
-		if ok {
-			if err := json.Unmarshal(kcraw, &marshalKeys); err != nil {
-				return err
-			}
-		}
-		kc.keys = make(map[string]key.Key)
-
-		for kid, m := range marshalKeys {
-			k, err := key.Unmarshal(m)
+		if !ok {
+			kc.keys = make(map[string]key.Key)
+		} else {
+			keys, err := key.UnmarshalKeys(kcraw)
 			if err != nil {
 				return err
 			}
-			kc.keys[kid] = k
+			kc.keys = keys
 		}
 	}
 	return nil

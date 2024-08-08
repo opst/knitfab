@@ -13,8 +13,13 @@ import (
 
 var ErrBadNewKey = errors.New("new key is bad. It does not satisfy the requirements")
 
+// KeyProvider provides a flesh key from the base keychain and rotates the keys if needed.
+//
+// (It is a wrapper around the keychain.Keychain.)
 type KeyProvider interface {
 	// Provide returns a key from the keychain.
+	//
+	// Expired keys will be purged.
 	// If no key satifies options in the keychain, it issues a new key.
 	Provide(ctx context.Context, option ...keychain.KeyRequirement) (string, key.Key, error)
 
@@ -32,17 +37,30 @@ func WithPolicy(policy key.KeyPolicy) Option {
 	}
 }
 
+// New returns a new KeyProvider.
+//
+// # Args
+//
+// - keychainName: Name of the keychain
+//
+// - dbKeychain: Keychain in the database. With this, KeyProvider synchronizes Key rotatiton.
+//
+// - getKeychain: Function to get the keychain by the keychainName.
+//
+// - options: Options to configure the KeyProvider.
+//
+// # Returns
+//
+// - KeyProvider
 func New(
-	keychainName string,
 	dbKeychain kdb.KeychainInterface,
-	getKeychain func(context.Context, string) (keychain.Keychain, error),
+	getKeychain func(context.Context) (keychain.Keychain, error),
 	options ...Option,
 ) KeyProvider {
 	base := &keyProvider{
-		keychainName: keychainName,
-		policy:       DefaultKeyPolicy,
-		getKeychain:  getKeychain,
-		dbKeychain:   dbKeychain,
+		policy:      DefaultKeyPolicy,
+		getKeychain: getKeychain,
+		dbKeychain:  dbKeychain,
 	}
 	for _, option := range options {
 		option(base)
@@ -51,10 +69,9 @@ func New(
 }
 
 type keyProvider struct {
-	policy       key.KeyPolicy
-	keychainName string
-	getKeychain  func(context.Context, string) (keychain.Keychain, error)
-	dbKeychain   kdb.KeychainInterface
+	policy      key.KeyPolicy
+	getKeychain func(context.Context) (keychain.Keychain, error)
+	dbKeychain  kdb.KeychainInterface
 }
 
 func (kp *keyProvider) Provide(ctx context.Context, req ...keychain.KeyRequirement) (string, key.Key, error) {
@@ -88,5 +105,5 @@ func (kp *keyProvider) Provide(ctx context.Context, req ...keychain.KeyRequireme
 }
 
 func (kp *keyProvider) GetKeychain(ctx context.Context) (keychain.Keychain, error) {
-	return kp.getKeychain(ctx, kp.keychainName)
+	return kp.getKeychain(ctx)
 }

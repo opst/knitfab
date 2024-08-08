@@ -31,6 +31,13 @@ func (f hs256policy) Issue() (Key, error) {
 	}, nil
 }
 
+// HS256 returns a KeyPolicy for HMAC-SHA256 algorithm.
+//
+// # Args
+//
+// - ttl: Time to live of new keys
+//
+// - klen: Length of the key in *bytes*, not bits.
 func HS256(ttl time.Duration, klen uint) KeyPolicy {
 	return hs256policy{
 		ttl:    ttl,
