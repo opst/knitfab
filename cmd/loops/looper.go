@@ -16,6 +16,7 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/image"
+	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/imported"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
 	knit "github.com/opst/knitfab/pkg"
 	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
@@ -162,6 +163,7 @@ func StartLoop(
 			kdb.Uploaded: uploaded.New(
 				kcluster.Database().Data(),
 			),
+			kdb.Imported: imported.New(),
 		}
 		_, err := loop.Start(
 			ctx,
@@ -191,6 +193,7 @@ func StartLoop(
 	case kdb.Finishing:
 		pseudoPlanNames := []kdb.PseudoPlanName{
 			kdb.Uploaded,
+			kdb.Imported,
 		}
 		// Initial RunCursor
 		runCursor := finishing.Seed(pseudoPlanNames)
