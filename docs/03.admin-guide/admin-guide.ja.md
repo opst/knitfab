@@ -1,89 +1,105 @@
 Knitfab 管理ガイド
 =================
 
-この文書は Knitfab を運用・管理する人に向けて書かれた。
+# 1. はじめに
+-----------------------
+
+この文書は Knitfab を運用・管理する人に向けたものです。
 
 - Knitfab をインストールする方法
 - Knitfab の運用上の注意点
 - Knitfab を構成する kubernetes リソースについて
 
-などの話題を取り扱う。
+などの話題を取り扱います。
 
-Knitfab を管理・運用しないユーザにとっては関心の範囲を超えるであろう話題を扱っている。
-
-他言語版/Translations
----------------------
+## 1.1. 他言語版/Translations
 
 - English: [./admin-guide.en.md](./admin-guide.en.md)
 
 
-Knitfab をインストールの事前準備
------------------------
+# 2. Knitfab インストールの事前準備
+--------------------
 
-Knitfab のインストール作業を開始する前に、環境の用意をする必要がある。
+Knitfab をインストールするには、以下の環境が必要です。
 
-- x86_64 系 CPU を搭載した Node からなる kubernetes クラスタ: Knitfab は kubenetes 上で稼働する。
-- NFS: RDB やクラスタ内イメージレジストリ、Knitfab のデータなどを永続化するために、NFS を利用する。
+- kubernetes クラスタ: 
+  - Knitfab は kubernetes クラスタ上で稼働します。
+  - マルチノードクラスタまたはシングルノードクラスタでも構いません。
+  - この kubernetes は、x86_64 系CPUで動作するマシン上で動作している必要があります。
+  - クラスタからインターネットにアクセスが可能なこと。
+- NFS: 
+  - Knitfabが用いる RDB やクラスタ内イメージレジストリ、データなどを永続化するために、NFS を利用します。
 
-とくに NFS は、ユーザがデータをどんどん蓄積してゆく先になる。容量は大きめに確保しておいたほうが良いだろう。
+特に NFS は、Knitfabがデータ履歴等を蓄積していく場所となりますので、十分な容量があるものが良いでしょう。
 
-### kubernetes
+## 2.1. kubernetesのインストール
 
-kubernetes の構築手法については、公式リファレンスを参考にしてほしい。
+kubernetes の構築手法については、下記の公式リファレンスを参考にしてください。
 
 - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
 - https://kubernetes.io/docs/setup/production-environment/container-runtimes/
 - https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
 
-なお、Knitfab 開発チームでは、次の条件で構築した kubernetes クラスタについて動作を確認している。
+なお、Knitfab 開発チームでは、次の条件で構築した kubernetes クラスタについて動作を確認しています。
 
-- kubernetes 1.29.2
+- kubernetes 1.29.2以降
 - コンテナランタイム: containerd
 - cgroup: systemd
 
-#### CNI をインストールする
+## 2.2. CNI をインストールする
 
-kubenetes のネットワーク機能を有効化するために、何らかの CNI (container network interface) をインストールする必要がある。
+kubenetes 上のネットワーク機能を有効化するために、何らかの CNI (container network interface) をインストールする必要があります。
 
-Knitfab 開発チームは [calico](https://docs.tigera.io/calico/latest/about) で動作を確認している。
+Knitfab 開発チームは [calico](https://docs.tigera.io/calico/latest/about) で動作を確認しています。
 
-#### GPU を有効化する
+## 2.3. GPU を有効化する
 
-kubernetes 上のコンテナから GPU を使えるようにするには、node をそのように設定しておく必要がある。
+kubernetes 上のコンテナから GPU を使えるようにするには、node をそのように設定しておく必要があります。
 
-これも公式リファレンスを参考にしながら構築を進めて欲しい。
+これも下記の公式リファレンスを参考にしながら設定を行ってください。
 
 - https://kubernetes.io/ja/docs/tasks/manage-gpus/scheduling-gpus/
 
-#### シングルノードクラスタ
+## 2.4. シングルノードクラスタでの設定
 
-kubernetes クラスタを単一ノード (control plane ノード) のみのクラスタで運用し始める場合は、そのノードに指定されている taint を除去する必要がある。
-そうでないと、Knitfab のコンポーネントが起動できるノードが存在しない、という状態になる。
+kubernetes クラスタを単一ノード (control plane ノード) のみのクラスタで運用し始める場合は、そのノードに指定されている taint を除去する必要があります。
+これを行わないと Knitfab のコンポーネントが起動できるノードが存在しない、という状態になります。
 
-詳細は https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#control-plane-node-isolation を参照されたい。
+詳細は https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#control-plane-node-isolation を参照ください。
 
-### NFS サーバ
+## 2.5. NFS サーバの用意
 
-Knitfab では、デフォルトの [ストレージクラス](https://kubernetes.io/docs/concepts/storage/storage-classes/) として、ストレージドライバ [csi-driver-nfs](https://github.com/kubernetes-csi/csi-driver-nfs) によるものを採用している。コンテナの起動するノードによらず Knitfab のデータにアクセスできるようにするためである。
+Knitfab では、デフォルトの [ストレージクラス](https://kubernetes.io/docs/concepts/storage/storage-classes/) として、ストレージドライバ [csi-driver-nfs](https://github.com/kubernetes-csi/csi-driver-nfs) によるものを採用しています。これはコンテナがどの kubernetes ノードで起動したとしても Knitfab がデータにアクセスできるようにするためです。
 
-Knitfab は NFSv4 を前提としている。
+NFSにはいくつかバージョンがありますが、Knitfab では NFS version 4 を前提としています。
 
-そこで、kubernetes クラスタの各ノードからアクセス可能なネットワーク上の位置に、NFS を構築してほしい。
-NFS 機能を有する NAS でよいはずだが、既存の計算機に nfsd を立てても構わない。
+そこで、kubernetes クラスタの各ノードからアクセス可能なネットワーク上の位置に、NFSサーバ を用意してください。
+例えば、NFS 機能を有する NAS(Network Attached Storage)機器や、NFSサーバー機能を有する計算機（Linuxサーバなど）等です。
 
-> たとえば Ubuntu なら、
+> たとえば Ubuntu OS マシンをNFSサーバーとするなら:
 >
 > - `nfs-kernel-server` パッケージをインストールして (`apt install nfs-kernel-server`) 、
 > - `/etc/exports` に設定ファイルを配置することで
 >
-> NFS サーバにできる。
+> NFS サーバにできます。
 
-Knitfab をインストールする
+## 2.6. その他ツール類
+以下のツールをインストールしてください。
+
+- [helm](https://helm.sh/)
+- bash
+- wget
+- jq
+
+インストール方法は、お使いのOSのドキュメントや関連資料を参照ください。
+
+
+# 3. Knitfab をインストールする
 -----------------------
 
-### インストールされるもの
+## 3.1. インストールされるもの
 
-次のものが Kubernetes クラスタにインストールされる。
+インストール手順を実施することにより、次のものが Kubernetes クラスタにインストールされます。
 
 |  | 対応する Helm Chart |
 |:------|:------------|
@@ -93,45 +109,38 @@ Knitfab をインストールする
 | TLS 証明書類 | knit-certs |
 | ストレージクラス | knit-storage-nfs |
 
-また、 Helm Chart "knit-storage-nfs" は [CSI "csi-driver-nfs"](https://github.com/kubernetes-csi/csi-driver-nfs/) に依存しているので、この Chart も Knitfab とおなじ Namespace にインストールされる。
+また、 Helm Chart "knit-storage-nfs" は [CSI "csi-driver-nfs"](https://github.com/kubernetes-csi/csi-driver-nfs/) に依存しているので、この Chart も Knitfab とおなじ Namespace にインストールされます。
 
-### 事前に用意するもの
+## 3.2. 必要なもの
+- インストール先の kubernetes クラスタに対してアクセスできる設定の kubeconfig ファイル
+- (単一ノードクラスタを構成の場合)そのノードのマシンに 4GB のメモリが必要。
+  なお、このメモリ量は最低限 Knitfab が起動できる程度の容量です。Knitfab上で実行する機械学習タスクによっては、より多くのメモリが必要となります。
 
-Knitfab をインストールするためには、次のツールが必要である。
+### 3.2.1. (任意実施) TLS 証明書を用意する
 
-- [helm](https://helm.sh/)
-- bash
-- wget
-
-また、インターネットアクセス、およびインストール先の kubernetes クラスタに対してアクセス権のある kubeconfig ファイルも必要である。
-
-もし単一ノードクラスタを構成するつもりなら、少なくとも 4GB のメモリが必要である。
-なお、この要件は最低限 Knitfab が起動する程度を述べているにすぎない。実行される機械学習タスクに応じ、より多くのメモリが必要となるだろう。
-
-####  (選択) TLS 証明書を用意する
-
-Knitfab Web API やクラスタ内イメージレジストリは、原則として https で通信を行う。
-インストールスクリプトはそのための証明書を生成するが、代わりに特定の証明書を指定して使うこともできる。
+Knitfab Web API やクラスタ内イメージレジストリは、原則として https で通信を行います。
+デフォルトではインストールスクリプトはそのための証明書を生成しますが、必要に応じて別の証明書を指定して使うこともできます。
 
 - CA 証明書とその鍵があれば、それを使う
 - 加えて、サーバ証明書とその鍵があれば、それを使う
 
-たとえば「 kubernetes クラスタのノードに対して特定のドメイン名が使いたい」などといった要求があるなら、事前にサーバ証明書とそれに署名した CA 証明書 (およびそれらの鍵) が必要である。
+たとえば「 kubernetes クラスタのノードに対して特定のドメイン名が使いたい」などといった要求があるなら、事前にサーバ証明書とそれに署名した CA 証明書 (およびそれらの鍵) が必要です。
 
-証明書類が与えられない場合、インストーラは自己署名証明書と、それで署名したサーバ証明書を生成する。サーバ証明書は、Knitfab をインストールした際の Kubernetes クラスタのノードの IP アドレスを SAN に持つように生成される。
+証明書類が指定されない場合は、インストーラは自己署名証明書と、それで署名したサーバ証明書を生成します。サーバ証明書は、Knitfab をインストールした際の Kubernetes クラスタのノードの IP アドレスを SAN に持つように生成します。
 
-### 手順
+## 3.3. インストール手順
+以下の順序で実施します。
 
-1. インストーラを手に入れる。
-2. インストール設定ファイルを生成し、パラメータを調整する。
-3. インストールを実行する。
+1. インストーラを手に入れます。
+2. インストール設定ファイルを生成し、パラメータを調整します。
+3. インストールを実行します。
 4. ユーザにハンドアウトを配布し、利用開始してもらう。
 
-#### 手順1: インストーラを手に入れる
+### 手順1. インストーラを手に入れる
 
-インストーラは https://github.com/opst/knitfab/installer/installer.sh である。
+インストーラは https://github.com/opst/knitfab/installer/installer.sh です。
 
-これを適当なディレクトリ ( 次例では、仮に `~/knitfab` とした) にダウンロードする。
+これを適当なディレクトリ ( 本書では、例として`~/knitfab` としますが、別の場所でも構いません) にダウンロードします。
 
 ```
 mkdir -p ~/knitfab/install
@@ -140,48 +149,49 @@ wget -O installer.sh https://raw.githubusercontent.com/opst/knitfab/main/install
 chmod +x ./installer.sh
 ```
 
-#### 手順2: インストール設定ファイルを生成し、パラメータを調整する
+### 手順2. インストール設定ファイルを生成し、パラメータを調整する
+以下を実行すると、 `./knitfab-install-settings` ディレクトリに Knitfab のインストール設定が生成されます。
+`${YOUR_KUBECONFIG}` の部分は、事前に用意した kubeconfig ファイルへのパスを指定してください。
 
 ```
 ./installer.sh --prepare --kubeconfig ${YOUR_KUBECONFIG}
 ```
 
-を実行すると、 `./knitfab-install-settings` ディレクトリに Knitfab のインストール設定が生成される。 `${YOUR_KUBECONFIG}` の部分は、インストール先となる kubernetes 用の kubeconfig ファイルへのパスに置き換えてほしい。
 
 > [!Note]
 >
-> もし特定の TLS 証明書類を利用したいなら、代わりに次のコマンドを実行する。
+> もし特定の TLS 証明書類を利用したいなら、代わりに次のコマンドを実行してください。
 >
 > ```
 > TLSCACERT=path/to/ca.crt TLSCAKEY=path/to/ca.key TLSCERT=path/to/server.crt TLSKEY=path/to/server.key ./installler.sh --prepare --kubeconfig ${KUBECONFIG}
 > ```
 >
-> サーバ証明書について指定がないなら、環境変数 `TLSCERT`, `TLSKEY` を省略して、次のようにする。
+> サーバ証明書について指定がないなら、環境変数 `TLSCERT`, `TLSKEY` を省略して、次のようにします。
 >
 > ```
 > TLSCACERT=path/to/ca.crt TLSCAKEY=path/to/ca.key ./installler.sh --prepare
 > ```
 >
-> CA 証明書が指定されなかった場合には、インストーラは 自己署名証明書を自動的に生成する。
-> サーバ証明書が指定されなかった場合には、インストーラは CA 証明書から自動的に生成する。
+> CA 証明書が指定されなかった場合には、インストーラは 自己署名証明書を自動的に生成します。
+> サーバ証明書が指定されなかった場合には、インストーラは CA 証明書から自動的に生成します。
 
 > [!Note]
 >
-> **Advanced**
+> **上級向け**
 >
-> 以上の手順は、 Knitfab Web API を https として公開するように設定するものである。
+> 上記の手順は、 Knitfab Web API を https として公開するように設定するものです。
 >
-> 一方で、Knitfab 自身が https 化されていると不都合な場合もある。たとえば、Knitfab Web API の前にロードバランサーを設置して、TLS終端化はそちらで行いたい、という場合がそうだ。
+> 一方で、Knitfab 自身が https 化されていると不都合な場合もあります。たとえば、Knitfab Web API の前にロードバランサーを設置して、TLS終端化はそちらで行いたい、という場合です。
 >
-> そうした場合には、次のように、フラグ `--no-tls` を付加して step 2. を実行せよ。
+> そうした場合には、次のように、フラグ `--no-tls` を付加して「手順2」を実行してください。
 >
 > ```
 > ./installer.sh --prepare --no-tls --kubeconfig ${YOUR_KUBECONFIG}
 > ```
 >
-> これによって、 `./installer.sh --prepare` が TLS 証明書ならびに関連する設定を生成しないようになり、続くインストール時にも Knitfab Web API は https 化されない。
+> これによって、 `./installer.sh --prepare` が TLS 証明書ならびに関連する設定を生成しないようになり、続くインストール時にも Knitfab Web API は https 化されません。
 >
-> なお、こうしたときには、クラスタ内イメージレジストリも https 化されないので、各ユーザはインセキュアレジストリ(insecure registry)として dockerd に登録する必要がある。詳細は、次のリンクを参照されたい。
+> なお、この際にはクラスタ内イメージレジストリも https 化されないので、各ユーザはインセキュアレジストリ(insecure registry)として dockerd に登録する必要があります。その詳細は、次のリンク先を参照ください。
 >
 > - https://docs.docker.com/reference/cli/dockerd/#insecure-registries
 > - https://docs.docker.com/reference/cli/dockerd/#daemon-configuration-file
@@ -189,35 +199,35 @@ chmod +x ./installer.sh
 
 > [!Caution]
 >
-> **TLS証明書を指定した場合、それら証明書や秘密鍵がインストール設定の一部として複製される。**
+> **TLS証明書を指定した場合、それら証明書や秘密鍵がインストール設定の一部として以下の場所に複製されます。**
 >
 > - `knitfab-install-settings/certs/*` (キーペア; ファイルのコピーとして)
 > - `knitfab-install-settings/values/knit-certs.yaml` (キーペア; base64エンコードされたテキストとして)
 > - `knitfab-install-settings/knitprofile` (証明書のみ; base64エンコードされたテキストとして)
 >
-> また、証明書を生成した場合も、その生成された証明書は上記の箇所に記録される。
+> また、インストーラが証明書を自動生成した場合も上記の場所に配置されます。
 >
-> 特に、キーペアには **秘密鍵** が含まれるので、取り扱いには注意してほしい。
+> 特に、キーペアには **秘密鍵** が含まれるので、取り扱いには注意してください。
 
-##### NFS を使うように設定する
+#### 手順2.1. NFS を使うように設定する
 
-**このコマンドで生成されるデフォルト設定は、「 Knitfab が管理している情報を永続化しない」ように記述されている。**
+**インストーラで生成されるデフォルト設定は、「 Knitfab が管理している情報を永続化しない」ようになっています。**
 
-そこで、用意した NFS を利用してデータを永続化するように、設定を更新する。
+そこで、用意した NFS を利用してデータを永続化するように、設定を変更します。
 
-変更すべきファイルは `knitfab-install-settings/values/knit-storage-nfs.yaml` である。
-次のエントリを変更せよ。
+変更すべきファイルは `knitfab-install-settings/values/knit-storage-nfs.yaml` です。
+このファイル内の次のエントリを変更してください。
 
 - `nfs.external`: 値を `true` にする。
-- `nfs.server`: コメントインして、 NFS サーバのホスト名 (ないし IP) を指定する。
+- `nfs.server`: をコメント解除して、 NFS サーバのホスト名 (ないし IPアドレス) を指定する。
 
-さらに、必要に応じて次のエントリも変更せよ。
+さらに、必要に応じて次のエントリも変更してください。
 
-- `nfs.mountOptions`: NFS に対するマウントオプションについて特に指定があれば更新せよ。
-- `nfs.share`: Knitfab に利用させたいサブディレクトリがあれば指定せよ。
-    - そのサブディレクトリは、事前に作成しておく必要がある。
+- `nfs.mountOptions`: NFS に対するマウントオプションについて特に指定があれば記述します。
+- `nfs.share`: Knitfab に利用させたいサブディレクトリがあれば指定します。
+    - 注：そのサブディレクトリは、事前に作成しておく必要があります。
 
-次のようになるだろう。
+以上をまとめると、`knit-storage-nfs.yaml` は、次のようになるでしょう。
 
 ```yaml
 nfs:
@@ -250,49 +260,56 @@ nfs:
   # node: "nfs-server"
 ```
 
-##### その他のインストール時パラメータについて
+#### 手順2.2. その他のインストール時の設定
 
-それら以外のファイルについても、必要に応じてパラメータを変更できる。
+ここまで述べた以外のファイルについても、必要に応じてパラメータを変更できます。
 
-特に利用上影響があるのは次のものである。
+特に利用上影響があるのは次のものです。
+##### (1) ポート番号
 
 - `knitfab-install-settings/values/knit-app.yaml` の `knitd.port`
 - `knitfab-install-settings/values/knit-image-registry.yaml` の `port`
 
-前者は Knitfab API のリッスンポート、後者はクラスタ内イメージレジストリのリッスンポートである。
+前者は Knitfab API の LISTEN ポート、後者はクラスタ内イメージレジストリの LISTEN ポートです。
 
-また、 kubernetes クラスタ構築時に、クラスタの TLD をデフォルト値 ( `cluster.local` ) から変更していた場合には、次の項目にそのカスタムな TLD を設定せよ。
+##### (2) クラスタのTLD
+また、 kubernetes クラスタ構築時に、クラスタの TLD(Top Level Domain)をデフォルト値 ( `cluster.local` ) から変更していた場合には、次の項目にその TLD を設定する必要があります。
 
-- `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメントインして書き換える)
+- `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメント解除して書き換えます)
 
-Knitfab の動作を拡張するための設定ファイルも含まれている。
+##### (3) Knitfab 拡張機能関連
+Knitfab の動作を拡張するための設定ファイルも含まれています。
 
-- `knitfab-install-settings/values/hooks.yaml` を編集することで WebHook を設定できる。
-- `knitfab-install-settings/values/extra-api.yaml` を編集することで拡張 Web API を設定できる。
+- `knitfab-install-settings/values/hooks.yaml` を編集することで WebHook を設定できます。
+- `knitfab-install-settings/values/extra-api.yaml` を編集することで拡張 Web API を設定できます。
 
-詳細は、「Knitfab を拡張する」の章を参照されたい、
+詳細は、「Knitfab を拡張する」の章を参照ください。
 
-#### 手順3: インストールする
+### 手順3. インストールする
+
+以下のコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを kubernetes クラスタにインストールします。
+`${NAMESPACE}`には、Knitfabアプリケーションのインストール先とする kubernetes 名前空間名を指定してください。（ここで新規に指定します。）
+これには、しばらく時間がかかります。
 
 ```
-./installer.sh --install --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./knitfab-install-settings
+./installer.sh --install --kubeconfig path/to/kubeconfig -n ${NAMESPACE} -s ./knitfab-install-settings
 ```
 
-このコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを kubernetes クラスタにインストールする。しばらく時間がかかるだろう。
+<!-- TODO: インストールの成否はどうやって確認するか記載 -->
 
-#### 手順4: ユーザにハンドアウトを配布する
+### 手順4. ユーザにハンドアウト(Knitfab設定情報)を配布する
 
-インストールされた Knitfab への接続情報が `knitfab-install-settings/handout` に生成されている。
+インストールされた Knitfab への接続情報が `knitfab-install-settings/handouts` フォルダに生成されます。
 
-このフォルダを、Knitfab を使おうとしているユーザに配布せよ。
+このフォルダの内容を、Knitfab を使用するユーザに配布してください。これを**ハンドアウト**と呼びます。
 
-このハンドアウトの使い方については、 user-guide に記述されている。
+このハンドアウトの使い方については、 user-guide に説明があります。
 
-##### ハンドアウトを訂正する
+#### (任意実施)手順4.1. ハンドアウトを修正する
 
-Knitfab に対して特定のドメイン名でアクセスさせたい場合には (例: 指定したサーバ証明書がそうなっている) 、ユーザにハンドアウトを配布する前に、接続設定を書き換える必要がある。
+Knitfab に対して特定のドメイン名でアクセスしたい場合には (例: 指定したサーバ証明書がそうなっている場合) 、ユーザにハンドアウトを配布する前に、接続設定を書き換える必要があります。
 
-**knitprofile ファイル** と呼ばれる、Knitfab API への接続設定が `knitfab-install-settings/handout/knitprofile` にある。このファイルは次の構成をした yaml ファイルである。
+**knitprofile ファイル** と呼ばれる、Knitfab API への接続設定が `knitfab-install-settings/handouts/knitprofile` にあります。このファイルは次のような構成をした yaml ファイルです。
 
 ```yaml
 apiRoot: https://IP-ADDRESS:PORT/api
@@ -300,12 +317,11 @@ cert:
     ca: ...Certification....
 ```
 
-キー `apiRoot` の値が、Knitfab Web API のエンドポイントを示している。
-デフォルトでは、クラスタの適当なノードの IP がセットされているはずである。
+キー `apiRoot` の値が、Knitfab Web API のエンドポイントを示します。
+デフォルトでは、クラスタの適当なノードの IP がセットされています。
+特定のドメイン名でアクセスしたいなら、ここにそれを記入してください。
 
-IP アドレスの代わりに特定のドメイン名でアクセスさせたいなら、この項目を変更せよ。
-
-たとえば Knitfab に対して `example.com:30803` としてアクセスさせたいなら、
+たとえば Knitfab に対して `example.com:30803` としてアクセスしたいなら、
 
 ```yaml
 apiRoot: https://example.com:30803/api
@@ -313,45 +329,43 @@ cert:
     ca: ...Certification....
 ```
 
-のように、 `apiRoot` のホスト部分を書き換えればよい。
+のように、 `apiRoot` のホスト部分を書き換えます。
 
-また、**クラスタ内イメージレジストリ** の証明書についても対処が必要である。
+また、**クラスタ内イメージレジストリ** の証明書についても対処が必要です。
 
-`knitfab-install-settings/handout/docker/certs.d/IP-ADDRESS:PORT` のような名前のディレクトリが見つかるだろう。
-このディレクトリは、やはり適当な kubernertes ノードの IP とポート名を `:` でつないだものである。
-この IP の部分を、アクセスさせたいドメイン名にリネームせよ。
+`knitfab-install-settings/handouts/docker/certs.d/IP-ADDRESS:PORT` のような名前のディレクトリがあります。
+このディレクトリ名は kubernertes ノードの IPアドレスとポート名を `:` でつないだものです。
+この IPアドレスの部分を、使用したいドメイン名に変更してください。
 
-### Knitfab をアンインストールする
+# 4. Knitfab をアンインストールする
 
-インストールを実行すると `knitfab-install-settings/uninstall.sh` としてアンインストーラが生成される。
+インストールを実行すると `knitfab-install-settings/uninstall.sh` としてアンインストーラが生成されます。
+
+これを以下のように実行すると、kubernetes クラスタ内の Knitfab のアプリケーションがアンインストールされます。
 
 ```
 knitfab-install-settings/uninstall.sh
 ```
 
-を実行すると、クラスタ内の Knitfab のアプリケーションがアンインストールされる。
-
-さらに、
+さらに、以下を実行すると、データベースやクラスタ内イメージレジストリを含むすべての Knitfab 関連リソースが破棄されます。
 
 ```
 knitfab-install-settings/uninstall.sh --hard
 ```
 
-を実行すると、データベースやクラスタ内イメージレジストリを含むすべての Knitfab 関連リソースが破棄される。
 
+# 5. Knitfab の helm 的構成について
 
-### Knitfab の helm 的構成について
+Knitfab はいくつかの helm chart で構成されています。
+このセクションでは、Knitfab の helm 的な構築方法について解説します。
 
-Knitfab はいくつかの helm chart をインストールすることで構成されている。
-このセクションでは、Knitfab の helm 的な構築方法について解説する。
-
-管理者は Knitfab の一部をアンインストール・再インストールしたり、アップデートしたりしなくてはならない場合があるかもしれない。そうした場合にも、何をすればよいか見通しが立つようになるだろう。
+管理者は Knitfab の一部をアンインストール・再インストールしたり、アップデートしたりしなくてはならない場合があるかもしれません。helm構成を理解しておけば、そうした場合に何をすればよいか見通しが立つようになるでしょう。
 
 > [!Note]
 >
-> このセクションは、読者に helm の知識があることを前提としている。
+> このセクションは、読者に helm の知識があることを前提としています。
 
-Knitfab は次の helm chart から構成されている。
+Knitfab は次の helm chart から構成されています。
 
 - knitfab/knit-storage-nfs: NFS ドライバを導入し StorageClass を定義する。
 - knitfab/knit-certs: 証明書類を導入する。
@@ -359,12 +373,12 @@ Knitfab は次の helm chart から構成されている。
 - knitfab/knit-image-registry: クラスタ内レジストリを定義する。
 - knitfab/knit-app: 上記以外の Knitfab のコンポーネントを定義する。
 
-helm chart リポジトリ "Knitfab" は (デフォルトでは)  https://raw.githubusercontent.com/opst/knitfab/main/charts/release である。
+helm chart リポジトリ "Knitfab" は (デフォルトでは)  https://raw.githubusercontent.com/opst/knitfab/main/charts/release です。
 
-これらの chart を適切な手順でインストールできれば、Knitfab をインストールできる。
-実際、インストーラはまさにそういうことをしているのである。
+これらの chart を適切な手順でインストールすれば、Knitfab をインストールできます。
+実際、Knitfabの インストーラはまさにそれを実行しています。
 
-大雑把に言えば、次の手順で Knitfab はインストールされている。
+要点だけに絞ると、インストーラは以下ような手順を実施しています。
 
 ```sh
 NAMESPACE=${NAMESPACE}  # where Knitfab to be installed
@@ -399,50 +413,47 @@ helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
     knit-app Knitfab/knit-app
 ```
 
-> インストーラは以上の操作に加えて、これらの挙動をもっと安定させるために追加のオプションを与えたり、アンインストーラやハンドアウトを生成したりしている。
+> 実際のインストーラは以上の操作に加えて、これらの挙動をもっと安定させるために追加のオプションを与えたり、アンインストーラやハンドアウトを生成したりしています。
 
-途中に度々現れている `--set-json "...=$(helm get values ...)"` というパターンは、インストール済の chart からインストールパラメータ ([helm の Values](https://helm.sh/docs/chart_template_guide/values_files/)) を読み出して、chart 間で矛盾がないようにしている。
+上記の途中にたびたび現れている `--set-json "...=$(helm get values ...)"` というパターンは、インストール済の chart からインストールパラメータ ([helm の Values](https://helm.sh/docs/chart_template_guide/values_files/)) を読み出して、chart 間で矛盾がないようにする手法です。
 
-それに加えて `./knitfab-install-settings/values/CHART_NAME.yaml` をその chart 用の Values として取り込んでいる。
-したがって、特定の chart のみを再インストールしたり、アップデートしたりする必要に迫られた場合は、この手法を踏襲することになる。
+それに加えて `./knitfab-install-settings/values/CHART_NAME.yaml` をその chart 用の Values として取り込んでいます。
+したがって、特定の chart のみを再インストールしたり、アップデートしたりする必要に迫られた場合は、この手法を踏襲するのが良いでしょう。
 
 > [!Caution]
 >
-> 次の chart をアンインストールすると、Knitfab 内のリネージやデータを喪失する。chart をアンインストールする際には注意されたい。
+> 次の chart をアンインストールすると、Knitfab 内の**リネージやデータを喪失してしまいます**。chart をアンインストールする際には注意ください。
 >
 > - knitfab/knit-storage-nfs
 > - knitfab/knit-db-postgres
 > - knitfab/knit-image-registry
 >
-> knit-db-postgres や knit-image-registry は、それぞれ PVC も定義しているので、これらの chart をアンインストールすると、それまでのデータベースの内容や、`docker push` されたイメージが失われる。
-> 結果として、PVC と Knitfab 的なデータとの関係や、プランが参照するイメージが失われるので、Knitfab のリネージ管理の前提が満たされないことになる。
+> knit-db-postgres や knit-image-registry は、それぞれ PVC も定義しているので、これらの chart をアンインストールすると、それまでのデータベースの内容や、`docker push` されたイメージが**失われます**。
+> 結果として、PVC と Knitfab 的なデータとの関係や、プランが参照するイメージが失われるので、Knitfab のリネージ管理の前提が満たされないことになります。
 >
-> また、knit-storage-nfs は他の全ての PV を NFS 上に記録する機能を提供している。これが失われると、全 Pod が PV にアクセスできなくなる。
+> また、knit-storage-nfs は他の全ての PV を NFS 上に記録する機能を提供しています。これが失われると、全 Pod が PV にアクセスできなくなります。
 
 
-ユーザに開示すべきクラスタの情報
---------------------------
+# 6. ユーザに開示すべきクラスタの情報
 
-Knitfab の機能には、インストールされている kubernetes クラスタの設定に依存するものがある。
-そうした機能をユーザがうまく活用するためには、ユーザに対してクラスタの設定に関する情報が開示されていなくてはならない。
+Knitfab の機能には、インストールされている kubernetes クラスタの設定に依存するものがあります。
+それらの機能をユーザがうまく活用するためには、ユーザに対してクラスタの設定に関する情報が開示されていなくてはなりません。
+Knitfab を構築した管理者として、ユーザに適切な情報開示をしましょう。
+以下では、そのようなユーザに開示すべき情報について説明します。
 
-Knitfab を構築した管理者として、ユーザに適切な情報開示をすべきだ。
+## 6.1. クラスタ内イメージレジストリの接続情報
 
-### クラスタ内イメージレジストリの接続情報
+ハンドアウト内の `docker/certs.d` ディレクトリ内を見ればわかりますが、利用すべきクラスタ内イメージレジストリのホスト・ポートについては、ユーザに対して明示的に伝えるべきでしょう。
 
-ハンドアウト内の `docker/certs.d` ディレクトリ内を見ればわかることではあるが、利用すべきクラスタ内イメージレジストリのホスト・ポートについては、ユーザに対して明示的に案内すべきだろう。
+## 6.2. "プラン"の `resources` に指定できるリソースと上限
 
-### "プラン"の `resources` に指定できるリソースと上限
-
-Knitfab の"プラン"定義には、その"プラン"に基づく"ラン"が利用する計算機資源を宣言する機能 `resources` がある。
-
-この値として、クラスタに存在しないような規模の cpu や memory が指定されても、そのような"プラン"の"ラン"は実行できないだけである。
-
-設定可能な値のバリエーションについて、管理者はユーザに極力開示したほうがいいだろう。
+Knitfab の"プラン"定義には、その"プラン"に基づく"ラン"が利用する計算機資源を宣言する機能 `resources` があります。
+この値として、クラスタに存在しないような規模の cpu や memory が指定されても、そのような"プラン"の"ラン"は実行できないだけとなります。
+したがって、設定可能な値の上限について、管理者はユーザに極力開示すべきでしょう。
 
 また、kubernetes では、GPU を搭載したノードがある場合に、GPU が schedulable resource として公開される。
-具体的に指定できるリソースの名称 (例: `nvidia.com/gpu`, `amd.com/gpu`) はノードの構成次第である。
-こうした、拡張的なリソース名称が使えるならば、その旨もユーザに開示すべきだ。
+具体的に指定できるリソースの名称 (例: `nvidia.com/gpu`, `amd.com/gpu`) はノードの構成次第となります。
+こうした、拡張的なリソース名称が使えるならば、その旨もユーザに開示すべきです。
 
 ### "プラン"の `on_node` で利用できるラベル: ノードの label と taint
 
