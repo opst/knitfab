@@ -458,37 +458,37 @@ Knitfab の"プラン"定義には、その"プラン"に基づく"ラン"が利
 
 ### 6.2.1. "プラン"の `on_node` で利用できるラベル: ノードの label と taint
 
-Knitfab の"プラン"定義には kubernetes のノードに設定された label と taint を利用した機能 `on_node` がある。
+Knitfab の"プラン"定義には kubernetes のノードに設定された label と taint を利用した機能 `on_node` があります。
 
-管理者は、ユーザに向けて、`on_node` 機能で利用できるラベルとその意味するところについて開示すべきである。
+管理者は、ユーザに向けて、`on_node` 機能で利用できるラベルとその意味するところについて開示すべきです。
 
 > [!Note]
 >
 > **Knitfab が推奨する taint と label の設定**
 >
-> もし node に taint をセットするなら、同じキーバリュー組で label もセットする。
+> もし node に taint をセットするなら、同じキーバリュー組で label もセットします。
 >
 
 #### 6.2.1.1. node の label とは
 
-kubenetes におけるノードの [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) とは、ノードのメタデータである。ラベルはキーバリュー型の構造をとる。
-kubernetes には、Pod に対して「ある label のあるノードで必ず、あるいは優先的に実行する」という制約をかけることができる ([node Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)) 。
+kubernetes におけるノードの [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) とは、ノードのメタデータです。ラベルはキーバリュー型の構造をとります。
+kubernetes には、Pod に対して「ある label のあるノードで必ず、あるいは優先的に実行する」という制約をかけることができます ([node Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)) 。
 
 #### 6.2.1.2. node の taint とは
 
-kubenetes におけるノードの [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) とは「ノードに pod を配置 **しない** ようにする制約」である。
-これに対して、taint を無視してよい、という属性 (toleration) を Pod に与えることができる。こうすると、適当な toleration のある Pod だけが taint のあるノード上に配置されうるのである。
+kubernetes におけるノードの [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) とは「ノードに pod を配置 **しない** ようにする制約」です。
+これに対して、taint を無視してよい、という属性 (toleration) を Pod に与えることができます。こうすると、適当な toleration のある Pod だけが taint のあるノード上に配置されうるのです。
 
-taint は、label のようなキーバリュー組とあわせて taint の強さ (NoSchedule, PreferNoSchedule) が設定できる。
+taint は、label のようなキーバリュー組とあわせて taint の強さ (NoSchedule, PreferNoSchedule) が設定できます。
 
-たとえば「 GPU のあるノードには、特に GPU を必要としないタスクが配置されないようにしたい」なら、node に taint を設定する必要がある。
+たとえば「 GPU のあるノードには、特に GPU を必要としないタスクが配置されないようにしたい」なら、node に taint を設定する必要があります。
 
 #### 6.2.1.3. "プラン"の on_node はどのように label と taint を利用しているのか
 
-user-guide に詳しく書いたが、Knitfab では、"プラン"定義に `on_node` という属性をもたせることができる。
-これは、その"プラン"に基づいた"ラン"がどういうノード上で実行されてよいか、を示すもので、kubernetes 的には toleration と node Affinity の値として利用される。
+user-guide に詳しく書きましたが、Knitfab では、"プラン"定義に `on_node` という属性をもたせることができます。
+これは、その"プラン"に基づいた"ラン"がどういうノード上で実行されてよいかを示すもので、kubernetes 的には toleration と node Affinity の値として利用されます。
 
-"プラン"定義の `on_node` は次のように記述される。
+次のように `on_node` を使って "プラン" を定義します。
 
 ```yaml
 on_node:
@@ -500,40 +500,40 @@ on_node:
     - "accelarator=gpu"
 ```
 
-`may`, `prefer`, `must` は、いずれも kuberenets の node label と同じ形式をした値の配列をセットする。
-`may` はノードへの配置許可、 `prefer` はノードへの優先配置、 `must` はノードへの強制配置を意味する。
+`may`、`prefer`、`must` は、いずれも kubernetes の node label と同じ形式をした値の配列をセットします。
+`may` はノードへの配置許可、`prefer` はノードへの優先配置、`must` はノードへの強制配置を意味します。
 
-具体的には、これらはそれぞれ、Worker の属性として、次のように翻訳される。
+具体的には、これらはそれぞれ、Worker の属性として次のように翻訳されます。
 
 - `may`:
     - `toleration`: `NoSchedule` のラベル
 - `prefer`:
     - `toleration`: `NoSchedule` および `PreferNoSchedule` のラベル
     - node Affinity: `preferredDuringSchedulingIgnoredDuringExecution` のラベル
-- `must`
+- `must`:
     - `toleration`: `NoSchedule` および `PreferNoSchedule` のラベル
     - node Affinity: `requiredDuringSchedulingIgnoredDuringExecution` のラベル
 
-推奨事項として「 taint をセットしたなら、そのラベルを node にも直接セットする」を掲げたのは、`on_node` 機能が同じラベルを toleration と node Affinity に使い回すから、である。
+推奨事項として「taint をセットしたなら、そのラベルを node にも直接セットする」を掲げたのは、`on_node` 機能が同じラベルを toleration と node Affinity に使い回すからです.
 
 ## 6.3. 重要な注意点
 ---------------------
 
 > [!Caution]
 >
-> **Knitfab をパブリックなネットワークに公開してはならない。**
+> **Knitfab をパブリックなネットワークに公開してはいけません。**
 >
-> 現時点のKnitfab やクラスタ内イメージレジストリは、認証や認可の仕組みが一切ない。
+> 現時点の Knitfab やクラスタ内イメージレジストリには、認証や認可の仕組みが一切ありません。
 >
-> パブリックなインターネットに公開すると、次のリスクがある。
+> パブリックなインターネットに公開すると、次のリスクがあります。
 >
-> - 悪意あるコンテナを実行させられる
-> - 悪意あるコンテナイメージを配信させられる
+> - 悪意あるコンテナを実行される
+> - 悪意あるコンテナイメージを配信される
 >
-> 前者は、計算機資源を奪われるだけでなく、kubernetes の未知の脆弱性をつかれてさらなる脅威にさらされる可能性がある。
-> 後者も、他の脅威の踏み台になりかねない。
+> 前者は、計算機資源を奪われるだけでなく、kubernetes の未知の脆弱性を突かれてさらなる脅威にさらされる可能性があります。
+> 後者も、他の脅威の踏み台になりかねません。
 >
-> **重ねて警告する。Knitfab をパブリックなインターネットに公開してはならない。**
+> **重ねて警告します。Knitfab をパブリックなインターネットに公開してはいけません。**
 >
 
 
@@ -542,54 +542,54 @@ on_node:
 
 ### 6.4.1. "データ"の実体
 
-"データ"は、kubernetes 的には PersistntVolumeClaim (PVC) およびバインドされている PersistentVolume (PV) である。
+"データ"は、kubernetes 的には PersistentVolumeClaim (PVC) およびバインドされている PersistentVolume (PV) です。
 
-Knitfab は、RDB に"データ"である PVC の名前を記録している。"データ"に割り当てられている"タグ"は RDB に書き込まれている。
+Knitfab は、RDB に"データ"である PVC の名前を記録しています。"データ"に割り当てられている"タグ"は RDB に書き込まれています。
 
 ### 6.4.2. "プラン"の実体
 
-"プラン"の実体は、RDB に記録されたレコードである。
-ただし、このレコードにはコンテナイメージの名前が含まれている。
+"プラン"の実体は、RDB に記録されたレコードです。
+ただし、このレコードにはコンテナイメージの名前が含まれています。
 
 ### 6.4.3. "ラン"の実体
 
-"ラン"の実体には、2つの側面がある。
+"ラン"の実体には、2つの側面があります。
 
-ひとつは RDB 上に記録されたリネージ情報である。つまり、入力と、出力と、"プラン"の組み合わせを記録している。
+ひとつは RDB 上に記録されたリネージ情報です。つまり、入力と、出力と、"プラン"の組み合わせを記録しています。
 
-もうひとつは、kubenetes 上で実施されている計算である。これは Worker と呼ばれる Job を起動することで実現する。
-Worker は"ラン"ごとに最大 1 存在する。必要になったら起動され、不要になったら破棄される。
+もうひとつは、kubernetes 上で実施されている計算です。これは Worker と呼ばれる Job を起動することで実現します。
+Worker は"ラン"ごとに最大 1 個存在します。必要になったら起動され、不要になったら破棄されます。
 
 
 ## 6.5. Knitfab の kubernetes 的構成
 ------------------
 
-Knitfab の、特に kubernetes 的な構成要素について解説する。
+Knitfab の、特に kubernetes 的な構成要素について解説します。
 
-Knitfab はいくつかの deployment, daemonset, service から構成されている。
+Knitfab はいくつかの deployment, daemonset, service から構成されています。
 
 ### 6.5.1. deployment, service
 
-Knitfab を構成する **静的なコンポーネント** は次のものたちである。
+Knitfab を構成する **静的なコンポーネント** は次のものたちです。
 
 | daemonset | 解説 | service | NodePort |
 |:---------:|:----:|:--------:|:------:|
-| knitd | Knitfab API サーバ | knitd | ✔ (30803) |
-| knitd-backend | Knitfab 内部 APIサーバ | knitd-backend | |
-| database-postgres | RDB | database | |
-| image-registry-registry | クラスタ内イメージレジストリ | image-registry | ✔ (30503) |
-| csi-nfs-controller |  NFS を PV として使えるようにする (csi-driver-nfs 由来)  | | |
-| projection-leader |  "ラン" を生成する | | |
-| initialize-leader |  "ラン" を起動する準備をする | | |
-| run-management-leader |  "ラン" を起動し死活監視する | | |
-| finishing-leader | 停止した "ラン" の破棄 | | |
-| garbage-collecion-leader | 不要になった PVC の破棄 | | |
-| housekeeping-leader | その他放置されたリソースの破棄 | | |
+| knitd | Knitfab API サーバーです | knitd | ✔ (30803) |
+| knitd-backend | Knitfab 内部 API サーバーです | knitd-backend | |
+| database-postgres | RDB です | database | |
+| image-registry-registry | クラスタ内イメージレジストリです | image-registry | ✔ (30503) |
+| csi-nfs-controller | NFS を PV として使えるようにします (csi-driver-nfs 由来) | | |
+| projection-leader | "ラン" を生成します | | |
+| initialize-leader | "ラン" を起動する準備をします | | |
+| run-management-leader | "ラン" を起動し死活監視します | | |
+| finishing-leader | 停止した "ラン" を破棄します | | |
+| garbage-collection-leader | 不要になった PVC を破棄します | | |
+| housekeeping-leader | その他放置されたリソースを破棄します | | |
 
-NodePort 列に ✔ が入っている service は、クラスタ外からアクセスされることが想定されている。カッコ付きでデフォルトのポート番号を示しておいた。
-ユーザは、knitd service に対して Knitfab の API アクセスを (CLI 経由で) する。また、カスタムイメージを image-regisrty service に対して push する。
+NodePort 列に ✔ が入っている service は、クラスタ外からアクセスされることが想定されています。カッコ内にデフォルトのポート番号を示しておきました。
+ユーザは、knitd service に対して Knitfab の API アクセスを (CLI 経由で) します。また、カスタムイメージを image-registry service に対して push します。
 
-コンポーネント間のメッセージは次図のように流れる。
+コンポーネント間のメッセージは次の図のように流れます。
 
 ```mermaid
 graph TB
@@ -665,164 +665,167 @@ graph TB
     das -."image pull".-> preg
 ```
 
-通信は点線、コンテナ内のファイル読み書きは実線で示した。
-また、RDB や kubernetes api へのデータフローは煩雑になるので省いた。コンポーネント間の通信手段であるかのように表現してある。
+通信は点線、コンテナ内のファイル読み書きは実線で示しました。
+また、RDB や kubernetes API へのデータフローは煩雑になるので省きました。コンポーネント間の通信手段であるかのように表現しています。
 
-ユーザは `knit` CLI を使って knitd にリクエストを送る。 knitd はそれに応じて RDB のレコードを操作する。
+ユーザは `knit` CLI を使って knitd にリクエストを送ります。 knitd はそれに応じて RDB のレコードを操作します。
 
-"knitfab" とラベル付けられた囲みの範囲内が、お使いの kubernetes クラスタ内に構築されている Knitfab の範囲である。
+"knitfab" とラベル付けられた囲みの範囲内が、お使いの kubernetes クラスタ内に構築されている Knitfab の範囲です。
 
-Web API を提供するコンテナ knitd が CLI からリクエストを受け取る。一部リクエストは 内部 API である knitd_backend にプロキシされて、 kubernetes API を呼び出している。
+Web API を提供するコンテナ knitd が CLI からリクエストを受け取ります。一部リクエストは内部 API である knitd_backend にプロキシされて、kubernetes API を呼び出しています。
 
-イベントループ (event loops) の各コンポーネントは、定期的に RDB を監視して、各々果たすべきタスクを探している。特に、workflow circuit とラベル付けられているイベントループの集まりは、
+イベントループ (event loops) の各コンポーネントは、定期的に RDB を監視して、各々果たすべきタスクを探しています。特に、workflow circuit とラベル付けられているイベントループの集まりは、
 
-- "プラン" や "データ" から "ラン" を生成し (projection) 、
-- 出力 "データ" の実体となる PVC を確保して (initializing) 、
-- "ラン" を Worker として起動して終了まで監視し (run management) 、
-- 終了した worker を破棄しつつ "ラン" を完了させる (finishing)
+- "プラン" や "データ" から "ラン" を生成し (projection)、
+- 出力 "データ" の実体となる PVC を確保して (initializing)、
+- "ラン" を Worker として起動して終了まで監視し (run management)、
+- 終了した Worker を破棄しつつ "ラン" を完了させます (finishing)
 
-...という一連の流れでもって、ワークフローを駆動させている。
-この Worker とは、Job を実体とした Knitfab の **動的なコンポーネント** のひとつである。
-Worker の主体はユーザ定義コンテナであるが、それ以外にも Knitfab の公開レジストリ (`ghcr.io/opst/Knitfab`) から提供されるイメージも利用している。
+...という一連の流れで、ワークフローを駆動させています。
+この Worker とは、Job を実体とした Knitfab の **動的なコンポーネント** のひとつです。
+Worker の主体はユーザ定義コンテナですが、それ以外にも Knitfab の公開レジストリ (`ghcr.io/opst/Knitfab`) から提供されるイメージも利用しています。
 
-housekeeping イベントループは、停止しているが破棄されていない Data Agent を探して、これを破棄する。
+housekeeping イベントループは、停止しているが破棄されていない Data Agent を探して、これを破棄します。
 
-garbage collector イベントループは、knitd によって「削除して良い」とマークされた PVC と PV を定期的に削除する。
+garbage collector イベントループは、knitd によって「削除して良い」とマークされた PVC と PV を定期的に削除します。
 
-図中に登場する Data Agent は、Knitfab が有するもうひとつの **動的なコンポーネント** である。この実体は Pod である。
-ユーザが "データ" をアップロードしたりダウンロードしたりしようとすると、そのタスクが knitd から knitd_backend に対して下請けにだされる。knitd_backend は要求に応じた PVC をマウントした Data Agent 起動して、具体的な読み書きをさらに下請けに出す。読み書きが終わって不要になった Data Agent は、原則 knitd_backend によって破棄される。Data Agent のイメージは、Knitfab の公開レジストリ (`ghcr.io/opst/Knitfab`) から提供される。
+図中に登場する Data Agent は、Knitfab が有するもうひとつの **動的なコンポーネント** です。この実体は Pod です。
+ユーザが "データ" をアップロードしたりダウンロードしたりしようとすると、そのタスクが knitd から knitd_backend に対して下請けに出されます。knitd_backend は要求に応じた PVC をマウントした Data Agent を起動して、具体的な読み書きをさらに下請けに出します。読み書きが終わって不要になった Data Agent は、原則 knitd_backend によって破棄されます。Data Agent のイメージは、Knitfab の公開レジストリ (`ghcr.io/opst/Knitfab`) から提供されます。
 
-ユーザは自作したプライベートなコンテナイメージをクラスタ内イメージレジストリ (image-regisrty) に `docker push` する。
-Worker が起動するに当たり、ユーザ定義のイメージは image-registry から pull されることになるだろう。
-その他、Worker を構成するコンテナは、 Knitfab の公開レジストリから提供される。
+ユーザは自作したプライベートなコンテナイメージをクラスタ内イメージレジストリ (image-registry) に `docker push` します。
+Worker が起動するに当たり、ユーザ定義のイメージは image-registry から pull されることになるでしょう。
+その他、Worker を構成するコンテナは、Knitfab の公開レジストリから提供されます。
 
 > [!Warning]
 >
-> 動的なコンポーネントは、既に述べた通り `ghcr.io/opst/knitfab` からイメージを pull することで起動する。
+> 動的なコンポーネントは、既に述べた通り `ghcr.io/opst/knitfab` からイメージを pull することで起動します。
 >
-> したがって、インターネットアクセスがない場合や、 ghcr.io に何らかの障害が起きている場合には動的コンポーネントの起動に失敗する可能性がある。
+> したがって、インターネットアクセスがない場合や、ghcr.io に何らかの障害が起きている場合には動的コンポーネントの起動に失敗する可能性があります。
 
 ### 6.5.2. daemonset
 
-- vex: そのノード上の pod がマウントしている PVC のキャパシティが足りなくなったら、自動的に拡張する。
+- vex: そのノード上の pod がマウントしている PVC のキャパシティが足りなくなったら、自動的に拡張します。
 
-ただし、NFS は PVC のキャパシティはあまり意味を持たないので、この daemonset も現時点ではそれほど有意義なものではない。
+ただし、NFS では PVC のキャパシティはあまり意味を持たないので、この daemonset も現時点ではそれほど有意義なものではありません。
 
 ### 6.5.3. その他のリソース
 
-さらに、Knitfab をインストールすると、次のリソースも作成される。
+さらに、Knitfab をインストールすると、次のリソースも作成されます。
 
-- StorageClass: NFS を利用した PersistnetVolume を作成できるようにするため。
-- PersistentVolume, PersistnetVolumeClaim: RDB とクラスタ内イメージレジストリの記憶領域として。
-- Role, RoleBinding, ServiceAccount: k8s API にアクセスするため。
-- ConfigMap, Secret: knitd, knitd-backend の設定ファイル, RDB の認証情報, TLS 証明書類
-- PriorityClass: ワーカ(後述)用の PriorityClass
+- StorageClass: NFS を利用した PersistnetVolume を作成できるようにするためです。
+- PersistentVolume, PersistnetVolumeClaim: RDB とクラスタ内イメージレジストリの記憶領域として使用します。
+- Role, RoleBinding, ServiceAccount: k8s API にアクセスするためです。
+- ConfigMap, Secret: knitd, knitd-backend の設定ファイル、RDB の認証情報、TLS 証明書類です。
+- PriorityClass: ワーカ（後述）用の PriorityClass です。
 
 ## 6.6. 日常的な監視
 -----------
 
-通常のシステム監視と同様の監視をすることになる。具体的には
+通常のシステム監視と同様の監視をすることになります。具体的には
 
 - ノードの計算機資源 (メモリ使用量・ CPU 使用量・ロードアベレージ)
 - 通信量
 - NFS のストレージ容量
 
-ノードの計算機資源が不足している場合は、その理由が重要である。
-Worker が大量に起動しているのであれば、ある意味では正常である。単に順次実験が進行するのを待てばよい。あるいは、ノードを追加できればスループット (時間あたり "ラン" の終了数) を改善できる可能性がある。
+ノードの計算機資源が不足している場合は、その理由が重要です。
+Worker が大量に起動しているのであれば、ある意味では正常です。単に順次実験が進行するのを待てばよいです。あるいは、ノードを追加できればスループット (時間あたり "ラン" の終了数) を改善できる可能性があります。
 
-NFS のストレージ容量には注意して欲しい。これが不足すると、ユーザの実験が生成した"データ"を記録できなくなる。余裕がある状態を維持したい。
+NFS のストレージ容量には注意してください。これが不足すると、ユーザの実験が生成した"データ"を記録できなくなります。できるだけ余裕がある状態を維持しましょう。
 
 # 7. トラブルシュート
 ----------------
 
-Knitfab がうまく動いていない、とユーザから相談を受けた場合に、少なくとも調べるべき観点について説明する。
+Knitfab がうまく動いていない場合に調べるべき観点について説明します。
 
 ## 7.1. "ラン"が starting になったが、いつまでたっても running にならない or すぐに失敗する
+少なくとも、以下２つの可能性があります。
 
 ### 7.1.1. 可能性1. Worker の Pod が正常に起動しないのかもしれない。
 
-ユーザに、当該 "ラン" の Run ID を尋ねよう。そのうえで、
+まず当該 "ラン" の Run ID を確認します。そのうえで、
 
 ```
 kubectl -n ${NAMESPACE} get pod
 ```
 
-を実行して、実行されている Pod の状況を調べる。
+を実行して、実行されている Pod の状況を調べます。
 
-問題の Worker の Pod は
+上記 Run ID に関連する Worker の Pod は
 
 ```
 worker-run-${RUN_ID}-${RANDOM_SUFFIX}
 ```
 
-という Name をしているだろう。Run ID が `3cb1b091-01ad-41b1-acac-3f042f9df97c` なら、
+という Name をしています。例えば、Run ID が `3cb1b091-01ad-41b1-acac-3f042f9df97c` なら、
 
 ```
 worker-run-3cb1b091-01ad-41b1-acac-3f042f9df97c-wkgrq
 ```
 
-のようになる。
+のような Pod Name です。
 
-そうした Pod を探し、 `kubectl describe pod ${POD_NAME}` や `kubectl get pod -o yaml pod ${POD_NAME}` を使って原因を探る。
+この Pod を確認したら、 `kubectl describe pod ${POD_NAME}` や `kubectl get pod -o yaml pod ${POD_NAME}` を使って原因を探ります。
 
-たとえば、
+たとえば、上記コマンドの出力に：
 
-- `ImagePullBackoff`, `ImagePullError` など:
-    - "プラン" に指定されているイメージが実在しないのかもしれない。
-    - クラスタ内イメージレジストリがダウンしていないだろうか？
-    - ghcr.io が障害を起こしているときに、新しいノード上で worker を起動しようとした場合にはこうなる可能性がある。
-- `Pending`:
-    - "プラン" に指定されている cpu や memory が大きすぎないだろうか？
-    - 存在しない label が `on_node` に指定されていないだろうか？
-    - 単に多量の "ラン" が存在していて、待たされているだけかもしれない。
-- `Error`:
-    - "ラン"の `exit` 属性の内容を確認する。
-        - `OOMError`: "プラン" の `resources` に割り当てているメモリが小さすぎる。
+- `ImagePullBackoff`, `ImagePullError` などが発生している場合:
+    - "プラン" に指定されているイメージが実在しないのかもしれません。
+    - クラスタ内イメージレジストリがダウンしているのかもしれません。
+    - ghcr.io(GitHubコンテナレジストリ) が障害を起こしているときに、新しいノード
+      上で worker を起動しようとした場合にはこうなる可能性があります。
+- `Pending`状態である場合:
+    - "プラン" に指定されている cpu や memory が大きすぎるかもしれません。
+    - 存在しない label が `on_node` に指定されているかもしれません。
+    - 単に多量の "ラン" が存在していて、起動を待たされているだけかもしれません。
+- `Error`が発生している場合:
+    - "ラン"の `exit` 属性の内容を確認します。例えば：
+        - `OOMError`があれば: "プラン" の `resources` に割り当てるべきメモリの不足が原因です。
 
 ### 7.1.2. 可能性2. イベントループのコンテナが存在しない、エラーを起こしている
 
-メンテナンス等のために Deployment をスケールインしていると、イベントループの連鎖が止まってしまう。
-各イベントループにつき少なくとも 1 つの Pod が存在するように設定する。
+メンテナンス等のために Deployment をスケールインしていると、イベントループの連鎖が止まってしまいます。
+各イベントループにつき少なくとも 1 つの Pod が存在するように設定します。
 
-- Error のままになっているイベントループ Pod がないか確認する。
-- `kubectl logs` で動作が止まっているイベントループ Pod がないか確認する。
+- Error のままになっているイベントループ Pod がないか確認します。
+- `kubectl logs` で動作が止まっているイベントループ Pod がないか確認します。
 
-こうしたコンテナがあるようなら、 `kubectl delete` で Pod を削除する。
-Deployment が自動的に必要数まで Pod を起動するのを待って、様子を見る。
+こうしたコンテナがあるようなら、 `kubectl delete` で Pod を削除します。
+Deployment が自動的に必要数まで Pod を起動するのを待って、様子を見ます。
 
 ## 7.2. システム側 Pod が頻繁に停止する
 
-ログや `kubectl desctibe` を利用して、停止する理由を探る必要がある。
+ログや `kubectl describe` を利用して、停止する理由を探る必要があります。
 
-異常停止を繰り返している Pod が knitd, knitd-backend とイベントループに限られているなら、database-postgres が正常な状態にない可能性がある。
+異常停止を繰り返している Pod が knitd, knitd-backend とイベントループに限られている場合、database-postgres が正常な状態にない可能性があります。
 
-- 異常停止を起こした Pod のログを読んで、データベースに対するアクセスエラーを起こしていないか確認する
-- database-postgres のログを読んで、異常を起こしていないか確認する
-- Config Map, Secret など、静的コンポーネントが前提としている他のリソースが消滅していないか確認する
-    - `kubectl describe` をすると、不足がないかどうかわかるだろう。
+- 異常停止を起こした Pod のログを確認して、データベースに対するアクセスエラーを起こしていないか確認します。
+- database-postgres のログを確認して、異常を起こしていないか確認します。
+- Config Map, Secret など、静的コンポーネントが前提としている他のリソースが消滅していないか確認します。
+    - `kubectl describe` をすると、不足がないかどうかわかります。
 
-また、ノードのメモリは十分だろうか？
+また、ノードのメモリは十分でしょうか？
 
-シングルノードの Knitfab を構成する場合、 4GiB 程度のメモリ容量が必要であった。
-これを下回る仮想マシン上に Knitfab のデプロイを試みたところ、静的なコンポーネントが不規則に停止・再起動を繰り返した。
+シングルノードの Knitfab を構成する場合、4GiB 程度のメモリ容量が必要です。 （私
+たちの検証では、これを下回る仮想マシン上に Knitfab のデプロイを試みたところ、静
+的なコンポーネントが不規則に停止・再起動を繰り返しました。）
 
 ## 7.3. なにか調子の悪い Pod がいる、再起動したい
 
-いつでも `kubectl pod delete` して構わない。
+Knitfab環境においては、いつでも `kubectl pod delete` して構いません。
 
-Knitfab の Pod は、突然に終了されても整合性を損なわないように設計されている。
+Knitfabは、突然Podが終了しても整合性を損なわないように設計されています。
 
-ただし、Worker や Data Agent を突然終了すると、ユーザの機械学習タスクやデータのアップロード・ダウンロードは失敗するだろう。
+ただし、Worker や Data Agent を強制終了すると、ユーザの機械学習タスクやデータのアップロード・ダウンロードは失敗します。
 
-また、スケールイン・スケールアウトについても、 kubernetes の Deployment としてスケーリングすればよい。
+また、スケールイン・スケールアウトについては、kubernetes の Deployment としてスケーリング設定することで対応できます。<!-- TODO: 独立セクションへ -->
 
 ## 7.4. ノードを追加したい
 
-kubenetes の手順に従って追加して良い。
-Worker や Data Agent を配置できるノードを増やすことができるだろう。
+ノード追加は、kubenetes の通常の手順に従って追加します。
 
-ただし、v1.0 の時点においては、TLS 証明書は新規追加されたノードには対応していない。
-ユーザからのリクエストは、以前からあるノードに対して送られるべきだ。さもなければ、証明書エラーになるだろう。
+ただし、v1.0 の時点においては、TLS 証明書は新規追加されたノードには対応していません。
+したがって、ユーザからのリクエストは、以前からあるノードに対して送らねばなりません。
+そうでなければ、証明書エラーになります。
 
 # 8. バックアップとレストア
 -------------------
