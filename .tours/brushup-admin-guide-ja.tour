@@ -9,6 +9,11 @@
     },
     {
       "file": "docs/03.admin-guide/admin-guide.ja.md",
+      "description": "version 4.1 では？",
+      "line": 74
+    },
+    {
+      "file": "docs/03.admin-guide/admin-guide.ja.md",
       "description": "これは root で実行すべきか？",
       "line": 294
     },
