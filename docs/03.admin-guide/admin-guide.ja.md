@@ -1,5 +1,42 @@
 Knitfab 管理ガイド
 =================
+もくじ
+- [Knitfab 管理ガイド](#knitfab-管理ガイド)
+- [1. はじめに](#1-はじめに)
+  - [1.1. 他言語版/Translations](#11-他言語版translations)
+- [2. Knitfab インストールの事前準備](#2-knitfab-インストールの事前準備)
+  - [2.1. Kubernetesのインストール](#21-kubernetesのインストール)
+  - [2.2. CNI をインストールする](#22-cni-をインストールする)
+  - [2.3. GPU を有効化する](#23-gpu-を有効化する)
+  - [2.4. シングルノードクラスタでの設定](#24-シングルノードクラスタでの設定)
+  - [2.5. NFS サーバの用意](#25-nfs-サーバの用意)
+  - [2.6. その他ツール類](#26-その他ツール類)
+- [3. Knitfab をインストールする](#3-knitfab-をインストールする)
+  - [3.1. インストールされるもの](#31-インストールされるもの)
+  - [3.2. 必要なもの](#32-必要なもの)
+  - [3.3. インストール手順](#33-インストール手順)
+- [4. Knitfab をアンインストールする](#4-knitfab-をアンインストールする)
+- [5. Knitfab の helm 的構成について](#5-knitfab-の-helm-的構成について)
+- [6. ユーザに開示すべきクラスタの情報](#6-ユーザに開示すべきクラスタの情報)
+  - [6.1. クラスタ内イメージレジストリの接続情報](#61-クラスタ内イメージレジストリの接続情報)
+  - [6.2. "プラン"の `resources` に指定できるリソースと上限](#62-プランの-resources-に指定できるリソースと上限)
+  - [6.3. 重要な注意点](#63-重要な注意点)
+  - [6.4. 各要素の Kubernetes 的な表現について](#64-各要素の-kubernetes-的な表現について)
+  - [6.5. Knitfab の Kubernetes 的構成](#65-knitfab-の-kubernetes-的構成)
+  - [6.6. 日常的な監視](#66-日常的な監視)
+- [7. トラブルシュート](#7-トラブルシュート)
+  - [7.1. "ラン"が starting になったが、いつまでたっても running にならない or すぐに失敗する](#71-ランが-starting-になったがいつまでたっても-running-にならない-or-すぐに失敗する)
+  - [7.2. システム側 Pod が頻繁に停止する](#72-システム側-pod-が頻繁に停止する)
+  - [7.3. なにか調子の悪い Pod がいる、再起動したい](#73-なにか調子の悪い-pod-がいる再起動したい)
+  - [7.4. ノードを追加したい](#74-ノードを追加したい)
+- [8. バックアップとレストア](#8-バックアップとレストア)
+  - [8.1. バックアップ](#81-バックアップ)
+  - [8.2. レストア](#82-レストア)
+- [9. Knitfab を拡張する](#9-knitfab-を拡張する)
+  - [9.1. ウェブフック](#91-ウェブフック)
+  - [9.2. ライフサイクル・フック](#92-ライフサイクルフック)
+  - [9.3. 拡張 Web API を登録する](#93-拡張-web-api-を登録する)
+
 
 # 1. はじめに
 -----------------------
@@ -8,11 +45,12 @@ Knitfab 管理ガイド
 
 - Knitfab をインストールする方法
 - Knitfab の運用上の注意点
-- Knitfab を構成する kubernetes リソースについて
+- Knitfab を構成する Kubernetes リソースについて
 
 などの話題を取り扱います。
 
 ## 1.1. 他言語版/Translations
+他言語版は以下のリンク先にあります。
 
 - English: [./admin-guide.en.md](./admin-guide.en.md)
 
@@ -22,27 +60,29 @@ Knitfab 管理ガイド
 
 Knitfab をインストールするには、以下の環境が必要です。
 
-- kubernetes クラスタ: 
-  - Knitfab は kubernetes クラスタ上で稼働します。
+- Kubernetes クラスタ: 
+  - **Kubernetes**（クバネティス/クバネテス/クーべネティス、K8sと略記されます）は、コンテナ化したアプリケーションのデプロイ、スケーリング、および管理を行うための、オープンソースのコンテナオーケストレーションシステムです。
+  - Knitfab は Kubernetes クラスタ上で稼働します。
   - マルチノードクラスタまたはシングルノードクラスタでも構いません。
-  - この kubernetes は、x86_64 系CPUで動作するマシン上で動作している必要があります。
-  - クラスタからインターネットにアクセスが可能なこと。
-- NFS: 
+  - この Kubernetes は、x86_64 系CPUで動作するマシン上で動作している必要があります。
+  - クラスタからインターネットにアクセスできる必要があります。
+- NFS:
+  - **NFS(Network File System)** は主にUNIXで利用される分散ファイルシステムおよびそのプロトコルです。
   - Knitfabが用いる RDB やクラスタ内イメージレジストリ、データなどを永続化するために、NFS を利用します。
 
 特に NFS は、Knitfabがデータ履歴等を蓄積していく場所となりますので、十分な容量があるものが良いでしょう。
 
-## 2.1. kubernetesのインストール
+## 2.1. Kubernetesのインストール
 
-kubernetes の構築手法については、下記の公式リファレンスを参考にしてください。
+Kubernetes の構築手法については、下記の公式リファレンスを参考にしてください。
 
-- https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
-- https://kubernetes.io/docs/setup/production-environment/container-runtimes/
-- https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
+- https://Kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
+- https://Kubernetes.io/docs/setup/production-environment/container-runtimes/
+- https://Kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
 
-なお、Knitfab 開発チームでは、次の条件で構築した kubernetes クラスタについて動作を確認しています。
+なお、Knitfab 開発チームでは、次の条件で構築した Kubernetes クラスタについて動作を確認しています。
 
-- kubernetes 1.29.2以降
+- Kubernetes 1.29.2以降
 - コンテナランタイム: containerd
 - cgroup: systemd
 
@@ -54,26 +94,26 @@ Knitfab 開発チームは [calico](https://docs.tigera.io/calico/latest/about) 
 
 ## 2.3. GPU を有効化する
 
-kubernetes 上のコンテナから GPU を使えるようにするには、node をそのように設定しておく必要があります。
+Kubernetes 上のコンテナから GPU を使えるようにするには、node をそのように設定しておく必要があります。
 
 これも下記の公式リファレンスを参考にしながら設定を行ってください。
 
-- https://kubernetes.io/ja/docs/tasks/manage-gpus/scheduling-gpus/
+- https://Kubernetes.io/ja/docs/tasks/manage-gpus/scheduling-gpus/
 
 ## 2.4. シングルノードクラスタでの設定
 
-kubernetes クラスタを単一ノード (control plane ノード) のみのクラスタで運用し始める場合は、そのノードに指定されている taint を除去する必要があります。
+Kubernetes クラスタを単一ノード (control plane ノード) のみのクラスタで運用し始める場合は、そのノードに指定されている taint を除去する必要があります。
 これを行わないと Knitfab のコンポーネントが起動できるノードが存在しない、という状態になります。
 
-詳細は https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#control-plane-node-isolation を参照ください。
+詳細は https://Kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#control-plane-node-isolation を参照ください。
 
 ## 2.5. NFS サーバの用意
 
-Knitfab では、デフォルトの [ストレージクラス](https://kubernetes.io/docs/concepts/storage/storage-classes/) として、ストレージドライバ [csi-driver-nfs](https://github.com/kubernetes-csi/csi-driver-nfs) によるものを採用しています。これはコンテナがどの kubernetes ノードで起動したとしても Knitfab がデータにアクセスできるようにするためです。
+Knitfab では、デフォルトの [ストレージクラス](https://Kubernetes.io/docs/concepts/storage/storage-classes/) として、ストレージドライバ [csi-driver-nfs](https://github.com/Kubernetes-csi/csi-driver-nfs) によるものを採用しています。これはコンテナがどの Kubernetes ノードで起動したとしても Knitfab がデータにアクセスできるようにするためです。
 
 NFSにはいくつかバージョンがありますが、Knitfab では NFS version 4 を前提としています。
 
-そこで、kubernetes クラスタの各ノードからアクセス可能なネットワーク上の位置に、NFSサーバ を用意してください。
+そこで、Kubernetes クラスタの各ノードからアクセス可能なネットワーク上の位置に、NFSサーバ を用意してください。
 例えば、NFS 機能を有する NAS(Network Attached Storage)機器や、NFSサーバー機能を有する計算機（Linuxサーバなど）等です。
 
 > たとえば Ubuntu OS マシンをNFSサーバーとするなら:
@@ -109,10 +149,10 @@ NFSにはいくつかバージョンがありますが、Knitfab では NFS vers
 | TLS 証明書類 | knit-certs |
 | ストレージクラス | knit-storage-nfs |
 
-また、 Helm Chart "knit-storage-nfs" は [CSI "csi-driver-nfs"](https://github.com/kubernetes-csi/csi-driver-nfs/) に依存しているので、この Chart も Knitfab とおなじ Namespace にインストールされます。
+また、 Helm Chart "knit-storage-nfs" は [CSI "csi-driver-nfs"](https://github.com/Kubernetes-csi/csi-driver-nfs/) に依存しているので、この Chart も Knitfab とおなじ Namespace にインストールされます。
 
 ## 3.2. 必要なもの
-- インストール先の kubernetes クラスタに対してアクセスできる設定の kubeconfig ファイル
+- インストール先の Kubernetes クラスタに対してアクセスできる設定の kubeconfig ファイル
 - (単一ノードクラスタを構成の場合)そのノードのマシンに 4GB のメモリが必要。
   なお、このメモリ量は最低限 Knitfab が起動できる程度の容量です。Knitfab上で実行する機械学習タスクによっては、より多くのメモリが必要となります。
 
@@ -124,7 +164,7 @@ Knitfab Web API やクラスタ内イメージレジストリは、原則とし�
 - CA 証明書とその鍵があれば、それを使う
 - 加えて、サーバ証明書とその鍵があれば、それを使う
 
-たとえば「 kubernetes クラスタのノードに対して特定のドメイン名が使いたい」などといった要求があるなら、事前にサーバ証明書とそれに署名した CA 証明書 (およびそれらの鍵) が必要です。
+たとえば「 Kubernetes クラスタのノードに対して特定のドメイン名が使いたい」などといった要求があるなら、事前にサーバ証明書とそれに署名した CA 証明書 (およびそれらの鍵) が必要です。
 
 証明書類が指定されない場合は、インストーラは自己署名証明書と、それで署名したサーバ証明書を生成します。サーバ証明書は、Knitfab をインストールした際の Kubernetes クラスタのノードの IP アドレスを SAN に持つように生成します。
 
@@ -257,7 +297,7 @@ nfs:
   # # This is useful when you want to keep the data even after the NFS server is restarted.
   # hostPath: "/var/lib/knitfab"
 
-  # # node: (optional) kubernetes node name where the in-cluster NFS server pod should be scheduled.
+  # # node: (optional) Kubernetes node name where the in-cluster NFS server pod should be scheduled.
   # node: "nfs-server"
 ```
 
@@ -274,7 +314,7 @@ nfs:
 前者は Knitfab API の LISTEN ポート、後者はクラスタ内イメージレジストリの LISTEN ポートです。
 
 ##### (2) クラスタのTLD
-また、 kubernetes クラスタ構築時に、クラスタの TLD(Top Level Domain)をデフォルト値 ( `cluster.local` ) から変更していた場合には、次の項目にその TLD を設定する必要があります。
+また、 Kubernetes クラスタ構築時に、クラスタの TLD(Top Level Domain)をデフォルト値 ( `cluster.local` ) から変更していた場合には、次の項目にその TLD を設定する必要があります。
 
 - `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメント解除して書き換えます)
 
@@ -288,8 +328,8 @@ Knitfab の動作を拡張するための設定ファイルも含まれていま
 
 ### 3.3.3. インストールする
 
-以下のコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを kubernetes クラスタにインストールします。
-`${NAMESPACE}`には、Knitfabアプリケーションのインストール先とする kubernetes 名前空間名を指定してください。（ここで新規に指定します。）
+以下のコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを Kubernetes クラスタにインストールします。
+`${NAMESPACE}`には、Knitfabアプリケーションのインストール先とする Kubernetes 名前空間名を指定してください。（ここで新規に指定します。）
 これには、しばらく時間がかかります。
 
 ```
@@ -335,14 +375,14 @@ cert:
 また、**クラスタ内イメージレジストリ** の証明書についても対処が必要です。
 
 `knitfab-install-settings/handouts/docker/certs.d/IP-ADDRESS:PORT` のような名前のディレクトリがあります。
-このディレクトリ名は kubernertes ノードの IPアドレスとポート名を `:` でつないだものです。
+このディレクトリ名は Kubernetes ノードの IPアドレスとポート名を `:` でつないだものです。
 この IPアドレスの部分を、使用したいドメイン名に変更してください。
 
 # 4. Knitfab をアンインストールする
 
 インストールを実行すると `knitfab-install-settings/uninstall.sh` としてアンインストーラが生成されます。
 
-これを以下のように実行すると、kubernetes クラスタ内の Knitfab のアプリケーションがアンインストールされます。
+これを以下のように実行すると、Kubernetes クラスタ内の Knitfab のアプリケーションがアンインストールされます。
 
 ```
 knitfab-install-settings/uninstall.sh
@@ -437,7 +477,7 @@ helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
 
 # 6. ユーザに開示すべきクラスタの情報
 
-Knitfab の機能には、インストールされている kubernetes クラスタの設定に依存するものがあります。
+Knitfab の機能には、インストールされている Kubernetes クラスタの設定に依存するものがあります。
 それらの機能をユーザがうまく活用するためには、ユーザに対してクラスタの設定に関する情報が開示されていなくてはなりません。
 Knitfab を構築した管理者として、ユーザに適切な情報開示をしましょう。
 以下では、そのようなユーザに開示すべき情報について説明します。
@@ -452,13 +492,13 @@ Knitfab の"プラン"定義には、その"プラン"に基づく"ラン"が利
 この値として、クラスタに存在しないような規模の cpu や memory が指定されても、そのような"プラン"の"ラン"は実行できないだけとなります。
 したがって、設定可能な値の上限について、管理者はユーザに極力開示すべきでしょう。
 
-また、kubernetes では、GPU を搭載したノードがある場合に、GPU が schedulable resource として公開される。
+また、Kubernetes では、GPU を搭載したノードがある場合に、GPU が schedulable resource として公開される。
 具体的に指定できるリソースの名称 (例: `nvidia.com/gpu`, `amd.com/gpu`) はノードの構成次第となります。
 こうした、拡張的なリソース名称が使えるならば、その旨もユーザに開示すべきです。
 
 ### 6.2.1. "プラン"の `on_node` で利用できるラベル: ノードの label と taint
 
-Knitfab の"プラン"定義には kubernetes のノードに設定された label と taint を利用した機能 `on_node` があります。
+Knitfab の"プラン"定義には Kubernetes のノードに設定された label と taint を利用した機能 `on_node` があります。
 
 管理者は、ユーザに向けて、`on_node` 機能で利用できるラベルとその意味するところについて開示すべきです。
 
@@ -471,12 +511,12 @@ Knitfab の"プラン"定義には kubernetes のノードに設定された lab
 
 #### 6.2.1.1. node の label とは
 
-kubernetes におけるノードの [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) とは、ノードのメタデータです。ラベルはキーバリュー型の構造をとります。
-kubernetes には、Pod に対して「ある label のあるノードで必ず、あるいは優先的に実行する」という制約をかけることができます ([node Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)) 。
+Kubernetes におけるノードの [label](https://Kubernetes.io/docs/concepts/overview/working-with-objects/labels/) とは、ノードのメタデータです。ラベルはキーバリュー型の構造をとります。
+Kubernetes には、Pod に対して「ある label のあるノードで必ず、あるいは優先的に実行する」という制約をかけることができます ([node Affinity](https://Kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)) 。
 
 #### 6.2.1.2. node の taint とは
 
-kubernetes におけるノードの [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) とは「ノードに pod を配置 **しない** ようにする制約」です。
+Kubernetes におけるノードの [taint](https://Kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) とは「ノードに pod を配置 **しない** ようにする制約」です。
 これに対して、taint を無視してよい、という属性 (toleration) を Pod に与えることができます。こうすると、適当な toleration のある Pod だけが taint のあるノード上に配置されうるのです。
 
 taint は、label のようなキーバリュー組とあわせて taint の強さ (NoSchedule, PreferNoSchedule) が設定できます。
@@ -486,7 +526,7 @@ taint は、label のようなキーバリュー組とあわせて taint の強�
 #### 6.2.1.3. "プラン"の on_node はどのように label と taint を利用しているのか
 
 user-guide に詳しく書きましたが、Knitfab では、"プラン"定義に `on_node` という属性をもたせることができます。
-これは、その"プラン"に基づいた"ラン"がどういうノード上で実行されてよいかを示すもので、kubernetes 的には toleration と node Affinity の値として利用されます。
+これは、その"プラン"に基づいた"ラン"がどういうノード上で実行されてよいかを示すもので、Kubernetes 的には toleration と node Affinity の値として利用されます。
 
 次のように `on_node` を使って "プラン" を定義します。
 
@@ -500,7 +540,7 @@ on_node:
     - "accelarator=gpu"
 ```
 
-`may`、`prefer`、`must` は、いずれも kubernetes の node label と同じ形式をした値の配列をセットします。
+`may`、`prefer`、`must` は、いずれも Kubernetes の node label と同じ形式をした値の配列をセットします。
 `may` はノードへの配置許可、`prefer` はノードへの優先配置、`must` はノードへの強制配置を意味します。
 
 具体的には、これらはそれぞれ、Worker の属性として次のように翻訳されます。
@@ -530,19 +570,19 @@ on_node:
 > - 悪意あるコンテナを実行される
 > - 悪意あるコンテナイメージを配信される
 >
-> 前者は、計算機資源を奪われるだけでなく、kubernetes の未知の脆弱性を突かれてさらなる脅威にさらされる可能性があります。
+> 前者は、計算機資源を奪われるだけでなく、Kubernetes の未知の脆弱性を突かれてさらなる脅威にさらされる可能性があります。
 > 後者も、他の脅威の踏み台になりかねません。
 >
 > **重ねて警告します。Knitfab をパブリックなインターネットに公開してはいけません。**
 >
 
 
-## 6.4. 各要素の kubernetes 的な表現について
+## 6.4. 各要素の Kubernetes 的な表現について
 --------------------------------
 
 ### 6.4.1. "データ"の実体
 
-"データ"は、kubernetes 的には PersistentVolumeClaim (PVC) およびバインドされている PersistentVolume (PV) です。
+"データ"は、Kubernetes 的には PersistentVolumeClaim (PVC) およびバインドされている PersistentVolume (PV) です。
 
 Knitfab は、RDB に"データ"である PVC の名前を記録しています。"データ"に割り当てられている"タグ"は RDB に書き込まれています。
 
@@ -557,14 +597,14 @@ Knitfab は、RDB に"データ"である PVC の名前を記録しています�
 
 ひとつは RDB 上に記録されたリネージ情報です。つまり、入力と、出力と、"プラン"の組み合わせを記録しています。
 
-もうひとつは、kubernetes 上で実施されている計算です。これは Worker と呼ばれる Job を起動することで実現します。
+もうひとつは、Kubernetes 上で実施されている計算です。これは Worker と呼ばれる Job を起動することで実現します。
 Worker は"ラン"ごとに最大 1 個存在します。必要になったら起動され、不要になったら破棄されます。
 
 
-## 6.5. Knitfab の kubernetes 的構成
+## 6.5. Knitfab の Kubernetes 的構成
 ------------------
 
-Knitfab の、特に kubernetes 的な構成要素について解説します。
+Knitfab の、特に Kubernetes 的な構成要素について解説します。
 
 Knitfab はいくつかの deployment, daemonset, service から構成されています。
 
@@ -633,9 +673,9 @@ graph TB
         userreq -.HTTP.-> FRH
         FRH-."queue (RDB)".->lproj
 
-        lrhk -."delete (k8s api)".->da
-        lrst -."create & watch (k8s api)".-> wk
-        lrfin -."delete (k8s api)".-> wk
+        lrhk -."delete (K8s api)".->da
+        lrst -."create & watch (K8s api)".-> wk
+        lrfin -."delete (K8s api)".-> wk
         lproj-."queue (RDB)".->lrini
         lrini-."queue (RDB)".->lrst
         lrst-."queue (RDB)".->lrfin
@@ -645,10 +685,10 @@ graph TB
         FRH-."queue (RDB)".->lrhk
         FRH-."queue (RDB)".->lgbc
 
-        lrini -."create (k8s api)".->data
+        lrini -."create (K8s api)".->data
         wk--"read or write"--> data
-        lgbc -."delete (k8s api)".->data
-        BRH -."create & delete (via k8s api)".->data
+        lgbc -."delete (K8s api)".->data
+        BRH -."create & delete (via K8s api)".->data
         da --"read or write"--> data
 
         subgraph "in-cluster image registry"
@@ -660,19 +700,19 @@ graph TB
     end
     wks -."image pull (private images)".-> ireg
     docker -."docker push (private images)".->ireg
-    BRH -."create & delete(via k8s api)".->da
+    BRH -."create & delete(via K8s api)".->da
     wks -."image pull (helper images)".-> preg
     das -."image pull".-> preg
 ```
 
 通信は点線、コンテナ内のファイル読み書きは実線で示しました。
-また、RDB や kubernetes API へのデータフローは煩雑になるので省きました。コンポーネント間の通信手段であるかのように表現しています。
+また、RDB や Kubernetes API へのデータフローは煩雑になるので省きました。コンポーネント間の通信手段であるかのように表現しています。
 
 ユーザは `knit` CLI を使って knitd にリクエストを送ります。 knitd はそれに応じて RDB のレコードを操作します。
 
-"knitfab" とラベル付けられた囲みの範囲内が、お使いの kubernetes クラスタ内に構築されている Knitfab の範囲です。
+"knitfab" とラベル付けられた囲みの範囲内が、お使いの Kubernetes クラスタ内に構築されている Knitfab の範囲です。
 
-Web API を提供するコンテナ knitd が CLI からリクエストを受け取ります。一部リクエストは内部 API である knitd_backend にプロキシされて、kubernetes API を呼び出しています。
+Web API を提供するコンテナ knitd が CLI からリクエストを受け取ります。一部リクエストは内部 API である knitd_backend にプロキシされて、Kubernetes API を呼び出しています。
 
 イベントループ (event loops) の各コンポーネントは、定期的に RDB を監視して、各々果たすべきタスクを探しています。特に、workflow circuit とラベル付けられているイベントループの集まりは、
 
@@ -714,7 +754,7 @@ Worker が起動するに当たり、ユーザ定義のイメージは image-reg
 
 - StorageClass: NFS を利用した PersistnetVolume を作成できるようにするためです。
 - PersistentVolume, PersistnetVolumeClaim: RDB とクラスタ内イメージレジストリの記憶領域として使用します。
-- Role, RoleBinding, ServiceAccount: k8s API にアクセスするためです。
+- Role, RoleBinding, ServiceAccount: K8s API にアクセスするためです。
 - ConfigMap, Secret: knitd, knitd-backend の設定ファイル、RDB の認証情報、TLS 証明書類です。
 - PriorityClass: ワーカ（後述）用の PriorityClass です。
 
@@ -817,7 +857,7 @@ Knitfabは、突然Podが終了しても整合性を損なわないように設�
 
 ただし、Worker や Data Agent を強制終了すると、ユーザの機械学習タスクやデータのアップロード・ダウンロードは失敗します。
 
-また、スケールイン・スケールアウトについては、kubernetes の Deployment としてスケーリング設定することで対応できます。<!-- TODO: 独立セクションへ -->
+また、スケールイン・スケールアウトについては、Kubernetes の Deployment としてスケーリング設定することで対応できます。<!-- TODO: 独立セクションへ -->
 
 ## 7.4. ノードを追加したい
 
@@ -1312,7 +1352,7 @@ Knitfab WebAPI サーバ (`knitd`) は。設定された Extra API のパスに�
 
 > [!Note]
 >
-> Knitfab のデータベースの接続情報は、 kubernetes の Secret `database-credential` に格納されている。
+> Knitfab のデータベースの接続情報は、 Kubernetes の Secret `database-credential` に格納されている。
 >
 > データベースに書き込みを行う機能を追加することもできるが、その場合には、データベース内の情報の一貫性を破壊しないように注意する必要がある。
 
