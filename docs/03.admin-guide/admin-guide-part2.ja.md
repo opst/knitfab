@@ -1,4 +1,4 @@
-<span style="font-size: 32px;">Knitfab 管理ガイド 第2部</span>
+# Knitfab 管理ガイド 第2部 <!-- omit in toc -->
 
 もくじ
 - [1. ユーザに開示すべきクラスタの情報](#1-ユーザに開示すべきクラスタの情報)
