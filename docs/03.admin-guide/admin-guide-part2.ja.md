@@ -274,8 +274,8 @@ graph TB
 ユーザは `knit` CLI を使って knitd にリクエストを送ります。 knitd はそれに応じて
 RDB のレコードを操作します。
 
-"knitfab" とラベル付けられた囲みの範囲内が、お使いの Kubernetes クラスタ内に構築
-されている Knitfab の範囲です。
+"knitfab" とラベル付けられた着色ボックスの範囲内が、お使いの Kubernetes クラスタ
+内に構築されている Knitfab の範囲です。
 
 Web API を提供するコンテナ knitd が CLI からリクエストを受け取ります。一部リクエ
 ストは内部 API である knitd_backend にプロキシされて、Kubernetes API を呼び出し
