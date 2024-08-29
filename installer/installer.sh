@@ -211,7 +211,7 @@ vex:
 
 EOF
 
-	cat <<EOF >> values/knit-db-postgres.yaml
+	cat <<EOF > values/knit-db-postgres.yaml
 # # # values/knit-db-postgres.yaml # # #
 
 # # this file declares install paramaters for Database of Knitfab.
