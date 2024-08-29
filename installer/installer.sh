@@ -211,7 +211,7 @@ vex:
 
 EOF
 
-	cat <<EOF >> values/knit-db-postgres.yaml
+	cat <<EOF > values/knit-db-postgres.yaml
 # # # values/knit-db-postgres.yaml # # #
 
 # # this file declares install paramaters for Database of Knitfab.
@@ -465,14 +465,21 @@ while [ 0 -lt ${#} ] ; do
 	esac
 done
 
-if [ -n "${KUBECONFIG}" ] ; then
-	KUBECONFIG=$(abspath ${KUBECONFIG})
-fi
-
 if [ -z "${SETTINGS}" ] ; then
 	SETTINGS=${HERE}/knitfab-install-settings
 fi
 export SETTINGS=$(abspath ${SETTINGS})
+
+if [ -z "${NAMESPACE}" ] ; then
+	if [ -r "${SETTINGS}/namespace" ] ; then
+		NAMESPACE=$(cat ${SETTINGS}/namespace)
+	fi
+fi
+NAMESPACE=${NAMESPACE:-knitfab}
+
+if [ -n "${KUBECONFIG}" ] ; then
+	KUBECONFIG=$(abspath ${KUBECONFIG})
+fi
 
 if [ -n "${TLSCACERT}" ] ; then
 	export TLSCACERT=$(abspath ${TLSCACERT})
@@ -570,6 +577,7 @@ EOF
 	exit 1
 fi
 
+
 if [ -n "${PREPARE}" ] ; then
 	if [ -n "${INSTALL}" ] ; then
 		message "ERROR: --prepare and --install are exclusive."
@@ -602,6 +610,9 @@ fi
 if [ -z "${INSTALL}" ] ; then
 	exit 0
 fi
+
+# save actual namespace
+echo ${NAMESPACE} > ${SETTINGS}/namespace
 
 cat <<EOF > ${SETTINGS}/uninstaller.sh
 #! /bin/bash
