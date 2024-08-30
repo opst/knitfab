@@ -223,7 +223,9 @@ chmod +x ./installer.sh
 >
 > 上記の手順は、 Knitfab Web API を https として公開するように設定するものです。
 >
-> 一方で、Knitfab 自身が https 化されていると不都合な場合もあります。たとえば、Knitfab Web API の前にロードバランサーを設置して、TLS終端化はそちらで行いたい、という場合です。
+> 一方で、Knitfab 自身が https 化されていると不都合な場合もあります。たとえ
+> ば、Knitfab Web API の前にロードバランサーを設置して、TLS終端化はそちらで行い
+> たい、という場合です。
 >
 > そうした場合には、次のように、フラグ `--no-tls` を付加して「手順2」を実行してください。
 >
@@ -316,7 +318,9 @@ nfs:
 前者は Knitfab API の LISTEN ポート、後者はクラスタ内イメージレジストリの LISTEN ポートです。
 
 ##### (2) クラスタのTLD
-また、 Kubernetes クラスタ構築時に、クラスタの TLD(Top Level Domain)をデフォルト値 ( `cluster.local` ) から変更していた場合には、次の項目にその TLD を設定する必要があります。
+また、 Kubernetes クラスタ構築時に、クラスタの TLD(Top Level Domain)をデフォルト
+値 ( `cluster.local` ) から変更していた場合には、次の項目にその TLD を設定する必
+要があります。
 
 - `knitfab-install-settings/values/knit-app.yaml` の `clusterTLD` (コメント解除して書き換えます)
 
@@ -330,15 +334,51 @@ Knitfab の動作を拡張するための設定ファイルも含まれていま
 
 ### 3.3.3. インストールする
 
-以下のコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポーネントを Kubernetes クラスタにインストールします。
-`${NAMESPACE}`には、Knitfabアプリケーションのインストール先とする Kubernetes 名前空間名を指定してください。（ここで新規に指定します。）
-これには、しばらく時間がかかります。
+以下のコマンドを実行することで、インストールスクリプトが順次 Knitfab のコンポー
+ネントを Kubernetes クラスタにインストールします。 `${NAMESPACE}`には、Knitfabア
+プリケーションのインストール先とする Kubernetes 名前空間名を指定してくださ
+い。（ここで新規に指定します。）これには、**しばらく時間がかかります。**
 
 ```
 ./installer.sh --install --kubeconfig path/to/kubeconfig -n ${NAMESPACE} -s ./knitfab-install-settings
 ```
 
-<!-- TODO: インストールの成否はどうやって確認するか記載 -->
+インストールが成功したかどうかは、K8s deployment の状態から分かります。
+
+以下のようにして、`kubectl get deploy -A` コマンドでKnitfabをインストールした
+ネームスペース内の deployment の'READY'値を確認し、それらがすべて'N/N'のように分
+母と分子の値が一致していれば成功です。
+
+```
+$ kubectl get deploy -A
+NAMESPACE          NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+calico-apiserver   calico-apiserver            2/2     2            2           21d
+calico-system      calico-kube-controllers     1/1     1            1           21d
+calico-system      calico-typha                2/2     2            2           21d
+kf-mycluster       csi-nfs-controller          1/1     1            1           19d
+kf-mycluster       database-postgres           1/1     1            1           19d
+kf-mycluster       finishing-leader            1/1     1            1           19d
+kf-mycluster       garbage-collection-leader   1/1     1            1           19d
+kf-mycluster       housekeeping-leader         1/1     1            1           19d
+kf-mycluster       image-registry-registry     1/1     1            1           19d
+kf-mycluster       initialize-leader           1/1     1            1           19d
+kf-mycluster       knitd                       1/1     1            1           19d
+kf-mycluster       knitd-backend               1/1     1            1           19d
+kf-mycluster       projection-leader           1/1     1            1           19d
+kf-mycluster       run-management-leader       1/1     1            1           19d
+kube-system        coredns                     2/2     2            2           21d
+tigera-operator    tigera-operator             1/1     1            1           21d
+
+```
+上記の例では、`kf-mycluster` というネームスペースで Knitfab をインストールしてい
+ます。このネームスペースに属する deployment(NAME列)のREADY値がすべて '1/1' と
+なっているのが確認できます。
+
+この状態になるまでしばらく時間がかかる場合がありますので、READY値が'N/N'になって
+いない場合は少し時間置いて再度試してみてください。
+
+それでも駄目な場合は、[トラブルシュート](admin-guide-deep-dive.ja.md#5-トラブルシュート)
+などを参考にして対処してください。
 
 ### 3.3.4. ユーザにハンドアウト(Knitfab設定情報)を配布する
 
@@ -350,9 +390,13 @@ Knitfab の動作を拡張するための設定ファイルも含まれていま
 
 #### (任意実施)3.3.4.1. ハンドアウトを修正する
 
-Knitfab に対して特定のドメイン名でアクセスしたい場合には (例: 指定したサーバ証明書がそうなっている場合) 、ユーザにハンドアウトを配布する前に、接続設定を書き換える必要があります。
+Knitfab に対して特定のドメイン名でアクセスしたい場合には (例: 指定したサーバ証明
+書がそうなっている場合) 、ユーザにハンドアウトを配布する前に、接続設定を書き換え
+る必要があります。
 
-**knitprofile ファイル** と呼ばれる、Knitfab API への接続設定が `knitfab-install-settings/handouts/knitprofile` にあります。このファイルは次のような構成をした yaml ファイルです。
+**knitprofile ファイル** と呼ばれる、Knitfab API への接続設定が
+`knitfab-install-settings/handouts/knitprofile` にあります。このファイルは次のよ
+うな構成をした yaml ファイルです。
 
 ```yaml
 apiRoot: https://IP-ADDRESS:PORT/api
@@ -402,7 +446,9 @@ knitfab-install-settings/uninstall.sh --hard
 Knitfab はいくつかの helm chart で構成されています。
 このセクションでは、Knitfab の helm 的な構築方法について解説します。
 
-管理者は Knitfab の一部をアンインストール・再インストールしたり、アップデートしたりしなくてはならない場合があるかもしれません。helm構成を理解しておけば、そうした場合に何をすればよいか見通しが立つようになるでしょう。
+管理者は Knitfab の一部をアンインストール・再インストールしたり、アップデートし
+たりしなくてはならない場合があるかもしれません。helm構成を理解しておけば、そうし
+た場合に何をすればよいか見通しが立つようになるでしょう。
 
 > [!Note]
 >
@@ -456,12 +502,16 @@ helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
     knit-app Knitfab/knit-app
 ```
 
-> 実際のインストーラは以上の操作に加えて、これらの挙動をもっと安定させるために追加のオプションを与えたり、アンインストーラやハンドアウトを生成したりしています。
+> 実際のインストーラは以上の操作に加えて、これらの挙動をもっと安定させるために追
+> 加のオプションを与えたり、アンインストーラやハンドアウトを生成したりしていま
+> す。
 
 上記の途中にたびたび現れている `--set-json "...=$(helm get values ...)"` というパターンは、インストール済の chart からインストールパラメータ ([helm の Values](https://helm.sh/docs/chart_template_guide/values_files/)) を読み出して、chart 間で矛盾がないようにする手法です。
 
-それに加えて `./knitfab-install-settings/values/CHART_NAME.yaml` をその chart 用の Values として取り込んでいます。
-したがって、特定の chart のみを再インストールしたり、アップデートしたりする必要に迫られた場合は、この手法を踏襲するのが良いでしょう。
+それに加えて `./knitfab-install-settings/values/CHART_NAME.yaml` をその chart 用
+の Values として取り込んでいます。したがって、特定の chart のみを再インストール
+したり、アップデートしたりする必要に迫られた場合は、この手法を踏襲するのが良いで
+しょう。
 
 > [!Caution]
 >
@@ -475,5 +525,3 @@ helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
 > 結果として、PVC と Knitfab 的なデータとの関係や、プランが参照するイメージが失われるので、Knitfab のリネージ管理の前提が満たされないことになります。
 >
 > また、knit-storage-nfs は他の全ての PV を NFS 上に記録する機能を提供しています。これが失われると、全 Pod が PV にアクセスできなくなります。
-
-<!-- End of Part1-->
