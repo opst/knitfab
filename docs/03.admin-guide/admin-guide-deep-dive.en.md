@@ -1,19 +1,44 @@
-Knitfab Administration Guide
-===========================
+Knitfab Administration Guide: 2.Deep Dive <!-- omit in toc -->
 
-Cluster Information to Disclose to Users
---------------------------
+Table of Contents
+- [1. Cluster Information to Disclose to Users](#1-cluster-information-to-disclose-to-users)
+  - [1.1. Connection information for the cluster's Internal image registry](#11-connection-information-for-the-clusters-internal-image-registry)
+  - [1.2. Resources that can be specified in the `resources` field of a Plan and their limits](#12-resources-that-can-be-specified-in-the-resources-field-of-a-plan-and-their-limits)
+- [2. Representation of Each Element in Kubernetes](#2-representation-of-each-element-in-kubernetes)
+  - [2.1. Data Entity](#21-data-entity)
+  - [2.2. Plan Entity](#22-plan-entity)
+  - [2.3. Run Entity](#23-run-entity)
+- [3. Configuration of Knitfab in Kubernetes](#3-configuration-of-knitfab-in-kubernetes)
+  - [3.1. Deployments and services](#31-deployments-and-services)
+  - [3.2. daemonset](#32-daemonset)
+  - [3.3. Other resources](#33-other-resources)
+- [4. Routine Monitoring](#4-routine-monitoring)
+- [5. Troubleshooting](#5-troubleshooting)
+  - [5.1. The Run is stuck in the "starting" state and never transitions to "running" or fails immediately.](#51-the-run-is-stuck-in-the-starting-state-and-never-transitions-to-running-or-fails-immediately)
+  - [5.2. Frequent system-side pod failures](#52-frequent-system-side-pod-failures)
+  - [5.3. There is a problematic pod. So, want to restart it](#53-there-is-a-problematic-pod-so-want-to-restart-it)
+  - [5.4. Want to add a node](#54-want-to-add-a-node)
+- [6. Backup and Restore](#6-backup-and-restore)
+  - [6.1. Backup](#61-backup)
+  - [6.2. Restore](#62-restore)
+- [7. Extend Knitfab](#7-extend-knitfab)
+  - [7.1. WebHooks](#71-webhooks)
+  - [7.2. Lifecycle Hooks](#72-lifecycle-hooks)
+  - [7.3. Register Extended Web API](#73-register-extended-web-api)
+
+
+# 1. Cluster Information to Disclose to Users
 
 Some features of Knitfab depend on the configuration of the installed Kubernetes cluster.
 In order for users to effectively utilize these features, they must be provided with information about the cluster's configuration.
 
 As the administrator who has set up Knitfab, it is important to disclose the appropriate information to users.
 
-### Connection information for the cluster's Internal image registry
+## 1.1. Connection information for the cluster's Internal image registry
 
 While it can be inferred by examining the `docker/certs.d` directory within the handout, it is advisable to explicitly guide users on the host and port of the cluster's internal image registry.
 
-### Resources that can be specified in the `resources` field of a Plan and their limits
+## 1.2. Resources that can be specified in the `resources` field of a Plan and their limits
 
 Knitfab has a feature called `resources` in its Plan definition, which declares the computational resources used by the Run based on that Plan.
 
@@ -25,7 +50,7 @@ In addition, in Kubernetes, if there are nodes with GPUs, the GPUs are exposed a
 The specific resource names that can be specified (e.g., `nvidia.com/gpu`, `amd.com/gpu`) depend on the node configuration.
 If such extended resource names are available, it should also be disclosed to the users.
 
-### Labels available for `on_node` in a Plan: labels and taints of node
+### 1.2.1. Labels available for `on_node` in a Plan: labels and taints of node
 
 Knitfab has a feature called `on_node` in Plan definitions that utilizes labels and taints set on Kubernetes nodes.
 
@@ -38,12 +63,12 @@ Administrators should disclose to users the labels that can be used with the `on
 > If you set a taint on a node, set a label with the same key-value pair.
 >
 
-#### Labels of node
+#### 1.2.1.1. Labels of K8s node
 
 [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) of a node in Kubernetes refers to metadata for a node. Labels have a key-value structure.
 In Kubernetes, it is possible to impose constraints on Pods to "always or preferentially run on nodes with a certain label" ([node Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)).
 
-#### Taints of node
+#### 1.2.1.2. Taints of K8s node
 
 [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) of a node in Kubernetes is a constraint that prevents pods from being scheduled on a node.
 In contrast, a toleration is an attribute that allows pods to ignore taint. By assigning tolerations to pods, only pods with toleration can be scheduled on nodes with taint.
@@ -52,7 +77,7 @@ Taints can be set along with key-value pairs, similar to labels, to specify the 
 
 For example, if you want to ensure that tasks that do not specifically require GPUs are not scheduled on nodes with GPUs, you need to set a taint on the node.
 
-#### Usage of labels and taints for the `on_node` attribute in Plans
+#### 1.2.1.3. How "on_node" in "Plan" uses labels and taints
 
 As described in the user guide, Knitfab allows the use of the `on_node` attribute in plan definitions.
 This attribute specifies where the Runs based on the Plan can be executed on which nodes, and it is used as toleration and node affinity values in Kubernetes.
@@ -85,41 +110,19 @@ Specifically, these are translated as the following worker attributes:
 
 The recommendation to "set the same label on the node if you set a taint" is because the `on_node` feature reuses the same label for tolerations and node affinity.
 
-Important Note
----------------------
+# 2. Representation of Each Element in Kubernetes
 
-> [!Caution]
->
-> **Don't expose Knitfab to the public network.**
->
-> The current version of Knitfab and the cluster's image registry have no authentication or authorization mechanisms.
->
-> If exposed to the public internet, the following risks exist:
->
-> - Malicious containers can be executed.
-> - Malicious container images can be distributed.
->
-> The former not only results in the theft of computing resources but also exposes the possibility of exploiting unknown vulnerabilities in Kubernetes, leading to further threats.
-> The latter can also serve as a stepping stone for other threats.
->
-> **We strongly advise against exposing Knitfab to the public internet.**
->
-
-
-Representation of Each Element in Kubernetes
---------------------------------------------
-
-### Data Entity
+## 2.1. Data Entity
 
 In Kubernetes, Data is represented by a PersistentVolumeClaim (PVC) and the associated bound PersistentVolume (PV).
 
 Knitfab records the name of the PVC, which represents the Data, in the RDB. The Tags set to the Data are written in the RDB.
 
-### Plan Entity
+## 2.2. Plan Entity
 
 The entity of a Plan is a record stored in the RDB. However, this record includes the name of the container image.
 
-### Run Entity
+## 2.3. Run Entity
 
 The Run entity has two aspects.
 
@@ -129,14 +132,13 @@ The other aspect is the computation performed on Kubernetes. This is achieved by
 There is a maximum of one Worker per Run. It is launched when needed and destroyed when no longer needed.
 
 
-Configuration of Knitfab in Kubernetes
-------------------
+# 3. Configuration of Knitfab in Kubernetes
 
 This section explains the Kubernetes-specific components of Knitfab.
 
 Knitfab consists of several deployments, daemonsets, and services.
 
-### Deployments and services
+## 3.1. Deployments and services
 
 The following **static components** make up Knitfab:
 
@@ -261,13 +263,13 @@ Users push their privately created container images to the cluster's internal im
 >
 > Therefore, if there is no internet access or if there is a problem with ghcr.io, there is a possibility of failure in launching the dynamic components.
 
-### daemonset
+## 3.2. daemonset
 
 - vex: Automatically scales up if the capacity of the PVCs mounted by pods on that node becomes insufficient.
 
 However, NFS does not place much significance on the capacity of PVCs, so this daemonset is not currently very meaningful.
 
-### Other resources
+## 3.3. Other resources
 
 Additionally, when installing Knitfab, the following resources are created:
 
@@ -277,8 +279,7 @@ Additionally, when installing Knitfab, the following resources are created:
 - ConfigMap, Secret: Configuration files for knitd, knitd-backend, authentication information for the RDB, and TLS certificates.
 - PriorityClass: PriorityClass for the Workers (explained later).
 
-Routine Monitoring
------------------
+# 4. Routine Monitoring
 
 You should perform routine monitoring similar to regular system monitoring. Specifically, monitor:
 
@@ -290,14 +291,13 @@ If there is a shortage of node computing resources, the cause is important. If a
 
 Pay attention to the NFS storage capacity. If it becomes insufficient, it will prevent the recording of Data generated by user experiments. It is important to maintain sufficient capacity.
 
-Troubleshooting
-----------------
+# 5. Troubleshooting
 
 When a user reports that Knitfab is not functioning properly, it is important to investigate the following points:
 
-### The Run is stuck in the "starting" state and never transitions to "running" or fails immediately.
+## 5.1. The Run is stuck in the "starting" state and never transitions to "running" or fails immediately.
 
-#### Possible cause 1: The Worker Pod may not be starting successfully.
+### 5.1.1. Possible cause 1: The Worker Pod may not be starting successfully.
 
 Ask the user for the Run ID of the specific Run. Then Execute
 
@@ -335,7 +335,7 @@ For example,
     - Check the `exit` attribute of the Run.
         - `OOMError`: The memory allocated in the Plan is too small.
 
-#### Possible cause 2: The event loop container is missing or causing errors
+### 5.1.2. Possible cause 2: The event loop container is missing or causing errors
 
 If you are scaling in the Deployment for maintenance purposes, it can stop the chain of event loops.
 Make sure that there is at least one Pod for each event loop.
@@ -346,7 +346,7 @@ Make sure that there is at least one Pod for each event loop.
 If you find such containers, delete the Pods using `kubectl delete`.
 Wait for the Deployment to automatically start the necessary number of Pods and observe the situation.
 
-### Frequent system-side pod failures
+## 5.2. Frequent system-side pod failures
 
 You need to investigate the reason for the frequent failures by checking logs and using `kubectl describe`.
 
@@ -362,7 +362,7 @@ Also, is the memory of the node sufficient?
 When configuring Knitfab on a single node, it requires approximately 4GiB of memory capacity.
 When attempting to deploy Knitfab on a virtual machine with less memory, the static components started to fail and restart irregularly.
 
-### There is a problematic pod. So, want to restart it
+## 5.3. There is a problematic pod. So, want to restart it
 
 You can always use `kubectl delete pod` to restart it.
 
@@ -372,7 +372,7 @@ However, if you abruptly terminate a Worker or Data Agent, it will cause failure
 
 Also, for scaling in/out, you can simply scale the Kubernetes Deployment.
 
-### Want to add a node
+## 5.4. Want to add a node
 
 You can follow the Kubernetes procedure to add a node.
 You will be able to increase the number of nodes where Workers and Data Agents can be deployed.
@@ -380,8 +380,7 @@ You will be able to increase the number of nodes where Workers and Data Agents c
 However, as of v1.0, TLS certificates are not supported for newly added nodes.
 User requests should be sent to the existing nodes. Otherwise, it will result in a certificate error.
 
-Backup and Restore
---------------------
+# 6. Backup and Restore
 
 This chapter shows you how to backup Data and lineages from Knitfab and to restore them into a newly installed Knitfab.
 
@@ -407,15 +406,15 @@ Restoring procedure of Knitfab consists of:
 
 The restore procedure clears Image Registry and RDB, and your Knitfab is restored as the backup.
 
-### Backup
+## 6.1. Backup
 
-#### Announce system outage
+### 6.1.1. Announce system outage
 
 For your users, announce system outage before starting backup operation.
 
 In the announcement, notice that running Runs during backup operation will be failed.
 
-#### Freeze Knitfab system
+### 6.1.2. Freeze Knitfab system
 
 To freeze system, execute `admin-tools/system-freeze.sh` (it is shell-script).
 
@@ -452,7 +451,7 @@ By starting the operation, Knitfab suspends to create new Runs. And after the op
 
 `admin-tools/system-freeze.sh` generates a script, `./system-unfreeze.sh`, to unfreeze  your Knitfab. This script is used later.
 
-#### Backup: Image Registry
+### 6.1.3. Backup: Image Registry
 
 Execute `admin-tools/backup/images.sh` like below
 
@@ -478,7 +477,7 @@ The script saves storage content of the Image Registry of Knitfab as tar.gz arch
 
 During backup, a Pod named "datadumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
 
-#### Backup: Data
+### 6.1.4. Backup: Data
 
 Backup contents of Knitfab Data.
 
@@ -508,7 +507,7 @@ The script saves storage content of the Image Registry of Knitfab as tar.gz arch
 
 During backup, a Pod named "datadumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
 
-#### Backup: Database
+### 6.1.5. Backup: Database
 
 Backup tables in Knitfab Database.
 
@@ -538,7 +537,7 @@ The script runs [`pg_dump`](https://www.postgresql.org/docs/15/app-pgdump.html),
 
 During backup, a Pod named "pgdumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
 
-#### Unfreeze Knitfab system, and announce it
+### 6.1.6. Unfreeze Knitfab system, and announce it
 
 To unfreeze Knitfan, execute `./system-unfreeze.sh`, generated by `admin-tools/system-freeze.sh`.
 
@@ -546,13 +545,13 @@ By this, deployments scales as number as before freezing, and Web API and Run's 
 
 Announce that Knitfab is unfrozen for your user after deployments scales out enough.
 
-### Restore
+## 6.2. Restore
 
 This section describes how to restore Knitfab from a backup.
 
 Knitfab which is the target of restore should be just newly installed one, and its version is same as the version which the backup has been taken. Otherwize, system consistency will be broken.
 
-#### Image Registry
+### 6.2.1. Restore: Image Registry
 
 Execute shell script `admin-tools/restore/images.sh` like below:
 
@@ -601,7 +600,7 @@ In such cases, you should scale Image Registry with `kubectl` directly.
 
 During restoring, to write to PV, a Pod named "dataloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
 
-#### Data
+### 6.2.2. Restore: Data
 
 Execute shell script `admin-tools/restore/data.sh` like below:
 
@@ -643,7 +642,7 @@ After that, it restores PVCs for each Data from backup.
 
 During restoring, to write to PV, a Pod named "dataloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
 
-#### Database
+### 6.2.3. Restore: Database
 
 Execute shell script `admin-tools/restore/db.sh` like below;
 
@@ -686,12 +685,11 @@ After that, it restores Database from backup.
 
 During restoring, to execute [pg_resotre](https://www.postgresql.org/docs/15/app-pgrestore.html), a Pod named "pgloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
 
-Extend Knitfab
------------------
+# 7. Extend Knitfab
 
 This section describes how to customise your Knitfab, for advanced usage.
 
-### WebHooks
+## 7.1. WebHooks
 
 Knitfab can notify internal events as HTTP requests. It is WebHook.
 
@@ -704,7 +702,7 @@ Set up WebHooks by following steps:
 1. Edit a file `values/hooks.yml` in install settings directory (`knitfab-install-settings`) generated by the Knitfab installer.
 2. Update Knitfab: rerun `./installer.sh --install`.
 
-### Lifecycle Hooks
+## 7.2. Lifecycle Hooks
 
 Lifecycle Hooks are WebHooks invoked before and after changing each Runs' status. URLs registered as hooks receives Run's information as a POST request.
 
@@ -730,7 +728,7 @@ Also After Hooks receive one request per one status changing, normally. These Ho
 
 - After changing Run's status and before invoke Hook, Knitfab's process is stopped unexpectedly.
 
-#### Setup Lifecycle Hooks
+### 7.2.1. Setup Lifecycle Hooks
 
 To setup Lifecycle Hook, edit `values/hooks.yaml` to update entry `hooks.lifecycle-hooks`.
 
@@ -794,7 +792,7 @@ You can set Before Hook only or After Hook only, or you can set 2 or more URLs f
 
 After that, Pods invoking Lifecycle Hooks and Hooks are activated.
 
-#### Request Spec　of Lifecycle Hooks
+### 7.2.2. Request Spec　of Lifecycle Hooks
 
 Before and After Lifecycle Hooks send `POST` requests with Run as JSON.
 Before Hooks send Run as just before changing status, and After Hooks send Run as just after status changed.
@@ -857,7 +855,7 @@ The format of Run JSON, as same as outputs of `knit run show`, is below:
     - `tags[*]`: Tags for this Output. Not Data's Tag
     - `knitId`: Identifier of the Data holding the log.
 
-### Register Extra APIs
+## 7.3. Register Extended Web API
 
 You can register Extra APIs for Knitfab Web API.
 
@@ -867,7 +865,7 @@ The feature may be useful to introduce custom functionalities which need to acce
 
 > [!Note]
 >
-> Credentials for Knitfab Database is stored in kubernetes Secret `database-credential`.
+> Credentials for Knitfab Database is stored in Kubernetes Secret `database-credential`.
 >
 > Functionalities writing to Database is possible, but in such cases, be careful to keep consistency of Database.
 
