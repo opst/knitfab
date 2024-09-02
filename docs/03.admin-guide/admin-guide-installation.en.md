@@ -1,4 +1,4 @@
-Knitfab Administration Guide <!-- omit in toc -->
+Knitfab Administration Guide: 1.Installation <!-- omit in toc -->
 
 Table of Contents
 - [1. Introduction](#1-introduction)
@@ -294,7 +294,7 @@ nfs:
   # # This is useful when you want to keep the data even after the NFS server is restarted.
   # hostPath: "/var/lib/Knitfab"
 
-  # # node: (optional) kubernetes node name where the in-cluster NFS server pod should be scheduled.
+  # # node: (optional) Kubernetes node name where the in-cluster NFS server pod should be scheduled.
   # node: "nfs-server"
 ```
 
@@ -370,7 +370,7 @@ It may take some time to reach this state, so if the READY values are not 'N/N',
 wait a bit and try again.
 
 If it still doesn't work, refer to
-[Troubleshooting](admin-guide-deep-dive.en.md#5-トラブルシュート) for further <!-- TODO: ref. -->
+[Troubleshooting](admin-guide-deep-dive.en.md#5-troubleshooting) for further
 assistance.
 
 If you don't want to display information for namespaces unrelated to Knitfab,
