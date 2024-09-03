@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"
+	kubeevent "k8s.io/api/events/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapiresouce "k8s.io/apimachinery/pkg/api/resource"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +48,8 @@ type K8sClient interface {
 	UpsertSecret(ctx context.Context, namespace string, spec *applyconfigurations.SecretApplyConfiguration) (*kubecore.Secret, error)
 	GetSecret(ctx context.Context, namespace string, name string) (*kubecore.Secret, error)
 	DeleteSecret(ctx context.Context, namespace string, name string) error
+
+	GetEvents(ctx context.Context, namespace string, filters ...EventSelector) ([]kubeevent.Event, error)
 
 	Log(ctx context.Context, namespace string, podname string, container string) (io.ReadCloser, error)
 }
@@ -153,6 +157,65 @@ func (k *k8sClient) GetSecret(ctx context.Context, namespace string, name string
 
 func (k *k8sClient) DeleteSecret(ctx context.Context, namespace string, name string) error {
 	return k.client.CoreV1().Secrets(namespace).Delete(ctx, name, *kubeapimeta.NewDeleteOptions(0))
+}
+
+func (k *k8sClient) GetEvents(ctx context.Context, namespace string, filters ...EventSelector) ([]kubeevent.Event, error) {
+	filt := &eventFilter{}
+	for _, f := range filters {
+		f(filt)
+	}
+
+	ev, err := k.client.EventsV1().Events(namespace).List(ctx, kubeapimeta.ListOptions{
+		FieldSelector: filt.FieldSelector(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ev.Items, nil
+}
+
+type eventFilter struct {
+	kind string
+	name string
+	uid  string
+}
+
+func (evf *eventFilter) FieldSelector() string {
+	selectors := []string{}
+	if evf.kind != "" {
+		selectors = append(selectors, "regarding.kind="+evf.kind)
+	}
+	if evf.name != "" {
+		selectors = append(selectors, "regarding.name="+evf.name)
+	}
+	if evf.uid != "" {
+		selectors = append(selectors, "regarding.uid="+evf.uid)
+	}
+	return strings.Join(selectors, ",")
+}
+
+// EventSelector is a function that filters Kubernetes events.
+type EventSelector func(e *eventFilter)
+
+// EventForKind filters events by fieldSeledtor "regarding.kind"
+func EventForKind(kind string) EventSelector {
+	return func(e *eventFilter) {
+		e.kind = kind
+	}
+}
+
+// EventForName filters events by fieldSeledtor "regarding.name"
+func EventForName(name string) EventSelector {
+	return func(e *eventFilter) {
+		e.name = name
+	}
+}
+
+// EventForObjectUID filters events by fieldSeledtor "regarding.uid"
+func EventForObjectUID(uid string) EventSelector {
+	return func(e *eventFilter) {
+		e.uid = uid
+	}
 }
 
 func WrapK8sClient(c *k8s.Clientset) K8sClient {
@@ -435,11 +498,23 @@ func (j *job) Close() error {
 type PodPhase kubecore.PodPhase
 
 var (
-	PodPending   PodPhase = PodPhase(kubecore.PodPending)
-	PodRunning   PodPhase = PodPhase(kubecore.PodRunning)
+	// PodPending means the pod is waiting or preparing to run.
+	PodPending PodPhase = PodPhase(kubecore.PodPending)
+
+	// PodStucking means the pod is stucking before running. Maybe misconfguration or resource shortage.
+	PodStucking PodPhase = PodPhase("Stucking")
+
+	// PodRunning means the pod is running.
+	PodRunning PodPhase = PodPhase(kubecore.PodRunning)
+
+	// PodSucceeded means the pod is stopped with success.
 	PodSucceeded PodPhase = PodPhase(kubecore.PodSucceeded)
-	PodFailed    PodPhase = PodPhase(kubecore.PodFailed)
-	PodUnknown   PodPhase = PodPhase(kubecore.PodUnknown)
+
+	// PodFailed means the pod is stopped with failure.
+	PodFailed PodPhase = PodPhase(kubecore.PodFailed)
+
+	// PodUnknown means the pod status is unknown.
+	PodUnknown PodPhase = PodPhase(kubecore.PodUnknown)
 )
 
 type Pod interface {
@@ -447,11 +522,13 @@ type Pod interface {
 	Status() PodPhase
 	Host() string
 	Ports() map[string]int32
+	Events() []kubeevent.Event
 	Close() error
 }
 
 type pod struct {
 	description kubecore.Pod
+	events      []kubeevent.Event
 	onClose     func() error
 }
 
@@ -460,6 +537,18 @@ func (p *pod) Name() string {
 }
 
 func (p *pod) Status() PodPhase {
+	if p.description.Status.Phase == "" {
+		return PodUnknown
+	}
+
+	if p.description.Status.Phase == kubecore.PodPending {
+		for _, ev := range p.events {
+			if ev.Type == "Warning" {
+				return PodStucking
+			}
+		}
+	}
+
 	return PodPhase(p.description.Status.Phase)
 }
 
@@ -482,6 +571,10 @@ func (p *pod) Close() error {
 		return nil
 	}
 	return p.onClose()
+}
+
+func (p *pod) Events() []kubeevent.Event {
+	return p.events
 }
 
 type Cluster interface {
@@ -1164,6 +1257,15 @@ func (c *k8sCluster) GetPod(
 			}
 			return ret, err
 		}
+
+		// error is ignored because it is not critical.
+		ev, _ := c.client.GetEvents(
+			ctx, c.namespace,
+			EventForKind("Pod"),
+			EventForObjectUID(string(_pod.ObjectMeta.UID)),
+		)
+		ret.events = ev
+
 		return ret, satisfyAll(_pod, requirements)
 	})
 }

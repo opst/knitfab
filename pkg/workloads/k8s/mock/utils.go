@@ -12,6 +12,7 @@ import (
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"
+	kubeevents "k8s.io/api/events/v1"
 	applyconfigurations "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
@@ -100,6 +101,8 @@ type MockClient struct {
 		GetSecret    func(ctx context.Context, namespace string, name string) (*kubecore.Secret, error)
 		DeleteSecret func(ctx context.Context, namespace string, name string) error
 
+		GetEvents func(ctx context.Context, namespace string, sel ...k8s.EventSelector) ([]kubeevents.Event, error)
+
 		Log func(ctx context.Context, namespace string, pod string, container string) (io.ReadCloser, error)
 	}
 	Called struct {
@@ -127,6 +130,8 @@ type MockClient struct {
 		UpsertSecret uint64
 		GetSecret    uint64
 		DeleteSecret uint64
+
+		GetEvents uint64
 
 		Log uint64
 	}
@@ -291,6 +296,15 @@ func (m *MockClient) DeleteSecret(ctx context.Context, namespace string, name st
 		return errors.New("[MOCK] not implemented")
 	}
 	return m.Impl.DeleteSecret(ctx, namespace, name)
+}
+
+func (m *MockClient) GetEvents(ctx context.Context, namespace string, sel ...k8s.EventSelector) ([]kubeevents.Event, error) {
+	m.Called.GetEvents += 1
+
+	if m.Impl.GetEvents == nil {
+		return nil, errors.New("[MOCK] not implemented")
+	}
+	return m.Impl.GetEvents(ctx, namespace, sel...)
 }
 
 func NewMockClient() *MockClient {

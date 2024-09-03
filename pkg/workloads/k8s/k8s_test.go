@@ -1123,6 +1123,21 @@ func TestK8SCluster_Pod(t *testing.T) {
 						result.Value.Ports(), testcase.Then.Ports,
 					)
 				}
+
+				{
+					ev := result.Value.Events()
+					if len(ev) == 0 {
+						t.Errorf("pod events is not given.")
+					}
+					for _, e := range ev {
+						if e.Regarding.Kind != "Pod" {
+							t.Errorf("event regarding is not Pod: %v", e)
+						}
+						if e.Regarding.Name != testcase.When.PodName {
+							t.Errorf("event regarding name is wrong: %v", e)
+						}
+					}
+				}
 			}
 
 			{

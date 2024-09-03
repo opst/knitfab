@@ -17,6 +17,7 @@ import (
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"
+	kubeevent "k8s.io/api/events/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyconfigurations "k8s.io/client-go/applyconfigurations/core/v1"
@@ -533,4 +534,8 @@ func (kc *k8sclient) GetSecret(ctx context.Context, namespace string, name strin
 
 func (kc *k8sclient) DeleteSecret(ctx context.Context, namespace string, name string) error {
 	return kc.base.DeleteSecret(ctx, namespace, name)
+}
+
+func (k8s *k8sclient) GetEvents(ctx context.Context, namespace string, sel ...k8s.EventSelector) ([]kubeevent.Event, error) {
+	return k8s.base.GetEvents(ctx, namespace, sel...)
 }
