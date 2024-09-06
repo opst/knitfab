@@ -7,6 +7,7 @@ import (
 	manager "github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
 	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/workloads/k8s"
 	kw "github.com/opst/knitfab/pkg/workloads/worker"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -47,14 +48,17 @@ func New(
 		}
 
 		var newStatus kdb.KnitRunStatus
-		switch s := w.JobStatus(); s {
-		case kw.Pending:
+
+		s := w.JobStatus(ctx)
+
+		switch ty := s.Type; ty {
+		case k8s.Pending:
 			newStatus = kdb.Starting
-		case kw.Running:
+		case k8s.Running:
 			newStatus = kdb.Running
-		case kw.Failed:
+		case k8s.Failed, k8s.Stucking:
 			newStatus = kdb.Aborting
-		case kw.Done:
+		case k8s.Succeeded:
 			newStatus = kdb.Completing
 		default:
 			return r.Status, nil
@@ -73,13 +77,12 @@ func New(
 
 		switch newStatus {
 		case kdb.Aborting, kdb.Completing:
-			if exitCode, reason, ok := w.ExitCode(); ok {
-				if err := setExit(ctx, r.Id, kdb.RunExit{
-					Code:    exitCode,
-					Message: reason,
-				}); err != nil {
-					return r.Status, err
-				}
+			exit := kdb.RunExit{
+				Code:    s.Code,
+				Message: s.Message,
+			}
+			if err := setExit(ctx, r.Id, exit); err != nil {
+				return r.Status, err
 			}
 		}
 

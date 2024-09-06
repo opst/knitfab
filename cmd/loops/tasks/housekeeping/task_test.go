@@ -11,6 +11,7 @@ import (
 	"github.com/opst/knitfab/pkg/utils/retry"
 	"github.com/opst/knitfab/pkg/workloads/k8s"
 	kubecore "k8s.io/api/core/v1"
+	kubeevents "k8s.io/api/events/v1"
 )
 
 type MockedGetPodder struct {
@@ -58,6 +59,10 @@ func (m *MockPod) Status() k8s.PodPhase {
 func (m *MockPod) Close() error {
 	m.IsClosed = true
 	return m.CloseResult
+}
+
+func (m *MockPod) Events() []kubeevents.Event {
+	return nil
 }
 
 type CallbackReturns struct {

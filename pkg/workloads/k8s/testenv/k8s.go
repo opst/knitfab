@@ -55,9 +55,9 @@ func Images() struct {
 		Nurse   string
 		Empty   string
 	}{
-		Dataagt: kos.GetEnvOr(ENV_IMAGE_DATAAGT, "knit-dataagt:TEST"),
-		Nurse:   kos.GetEnvOr(ENV_IMAGE_NURSE, "knit-nurse:TEST"),
-		Empty:   kos.GetEnvOr(ENV_IMAGE_EMPTY, "knit-empty:TEST"),
+		Dataagt: kos.GetEnvOr(ENV_IMAGE_DATAAGT, "knit-dataagt:TEST-test"),
+		Nurse:   kos.GetEnvOr(ENV_IMAGE_NURSE, "knit-nurse:TEST-test"),
+		Empty:   kos.GetEnvOr(ENV_IMAGE_EMPTY, "knit-empty:TEST-test"),
 	}
 }
 
@@ -536,6 +536,6 @@ func (kc *k8sclient) DeleteSecret(ctx context.Context, namespace string, name st
 	return kc.base.DeleteSecret(ctx, namespace, name)
 }
 
-func (k8s *k8sclient) GetEvents(ctx context.Context, namespace string, sel ...k8s.EventSelector) ([]kubeevent.Event, error) {
-	return k8s.base.GetEvents(ctx, namespace, sel...)
+func (k8s *k8sclient) GetEvents(ctx context.Context, kind string, target kubeapimeta.ObjectMeta) ([]kubeevent.Event, error) {
+	return k8s.base.GetEvents(ctx, kind, target)
 }

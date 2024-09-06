@@ -10,17 +10,15 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/image"
 	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/workloads/k8s"
 	kw "github.com/opst/knitfab/pkg/workloads/worker"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	kubeshm "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type FakeWorker struct {
-	runId      string
-	jobStatus  kw.Status
-	exitCode   uint8
-	exitReason string
-	exitOk     bool
+	runId     string
+	jobStatus k8s.JobStatus
 }
 
 var _ kw.Worker = (*FakeWorker)(nil)
@@ -29,12 +27,8 @@ func (w *FakeWorker) RunId() string {
 	return w.runId
 }
 
-func (w *FakeWorker) JobStatus() kw.Status {
+func (w *FakeWorker) JobStatus(context.Context) k8s.JobStatus {
 	return w.jobStatus
-}
-
-func (w *FakeWorker) ExitCode() (uint8, string, bool) {
-	return w.exitCode, w.exitReason, w.exitOk
 }
 
 func (w *FakeWorker) Log(_ context.Context) (io.ReadCloser, error) {
@@ -379,11 +373,8 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 	type When struct {
 		runStatus     kdb.KnitRunStatus
-		jobStatus     kw.Status
+		jobStatus     k8s.JobStatus
 		errBeforeHook error
-		exitCode      uint8
-		exitReason    string
-		exitOk        bool
 		errSetExit    error
 	}
 
@@ -415,11 +406,8 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 			getWorker := func(context.Context, kdb.Run) (kw.Worker, error) {
 				return &FakeWorker{
-					runId:      run.Id,
-					jobStatus:  when.jobStatus,
-					exitCode:   when.exitCode,
-					exitReason: when.exitReason,
-					exitOk:     when.exitOk,
+					runId:     run.Id,
+					jobStatus: when.jobStatus,
 				}, nil
 			}
 
@@ -430,8 +418,8 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 					t.Errorf("got runId %v, want %v", runId, run.Id)
 				}
 				want := kdb.RunExit{
-					Code:    when.exitCode,
-					Message: when.exitReason,
+					Code:    when.jobStatus.Code,
+					Message: when.jobStatus.Message,
 				}
 				if exit != want {
 					t.Errorf("got exit %v, want %v", exit, want)
@@ -479,7 +467,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 	t.Run("When worker for Starting Run is Pending, it stays Starting", theory(
 		When{
 			runStatus: kdb.Starting,
-			jobStatus: kw.Pending,
+			jobStatus: k8s.JobStatus{Type: k8s.Pending, Message: "Pending"},
 		},
 		Then{
 			wantBeforeHookInvoked: false,
@@ -491,7 +479,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 	t.Run("When worker for a Running Run is also Running, it stays Running", theory(
 		When{
 			runStatus: kdb.Running,
-			jobStatus: kw.Running,
+			jobStatus: k8s.JobStatus{Type: k8s.Running},
 		},
 		Then{
 			wantBeforeHookInvoked: false,
@@ -503,7 +491,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 	t.Run("When worker for Starting Run is Running, it translate run status to Running", theory(
 		When{
 			runStatus: kdb.Starting,
-			jobStatus: kw.Running,
+			jobStatus: k8s.JobStatus{Type: k8s.Running},
 		},
 		Then{
 			wantBeforeHookInvoked: true,
@@ -517,7 +505,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 			When{
 				errBeforeHook: wantErr,
 				runStatus:     kdb.Starting,
-				jobStatus:     kw.Running,
+				jobStatus:     k8s.JobStatus{Type: k8s.Running},
 			},
 			Then{
 				wantBeforeHookInvoked: true,
@@ -534,10 +522,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 			When{
 				errBeforeHook: wantErr,
 				runStatus:     kdb.Running,
-				jobStatus:     kw.Done,
-				exitCode:      0,
-				exitReason:    "Completed",
-				exitOk:        true,
+				jobStatus:     k8s.JobStatus{Type: k8s.Succeeded, Code: 0, Message: "Completed"},
 			},
 			Then{
 				wantBeforeHookInvoked: true,
@@ -554,10 +539,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 			When{
 				errBeforeHook: wantErr,
 				runStatus:     kdb.Running,
-				jobStatus:     kw.Failed,
-				exitCode:      1,
-				exitReason:    "Error",
-				exitOk:        true,
+				jobStatus:     k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "Error"},
 			},
 			Then{
 				wantBeforeHookInvoked: true,
@@ -570,11 +552,8 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 	t.Run("When worker is done, it translate run status to completing", theory(
 		When{
-			runStatus:  kdb.Running,
-			jobStatus:  kw.Done,
-			exitCode:   0,
-			exitReason: "Completed",
-			exitOk:     true,
+			runStatus: kdb.Running,
+			jobStatus: k8s.JobStatus{Type: k8s.Succeeded, Code: 0, Message: "Completed"},
 		},
 		Then{
 			wantBeforeHookInvoked: true,
@@ -588,10 +567,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		t.Run("When worker is done and setExit returnd an error, it should return the error", theory(
 			When{
 				runStatus:  kdb.Running,
-				jobStatus:  kw.Done,
-				exitCode:   0,
-				exitReason: "Completed",
-				exitOk:     true,
+				jobStatus:  k8s.JobStatus{Type: k8s.Succeeded, Code: 0, Message: "Completed"},
 				errSetExit: wantError,
 			},
 			Then{
@@ -606,11 +582,8 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 	t.Run("When worker is failed, it translate run status to aborting", theory(
 		When{
-			runStatus:  kdb.Running,
-			jobStatus:  kw.Failed,
-			exitCode:   1,
-			exitReason: "Error",
-			exitOk:     true,
+			runStatus: kdb.Running,
+			jobStatus: k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "Error"},
 		},
 		Then{
 			wantBeforeHookInvoked: true,
@@ -626,10 +599,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		t.Run("When worker is failed and setExit returns an error, it should return the error", theory(
 			When{
 				runStatus:  kdb.Running,
-				jobStatus:  kw.Failed,
-				exitCode:   1,
-				exitReason: "Error",
-				exitOk:     true,
+				jobStatus:  k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "Error"},
 				errSetExit: fakeErr,
 			},
 			Then{
@@ -641,5 +611,54 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 			},
 		))
 
+	}
+
+	{
+		wantErr := errors.New("unexpected error")
+		t.Run("When worker for Starting Run is Stucked and Before hook returns an error, it should return the error", theory(
+			When{
+				errBeforeHook: wantErr,
+				runStatus:     kdb.Starting,
+				jobStatus:     k8s.JobStatus{Type: k8s.Stucking, Code: 255, Message: "Stucking"},
+			},
+			Then{
+				wantBeforeHookInvoked: true,
+				wantSetExitInvoked:    false,
+				wantStatus:            kdb.Starting,
+				wantErr:               wantErr,
+			},
+		))
+	}
+
+	t.Run("When worker is stucking, it translate run status to aborting", theory(
+		When{
+			runStatus: kdb.Starting,
+			jobStatus: k8s.JobStatus{Type: k8s.Stucking, Code: 255, Message: "Stucking"},
+		},
+		Then{
+			wantBeforeHookInvoked: true,
+			wantSetExitInvoked:    true,
+
+			wantStatus: kdb.Aborting,
+			wantErr:    nil,
+		},
+	))
+
+	{
+		wantError := errors.New("unexpected error")
+		t.Run("When worker is stucking and setExit returnd an error, it should return the error", theory(
+			When{
+				runStatus:  kdb.Starting,
+				jobStatus:  k8s.JobStatus{Type: k8s.Stucking, Code: 255, Message: "Stucking"},
+				errSetExit: wantError,
+			},
+			Then{
+				wantBeforeHookInvoked: true,
+				wantSetExitInvoked:    true,
+
+				wantStatus: kdb.Starting,
+				wantErr:    wantError,
+			},
+		))
 	}
 }

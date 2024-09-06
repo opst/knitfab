@@ -20,6 +20,7 @@ import (
 	kio "github.com/opst/knitfab/pkg/io"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"
+	"github.com/opst/knitfab/pkg/workloads/k8s"
 	"github.com/opst/knitfab/pkg/workloads/worker"
 )
 
@@ -345,7 +346,7 @@ func (m *MockedDataagt) String() string {
 type mockWorker struct {
 	Impl struct {
 		RunId     func() string
-		JobStatus func() worker.Status
+		JobStatus func() k8s.JobStatus
 		ExitCode  func() (uint8, string, bool)
 		Log       func(context.Context) (io.ReadCloser, error)
 		Close     func() error
@@ -373,18 +374,10 @@ func (m *mockWorker) RunId() string {
 	panic(errors.New("it should not be called"))
 }
 
-func (m *mockWorker) JobStatus() worker.Status {
+func (m *mockWorker) JobStatus(ctx context.Context) k8s.JobStatus {
 	m.Calls.JobStatus.Args = append(m.Calls.JobStatus.Args, nil)
 	if m.Impl.JobStatus != nil {
 		return m.Impl.JobStatus()
-	}
-	panic(errors.New("it should not be called"))
-}
-
-func (m *mockWorker) ExitCode() (uint8, string, bool) {
-	m.Calls.ExitCode.Args = append(m.Calls.ExitCode.Args, nil)
-	if m.Impl.ExitCode != nil {
-		return m.Impl.ExitCode()
 	}
 	panic(errors.New("it should not be called"))
 }

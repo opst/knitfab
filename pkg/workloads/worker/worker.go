@@ -13,32 +13,12 @@ import (
 	kubebatch "k8s.io/api/batch/v1"
 )
 
-type Status string
-
-const (
-	Pending Status = "pending"
-	Running Status = "running"
-	Done    Status = "done"
-	Failed  Status = "failed"
-)
-
 type Worker interface {
 	// RunId returns the run ID of the worker
 	RunId() string
 
 	// JobStatus returns the status of the job
-	JobStatus() Status
-
-	// ExitCode returns the exit code of the main container of job
-	//
-	// # Returns
-	//
-	// - exitCode : the exit code of the main container.
-	//
-	// - reason: the reason of the exit.
-	//
-	// - ok : true if the worker has been stopped, false otherwise.
-	ExitCode() (uint8, string, bool)
+	JobStatus(ctx context.Context) k8s.JobStatus
 
 	// Log returns the log of the worker's main container.
 	//
@@ -62,21 +42,8 @@ func (w *worker) RunId() string {
 	return w.runId
 }
 
-func (w *worker) JobStatus() Status {
-	switch w.job.Status() {
-	case k8s.Succeeded:
-		return Done
-	case k8s.Failed:
-		return Failed
-	case k8s.Pending:
-		return Pending
-	default:
-		return Running
-	}
-}
-
-func (w *worker) ExitCode() (uint8, string, bool) {
-	return w.job.ExitCode("main")
+func (w *worker) JobStatus(ctx context.Context) k8s.JobStatus {
+	return w.job.Status(ctx)
 }
 
 func (w *worker) Log(ctx context.Context) (io.ReadCloser, error) {

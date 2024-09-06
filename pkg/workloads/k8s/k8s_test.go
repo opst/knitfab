@@ -12,6 +12,7 @@ import (
 	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/retry"
+	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 	wl "github.com/opst/knitfab/pkg/workloads"
 	k8s "github.com/opst/knitfab/pkg/workloads/k8s"
@@ -19,6 +20,7 @@ import (
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"
+	kubeevent "k8s.io/api/events/v1"
 	kubeapierr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapiresource "k8s.io/apimachinery/pkg/api/resource"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1306,93 +1308,33 @@ func TestK8SCluster_Pod(t *testing.T) {
 	}))
 }
 
-func TestK8sCluster_Job(t *testing.T) {
-	newDeleteOptions := func(opts ...func(*kubeapimeta.DeleteOptions) *kubeapimeta.DeleteOptions) *kubeapimeta.DeleteOptions {
-		d := kubeapimeta.NewDeleteOptions(0)
-		for _, o := range opts {
-			d = o(d)
-		}
-		return d
+func TestK8sCluster_NewJob_and_GetJob_in_k8s(t *testing.T) {
+
+	type When struct {
+		Containers []kubecore.Container
+		Volumes    []kubecore.Volume
 	}
 
-	cascadeForeground := func(do *kubeapimeta.DeleteOptions) *kubeapimeta.DeleteOptions {
-		pp := kubeapimeta.DeletePropagationForeground
-		do.PropagationPolicy = &pp
-		return do
+	type Then struct {
+		Name                     string
+		Namespace                string
+		JobStatus                k8s.JobStatus
+		IgnoreMessageOnJobStatus bool
+
+		Log          string
+		LogContainer string
 	}
 
-	for name, testcase := range map[string]struct {
-		Cmd       []string
-		JobStatus k8s.JobStatus
-		WantLog   string
-	}{
-		"when the passed job spec is one to be succeeded is passed, it creates a k8s job which is completed as succeeded": {
-			Cmd:       []string{"sh", "-c", "exit 0"},
-			JobStatus: k8s.Succeeded,
-			WantLog:   ``,
-		},
-		"when the passed job spec is one to be succeeded is passed, it creates a k8s job which is completed as succeeded with log (stdout)": {
-			Cmd:       []string{"sh", "-c", "echo line 1; echo line 2; echo line 3; exit 0"},
-			JobStatus: k8s.Succeeded,
-			WantLog: `line 1
-line 2
-line 3
-`,
-		},
-		"when the passed job spec is one to be succeeded is passed, it creates a k8s job which is completed as succeeded with log (stderr)": {
-			Cmd:       []string{"sh", "-c", "echo line 1 >&2; echo line 2 >&2; echo line 3 >&2; exit 0"},
-			JobStatus: k8s.Succeeded,
-			WantLog: `line 1
-line 2
-line 3
-`,
-		},
-		"when the passed job spec is one to be failed is passed, it creates a k8s job which is completed as Failed": {
-			Cmd:       []string{"sh", "-c", "exit 1"},
-			JobStatus: k8s.Failed,
-			WantLog:   ``,
-		},
-		"when the passed job spec is one to be failed is passed, it creates a k8s job which is completed as Failed with log (stdout)": {
-			Cmd:       []string{"sh", "-c", "echo line A; echo line B; echo line C; exit 1"},
-			JobStatus: k8s.Failed,
-			WantLog: `line A
-line B
-line C
-`,
-		},
-		"when the passed job spec is one to be failed is passed, it creates a k8s job which is completed as Failed with log (stderr)": {
-			Cmd:       []string{"sh", "-c", "echo line A >&2; echo line B >&2; echo line C >&2; exit 1"},
-			JobStatus: k8s.Failed,
-			WantLog: `line A
-line B
-line C
-`,
-		},
-		"when the passed job spec is taking long time to be done, it creates a k8s job and the job is running": {
-			Cmd:       []string{"sh", "-c", "while : ; do sleep 10; done"},
-			JobStatus: k8s.Running,
-		},
-	} {
-		t.Run("[in k8s] "+name, func(t *testing.T) {
-			jobSpec := &kubebatch.Job{
-				ObjectMeta: kubeapimeta.ObjectMeta{
-					Name: "test-job",
-				},
-				Spec: kubebatch.JobSpec{
-					BackoffLimit: ref[int32](0),
-					Template: kubecore.PodTemplateSpec{
-						Spec: kubecore.PodSpec{
-							RestartPolicy:                 kubecore.RestartPolicyNever,
-							TerminationGracePeriodSeconds: ref[int64](1), // to quick shutdown
-							Containers: []kubecore.Container{
-								{
-									Name: "main", Image: "busybox:1.35",
-									Command: testcase.Cmd,
-								},
-							},
-						},
-					},
-				},
+	theory := func(when When, then Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			if dl, ok := t.Deadline(); ok {
+				_ctx, cancel := context.WithDeadline(
+					ctx,
+					dl.Add(-10*time.Second), // margin to cleanup
+				)
+				defer cancel()
+				ctx = _ctx
 			}
 
 			namespace := tenv.Namespace()
@@ -1402,17 +1344,34 @@ line C
 
 			domain := tenv.Domain()
 
-			ctx := context.Background()
 			clientset := tenv.NewClient()
 			testee := k8s.AttachCluster(k8s.WrapK8sClient(clientset), namespace, domain)
 
+			jobSpec := &kubebatch.Job{
+				ObjectMeta: kubeapimeta.ObjectMeta{
+					Name: "test-job",
+				},
+				Spec: kubebatch.JobSpec{
+					BackoffLimit: ref[int32](0),
+					Template: kubecore.PodTemplateSpec{
+						Spec: kubecore.PodSpec{
+							TerminationGracePeriodSeconds: ref[int64](1), // to quick shutdown.
+							RestartPolicy:                 kubecore.RestartPolicyNever,
+							Containers:                    when.Containers,
+							Volumes:                       when.Volumes,
+						},
+					},
+				},
+			}
+
 			defer func() {
+				delopt := kubeapimeta.NewDeleteOptions(0)
+				delopt.PropagationPolicy = ref(kubeapimeta.DeletePropagationForeground)
+				ctx := context.Background()
+
 				clientset.BatchV1().
 					Jobs(namespace).
-					Delete(
-						ctx, jobSpec.ObjectMeta.Name,
-						*newDeleteOptions(cascadeForeground),
-					)
+					Delete(ctx, jobSpec.ObjectMeta.Name, *delopt)
 				for {
 					_, err := clientset.BatchV1().
 						Jobs(namespace).
@@ -1424,681 +1383,417 @@ line C
 				}
 			}()
 
-			{
-				result := <-testee.GetJob(
-					ctx, retry.StaticBackoff(200*time.Millisecond), jobSpec.ObjectMeta.Name,
-				)
-				if !wl.AsMissingError(result.Err) {
-					t.Errorf("GetJob does not causes expected error (ErrMissing): %v", result.Err)
-				}
-			}
-
-			result := <-testee.NewJob(
+			got := <-testee.NewJob(
 				ctx, retry.StaticBackoff(200*time.Millisecond), jobSpec,
 			)
+			if got.Err != nil {
+				t.Fatal(got.Err)
+			}
 
-			if result.Err != nil {
-				t.Fatalf("Job is not found, unexpectedly. err: %v", result.Err)
+			{
+				// test job existence
+				_, err := clientset.BatchV1().
+					Jobs(namespace).
+					Get(ctx, jobSpec.ObjectMeta.Name, kubeapimeta.GetOptions{})
+				if err != nil {
+					t.Fatal("job is not created: ", err)
+				}
 			}
 
 			// tests for returned value
-			actual := result.Value
-			if actual == nil {
-				t.Fatalf("Job is nil, unexpectedly")
+			if gotName := got.Value.Name(); gotName != then.Name {
+				t.Errorf("name: not match: (actual, expected) = (%s, %s)", gotName, then.Name)
 			}
 
-			if actual.Name() != jobSpec.ObjectMeta.Name {
-				t.Errorf("name: not match: (actual, expected) = (%s, %s)", actual.Name(), jobSpec.ObjectMeta.Name)
+			if gotNamespace := got.Value.Namespace(); gotNamespace != then.Namespace {
+				t.Errorf("namespace: not match: (actual, expected) = (%s, %s)", gotNamespace, then.Namespace)
 			}
 
-			if actual.Namespace() != namespace {
-				t.Errorf("namespace: not match: (actual, expected) = (%s, %s)", actual.Namespace(), namespace)
-			}
-
-			{
-				result := <-testee.NewJob(
-					ctx, retry.StaticBackoff(200*time.Millisecond), jobSpec,
-				)
-				if !wl.AsConflict(result.Err) {
-					t.Errorf("NewJob does not causes conflict error: %v", result.Err)
-				}
-			}
-
-			_ctx := ctx
-			if deadline, ok := t.Deadline(); ok {
-				var cancel func()
-				_ctx, cancel = context.WithDeadline(ctx, deadline.Add(-time.Second))
-				defer cancel()
-			}
-			// Waiting the job status is updated...
-			var job k8s.Job
 			for {
-				result := <-testee.GetJob(
-					_ctx, retry.StaticBackoff(200*time.Millisecond), jobSpec.ObjectMeta.Name,
+				time.Sleep(50 * time.Millisecond)
+				select {
+				case <-ctx.Done():
+					t.Fatalf("timeout")
+				default:
+				}
+
+				got := <-testee.GetJob(
+					ctx, retry.StaticBackoff(200*time.Millisecond), jobSpec.ObjectMeta.Name,
 				)
 
-				if result.Err != nil {
-					t.Fatal("unexpected error: ", result.Err)
+				if got.Err != nil {
+					t.Fatalf("unexpected error: %v", got.Err)
 				}
-				job = result.Value
 
-				if job.Name() != jobSpec.ObjectMeta.Name {
-					t.Errorf("name: not match: (actual, expected) = (%s, %s)", actual.Name(), jobSpec.ObjectMeta.Name)
+				if gotName := got.Value.Name(); gotName != then.Name {
+					t.Errorf("name: not match: (actual, expected) = (%s, %s)", gotName, then.Name)
 				}
-				if job.Namespace() != namespace {
-					t.Errorf("namespace: not match: (actual, expected) = (%s, %s)", actual.Namespace(), namespace)
+
+				if gotNamespace := got.Value.Namespace(); gotNamespace != then.Namespace {
+					t.Errorf("namespace: not match: (actual, expected) = (%s, %s)", gotNamespace, then.Namespace)
 				}
-				if job.Status() == testcase.JobStatus {
-					break
-				} // otherwise, it gets into infinity loop and shall fail with time-out.
+
+				// wait condition met. If never, test will be timed	out.
+				if gotStatus := got.Value.Status(ctx); gotStatus.Type != then.JobStatus.Type {
+					continue
+				} else {
+					if gotStatus.Code != then.JobStatus.Code {
+						t.Errorf("job status code: not match: (actual, expected) = (%d, %d)", gotStatus.Code, then.JobStatus.Code)
+					}
+					if !then.IgnoreMessageOnJobStatus && gotStatus.Message != then.JobStatus.Message {
+						t.Errorf("job status message: not match: (actual, expected) = (%s, %s)", gotStatus.Message, then.JobStatus.Message)
+					}
+				}
+
+				if lc := then.LogContainer; lc != "" {
+					func() {
+						rc := try.To(got.Value.Log(ctx, lc)).OrFatal(t)
+						defer rc.Close()
+						gotLog := try.To(io.ReadAll(rc)).OrFatal(t)
+						if string(gotLog) != then.Log {
+							t.Errorf("log: not match: (actual, expected) = (%s, %s)", gotLog, then.Log)
+						}
+					}()
+				}
+				break
 			}
-
-			if job.Status() == k8s.Failed || job.Status() == k8s.Succeeded {
-				logs := try.To(job.Log(ctx, "main")).OrFatal(t)
-				defer logs.Close()
-
-				logContent := new(strings.Builder)
-				if _, err := io.Copy(logContent, logs); err != nil {
-					t.Fatal(err)
-				}
-
-				if logContent.String() != testcase.WantLog {
-					t.Errorf(
-						"logs: not match:\n===actual===\n%s\n===expected===\n%s",
-						logContent.String(), testcase.WantLog,
-					)
-				}
-			}
-		})
+		}
 	}
 
-	t.Run("[in k8s] when a job comes from NewJob is closed, the job should be removed from k8s", func(t *testing.T) {
-
-		jobSpec := &kubebatch.Job{
-			ObjectMeta: kubeapimeta.ObjectMeta{
-				Name: "test-job",
-			},
-			Spec: kubebatch.JobSpec{
-				BackoffLimit: ref[int32](0),
-				Template: kubecore.PodTemplateSpec{
-					Spec: kubecore.PodSpec{
-						RestartPolicy:                 kubecore.RestartPolicyNever,
-						TerminationGracePeriodSeconds: ref[int64](1), // to quick shutdown.
-						Containers: []kubecore.Container{
-							{
-								Name: "main", Image: "busybox:1.35",
-								Command: []string{"sh", "-c", "while : ; do sleep 100; done"},
-							},
-						},
-					},
+	wantNamespace := tenv.Namespace()
+	t.Run("successing job with single line log", theory(
+		When{
+			Containers: []kubecore.Container{
+				{
+					Name:    "main",
+					Image:   "busybox:1.35",
+					Command: []string{"sh", "-c", "echo 'hello world'"},
 				},
 			},
-		}
+		},
+		Then{
+			Name:      "test-job",
+			Namespace: wantNamespace,
+			JobStatus: k8s.JobStatus{Type: k8s.Succeeded},
 
-		namespace := tenv.Namespace()
-		if namespace == "" {
-			t.Fatal("no namespace is given.")
-		}
+			LogContainer: "main",
+			Log:          "hello world\n",
+		},
+	))
 
-		domain := tenv.Domain()
-
-		ctx := context.Background()
-		clientset := tenv.NewClient()
-		testee := k8s.AttachCluster(k8s.WrapK8sClient(clientset), namespace, domain)
-
-		defer func() {
-			clientset.BatchV1().
-				Jobs(namespace).
-				Delete(
-					ctx, jobSpec.ObjectMeta.Name,
-					*newDeleteOptions(cascadeForeground),
-				)
-			for {
-				_, err := clientset.BatchV1().
-					Jobs(namespace).
-					Get(ctx, jobSpec.ObjectMeta.Name, kubeapimeta.GetOptions{})
-				if kubeapierr.IsNotFound(err) {
-					break
-				}
-				time.Sleep(50 * time.Millisecond)
-			}
-		}()
-
-		result := <-testee.NewJob(
-			ctx, retry.StaticBackoff(200*time.Millisecond), jobSpec,
-		)
-
-		if result.Err != nil {
-			t.Fatalf("Job is not found, unexpectedly. err: %v", result.Err)
-		}
-
-		// tests for returned value
-		actual := result.Value
-
-		if _, err := clientset.BatchV1().
-			Jobs(namespace).
-			Get(ctx, jobSpec.ObjectMeta.Name, kubeapimeta.GetOptions{}); err != nil {
-			t.Fatal("job is not created: ", err)
-		}
-
-		if err := actual.Close(); err != nil {
-			t.Fatal("unexpected error: ", err)
-		}
-
-		_ctx := ctx
-		if deadline, ok := t.Deadline(); ok {
-			var cancel func()
-			_ctx, cancel = context.WithDeadline(ctx, deadline.Add(-time.Second))
-			defer cancel()
-		}
-
-		for {
-			_, err := clientset.BatchV1().
-				Jobs(namespace).
-				Get(_ctx, jobSpec.ObjectMeta.Name, kubeapimeta.GetOptions{})
-			if kubeapierr.IsNotFound(err) {
-				break // ok
-			}
-			// otherwise, fail with timeout
-			time.Sleep(50 * time.Millisecond)
-		}
-	})
-
-	t.Run("[in k8s] when a job comes from GetJob is closed, the job should be removed from k8s", func(t *testing.T) {
-
-		jobSpec := &kubebatch.Job{
-			ObjectMeta: kubeapimeta.ObjectMeta{
-				Name: "test-job",
-			},
-			Spec: kubebatch.JobSpec{
-				BackoffLimit: ref[int32](0),
-				Template: kubecore.PodTemplateSpec{
-					Spec: kubecore.PodSpec{
-						TerminationGracePeriodSeconds: ref[int64](1), // to quick shutdown.
-						RestartPolicy:                 kubecore.RestartPolicyNever,
-						Containers: []kubecore.Container{
-							{
-								Name: "main", Image: "busybox:1.35",
-								Command: []string{"sh", "-c", "while : ; do sleep 100; done"},
-							},
-						},
-					},
+	t.Run("successing job with multiple line log", theory(
+		When{
+			Containers: []kubecore.Container{
+				{
+					Name:    "main",
+					Image:   "busybox:1.35",
+					Command: []string{"sh", "-c", "echo 'hello world'; sleep 1; echo 'goodbye world'"},
 				},
 			},
-		}
+		},
+		Then{
+			Name:      "test-job",
+			Namespace: wantNamespace,
+			JobStatus: k8s.JobStatus{Type: k8s.Succeeded},
 
-		namespace := tenv.Namespace()
-		if namespace == "" {
-			t.Fatal("no namespace is given.")
-		}
+			LogContainer: "main",
+			Log: `hello world
+goodbye world
+`,
+		},
+	))
 
-		domain := tenv.Domain()
+	t.Run("failing job with single line log", theory(
+		When{
+			Containers: []kubecore.Container{
+				{
+					Name:    "main",
+					Image:   "busybox:1.35",
+					Command: []string{"sh", "-c", "echo 'hello world' && exit 1"},
+				},
+			},
+		},
+		Then{
+			Name:      "test-job",
+			Namespace: wantNamespace,
+			JobStatus: k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "(container main) Error"},
 
-		ctx := context.Background()
-		clientset := tenv.NewClient()
-		testee := k8s.AttachCluster(k8s.WrapK8sClient(clientset), namespace, domain)
+			LogContainer: "main",
+			Log: `hello world
+`,
+		},
+	))
 
-		defer func() {
-			clientset.BatchV1().
-				Jobs(namespace).
-				Delete(
-					ctx, jobSpec.ObjectMeta.Name,
-					*newDeleteOptions(cascadeForeground),
-				)
-			for {
-				_, err := clientset.BatchV1().
-					Jobs(namespace).
-					Get(ctx, jobSpec.ObjectMeta.Name, kubeapimeta.GetOptions{})
-				if kubeapierr.IsNotFound(err) {
-					break
-				}
-				time.Sleep(50 * time.Millisecond)
-			}
-		}()
+	t.Run("successing job with multiple container", theory(
+		When{
+			Containers: []kubecore.Container{
+				{
+					Name:    "main",
+					Image:   "busybox:1.35",
+					Command: []string{"sh", "-c", "echo 'hello world'"},
+				},
+				{
+					Name:    "sub",
+					Image:   "busybox:1.35",
+					Command: []string{"sh", "-c", "echo 'goodbye world'"},
+				},
+			},
+		},
+		Then{
+			Name:      "test-job",
+			Namespace: wantNamespace,
+			JobStatus: k8s.JobStatus{Type: k8s.Succeeded},
 
-		if r := <-testee.NewJob(
-			ctx, retry.StaticBackoff(200*time.Millisecond), jobSpec,
-		); r.Err != nil {
-			t.Fatalf("Job is not found, unexpectedly. err: %v", r.Err)
-		}
+			LogContainer: "main",
+			Log: `hello world
+`,
+		},
+	))
 
-		if _, err := clientset.BatchV1().
-			Jobs(namespace).
-			Get(ctx, jobSpec.ObjectMeta.Name, kubeapimeta.GetOptions{}); err != nil {
-			t.Fatal("job is not created: ", err)
-		}
+	t.Run("failing job with multiple container", theory(
+		When{
+			Containers: []kubecore.Container{
+				{
+					Name:    "main",
+					Image:   "busybox:1.35",
+					Command: []string{"sh", "-c", "echo 'hello world'"},
+				},
+				{
+					Name:    "sub",
+					Image:   "busybox:1.35",
+					Command: []string{"sh", "-c", "echo 'goodbye world' && exit 1"},
+				},
+			},
+		},
+		Then{
+			Name:      "test-job",
+			Namespace: wantNamespace,
+			JobStatus: k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "(container sub) Error"},
 
-		// tests for returned value
-		result := <-testee.GetJob(
-			ctx, retry.StaticBackoff(200*time.Millisecond), jobSpec.ObjectMeta.Name,
-		)
+			LogContainer: "sub",
+			Log: `goodbye world
+`,
+		},
+	))
+}
 
-		if result.Err != nil {
-			t.Fatal("unexpected error: ", result.Err)
-		}
+func TestK8sCluster_GetJob_with_mock(t *testing.T) {
+	type When struct {
+		Job       *kubebatch.Job
+		GetJobErr error
 
-		actual := result.Value
-		if err := actual.Close(); err != nil {
-			t.Fatal("unexpected error: ", err)
-		}
+		Pods        []kubecore.Pod
+		FindPodsErr error
 
-		for {
-			_, err := clientset.BatchV1().
-				Jobs(namespace).
-				Get(ctx, jobSpec.ObjectMeta.Name, kubeapimeta.GetOptions{})
-			if kubeapierr.IsNotFound(err) {
-				break // ok
-			}
-			// otherwise, fail with timeout
+		Log      string
+		LogError error
 
-			time.Sleep(50 * time.Millisecond)
-		}
-	})
+		DeleteJobErr error
 
-	// mocked test: testing behaviour of return value
-	type when struct {
-		job  *kubebatch.JobStatus
-		pods []kubecore.Pod
+		GetEvents    []kubeevent.Event
+		GetEventsErr error
 	}
-	type then struct {
+
+	type Then struct {
 		Name      string
 		Namespace string
 		Status    k8s.JobStatus
-	}
-	for name, testcase := range map[string]struct {
-		when
-		then
-	}{
-		`when the new job does NOT have Status="True" in Conditions and there are no pods for the job, it reports the job is Pending`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{{Status: kubecore.ConditionFalse}},
-				},
-				pods: []kubecore.Pod{},
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Pending,
-			},
-		},
-		`when the new job does NOT have Status="True" in Conditions and the pod of the job is Running, it reports the job is Running`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{}, // empty slice has no conditions with status="True"
-				},
-				pods: []kubecore.Pod{
-					{Status: kubecore.PodStatus{Phase: kubecore.PodRunning}},
-				},
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Running,
-			},
-		},
-		`when the new job does NOT have Status="True" in Conditions and the pod of the job is Pending, it reports the job is Pending`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{{Status: kubecore.ConditionFalse}},
-				},
-				pods: []kubecore.Pod{
-					{Status: kubecore.PodStatus{Phase: kubecore.PodPending}},
-				},
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Pending,
-			},
-		},
-		`when the new job does NOT have Status="True" in Conditions and pods of the job is Pending AND Running, it reports the job is Running`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{{Status: kubecore.ConditionFalse}},
-				},
-				pods: []kubecore.Pod{
-					{Status: kubecore.PodStatus{Phase: kubecore.PodPending}},
-					{Status: kubecore.PodStatus{Phase: kubecore.PodRunning}},
-				},
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Running,
-			},
-		},
-		`when the new job does NOT have Status="True" in Conditions and there are pod is Succeeded, it reports the job is Running`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{{Status: kubecore.ConditionFalse}},
-				},
-				pods: []kubecore.Pod{
-					{Status: kubecore.PodStatus{Phase: kubecore.PodSucceeded}},
-				},
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Running,
-			},
-		},
-		`when the new job does NOT have Status="True" in Conditions and there are pod is Failed, it reports the job is Running`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{{Status: kubecore.ConditionFalse}},
-				},
-				pods: []kubecore.Pod{
-					{Status: kubecore.PodStatus{Phase: kubecore.PodFailed}},
-				},
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Running,
-			},
-		},
-		`when the new job does NOT have Status="True" in Conditions and there are pod is Succeeded and Pending, it reports the job is Running`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{{Status: kubecore.ConditionFalse}},
-				},
-				pods: []kubecore.Pod{
-					{Status: kubecore.PodStatus{Phase: kubecore.PodSucceeded}},
-					{Status: kubecore.PodStatus{Phase: kubecore.PodPending}},
-				},
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Running,
-			},
-		},
-		`when the new job does NOT have Status="True" in Conditions and there are pod is Failed and Pending, it reports the job is Running`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{{Status: kubecore.ConditionFalse}},
-				},
-				pods: []kubecore.Pod{
-					{Status: kubecore.PodStatus{Phase: kubecore.PodFailed}},
-					{Status: kubecore.PodStatus{Phase: kubecore.PodPending}},
-				},
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Running,
-			},
-		},
-		`when the new job has Status="True" & Type="Complete" in Conditions, it reports the job is Succeeded`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{
-						{Status: kubecore.ConditionTrue, Type: kubebatch.JobComplete},
-					},
-				},
-				pods: []kubecore.Pod{}, // do not care
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Succeeded,
-			},
-		},
-		`when the new job has Status="True" & Type="Failed" in Conditions, it reports the job is Failed`: {
-			when{
-				job: &kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{
-						{Status: kubecore.ConditionTrue, Type: kubebatch.JobFailed},
-					},
-				},
-				pods: []kubecore.Pod{}, // do not care
-			},
-			then{
-				Name:      "fake-job",
-				Namespace: "fake-namespace",
-				Status:    k8s.Failed,
-			},
-		},
-	} {
-		t.Run("[mock / NewJob]"+name, func(t *testing.T) {
-			when, then := testcase.when, testcase.then
 
-			namespace := tenv.Namespace()
-			if namespace == "" {
-				t.Fatal("no namespace given.")
+		LogSourcePodName string
+	}
+
+	domain := tenv.Domain()
+	namespace := tenv.Namespace()
+	if namespace == "" {
+		t.Fatal("no namespace is given.")
+	}
+
+	theory := func(when When, then Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			jobName := "fake-job"
+
+			mockClient := k8smock.NewMockClient()
+			mockClient.Impl.GetJob = func(ctx context.Context, ns string, n string) (*kubebatch.Job, error) {
+				if ns != namespace {
+					t.Errorf("unexpected namespace: (got, want) = (%s, %s)", ns, namespace)
+				}
+				if n != jobName {
+					t.Errorf("unexpected job name: (got, want) = (%s, %s)", n, jobName)
+				}
+				return when.Job, when.GetJobErr
 			}
 
-			domain := tenv.Domain()
+			if when.GetJobErr == nil {
+				mockClient.Impl.FindPods = func(ctx context.Context, ns string, ls k8s.LabelSelector) ([]kubecore.Pod, error) {
+					if ns != namespace {
+						t.Errorf("unexpected namespace: (got, want) = (%s, %s)", ns, namespace)
+					}
 
-			ctx := context.Background()
-			clientset := k8smock.NewMockClient()
+					if want := k8s.LabelsToSelecor(when.Job.Spec.Selector.MatchLabels); !cmp.MapEqWith(ls, want, k8s.SelectorElement.Equal) {
+						t.Errorf("unexpected label selector: (got, want) = (%v, %v)", ls, want)
+					}
 
-			fakeJob := &kubebatch.Job{
+					return when.Pods, when.FindPodsErr
+				}
+				mockClient.Impl.Log = func(ctx context.Context, ns string, n string, c string) (io.ReadCloser, error) {
+					if ns != namespace {
+						t.Errorf("unexpected namespace: (got, want) = (%s, %s)", ns, namespace)
+					}
+					if n != then.LogSourcePodName {
+						t.Errorf("unexpected pod name: (got, want) = (%s, %s)", n, then.LogSourcePodName)
+					}
+					if c != "main" {
+						t.Errorf("unexpected container name: (got, want) = (%s, %s)", c, "main")
+					}
+					return io.NopCloser(strings.NewReader(when.Log)), when.LogError
+				}
+				mockClient.Impl.GetEvents = func(ctx context.Context, kind string, target kubeapimeta.ObjectMeta) ([]kubeevent.Event, error) {
+					if kind != "Pod" {
+						t.Errorf("unexpected kind: (got, want) = (%s, %s)", kind, "Pod")
+					}
+					if target.Namespace != namespace {
+						t.Errorf("unexpected namespace: (got, want) = (%s, %s)", target.Namespace, namespace)
+					}
+					return when.GetEvents, when.GetEventsErr
+				}
+
+				deleteJobHasBeenCalled := false
+				defer func() {
+					if !deleteJobHasBeenCalled {
+						t.Errorf("DeleteJob has not been called.")
+					}
+				}()
+				mockClient.Impl.DeleteJob = func(ctx context.Context, ns string, n string) error {
+					deleteJobHasBeenCalled = true
+					if ns != namespace {
+						t.Errorf("unexpected namespace: (got, want) = (%s, %s)", ns, namespace)
+					}
+					if n != jobName {
+						t.Errorf("unexpected job name: (got, want) = (%s, %s)", n, jobName)
+					}
+					return when.DeleteJobErr
+				}
+			}
+			testee := k8s.AttachCluster(mockClient, namespace, domain)
+
+			got := <-testee.GetJob(
+				ctx, retry.StaticBackoff(200*time.Millisecond), jobName,
+			)
+			if want := when.GetJobErr; want != nil {
+				if got.Err == nil {
+					t.Fatalf("error is expected, but got nil")
+				} else if !errors.Is(got.Err, want) {
+					t.Fatalf("unexpected error: %v", got.Err)
+				}
+				return
+			} else if got.Err != nil {
+				t.Fatalf("unexpected error: %v", got.Err)
+			}
+
+			if gotName := got.Value.Name(); gotName != then.Name {
+				t.Errorf("name: not match: (got, want) = (%s, %s)", gotName, then.Name)
+			}
+
+			if gotNamespace := got.Value.Namespace(); gotNamespace != then.Namespace {
+				t.Errorf("namespace: not match: (got, want) = (%s, %s)", gotNamespace, then.Namespace)
+			}
+
+			if gotStatus := got.Value.Status(ctx); gotStatus != then.Status {
+				t.Errorf("status: not match: (got, want) = (%+v, %+v)", gotStatus, then.Status)
+			}
+
+			gotLog, err := got.Value.Log(ctx, "main")
+			if when.LogError != nil {
+				if err == nil {
+					t.Fatalf("error is expected, but got nil")
+				} else if !errors.Is(err, when.LogError) {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			} else if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			} else {
+				gotLogBytes := try.To(io.ReadAll(gotLog)).OrFatal(t)
+				if string(gotLogBytes) != when.Log {
+					t.Errorf("log: not match: (got, want) = (%s, %s)", string(gotLogBytes), when.Log)
+				}
+			}
+
+			if gotErr := got.Value.Close(); gotErr != nil {
+				if when.DeleteJobErr == nil {
+					t.Fatalf("unexpected error: %v", gotErr)
+				} else if !errors.Is(gotErr, when.DeleteJobErr) {
+					t.Fatalf("unexpected error: %v", gotErr)
+				}
+			}
+		}
+	}
+
+	t.Run("successed job", theory(
+		When{
+			Job: &kubebatch.Job{
 				ObjectMeta: kubeapimeta.ObjectMeta{
-					Name: "test-job",
+					Name:      "fake-job",
+					Namespace: namespace,
 				},
 				Spec: kubebatch.JobSpec{
-					BackoffLimit: ref[int32](0),
-					Template: kubecore.PodTemplateSpec{
-						Spec: kubecore.PodSpec{
-							RestartPolicy: kubecore.RestartPolicyNever,
-							Containers: []kubecore.Container{
-								{
-									Name:  "main",
-									Image: "busybox:1.35",
-									Command: []string{
-										"sh", "-c", "echo 'hello world'",
-									},
+					Selector: &kubeapimeta.LabelSelector{
+						MatchLabels: map[string]string{
+							"controller":   "fake-job",
+							"custom-label": "condition",
+						},
+					},
+				},
+				Status: kubebatch.JobStatus{
+					Conditions: []kubebatch.JobCondition{
+						{
+							Status: "False", // should be ignored
+							Type:   kubebatch.JobFailed,
+						},
+						{
+							Status: "True",
+							Type:   kubebatch.JobComplete,
+						},
+					},
+				},
+			},
+			Pods: []kubecore.Pod{
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-1",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodSucceeded,
+						ContainerStatuses: []kubecore.ContainerStatus{
+							{
+								Name: "main",
+								State: kubecore.ContainerState{
+									Terminated: &kubecore.ContainerStateTerminated{ExitCode: 0},
 								},
 							},
 						},
 					},
 				},
-			}
+			},
+			Log: `hello world
+this is succeeded pod`,
+		},
+		Then{
+			Name:      "fake-job",
+			Namespace: namespace,
+			Status:    k8s.JobStatus{Type: k8s.Succeeded},
 
-			matchLabels := map[string]string{
-				"controller":   "fake-job",
-				"custom-label": "condition",
-			}
+			LogSourcePodName: "fake-job-pod-1",
+		},
+	))
 
-			clientset.Impl.CreateJob = func(ctx context.Context, ns string, j *kubebatch.Job) (*kubebatch.Job, error) {
-				if ns != namespace {
-					t.Errorf("unexpected namespace: (actual, expected) = (%s, %s)", ns, namespace)
-				}
-				if j != fakeJob {
-					t.Errorf("unexpected job: (actual, expected) = (%v, %v)", *j, *fakeJob)
-				}
-
-				job := &kubebatch.Job{
-					ObjectMeta: kubeapimeta.ObjectMeta{
-						Name:      "fake-job",
-						Namespace: "fake-namespace",
-					},
-					Spec: kubebatch.JobSpec{
-						BackoffLimit: fakeJob.Spec.BackoffLimit,
-						Selector: &kubeapimeta.LabelSelector{
-							MatchLabels: matchLabels,
-						},
-						Template: fakeJob.Spec.Template,
-					},
-					Status: *when.job,
-				}
-				return job, nil
-			}
-			clientset.Impl.FindPods = func(ctx context.Context, ns string, ls k8s.LabelSelector) ([]kubecore.Pod, error) {
-				if ns != namespace {
-					t.Errorf("unexpected namespace: (actual, expected) = (%s, %s)", ns, namespace)
-				}
-				if !cmp.MapEqWith(ls, k8s.LabelsToSelecor(matchLabels), k8s.SelectorElement.Equal) {
-					t.Errorf("unexpected label selector")
-				}
-
-				return when.pods, nil
-			}
-			testee := k8s.AttachCluster(clientset, namespace, domain)
-
-			result := <-testee.NewJob(
-				ctx, retry.StaticBackoff(200*time.Millisecond), fakeJob,
-			)
-
-			if result.Err != nil {
-				t.Fatalf("unexpected error is retured: %s", result.Err)
-			}
-
-			// tests for returned value
-			actual := result.Value
-			if actual == nil {
-				t.Fatalf("Job is nil, unexpectedly")
-			}
-
-			if actual.Name() != then.Name {
-				t.Errorf("name: not match: (actual, expected) = (%s, %s)", actual.Name(), then.Name)
-			}
-
-			if actual.Namespace() != then.Namespace {
-				t.Errorf("namespace: not match: (actual, expected) = (%s, %s)", actual.Namespace(), then.Namespace)
-			}
-
-			if actual.Status() != then.Status {
-				t.Errorf("job status: not match: (actual, expected) = (%s, %s)", actual.Status(), then.Status)
-			}
-		})
-
-		t.Run("[mock / GetJob]"+name, func(t *testing.T) {
-			when, then := testcase.when, testcase.then
-
-			namespace := tenv.Namespace()
-			if namespace == "" {
-				t.Fatal("no namespace given.")
-			}
-
-			domain := tenv.Domain()
-
-			ctx := context.Background()
-			clientset := k8smock.NewMockClient()
-
-			jobName := "fake-job"
-
-			matchLabels := map[string]string{
-				"controller":   "fake-job",
-				"custom-label": "condition",
-			}
-
-			clientset.Impl.GetJob = func(ctx context.Context, ns string, n string) (*kubebatch.Job, error) {
-				if ns != namespace {
-					t.Errorf("unexpected namespace: (actual, expected) = (%s, %s)", ns, namespace)
-				}
-				if n != jobName {
-					t.Errorf("unexpected job name: (actual, expected) = (%s, %s)", n, jobName)
-				}
-
-				job := &kubebatch.Job{
-					ObjectMeta: kubeapimeta.ObjectMeta{
-						Name:      "fake-job",
-						Namespace: "fake-namespace",
-					},
-					Spec: kubebatch.JobSpec{
-						Selector: &kubeapimeta.LabelSelector{
-							MatchLabels: matchLabels,
-						},
-					},
-					Status: *when.job,
-				}
-				return job, nil
-			}
-			clientset.Impl.FindPods = func(ctx context.Context, ns string, ls k8s.LabelSelector) ([]kubecore.Pod, error) {
-				if ns != namespace {
-					t.Errorf("unexpected namespace: (actual, expected) = (%s, %s)", ns, namespace)
-				}
-				if !cmp.MapEqWith(ls, k8s.LabelsToSelecor(matchLabels), k8s.SelectorElement.Equal) {
-					t.Errorf("unexpected label selector")
-				}
-
-				return when.pods, nil
-			}
-			testee := k8s.AttachCluster(clientset, namespace, domain)
-
-			result := <-testee.GetJob(
-				ctx, retry.StaticBackoff(200*time.Millisecond), "fake-job",
-			)
-
-			if result.Err != nil {
-				t.Fatalf("unexpected error is retured: %s", result.Err)
-			}
-
-			// tests for returned value
-			actual := result.Value
-			if actual == nil {
-				t.Fatalf("Job is nil, unexpectedly")
-			}
-
-			if actual.Name() != then.Name {
-				t.Errorf("name: not match: (actual, expected) = (%s, %s)", actual.Name(), then.Name)
-			}
-
-			if actual.Namespace() != then.Namespace {
-				t.Errorf("namespace: not match: (actual, expected) = (%s, %s)", actual.Namespace(), then.Namespace)
-			}
-
-			if actual.Status() != then.Status {
-				t.Errorf("job status: not match: (actual, expected) = (%s, %s)", actual.Status(), then.Status)
-			}
-		})
-	}
-
-	t.Run("[mock / NewJob] when it fails to create a new job, it returns error", func(t *testing.T) {
-		namespace := tenv.Namespace()
-		if namespace == "" {
-			t.Fatal("no namespace given.")
-		}
-
-		domain := tenv.Domain()
-
-		ctx := context.Background()
-		clientset := k8smock.NewMockClient()
-
-		errorForJob := errors.New("fake error")
-		clientset.Impl.CreateJob = func(ctx context.Context, ns string, j *kubebatch.Job) (*kubebatch.Job, error) {
-			if ns != namespace {
-				t.Errorf("unexpected namespace: (actual, expected) = (%s, %s)", ns, namespace)
-			}
-
-			return nil, errorForJob
-		}
-		clientset.Impl.FindPods = func(ctx context.Context, ns string, ls k8s.LabelSelector) ([]kubecore.Pod, error) {
-			t.Errorf("should not be called")
-
-			return nil, errors.New("should not be called")
-		}
-		testee := k8s.AttachCluster(clientset, namespace, domain)
-
-		result := <-testee.NewJob(
-			ctx, retry.StaticBackoff(200*time.Millisecond),
-			&kubebatch.Job{}, // anything ok. k8s client is mocked & hadnling JobSpec is tested in other testcase.
-		)
-
-		if err := result.Err; !errors.Is(err, errorForJob) {
-			t.Fatalf("unexpected error is retured: %s", result.Err)
-		}
-	})
-
-	t.Run("[mock / NewJob] when it fails to get pods of the new job without Conditions, it returns a job as pending", func(t *testing.T) {
-		namespace := tenv.Namespace()
-		if namespace == "" {
-			t.Fatal("no namespace given.")
-		}
-
-		domain := tenv.Domain()
-
-		ctx := context.Background()
-		clientset := k8smock.NewMockClient()
-
-		clientset.Impl.CreateJob = func(ctx context.Context, ns string, j *kubebatch.Job) (*kubebatch.Job, error) {
-			job := &kubebatch.Job{
+	t.Run("failed job", theory(
+		When{
+			Job: &kubebatch.Job{
 				ObjectMeta: kubeapimeta.ObjectMeta{
 					Name:      "fake-job",
-					Namespace: "fake-namespace",
+					Namespace: namespace,
 				},
 				Spec: kubebatch.JobSpec{
 					Selector: &kubeapimeta.LabelSelector{
@@ -2109,92 +1804,55 @@ line C
 					},
 				},
 				Status: kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{},
+					Conditions: []kubebatch.JobCondition{
+						{
+							Status: "True",
+							Type:   kubebatch.JobFailed,
+						},
+						{
+							Status: "False", // should be ignored
+							Type:   kubebatch.JobComplete,
+						},
+					},
 				},
-			}
-			return job, nil
-		}
+			},
+			Pods: []kubecore.Pod{
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-1",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodFailed,
+						ContainerStatuses: []kubecore.ContainerStatus{
+							{
+								Name: "main",
+								State: kubecore.ContainerState{
+									Terminated: &kubecore.ContainerStateTerminated{ExitCode: 1, Reason: "Crashed"},
+								},
+							},
+						},
+					},
+				},
+			},
+			Log: `hello world
+this is failed pod
+`,
+		},
+		Then{
+			Name:             "fake-job",
+			Namespace:        namespace,
+			Status:           k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "(container main) Crashed"},
+			LogSourcePodName: "fake-job-pod-1",
+		},
+	))
 
-		errorForPod := errors.New("fake error")
-		clientset.Impl.FindPods = func(ctx context.Context, ns string, ls k8s.LabelSelector) ([]kubecore.Pod, error) {
-			if ns != namespace {
-				t.Errorf("unexpected namespace: (actual, expected) = (%s, %s)", ns, namespace)
-			}
-
-			return nil, errorForPod
-		}
-		testee := k8s.AttachCluster(clientset, namespace, domain)
-
-		result := <-testee.NewJob(
-			ctx, retry.StaticBackoff(200*time.Millisecond),
-			&kubebatch.Job{}, // anything ok. k8s client is mocked & hadnling JobSpec is tested in other testcase.
-		)
-
-		if result.Err != nil {
-			t.Fatalf("unexpected error is retured: %s", result.Err)
-		}
-
-		// tests for returned value
-		actual := result.Value
-		if actual == nil {
-			t.Fatalf("Job is nil, unexpectedly")
-		}
-
-		if actual.Status() != k8s.Pending {
-			t.Errorf("job status: not match: (actual, expected) = (%s, %s)", actual.Status(), k8s.Pending)
-		}
-	})
-
-	t.Run("[mock / GetJob] when it fails to get a new job, it returns error", func(t *testing.T) {
-		namespace := tenv.Namespace()
-		if namespace == "" {
-			t.Fatal("no namespace given.")
-		}
-
-		domain := tenv.Domain()
-
-		ctx := context.Background()
-		clientset := k8smock.NewMockClient()
-
-		errorForJob := errors.New("fake error")
-		clientset.Impl.GetJob = func(ctx context.Context, ns string, n string) (*kubebatch.Job, error) {
-			if ns != namespace {
-				t.Errorf("unexpected namespace: (actual, expected) = (%s, %s)", ns, namespace)
-			}
-
-			return nil, errorForJob
-		}
-		clientset.Impl.FindPods = func(ctx context.Context, ns string, ls k8s.LabelSelector) ([]kubecore.Pod, error) {
-			t.Errorf("should not be called")
-
-			return nil, errors.New("should not be called")
-		}
-		testee := k8s.AttachCluster(clientset, namespace, domain)
-
-		result := <-testee.GetJob(
-			ctx, retry.StaticBackoff(200*time.Millisecond), "fake-job",
-		)
-
-		if err := result.Err; !errors.Is(err, errorForJob) {
-			t.Fatalf("unexpected error is retured: %s", result.Err)
-		}
-	})
-
-	t.Run("[mock / GetJob] when it fails to get pods of the new job without Conditions, it returns a job as pending", func(t *testing.T) {
-		namespace := tenv.Namespace()
-		if namespace == "" {
-			t.Fatal("no namespace given.")
-		}
-
-		domain := tenv.Domain()
-
-		ctx := context.Background()
-		clientset := k8smock.NewMockClient()
-
-		clientset.Impl.GetJob = func(ctx context.Context, ns string, n string) (*kubebatch.Job, error) {
-			job := &kubebatch.Job{
+	t.Run("Pending job: no pods", theory(
+		When{
+			Job: &kubebatch.Job{
 				ObjectMeta: kubeapimeta.ObjectMeta{
-					Name: n, Namespace: "fake-namespace",
+					Name:      "fake-job",
+					Namespace: namespace,
 				},
 				Spec: kubebatch.JobSpec{
 					Selector: &kubeapimeta.LabelSelector{
@@ -2205,40 +1863,326 @@ line C
 					},
 				},
 				Status: kubebatch.JobStatus{
-					Conditions: []kubebatch.JobCondition{},
+					Conditions: []kubebatch.JobCondition{
+						{
+							Status: "False", // should be ignored
+							Type:   kubebatch.JobFailed,
+						},
+						{
+							Status: "False", // should be ignored
+							Type:   kubebatch.JobComplete,
+						},
+					},
 				},
-			}
-			return job, nil
-		}
+			},
+			Pods:     []kubecore.Pod{}, // empty
+			LogError: k8s.ErrJobHasNoPods,
+		},
+		Then{
+			Name:      "fake-job",
+			Namespace: namespace,
+			Status:    k8s.JobStatus{Type: k8s.Pending},
+		},
+	))
 
-		errorForPod := errors.New("fake error")
-		clientset.Impl.FindPods = func(ctx context.Context, ns string, ls k8s.LabelSelector) ([]kubecore.Pod, error) {
-			if ns != namespace {
-				t.Errorf("unexpected namespace: (actual, expected) = (%s, %s)", ns, namespace)
-			}
+	t.Run("Pending job: no pods are found since error", theory(
+		When{
+			Job: &kubebatch.Job{
+				ObjectMeta: kubeapimeta.ObjectMeta{
+					Name:      "fake-job",
+					Namespace: namespace,
+				},
+				Spec: kubebatch.JobSpec{
+					Selector: &kubeapimeta.LabelSelector{
+						MatchLabels: map[string]string{
+							"controller":   "fake-job",
+							"custom-label": "condition",
+						},
+					},
+				},
+			},
+			FindPodsErr: errors.New("fake error"),
+			LogError:    k8s.ErrJobHasNoPods,
+		},
+		Then{
+			Name:      "fake-job",
+			Namespace: namespace,
+			Status:    k8s.JobStatus{Type: k8s.Pending},
+		},
+	))
 
-			return nil, errorForPod
-		}
-		testee := k8s.AttachCluster(clientset, namespace, domain)
+	t.Run("Pending job: there are pods which is not started", theory(
+		When{
+			Job: &kubebatch.Job{
+				ObjectMeta: kubeapimeta.ObjectMeta{
+					Name:      "fake-job",
+					Namespace: namespace,
+				},
+				Spec: kubebatch.JobSpec{
+					Selector: &kubeapimeta.LabelSelector{
+						MatchLabels: map[string]string{
+							"controller":   "fake-job",
+							"custom-label": "condition",
+						},
+					},
+				},
+				Status: kubebatch.JobStatus{
+					Conditions: []kubebatch.JobCondition{
+						{
+							Status: "False", // should be ignored
+							Type:   kubebatch.JobFailed,
+						},
+						{
+							Status: "False", // should be ignored
+							Type:   kubebatch.JobComplete,
+						},
+					},
+				},
+			},
+			Pods: []kubecore.Pod{
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-1",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodPending,
+					},
+				},
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-2",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodPending,
+					},
+				},
+			},
+			GetEvents: []kubeevent.Event{
+				{
+					EventTime: kubeapimeta.NewMicroTime(try.To(rfctime.ParseRFC3339DateTime(
+						"2024-09-15T12:13:14+09:00",
+					)).OrFatal(t).Time()),
+					ReportingController: "fake-scheduler",
+					Reason:              "FailedScheduling",
+					Note:                "0/1 nodes are available: 1 Insufficient memory",
+					Type:                "Warning",
+				},
+				{
+					EventTime: kubeapimeta.NewMicroTime(try.To(rfctime.ParseRFC3339DateTime(
+						"2024-09-15T12:13:15+09:00",
+					)).OrFatal(t).Time()),
+					ReportingController: "fake-scheduler",
+					Reason:              "ScheduleSuccess",
+					Note:                "Pod scheduled",
+					Type:                "Normal", // overtake the previous Warning event
+				},
+			},
+			Log: `hello world
+this is pending pod`,
+		},
+		Then{
+			Name:             "fake-job",
+			Namespace:        namespace,
+			Status:           k8s.JobStatus{Type: k8s.Pending},
+			LogSourcePodName: "fake-job-pod-1",
+		},
+	))
 
-		result := <-testee.GetJob(
-			ctx, retry.StaticBackoff(200*time.Millisecond), "fake-job",
-		)
+	t.Run("Pending job: All pods are not scheduled", theory(
+		When{
+			Job: &kubebatch.Job{
+				ObjectMeta: kubeapimeta.ObjectMeta{
+					Name:      "fake-job",
+					Namespace: namespace,
+				},
+				Spec: kubebatch.JobSpec{
+					Selector: &kubeapimeta.LabelSelector{
+						MatchLabels: map[string]string{
+							"controller":   "fake-job",
+							"custom-label": "condition",
+						},
+					},
+				},
+				Status: kubebatch.JobStatus{},
+			},
+			Pods: []kubecore.Pod{
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-1",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodPending,
+						Conditions: []kubecore.PodCondition{
+							{
+								Type:   kubecore.PodScheduled,
+								Status: "False",
+							},
+						},
+					},
+				},
+			},
+			GetEvents: []kubeevent.Event{
+				{
+					EventTime: kubeapimeta.NewMicroTime(try.To(rfctime.ParseRFC3339DateTime(
+						"2024-09-15T12:13:14+09:00",
+					)).OrFatal(t).Time()),
+					ReportingController: "fake-scheduler",
+					Reason:              "FailedScheduling",
+					Note:                "0/1 nodes are available: 1 Insufficient memory",
+					Type:                "Warning",
+				},
+			},
+		},
+		Then{
+			Name:             "fake-job",
+			Namespace:        namespace,
+			Status:           k8s.JobStatus{Type: k8s.Pending},
+			LogSourcePodName: "fake-job-pod-1",
+		},
+	))
 
-		if result.Err != nil {
-			t.Fatalf("unexpected error is retured: %s", result.Err)
-		}
+	t.Run("Stucking job: some Pod is not started AND Warning event is reported", theory(
+		When{
+			Job: &kubebatch.Job{
+				ObjectMeta: kubeapimeta.ObjectMeta{
+					Name:      "fake-job",
+					Namespace: namespace,
+				},
+				Spec: kubebatch.JobSpec{
+					Selector: &kubeapimeta.LabelSelector{
+						MatchLabels: map[string]string{
+							"controller":   "fake-job",
+							"custom-label": "condition",
+						},
+					},
+				},
+				Status: kubebatch.JobStatus{},
+			},
+			Pods: []kubecore.Pod{
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-1",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodPending,
+						Conditions: []kubecore.PodCondition{
+							{
+								Type:   kubecore.PodScheduled,
+								Status: "True",
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-2",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodRunning,
+						Conditions: []kubecore.PodCondition{
+							{
+								Type:   kubecore.PodScheduled,
+								Status: "True",
+							},
+						},
+					},
+				},
+			},
+			GetEvents: []kubeevent.Event{
+				{
+					EventTime: kubeapimeta.NewMicroTime(try.To(rfctime.ParseRFC3339DateTime(
+						"2024-09-15T12:13:14+09:00",
+					)).OrFatal(t).Time()),
+					ReportingController: "fake-scheduler",
+					Reason:              "VolumeMountFailure",
+					Note:                "Permission denied",
+					Type:                "Warning",
+				},
+			},
+		},
+		Then{
+			Name:      "fake-job",
+			Namespace: namespace,
+			Status: k8s.JobStatus{
+				Type: k8s.Stucking, Code: 255,
+				Message: "(pod fake-job-pod-1) [VolumeMountFailure] Permission denied",
+			},
+			LogSourcePodName: "fake-job-pod-1",
+		},
+	))
 
-		// tests for returned value
-		actual := result.Value
-		if actual == nil {
-			t.Fatalf("Job is nil, unexpectedly")
-		}
+	t.Run("Running job: some Pod is not started AND Warning event is not reported", theory(
+		When{
+			Job: &kubebatch.Job{
+				ObjectMeta: kubeapimeta.ObjectMeta{
+					Name:      "fake-job",
+					Namespace: namespace,
+				},
+				Spec: kubebatch.JobSpec{
+					Selector: &kubeapimeta.LabelSelector{
+						MatchLabels: map[string]string{
+							"controller":   "fake-job",
+							"custom-label": "condition",
+						},
+					},
+				},
+				Status: kubebatch.JobStatus{},
+			},
+			Pods: []kubecore.Pod{
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-1",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodPending,
+						Conditions: []kubecore.PodCondition{
+							{
+								Type:   kubecore.PodScheduled,
+								Status: "True",
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: kubeapimeta.ObjectMeta{
+						Name:      "fake-job-pod-2",
+						Namespace: namespace,
+					},
+					Status: kubecore.PodStatus{
+						Phase: kubecore.PodRunning,
+						Conditions: []kubecore.PodCondition{
+							{
+								Type:   kubecore.PodScheduled,
+								Status: "True",
+							},
+						},
+					},
+				},
+			},
+		},
+		Then{
+			Name:             "fake-job",
+			Namespace:        namespace,
+			Status:           k8s.JobStatus{Type: k8s.Running},
+			LogSourcePodName: "fake-job-pod-1",
+		},
+	))
 
-		if actual.Status() != k8s.Pending {
-			t.Errorf("job status: not match: (actual, expected) = (%s, %s)", actual.Status(), k8s.Pending)
-		}
-	})
+	t.Run("Error: GetJob returns error", theory(
+		When{
+			GetJobErr: errors.New("fake error"),
+		},
+		Then{
+			Name:      "fake-job",
+			Namespace: namespace,
+		},
+	))
 }
 
 func ref[T any](t T) *T {

@@ -12,6 +12,7 @@ import (
 	kdb "github.com/opst/knitfab/pkg/db"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/pkg/workloads/k8s"
 	k8smock "github.com/opst/knitfab/pkg/workloads/k8s/mock"
 	"github.com/opst/knitfab/pkg/workloads/k8s/testenv"
 	"github.com/opst/knitfab/pkg/workloads/metasource"
@@ -116,11 +117,18 @@ func TestWorkerRunning(t *testing.T) {
 	)
 
 	{
-		pc := try.To(
+		priorityClassName := "worker-priority"
+		t.Cleanup(func() {
+			clientset.SchedulingV1().PriorityClasses().Delete(
+				context.Background(), priorityClassName,
+				*kubeapimeta.NewDeleteOptions(0),
+			)
+		})
+		try.To(
 			clientset.SchedulingV1().PriorityClasses().Create(
 				ctx, &v1.PriorityClass{
 					ObjectMeta: kubeapimeta.ObjectMeta{
-						Name: "worker-priority",
+						Name: priorityClassName,
 					},
 					Description:      "priority for tseting",
 					Value:            100_000_000,
@@ -130,12 +138,6 @@ func TestWorkerRunning(t *testing.T) {
 				kubeapimeta.CreateOptions{},
 			),
 		).OrFatal(t)
-		t.Cleanup(func() {
-			clientset.SchedulingV1().PriorityClasses().Delete(
-				context.Background(), pc.Name,
-				*kubeapimeta.NewDeleteOptions(0),
-			)
-		})
 	}
 
 	{ // assert precondition
@@ -184,7 +186,7 @@ func TestWorkerRunning(t *testing.T) {
 				)
 			}
 
-			if testee.JobStatus() == worker.Failed {
+			if got := testee.JobStatus(ctx); got.Type == k8s.Failed {
 				t.Fatal("unexpected worker status: failed")
 			}
 		})
@@ -194,16 +196,12 @@ func TestWorkerRunning(t *testing.T) {
 			for {
 				found := try.To(worker.Find(ctx, cluster, run)).OrFatal(t)
 
-				_, _, ok := found.ExitCode()
-				if ok {
-					t.Error("unexpectedly exit code is found")
-				}
-
-				if found.JobStatus() == worker.Running {
+				got := found.JobStatus(ctx)
+				if got.Type == k8s.Running {
 					return // ok!
 				}
 				if (10 * time.Second) < time.Since(before) {
-					t.Error("the run's status is not running: ", found.JobStatus())
+					t.Error("the run's status is not running: ", got)
 					break
 				}
 				time.Sleep(50 * time.Millisecond)
@@ -354,31 +352,19 @@ func TestWorkerStoppedInSuccess(t *testing.T) {
 	workerNewlySpawned := try.To(worker.Spawn(ctx, cluster, conf, executable)).OrFatal(t)
 	defer workerNewlySpawned.Close()
 
-	t.Run("when it spawns worker,", func(t *testing.T) {
-		t.Run("it should has no exitcode", func(t *testing.T) {
-			_, _, ok := workerNewlySpawned.ExitCode()
-			if ok {
-				t.Error("unexpectedly exit code is found")
-			}
-		})
-	})
-
 	t.Run("after worker get be done, it should has exitcode 0", func(t *testing.T) {
 		var testee worker.Worker
 		for {
 			testee = try.To(worker.Find(ctx, cluster, executable.RunBody)).OrFatal(t)
-			code, reason, ok := testee.ExitCode()
-			if !ok {
+			got := testee.JobStatus(ctx)
+			if got.Type != k8s.Succeeded {
 				time.Sleep(50 * time.Millisecond)
 				continue
 			}
-			if reason == "" {
-				t.Error("unexpected reason: (it is empty)")
+			if got.Code != 0 {
+				t.Errorf("unexpected exit code: %d", got.Code)
 			}
-			if code == 0 {
-				break
-			}
-			t.Errorf("unexpected exit code: %d", code)
+			break
 		}
 
 		logContent := new(strings.Builder)
@@ -514,31 +500,19 @@ func TestWorkerStoppedInFailure(t *testing.T) {
 	workerNewlySpawned := try.To(worker.Spawn(ctx, cluster, conf, executable)).OrFatal(t)
 	defer workerNewlySpawned.Close()
 
-	t.Run("when it spawns worker,", func(t *testing.T) {
-		t.Run("it should has no exitcode", func(t *testing.T) {
-			_, _, ok := workerNewlySpawned.ExitCode()
-			if ok {
-				t.Error("unexpectedly exit code is found")
-			}
-		})
-	})
-
 	t.Run("after worker get be done, it should has exitcode 42", func(t *testing.T) {
 		for {
 			testee := try.To(worker.Find(ctx, cluster, executable.RunBody)).OrFatal(t)
-			code, reason, ok := testee.ExitCode()
-			if !ok {
+			got := testee.JobStatus(ctx)
+			if got.Type != k8s.Failed {
 				time.Sleep(50 * time.Millisecond)
 				continue
 			}
-			if reason == "" {
-				t.Error("unexpected reason (it is empty)")
-			}
 
-			if code == 42 {
-				return
+			if got.Code != 42 {
+				t.Errorf("unexpected exit code: %d", got.Code)
 			}
-			t.Errorf("unexpected exit code: %d", code)
+			break
 		}
 	})
 }
