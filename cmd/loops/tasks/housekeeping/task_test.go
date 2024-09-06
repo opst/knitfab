@@ -17,13 +17,13 @@ import (
 type MockedGetPodder struct {
 	ImplGetPod func(
 		ctx context.Context, backoff retry.Backoff, name string,
-		requirements ...k8s.Requirement[*kubecore.Pod],
+		requirements ...k8s.Requirement[k8s.WithEvents[*kubecore.Pod]],
 	) retry.Promise[k8s.Pod]
 }
 
 func (m *MockedGetPodder) GetPod(
 	ctx context.Context, backoff retry.Backoff, name string,
-	requirements ...k8s.Requirement[*kubecore.Pod],
+	requirements ...k8s.Requirement[k8s.WithEvents[*kubecore.Pod]],
 ) retry.Promise[k8s.Pod] {
 	return m.ImplGetPod(ctx, backoff, name, requirements...)
 }
@@ -199,7 +199,7 @@ func TestTask(t *testing.T) {
 				mGetPodder := &MockedGetPodder{
 					ImplGetPod: func(
 						ctx context.Context, backoff retry.Backoff, name string,
-						requirements ...k8s.Requirement[*kubecore.Pod],
+						_ ...k8s.Requirement[k8s.WithEvents[*kubecore.Pod]],
 					) retry.Promise[k8s.Pod] {
 
 						if name != when.InvokeCallbackWith.Name {
@@ -271,7 +271,7 @@ func TestTask(t *testing.T) {
 				mGetPodder := &MockedGetPodder{
 					ImplGetPod: func(
 						ctx context.Context, backoff retry.Backoff, name string,
-						requirements ...k8s.Requirement[*kubecore.Pod],
+						_ ...k8s.Requirement[k8s.WithEvents[*kubecore.Pod]],
 					) retry.Promise[k8s.Pod] {
 						ch := make(chan retry.Result[k8s.Pod], 1)
 						ch <- retry.Result[k8s.Pod]{
@@ -308,6 +308,16 @@ func TestTask(t *testing.T) {
 
 		t.Run("should close pod if pod status is failed", theory(
 			When{PodStatus: k8s.PodFailed},
+			Then{
+				WantClose: true,
+				CallbackReturns: CallbackReturns{
+					RemoveOk: true, Err: nil,
+				},
+			},
+		))
+
+		t.Run("should close pod if pod status is stucking", theory(
+			When{PodStatus: k8s.PodStucking},
 			Then{
 				WantClose: true,
 				CallbackReturns: CallbackReturns{

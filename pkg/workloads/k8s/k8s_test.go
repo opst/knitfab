@@ -1071,8 +1071,8 @@ func TestK8SCluster_Pod(t *testing.T) {
 
 			result := <-testee.NewPod(
 				ctx, retry.StaticBackoff(200*time.Millisecond), podDefn,
-				func(value *kubecore.Pod) error {
-					if value.Status.Phase == testcase.Then.PodPhase {
+				func(value k8s.WithEvents[*kubecore.Pod]) error {
+					if value.Value.Status.Phase == testcase.Then.PodPhase {
 						return nil
 					}
 					return retry.ErrRetry
@@ -1100,8 +1100,8 @@ func TestK8SCluster_Pod(t *testing.T) {
 			{
 				result := <-testee.GetPod(
 					ctx, retry.StaticBackoff(200*time.Millisecond), testcase.When.PodName,
-					func(value *kubecore.Pod) error {
-						if value.Status.Phase == testcase.Then.PodPhase {
+					func(value k8s.WithEvents[*kubecore.Pod]) error {
+						if value.Value.Status.Phase == testcase.Then.PodPhase {
 							return nil
 						}
 						return retry.ErrRetry

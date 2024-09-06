@@ -20,7 +20,7 @@ func Seed() kdb.DataAgentCursor {
 }
 
 type GetPodder interface {
-	GetPod(context.Context, retry.Backoff, string, ...k8s.Requirement[*kubecore.Pod]) retry.Promise[k8s.Pod]
+	GetPod(context.Context, retry.Backoff, string, ...k8s.Requirement[k8s.WithEvents[*kubecore.Pod]]) retry.Promise[k8s.Pod]
 }
 
 // return:
@@ -36,7 +36,7 @@ func Task(
 			defer cancel()
 			ppod := <-kluster.GetPod(
 				_ctx, retry.StaticBackoff(50*time.Millisecond), da.Name,
-				func(*kubecore.Pod) error { return nil }, // everything is fine
+				func(k8s.WithEvents[*kubecore.Pod]) error { return nil }, // everything is fine
 			)
 			if err := ppod.Err; err != nil {
 				if workloads.AsMissingError(err) {
@@ -47,7 +47,7 @@ func Task(
 
 			pod := ppod.Value
 			switch s := pod.Status(); s {
-			case k8s.PodSucceeded, k8s.PodFailed:
+			case k8s.PodSucceeded, k8s.PodFailed, k8s.PodStucking:
 				if err := pod.Close(); err != nil {
 					return false, err
 				}

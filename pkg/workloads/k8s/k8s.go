@@ -881,7 +881,7 @@ type Cluster interface {
 	//
 	// Whether or not the Promise has Error, Pod can be created.
 	// So, you may need to Close() it.
-	NewPod(context.Context, retry.Backoff, *kubecore.Pod, ...Requirement[*kubecore.Pod]) retry.Promise[Pod]
+	NewPod(context.Context, retry.Backoff, *kubecore.Pod, ...Requirement[WithEvents[*kubecore.Pod]]) retry.Promise[Pod]
 
 	//	Get existing Pod
 	//
@@ -910,7 +910,7 @@ type Cluster interface {
 	//
 	// Whether or not the Promise has Error, Pod can be found.
 	// So, you may need to Close() it.
-	GetPod(context.Context, retry.Backoff, string, ...Requirement[*kubecore.Pod]) retry.Promise[Pod]
+	GetPod(context.Context, retry.Backoff, string, ...Requirement[WithEvents[*kubecore.Pod]]) retry.Promise[Pod]
 
 	// GetSecret gets a k8s Secrets from the cluster.
 	//
@@ -941,6 +941,15 @@ type Cluster interface {
 	//
 	// - error: error if any
 	UpsertSecret(context.Context, *applyconfigurations.SecretApplyConfiguration) (Secret, error)
+}
+
+type WithEvents[T any] struct {
+	Value  T
+	Events []kubeevent.Event
+}
+
+func (w WithEvents[T]) SignificantEvent() *kubeevent.Event {
+	return significantEvent(w.Events)
 }
 
 type k8sCluster struct {
@@ -1256,8 +1265,8 @@ func (c *k8sCluster) GetJob(
 	})
 }
 
-var PodHasBeenRunning Requirement[*kubecore.Pod] = func(p *kubecore.Pod) error {
-	switch p.Status.Phase {
+var PodHasBeenRunning Requirement[WithEvents[*kubecore.Pod]] = func(p WithEvents[*kubecore.Pod]) error {
+	switch p.Value.Status.Phase {
 	case kubecore.PodRunning, kubecore.PodFailed, kubecore.PodSucceeded:
 		return nil
 	default:
@@ -1265,8 +1274,8 @@ var PodHasBeenRunning Requirement[*kubecore.Pod] = func(p *kubecore.Pod) error {
 	}
 }
 
-var PodHasBeenPending Requirement[*kubecore.Pod] = func(p *kubecore.Pod) error {
-	switch p.Status.Phase {
+var PodHasBeenPending Requirement[WithEvents[*kubecore.Pod]] = func(p WithEvents[*kubecore.Pod]) error {
+	switch p.Value.Status.Phase {
 	case kubecore.PodPending, kubecore.PodRunning, kubecore.PodFailed, kubecore.PodSucceeded:
 		return nil
 	default:
@@ -1276,20 +1285,15 @@ var PodHasBeenPending Requirement[*kubecore.Pod] = func(p *kubecore.Pod) error {
 
 func (c *k8sCluster) NewPod(
 	ctx context.Context, r retry.Backoff, p *kubecore.Pod,
-	requirements ...Requirement[*kubecore.Pod],
+	requirements ...Requirement[WithEvents[*kubecore.Pod]],
 ) retry.Promise[Pod] {
 	if len(requirements) == 0 {
-		requirements = []Requirement[*kubecore.Pod]{PodHasBeenRunning}
+		requirements = []Requirement[WithEvents[*kubecore.Pod]]{PodHasBeenRunning}
 	}
 	select {
 	case <-ctx.Done():
 		return retry.Failed[Pod](ctx.Err())
 	default:
-	}
-
-	_close := func() error {
-		ctx := context.Background()
-		return c.client.DeletePod(ctx, c.namespace, p.ObjectMeta.Name)
 	}
 
 	_pod, err := c.client.CreatePod(ctx, c.namespace, p)
@@ -1299,21 +1303,16 @@ func (c *k8sCluster) NewPod(
 		}
 		return retry.Failed[Pod](err)
 	}
-	if err := satisfyAll(_pod, requirements); err == nil {
-		return retry.Ok[Pod](&pod{description: *_pod, onClose: _close})
-	} else if !errors.Is(err, retry.ErrRetry) {
-		return retry.Failed[Pod](err)
-	}
 
 	return c.GetPod(ctx, r, _pod.ObjectMeta.Name, requirements...)
 }
 
 func (c *k8sCluster) GetPod(
 	ctx context.Context, r retry.Backoff, name string,
-	requirements ...Requirement[*kubecore.Pod],
+	requirements ...Requirement[WithEvents[*kubecore.Pod]],
 ) retry.Promise[Pod] {
 	if len(requirements) == 0 {
-		requirements = []Requirement[*kubecore.Pod]{PodHasBeenRunning}
+		requirements = []Requirement[WithEvents[*kubecore.Pod]]{PodHasBeenRunning}
 	}
 	_close := func() error {
 		ctx := context.Background()
@@ -1334,7 +1333,9 @@ func (c *k8sCluster) GetPod(
 		ev, _ := c.client.GetEvents(ctx, "Pod", _pod.ObjectMeta)
 		ret.events = ev
 
-		return ret, satisfyAll(_pod, requirements)
+		podWithEvents := WithEvents[*kubecore.Pod]{Value: _pod, Events: ev}
+
+		return ret, satisfyAll(podWithEvents, requirements)
 	})
 }
 
