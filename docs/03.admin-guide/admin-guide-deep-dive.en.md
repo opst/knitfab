@@ -1,434 +1,44 @@
-Knitfab Administration Guide
-===========================
-
-This document is for individuals who are responsible for operating and managing Knitfab.
-
-Topics covered include:
-
-- How to install Knitfab
-- Operational considerations for Knitfab
-- Kubernetes resources that make up Knitfab
-
-These topics may go beyond the scope of interest for users who do not manage or operate Knitfab.
-
-他言語版/Translations
----------------------
-
-- 日本語: [./admin-guide.ja.md](./admin-guide.ja.md)
-
-Preparation for Installing Knitfab
-----------------------------------
-
-Before starting the installation process of Knitfab, you need to prepare an environment that meets the following requirements.
-
-- Kubernetes Cluster consisting of Nodes equipped with x86_64 CPUs: Knitfab runs Kubernetes.
-- NFS: To persist RDB, cluster-internal image registry, and Knitfab data, NFS is used.
-
-In particular, NFS will serve as the destination for users to accumulate data. It is recommended to allocate sufficient storage capacity.
-
-### Kubernetes
-
-Please refer to the following official documentation for instructions on how to set up Kubernetes.
-
-- https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
-- https://kubernetes.io/docs/setup/production-environment/container-runtimes/
-- https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
-
-Note that the Knitfab development team has tested the operation on a Kubernetes cluster built with the following conditions:
-
-- Kubernetes 1.29.2
-- Container runtime: containerd
-- Cgroup: systemd
-
-#### Install CNI
-
-To enable the network functionality of Kubernetes, you need to install some Container Network Interface (CNI).
-
-The Knitfab development team has tested the operation with [calico](https://docs.tigera.io/calico/latest/about).
-
-#### Enable GPU
-
-To enable the use of GPUs from containers on Kubernetes, you need to configure the nodes accordingly.
-
-Please refer to the official documentation for instructions on how to set this up.
-
-- https://kubernetes.io/ja/docs/tasks/manage-gpus/scheduling-gpus/
-
-#### Single Node Cluster
-
-If you are operating a Kubernetes cluster with only a single node (control plane node), you need to remove the taint specified on that node.
-Otherwise, the components of Knitfab will not be able to start on any node.
-
-For more details, please refer to https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#control-plane-node-isolation.
-
-### NFS Server
-
-Knitfab adopts the storage driver [csi-driver-nfs](https://github.com/kubernetes-csi/csi-driver-nfs) as the default [storage class](https://kubernetes.io/docs/concepts/storage/storage-classes/). This is done to ensure access to Knitfab data regardless of the node on which the container is launched.
-
-Knitfab assumes NFSv4.
-
-Therefore, please set up NFS in a location on the network accessible from each node of the Kubernetes cluster.
-It should be sufficient to use an NAS with NFS capabilities, but it is also possible to set up nfsd on an existing machine.
-
-> For example, on Ubuntu,
->
-> - Install the `nfs-kernel-server` package (`apt install nfs-kernel-server`), and
-> - Configure the settings file in `/etc/exports`
->
-> to set up an NFS server.
-
-Installing Knitfab
------------------------
-
-### What is installed
-
-Following items are installed in your Kubernetes cluster.
-
-|  | Corresponding Helm Chart |
-|:------|:------------|
-| Knitfab Application | knit-app, knit-schema-upgrader |
-| Database | knit-db-postgres |
-| In-cluster Image Registry | knit-image-registry |
-| TLS Certifications | knit-certs |
-| StorageClass | knit-storage-nfs |
-
-[CSI "csi-driver-nfs"](https://github.com/kubernetes-csi/csi-driver-nfs/) is also installed in the same Namespace as Knitfab, since "knit-storage-nfs" depends on it.
-
-### Prerequisites
-
-To install Knitfab, the following tools are required:
-
-- [helm](https://helm.sh/)
-- bash
-- wget
-
-In addition, internet access and a kubeconfig file with access to the target Kubernetes cluster are also required.
-
-If you are planning to configure a single-node cluster, at least 4GB of memory is required.
-Note that this requirement is only the minimum for Knitfab to start. Depending on the machine learning tasks being executed, more memory may be required.
-
-#### (Optional) Prepare TLS Certificates
-
-Knitfab Web API and the in-cluster Image Registry communicate over HTTPS, by default.
-The installer script generates certificates for this purpose, but you can also specify specific certificates to use.
-
-- If you have a CA certificate and its key, you can use them.
-- Additionally, if you have a server certificate and its key, you can use them.
-
-For example, if you have a requirement such as "I want to use a specific domain name for the nodes in the Kubernetes cluster," you will need a server certificate and a CA certificate signed by it (along with their keys).
-
-If no certificates are provided, the installer will generate self-signed certificates and a server certificate signed by them. The server sertificate has SAN with IP Addresses of nodes of the Kubernetes cluster where Knitfab is installed in.
-
-### Installation steps
-
-1. Obtain the installer.
-2. Generate the installation settings file and adjust the parameters.
-3. Execute the installation.
-4. Distribute the handout to users and have them start using it.
-
-#### Step 1: Obtain the installer
-
-The installer is located at https://github.com/opst/Knitfab/installer/installer.sh.
-
-Download it to a suitable directory.
-
-```
-mkdir -p ~/Knitfab/install
-cd ~/Knitfab/install
-wget -O installer.sh https://raw.githubusercontent.com/opst/Knitfab/main/installer/installer.sh
-chmod +x ./installer.sh
-```
-
-#### Step 2: Generate the installation settings file and adjust the parameters
-
-The following Command generates the installation settings for Knitfab in the `./knitfab_install_settings` directory:
-
-```
-./installer.sh --prepare --kubeconfig ${YOUR_KUBECONFIG}
-```
-
-> [!Note]
->
-> If you want to use specific TLS certificates, execute the following command instead.
->
-> ```
-> TLSCACERT=path/to/ca.crt TLSCAKEY=path/to/ca.key TLSCERT=path/to/server.crt TLSKEY=path/to/server.key ./installler.sh --prepare
-> ```
->
-> If there is no specification for the server certificate, omit the environment variables `TLSCERT` and `TLSKEY` and do the following:
->
-> ```
-> TLSCACERT=path/to/ca.crt TLSCAKEY=path/to/ca.key ./installler.sh --prepare
-> ```
->
-
-> [!Note]
->
-> **Advanced**
->
-> By the step above, Knitfab Web API is exposed as an https endpoint.
->
-> However, it might be inconvinient that Knitfab itself is https. For example, deploying a load balancer front of Knitfab Web API, and you want for the LB to terminate TLS.
->
-> In a case like that, add a flag `--no-tls` to step 2.
->
-> ```
-> ./installer.sh --prepare --no-tls --kubeconfig ${YOUR_KUBECONFIG}
-> ```
->
-> By `--no-tls`, `./installer.sh` does not generate TLS certificates and related configurations, then Knitfab Web API is not to be https on installing.
->
-> If you do so, the in-cluster Image Repository is not https, either.
->
-> Your users should register it as "insecure registry" to dockerd. For more details, see following links:
->
-> - https://docs.docker.com/reference/cli/dockerd/#insecure-registries
-> - https://docs.docker.com/reference/cli/dockerd/#daemon-configuration-file
->
-
-> [!Caution]
->
-> **If you specify TLS certificates, those certificates and secret keys will be copied as part of the installation settings.**
->
-> - `knitfab-install-settings/certs/*` (key pair; as file copies)
-> - `knitfab-install-settings/values/knit-certs.yaml` (key pair; as base64-encoded text)
-> - `knitfab-install-settings/knitprofile` (only cert; as base64-encoded text)
->
-> Also, when key pair is generated, the key pair or certificaiton are stored as above.
->
-> Especially, key pair has **secret key**. Handle with care.
-
-##### Configure to use NFS
-
-**The default configuration generated by this command is set to "not persist Knitfab-managed information."**
-
-To persist data using the prepared NFS, update the configuration.
-
-The file to be updated is `Knitfab-install-settings/values/knit-storage-nfs.yaml`.
-Update the following entries:
-
-- `nfs.external`: Set the value to `true`.
-- `nfs.server`: Comment in and specify the hostname (or IP) of the NFS server.
-
-Additionally, update the following entries if necessary:
-
-- `nfs.mountOptions`: Update if there are specific mount options for NFS.
-- `nfs.share`: Specify the subdirectory you want to use for Knitfab.
-    - The subdirectory needs to be created beforehand.
-
-The configuration should look as follow:
-
-```yaml
-nfs:
-  # # external: If true (External mode), use NFS server you own.
-  # #  Otherwise(In-cluster mode), Knitfab employs in-cluster NFS server.
-  external: true
-
-  # # mountOptions: (optional) Mount options for the nfs server.
-  # #  By default, "nfsvers=4.1,rsize=8192,wsize=8192,hard,nolock".
-  mountOptions: "nfsvers=4.1,rsize=8192,wsize=8192,hard,nolock"
-
-  # # # FOR EXTERNAL MODE # # #
-
-  # # server: Hostname of the nfs server.
-  # #  If external is true, this value is required.
-  server: "nfs.example.com"  # update this to your NFS server host.
-
-  # # share: (optional) Export root of the nfs server. default is "/".
-  share: "/"
-
-  # # # FOR IN-CLUSTER MODE # # #
-
-  # # hostPath: (optional) Effective only when external is false.
-  # # If set, the in-cluster NFS server will read/write files at this directory ON NODE.
-  # #
-  # # This is useful when you want to keep the data even after the NFS server is restarted.
-  # hostPath: "/var/lib/Knitfab"
-
-  # # node: (optional) kubernetes node name where the in-cluster NFS server pod should be scheduled.
-  # node: "nfs-server"
-```
-
-##### Other installation parameters
-
-For other files as well, you can modify the parameters as needed.
-
-The following are particularly impactful for usage:
-
-- `knitfab-install-settings/values/knit-app.yaml`'s `knitd.port`
-- `knitfab-install-settings/values/knit-image-registry.yaml`'s `port`
-
-The former is the listening port for the Knitfab API, and the latter is the listening port for the in-cluster image registry.
-
-Also, if you have changed the TLD (Top-Level Domain) of the Kubernetes cluster during its setup from the default value (`cluster.local`), set the custom TLD in the following item.
-
-- `clusterTLD` in `knitfab-install-settings/values/knit-app.yaml` (Comment in and modify)
-
-There are configuration files to extend Knitfab's behavior.
-
-- to register WebHooks, edit `knitfab-install-settings/values/hooks.yaml`
-- to register Extra API, edit `knitfab-install-settings/valuesextra-api.yaml`
-
-For more detail, see section "Extend Knitfab".
-
-#### Step 3: Install
-
-```
-./installer.sh --install --kubeconfig path/to/kubeconfig -n NAMESPACE -s ./knitfab-install-settings
-```
-
-By executing this command, the installer script will sequentially install Knitfab components onto the Kubernetes cluster. It may take some time to complete.
-
-#### Step 4: Distribute handouts to users
-
-The connection information to the installed Knitfab is generated in the `knitfab-install-settings/handout` folder.
-
-Distribute this folder to users who want to use Knitfab.
-
-The usage instructions for this handout are described in the user guide.
-
-##### Modify the handout
-
-If you want to access Knitfab with a specific domain name (e.g., when a specified server certificate is configured), you need to modify the connection settings before distributing the handout to users.
-
-The connection settings to the Knitfab API, called **knitprofil file**, can be found in `knitfab-install-settings/handout/knitprofile`. This file is a YAML file with the following structure:
-
-```yaml
-apiRoot: https://IP-ADDRESS:PORT/api
-cert:
-    ca: ...Certification....
-```
-
-The value of the `apiRoot` key indicates the endpoint of the Knitfab Web API.
-By default, it should be set to the IP address of a appropriate node in the cluster.
-
-If you want to access Knitfab with a specific domain name instead of an IP address, you need to modify this item.
-
-For example, if you want to access Knitfab as `example.com:30803`, you can rewrite the host part of the `apiRoot` as follows:
-
-```yaml
-apiRoot: https://example.com:30803/api
-cert:
-    ca: ...Certification....
-```
-
-Also, you need to address the certificate for the **in-cluster Image Registry**.
-
-You will find a directory named `knitfab-install-settings/handout/docker/certs.d/10.10.0.3:30503`.
-This directory is also named after the IP address of a appropriate Kubernetes node concatenated with the port number using `:` as a separator.
-Rename the part with this IP to the desired domain name for access.
-
-### Uninstall Knitfab
-
-When you execute the installation, an uninstaller will be generated as `knitfab-install-settings/uninstall.sh`.
-
-```
-Knitfab-install-settings/uninstall.sh
-```
-
-Executing this command will uninstall the Knitfab application within the cluster.
-
-Furthermore,
-
-```
-Knitfab-install-settings/uninstall.sh --hard
-```
-
-Executing this command will destroy all Knitfab-related resources, including the database and the in-cluster image registry.
-
-
-### Helm configuration for Knitfab
-
-Knitfab is composed of several helm charts. This section explains the helm-based construction of Knitfab.
-
-Administrators may need to uninstall, reinstall, or update parts of Knitfab. This section provides guidance on what to do in such cases, providing clarity on the necessary steps.
-
-> [!Note]
->
-> This section assumes that the reader has knowledge of helm.
-
-Knitfab is composed of the following helm charts:
-
-- Knitfab/knit-storage-nfs: Introduces the NFS driver and defines the StorageClass.
-- Knitfab/knit-certs: Introduces certificates.
-- Knitfab/knit-db-postgres: Defines the RDB.
-- Knitfab/knit-image-registry: Defines the cluster's internal registry.
-- Knitfab/knit-app: Defines other components of Knitfab not covered above.
-
-The helm chart repository "Knitfab" is (by default) located at https://raw.githubusercontent.com/opst/Knitfab/main/charts/release.
-
-By following the appropriate steps to install these charts, Knitfab can be installed.
-In fact, the installer does exactly that.
-
-In general, Knitfab is installed using the following steps:
-
-```sh
-NAMESPACE=${NAMESPACE}  # where Knitfab to be installed
-CHART_VERSION=${CHART_VERSION:=v1.0.0}  # version of Knitfab to be installed
-VALUES=./knit-install-settings/values
-
-helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
-    -f ${VALUES}/knit-storage-nfs.yaml \
-    knit-storage-nfs Knitfab/knit-storage-nfs
-
-helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
-    -f ${VALUES}/knit-certs.yaml \
-    knit-certs Knitfab/knit-certs
-
-helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
-    --set-json "storage=$(helm get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-    -f ${VALUES}/knit-db-postgres.yaml \
-    knit-db-postgres Knitfab/knit-db-postgres
-
-helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
-    --set-json "storage=$(helm get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-    --set-json "certs=$(helm get values knit-certs -n ${NAMESPACE} -o json --all)" \
-    -f ${VALUES}/knit-image-registry.yaml \
-    knit-image-registry Knitfab/knit-image-registry
-
-helm install -n ${NAMESPACE} --version ${CHART_VERSION} \
-    --set-json "storage=$(helm get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-    --set-json "database=$(helm get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
-    --set-json "imageRegistry=$(helm get values knit-image-registry -n ${NAMESPACE} -o json --all)" \
-    --set-json "certs=$(helm get values knit-certs -n ${NAMESPACE} -o json --all)" \
-    -f ${VALUES}/knit-app.yaml \
-    knit-app Knitfab/knit-app
-```
-
-> In addition to the above operations, the installer provides additional options to make these behaviors more stable and generates uninstallers and handouts.
-
-The pattern `--set-json "...=$(helm get values ...)"` that appears frequently in the middle is used to read installation parameters ([Helm Values](https://helm.sh/docs/chart_template_guide/values_files/)) from installed charts and ensure consistency between charts.
-
-In addition, `./knitfab-install-settings/values/CHART_NAME.yaml` is incorporated as the Values for that chart.
-Therefore, if you need to reinstall or update only a specific chart, you should follow this approach.
-
-> [!Caution]
->
-> Uninstalling the following charts will result in the loss of lineage and data in Knitfab. Please be cautious when uninstalling charts.
->
-> - knitfab/knit-storage-nfs
-> - knitfab/knit-db-postgres
-> - knitfab/knit-image-registry
->
-> knit-db-postgres and knit-image-registry also define PVCs, so uninstalling these charts will result in the loss of the previous database content and `docker push`ed images.
-> As a result, the relationship between PVCs and Knitfab data, as well as the images referenced by Plans, will be lost, and the premise of Knitfab's lineage management will not be met.
->
-> Additionally, knit-storage-nfs provides the functionality to store all other PVs on NFS. If this is lost, all Pods will no longer have access to PVs.
-
-
-Cluster Information to Disclose to Users
---------------------------
+Knitfab Administration Guide: 2.Deep Dive <!-- omit in toc -->
+
+Table of Contents
+- [1. Cluster Information to Disclose to Users](#1-cluster-information-to-disclose-to-users)
+  - [1.1. Connection information for the cluster's Internal image registry](#11-connection-information-for-the-clusters-internal-image-registry)
+  - [1.2. Resources that can be specified in the `resources` field of a Plan and their limits](#12-resources-that-can-be-specified-in-the-resources-field-of-a-plan-and-their-limits)
+- [2. Representation of Each Element in Kubernetes](#2-representation-of-each-element-in-kubernetes)
+  - [2.1. Data Entity](#21-data-entity)
+  - [2.2. Plan Entity](#22-plan-entity)
+  - [2.3. Run Entity](#23-run-entity)
+- [3. Configuration of Knitfab in Kubernetes](#3-configuration-of-knitfab-in-kubernetes)
+  - [3.1. Deployments and services](#31-deployments-and-services)
+  - [3.2. daemonset](#32-daemonset)
+  - [3.3. Other resources](#33-other-resources)
+- [4. Routine Monitoring](#4-routine-monitoring)
+- [5. Troubleshooting](#5-troubleshooting)
+  - [5.1. The Run is stuck in the "starting" state and never transitions to "running" or fails immediately.](#51-the-run-is-stuck-in-the-starting-state-and-never-transitions-to-running-or-fails-immediately)
+  - [5.2. Frequent system-side pod failures](#52-frequent-system-side-pod-failures)
+  - [5.3. There is a problematic pod. So, want to restart it](#53-there-is-a-problematic-pod-so-want-to-restart-it)
+  - [5.4. Want to add a node](#54-want-to-add-a-node)
+- [6. Backup and Restore](#6-backup-and-restore)
+  - [6.1. Backup](#61-backup)
+  - [6.2. Restore](#62-restore)
+- [7. Extend Knitfab](#7-extend-knitfab)
+  - [7.1. WebHooks](#71-webhooks)
+  - [7.2. Lifecycle Hooks](#72-lifecycle-hooks)
+  - [7.3. Register Extended Web API](#73-register-extended-web-api)
+
+
+# 1. Cluster Information to Disclose to Users
 
 Some features of Knitfab depend on the configuration of the installed Kubernetes cluster.
 In order for users to effectively utilize these features, they must be provided with information about the cluster's configuration.
 
 As the administrator who has set up Knitfab, it is important to disclose the appropriate information to users.
 
-### Connection information for the cluster's Internal image registry
+## 1.1. Connection information for the cluster's Internal image registry
 
 While it can be inferred by examining the `docker/certs.d` directory within the handout, it is advisable to explicitly guide users on the host and port of the cluster's internal image registry.
 
-### Resources that can be specified in the `resources` field of a Plan and their limits
+## 1.2. Resources that can be specified in the `resources` field of a Plan and their limits
 
 Knitfab has a feature called `resources` in its Plan definition, which declares the computational resources used by the Run based on that Plan.
 
@@ -440,7 +50,7 @@ In addition, in Kubernetes, if there are nodes with GPUs, the GPUs are exposed a
 The specific resource names that can be specified (e.g., `nvidia.com/gpu`, `amd.com/gpu`) depend on the node configuration.
 If such extended resource names are available, it should also be disclosed to the users.
 
-### Labels available for `on_node` in a Plan: labels and taints of node
+### 1.2.1. Labels available for `on_node` in a Plan: labels and taints of node
 
 Knitfab has a feature called `on_node` in Plan definitions that utilizes labels and taints set on Kubernetes nodes.
 
@@ -453,12 +63,12 @@ Administrators should disclose to users the labels that can be used with the `on
 > If you set a taint on a node, set a label with the same key-value pair.
 >
 
-#### Labels of node
+#### 1.2.1.1. Labels of K8s node
 
 [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) of a node in Kubernetes refers to metadata for a node. Labels have a key-value structure.
 In Kubernetes, it is possible to impose constraints on Pods to "always or preferentially run on nodes with a certain label" ([node Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)).
 
-#### Taints of node
+#### 1.2.1.2. Taints of K8s node
 
 [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) of a node in Kubernetes is a constraint that prevents pods from being scheduled on a node.
 In contrast, a toleration is an attribute that allows pods to ignore taint. By assigning tolerations to pods, only pods with toleration can be scheduled on nodes with taint.
@@ -467,7 +77,7 @@ Taints can be set along with key-value pairs, similar to labels, to specify the 
 
 For example, if you want to ensure that tasks that do not specifically require GPUs are not scheduled on nodes with GPUs, you need to set a taint on the node.
 
-#### Usage of labels and taints for the `on_node` attribute in Plans
+#### 1.2.1.3. How "on_node" in "Plan" uses labels and taints
 
 As described in the user guide, Knitfab allows the use of the `on_node` attribute in plan definitions.
 This attribute specifies where the Runs based on the Plan can be executed on which nodes, and it is used as toleration and node affinity values in Kubernetes.
@@ -500,41 +110,19 @@ Specifically, these are translated as the following worker attributes:
 
 The recommendation to "set the same label on the node if you set a taint" is because the `on_node` feature reuses the same label for tolerations and node affinity.
 
-Important Note
----------------------
+# 2. Representation of Each Element in Kubernetes
 
-> [!Caution]
->
-> **Don't expose Knitfab to the public network.**
->
-> The current version of Knitfab and the cluster's image registry have no authentication or authorization mechanisms.
->
-> If exposed to the public internet, the following risks exist:
->
-> - Malicious containers can be executed.
-> - Malicious container images can be distributed.
->
-> The former not only results in the theft of computing resources but also exposes the possibility of exploiting unknown vulnerabilities in Kubernetes, leading to further threats.
-> The latter can also serve as a stepping stone for other threats.
->
-> **We strongly advise against exposing Knitfab to the public internet.**
->
-
-
-Representation of Each Element in Kubernetes
---------------------------------------------
-
-### Data Entity
+## 2.1. Data Entity
 
 In Kubernetes, Data is represented by a PersistentVolumeClaim (PVC) and the associated bound PersistentVolume (PV).
 
 Knitfab records the name of the PVC, which represents the Data, in the RDB. The Tags set to the Data are written in the RDB.
 
-### Plan Entity
+## 2.2. Plan Entity
 
 The entity of a Plan is a record stored in the RDB. However, this record includes the name of the container image.
 
-### Run Entity
+## 2.3. Run Entity
 
 The Run entity has two aspects.
 
@@ -544,14 +132,13 @@ The other aspect is the computation performed on Kubernetes. This is achieved by
 There is a maximum of one Worker per Run. It is launched when needed and destroyed when no longer needed.
 
 
-Configuration of Knitfab in Kubernetes
-------------------
+# 3. Configuration of Knitfab in Kubernetes
 
 This section explains the Kubernetes-specific components of Knitfab.
 
 Knitfab consists of several deployments, daemonsets, and services.
 
-### Deployments and services
+## 3.1. Deployments and services
 
 The following **static components** make up Knitfab:
 
@@ -676,13 +263,13 @@ Users push their privately created container images to the cluster's internal im
 >
 > Therefore, if there is no internet access or if there is a problem with ghcr.io, there is a possibility of failure in launching the dynamic components.
 
-### daemonset
+## 3.2. daemonset
 
 - vex: Automatically scales up if the capacity of the PVCs mounted by pods on that node becomes insufficient.
 
 However, NFS does not place much significance on the capacity of PVCs, so this daemonset is not currently very meaningful.
 
-### Other resources
+## 3.3. Other resources
 
 Additionally, when installing Knitfab, the following resources are created:
 
@@ -692,8 +279,7 @@ Additionally, when installing Knitfab, the following resources are created:
 - ConfigMap, Secret: Configuration files for knitd, knitd-backend, authentication information for the RDB, and TLS certificates.
 - PriorityClass: PriorityClass for the Workers (explained later).
 
-Routine Monitoring
------------------
+# 4. Routine Monitoring
 
 You should perform routine monitoring similar to regular system monitoring. Specifically, monitor:
 
@@ -705,14 +291,13 @@ If there is a shortage of node computing resources, the cause is important. If a
 
 Pay attention to the NFS storage capacity. If it becomes insufficient, it will prevent the recording of Data generated by user experiments. It is important to maintain sufficient capacity.
 
-Troubleshooting
-----------------
+# 5. Troubleshooting
 
 When a user reports that Knitfab is not functioning properly, it is important to investigate the following points:
 
-### The Run is stuck in the "starting" state and never transitions to "running" or fails immediately.
+## 5.1. The Run is stuck in the "starting" state and never transitions to "running" or fails immediately.
 
-#### Possible cause 1: The Worker Pod may not be starting successfully.
+### 5.1.1. Possible cause 1: The Worker Pod may not be starting successfully.
 
 Ask the user for the Run ID of the specific Run. Then Execute
 
@@ -750,7 +335,7 @@ For example,
     - Check the `exit` attribute of the Run.
         - `OOMError`: The memory allocated in the Plan is too small.
 
-#### Possible cause 2: The event loop container is missing or causing errors
+### 5.1.2. Possible cause 2: The event loop container is missing or causing errors
 
 If you are scaling in the Deployment for maintenance purposes, it can stop the chain of event loops.
 Make sure that there is at least one Pod for each event loop.
@@ -761,7 +346,7 @@ Make sure that there is at least one Pod for each event loop.
 If you find such containers, delete the Pods using `kubectl delete`.
 Wait for the Deployment to automatically start the necessary number of Pods and observe the situation.
 
-### Frequent system-side pod failures
+## 5.2. Frequent system-side pod failures
 
 You need to investigate the reason for the frequent failures by checking logs and using `kubectl describe`.
 
@@ -777,7 +362,7 @@ Also, is the memory of the node sufficient?
 When configuring Knitfab on a single node, it requires approximately 4GiB of memory capacity.
 When attempting to deploy Knitfab on a virtual machine with less memory, the static components started to fail and restart irregularly.
 
-### There is a problematic pod. So, want to restart it
+## 5.3. There is a problematic pod. So, want to restart it
 
 You can always use `kubectl delete pod` to restart it.
 
@@ -787,7 +372,7 @@ However, if you abruptly terminate a Worker or Data Agent, it will cause failure
 
 Also, for scaling in/out, you can simply scale the Kubernetes Deployment.
 
-### Want to add a node
+## 5.4. Want to add a node
 
 You can follow the Kubernetes procedure to add a node.
 You will be able to increase the number of nodes where Workers and Data Agents can be deployed.
@@ -795,8 +380,7 @@ You will be able to increase the number of nodes where Workers and Data Agents c
 However, as of v1.0, TLS certificates are not supported for newly added nodes.
 User requests should be sent to the existing nodes. Otherwise, it will result in a certificate error.
 
-Backup and Restore
---------------------
+# 6. Backup and Restore
 
 This chapter shows you how to backup Data and lineages from Knitfab and to restore them into a newly installed Knitfab.
 
@@ -822,15 +406,15 @@ Restoring procedure of Knitfab consists of:
 
 The restore procedure clears Image Registry and RDB, and your Knitfab is restored as the backup.
 
-### Backup
+## 6.1. Backup
 
-#### Announce system outage
+### 6.1.1. Announce system outage
 
 For your users, announce system outage before starting backup operation.
 
 In the announcement, notice that running Runs during backup operation will be failed.
 
-#### Freeze Knitfab system
+### 6.1.2. Freeze Knitfab system
 
 To freeze system, execute `admin-tools/system-freeze.sh` (it is shell-script).
 
@@ -867,7 +451,7 @@ By starting the operation, Knitfab suspends to create new Runs. And after the op
 
 `admin-tools/system-freeze.sh` generates a script, `./system-unfreeze.sh`, to unfreeze  your Knitfab. This script is used later.
 
-#### Backup: Image Registry
+### 6.1.3. Backup: Image Registry
 
 Execute `admin-tools/backup/images.sh` like below
 
@@ -893,7 +477,7 @@ The script saves storage content of the Image Registry of Knitfab as tar.gz arch
 
 During backup, a Pod named "datadumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
 
-#### Backup: Data
+### 6.1.4. Backup: Data
 
 Backup contents of Knitfab Data.
 
@@ -923,7 +507,7 @@ The script saves storage content of the Image Registry of Knitfab as tar.gz arch
 
 During backup, a Pod named "datadumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
 
-#### Backup: Database
+### 6.1.5. Backup: Database
 
 Backup tables in Knitfab Database.
 
@@ -953,7 +537,7 @@ The script runs [`pg_dump`](https://www.postgresql.org/docs/15/app-pgdump.html),
 
 During backup, a Pod named "pgdumper" is created to read content of PV. It will be removed when backup gets be done successfully. If you abort backup, the Pod can be remained. In such cases, you should remove the Pod by `kubectl` directly.
 
-#### Unfreeze Knitfab system, and announce it
+### 6.1.6. Unfreeze Knitfab system, and announce it
 
 To unfreeze Knitfan, execute `./system-unfreeze.sh`, generated by `admin-tools/system-freeze.sh`.
 
@@ -961,13 +545,13 @@ By this, deployments scales as number as before freezing, and Web API and Run's 
 
 Announce that Knitfab is unfrozen for your user after deployments scales out enough.
 
-### Restore
+## 6.2. Restore
 
 This section describes how to restore Knitfab from a backup.
 
 Knitfab which is the target of restore should be just newly installed one, and its version is same as the version which the backup has been taken. Otherwize, system consistency will be broken.
 
-#### Image Registry
+### 6.2.1. Restore: Image Registry
 
 Execute shell script `admin-tools/restore/images.sh` like below:
 
@@ -1016,7 +600,7 @@ In such cases, you should scale Image Registry with `kubectl` directly.
 
 During restoring, to write to PV, a Pod named "dataloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
 
-#### Data
+### 6.2.2. Restore: Data
 
 Execute shell script `admin-tools/restore/data.sh` like below:
 
@@ -1058,7 +642,7 @@ After that, it restores PVCs for each Data from backup.
 
 During restoring, to write to PV, a Pod named "dataloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
 
-#### Database
+### 6.2.3. Restore: Database
 
 Execute shell script `admin-tools/restore/db.sh` like below;
 
@@ -1101,12 +685,11 @@ After that, it restores Database from backup.
 
 During restoring, to execute [pg_resotre](https://www.postgresql.org/docs/15/app-pgrestore.html), a Pod named "pgloader" will be started. When restoring gets be done successfully, it will be removed. If restoring is aborted in the middle, the Pod can be remained. In such cases, you should delete it with `kubectl` directly.
 
-Extend Knitfab
------------------
+# 7. Extend Knitfab
 
 This section describes how to customise your Knitfab, for advanced usage.
 
-### WebHooks
+## 7.1. WebHooks
 
 Knitfab can notify internal events as HTTP requests. It is WebHook.
 
@@ -1119,7 +702,7 @@ Set up WebHooks by following steps:
 1. Edit a file `values/hooks.yml` in install settings directory (`knitfab-install-settings`) generated by the Knitfab installer.
 2. Update Knitfab: rerun `./installer.sh --install`.
 
-### Lifecycle Hooks
+## 7.2. Lifecycle Hooks
 
 Lifecycle Hooks are WebHooks invoked before and after changing each Runs' status. URLs registered as hooks receives Run's information as a POST request.
 
@@ -1145,7 +728,7 @@ Also After Hooks receive one request per one status changing, normally. These Ho
 
 - After changing Run's status and before invoke Hook, Knitfab's process is stopped unexpectedly.
 
-#### Setup Lifecycle Hooks
+### 7.2.1. Setup Lifecycle Hooks
 
 To setup Lifecycle Hook, edit `values/hooks.yaml` to update entry `hooks.lifecycle-hooks`.
 
@@ -1209,7 +792,7 @@ You can set Before Hook only or After Hook only, or you can set 2 or more URLs f
 
 After that, Pods invoking Lifecycle Hooks and Hooks are activated.
 
-#### Request Spec　of Lifecycle Hooks
+### 7.2.2. Request Spec　of Lifecycle Hooks
 
 Before and After Lifecycle Hooks send `POST` requests with Run as JSON.
 Before Hooks send Run as just before changing status, and After Hooks send Run as just after status changed.
@@ -1272,7 +855,7 @@ The format of Run JSON, as same as outputs of `knit run show`, is below:
     - `tags[*]`: Tags for this Output. Not Data's Tag
     - `knitId`: Identifier of the Data holding the log.
 
-### Register Extra APIs
+## 7.3. Register Extended Web API
 
 You can register Extra APIs for Knitfab Web API.
 
@@ -1282,7 +865,7 @@ The feature may be useful to introduce custom functionalities which need to acce
 
 > [!Note]
 >
-> Credentials for Knitfab Database is stored in kubernetes Secret `database-credential`.
+> Credentials for Knitfab Database is stored in Kubernetes Secret `database-credential`.
 >
 > Functionalities writing to Database is possible, but in such cases, be careful to keep consistency of Database.
 

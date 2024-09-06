@@ -1,4 +1,4 @@
-# Knitfab 管理ガイド 第１部 <!-- omit in toc -->
+# Knitfab 管理ガイド: 1.インストール編 <!-- omit in toc -->
 
 もくじ
 - [1. はじめに](#1-はじめに)
@@ -34,7 +34,9 @@
 ## 1.1. 他言語版/Translations
 他言語版は以下のリンク先にあります。
 
-- English: [./admin-guide.en.md](./admin-guide.en.md)
+- English:
+  - [./admin-guide-installation.en.md](./admin-guide-installation.en.md)
+  - [./admin-guide-deep-dive.en.md](./admin-guide-deep-deive.en.md)
 
 ## 1.2. 重要な注意点
 
