@@ -714,11 +714,7 @@ run ${HELM} repo add --force-update knitfab ${CHART_REPOSITORY_ROOT}
 message "[2 / 3] install knit middlewares..."
 
 message "[2 / 3] #1 install storage driver"
-MODE=install
-if ${HELM} status knit-storage-nfs -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	-f ${VALUES}/knit-storage-nfs.yaml \
@@ -726,22 +722,17 @@ knit-storage-nfs knitfab/knit-storage-nfs
 sleep 5
 
 message "[2 / 3] #2 install tls certificates"
-MODE=install
-if ${HELM} status knit-certs -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	-f ${VALUES}/knit-certs.yaml \
 	knit-certs knitfab/knit-certs
 
 message "[2 / 3] #3 install database"
-MODE=install
 if ${HELM} status knit-db-postgres -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
 	MODE=upgrade
 fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
@@ -749,11 +740,7 @@ run ${HELM} ${MODE} --dependency-update --wait \
 	knit-db-postgres knitfab/knit-db-postgres
 
 message "[2 / 3] #4 install image registry"
-MODE=install
-if ${HELM} status knit-image-registry -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
@@ -763,11 +750,7 @@ run ${HELM} ${MODE} --dependency-update --wait \
 
 message "[3 / 3] install Knitfab app"
 message "[3 / 3] #1 run database upgrade job"
-MODE=install
-if ${HELM} status knit-schema-upgrader -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --wait \
+run ${HELM} upgrade -i --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
@@ -776,11 +759,7 @@ run ${HELM} ${MODE} --wait \
 	knit-schema-upgrader knitfab/knit-schema-upgrader
 
 message "[3 / 3] #2 install knit app"
-MODE=install
-if ${HELM} status knit-app -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
