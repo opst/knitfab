@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"
+	kubeevent "k8s.io/api/events/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapiresouce "k8s.io/apimachinery/pkg/api/resource"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +48,8 @@ type K8sClient interface {
 	UpsertSecret(ctx context.Context, namespace string, spec *applyconfigurations.SecretApplyConfiguration) (*kubecore.Secret, error)
 	GetSecret(ctx context.Context, namespace string, name string) (*kubecore.Secret, error)
 	DeleteSecret(ctx context.Context, namespace string, name string) error
+
+	GetEvents(ctx context.Context, kind string, meta kubeapimeta.ObjectMeta) ([]kubeevent.Event, error)
 
 	Log(ctx context.Context, namespace string, podname string, container string) (io.ReadCloser, error)
 }
@@ -153,6 +157,27 @@ func (k *k8sClient) GetSecret(ctx context.Context, namespace string, name string
 
 func (k *k8sClient) DeleteSecret(ctx context.Context, namespace string, name string) error {
 	return k.client.CoreV1().Secrets(namespace).Delete(ctx, name, *kubeapimeta.NewDeleteOptions(0))
+}
+
+func (k *k8sClient) GetEvents(ctx context.Context, kind string, m kubeapimeta.ObjectMeta) ([]kubeevent.Event, error) {
+	fieldSelectors := []string{}
+	if kind != "" {
+		fieldSelectors = append(fieldSelectors, "regarding.kind="+kind)
+	}
+	if m.Name != "" {
+		fieldSelectors = append(fieldSelectors, "regarding.name="+m.Name)
+	}
+	if m.UID != "" {
+		fieldSelectors = append(fieldSelectors, "regarding.uid="+string(m.UID))
+	}
+
+	ev, err := k.client.EventsV1().Events(m.Namespace).List(ctx, kubeapimeta.ListOptions{
+		FieldSelector: strings.Join(fieldSelectors, ","),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ev.Items, nil
 }
 
 func WrapK8sClient(c *k8s.Clientset) K8sClient {
@@ -286,25 +311,34 @@ func (p *pvc) Close() error {
 	return p.onClose()
 }
 
-type JobStatus string
+type JobStatusType string
 
 const (
 	// no pods have been started.
-	Pending JobStatus = "Pending"
+	Pending JobStatusType = "Pending"
+
+	// There are some pods that cannot started.
+	Stucking JobStatusType = "Stucking"
 
 	// at least one pod has started, and the job has not completed.
-	Running JobStatus = "Running"
+	Running JobStatusType = "Running"
 
 	// the job is succeeded.
 	//
 	// In case of parallel > 1, some pods can be failed.
-	Succeeded JobStatus = "Succeeded"
+	Succeeded JobStatusType = "Succeeded"
 
 	// the job is failed.
 	//
 	// In case of parallel, some pods can be succeeded.
-	Failed JobStatus = "Failed"
+	Failed JobStatusType = "Failed"
 )
+
+type JobStatus struct {
+	Type    JobStatusType
+	Code    uint8
+	Message string
+}
 
 // abstraction of k8s job.
 type Job interface {
@@ -328,19 +362,11 @@ type Job interface {
 	// It can be no pods are running if some pods have run to be terminated
 	// and more pods are pending to be started.
 	//
+	// - Stucking : At least one pod is stucking before running.
+	// This is precendence over Running.
+	//
 	// - Pending : no pods have been started.
-	Status() JobStatus
-
-	//	ExitCode returns the exit code of the main container of job
-	//
-	// # Return
-	//
-	// - exitCode : the exit code of the main container.
-	//
-	// - reason: the reason of the termination.
-	//
-	// - ok : true if the job has been stopped, false otherwise.
-	ExitCode(container string) (uint8, string, bool)
+	Status(ctx context.Context) JobStatus
 
 	// Log get log stream of the job
 	//
@@ -378,33 +404,82 @@ func (j *job) Namespace() string {
 	return j.job.Namespace
 }
 
-func (j *job) Status() JobStatus {
+func (j *job) Status(ctx context.Context) JobStatus {
+	// If the job is completed or failed, return the status.
+	// If some pods are scheduled,
+	// 	If at least one pod is Pending AND has Warning events
+	// 		as its controller's newest event, return Stucking.
+	// 	If at least one pod is running, return Running.
+	// Otherwise, return Pending.
+	//
+	// The reason why we do not check unscheduled pod's events is that
+	// the pod (and its job) can be scheduled to another node or after other pods are ended.
 	for _, sc := range j.job.Status.Conditions {
 		if sc.Status != "True" {
 			continue
 		}
 		switch sc.Type {
 		case kubebatch.JobComplete:
-			return Succeeded
+			return JobStatus{Type: Succeeded}
 		case kubebatch.JobFailed:
-			return Failed
+			var code uint8
+			message := ""
+			for _, p := range j.pods {
+				for _, c := range p.Status.ContainerStatuses {
+					if term := c.State.Terminated; term != nil {
+						if uint8(term.ExitCode) <= code {
+							continue
+						}
+						code = uint8(term.ExitCode)
+						message = fmt.Sprintf("(container %s) %s", c.Name, term.Reason)
+					}
+				}
+			}
+			return JobStatus{Type: Failed, Code: code, Message: message}
 		}
 	}
 
+	runningPodFound := false
+PODS:
 	for _, p := range j.pods {
+
 		// if at least one pod has been run, the job has been run.
 		switch p.Status.Phase {
 		case kubecore.PodRunning, kubecore.PodSucceeded, kubecore.PodFailed:
-			return Running
+			runningPodFound = true
+
+		case kubecore.PodPending:
+			for _, c := range p.Status.Conditions {
+				if c.Type == "PodScheduled" {
+					if c.Status != "True" {
+						continue PODS
+					}
+				}
+			}
+			// if at least one pod is stucking, the job is stucking.
+			if ev, err := j.client.GetEvents(ctx, "Pod", p.ObjectMeta); err == nil {
+				sigev := significantEvent(ev)
+				if sigev != nil && sigev.Type == "Warning" {
+					return JobStatus{
+						Type:    Stucking,
+						Code:    255,
+						Message: fmt.Sprintf("(pod %s) [%s] %s", p.Name, sigev.Reason, sigev.Note),
+					}
+				}
+			}
 		}
 	}
 
-	return Pending
+	if runningPodFound {
+		return JobStatus{Type: Running}
+	} else {
+		return JobStatus{Type: Pending}
+	}
 }
 
 func (j *job) Log(ctx context.Context, containerName string) (io.ReadCloser, error) {
 	if len(j.pods) == 0 {
-		return nil, errors.New("no pods")
+		return nil, fmt.Errorf("job %s has no logs: %w", j.Name(), ErrJobHasNoPods)
 	}
 	pod := j.pods[0]
 	return j.client.Log(ctx, pod.Namespace, pod.Name, containerName)
@@ -432,14 +507,28 @@ func (j *job) Close() error {
 	return j.close()
 }
 
+var ErrJobHasNoPods = errors.New("no pods")
+
 type PodPhase kubecore.PodPhase
 
 var (
-	PodPending   PodPhase = PodPhase(kubecore.PodPending)
-	PodRunning   PodPhase = PodPhase(kubecore.PodRunning)
+	// PodPending means the pod is waiting or preparing to run.
+	PodPending PodPhase = PodPhase(kubecore.PodPending)
+
+	// PodStucking means the pod is stucking before running. Maybe misconfguration or storage failure.
+	PodStucking PodPhase = PodPhase("Stucking")
+
+	// PodRunning means the pod is running.
+	PodRunning PodPhase = PodPhase(kubecore.PodRunning)
+
+	// PodSucceeded means the pod is stopped with success.
 	PodSucceeded PodPhase = PodPhase(kubecore.PodSucceeded)
-	PodFailed    PodPhase = PodPhase(kubecore.PodFailed)
-	PodUnknown   PodPhase = PodPhase(kubecore.PodUnknown)
+
+	// PodFailed means the pod is stopped with failure.
+	PodFailed PodPhase = PodPhase(kubecore.PodFailed)
+
+	// PodUnknown means the pod status is unknown.
+	PodUnknown PodPhase = PodPhase(kubecore.PodUnknown)
 )
 
 type Pod interface {
@@ -447,11 +536,13 @@ type Pod interface {
 	Status() PodPhase
 	Host() string
 	Ports() map[string]int32
+	Events() []kubeevent.Event
 	Close() error
 }
 
 type pod struct {
 	description kubecore.Pod
+	events      []kubeevent.Event
 	onClose     func() error
 }
 
@@ -460,7 +551,30 @@ func (p *pod) Name() string {
 }
 
 func (p *pod) Status() PodPhase {
-	return PodPhase(p.description.Status.Phase)
+	if p.description.Status.Phase == "" {
+		return PodUnknown
+	}
+
+	switch phase := p.description.Status.Phase; phase {
+	case kubecore.PodPending:
+		for _, cc := range p.description.Status.Conditions {
+			if cc.Type != "PodScheduled" {
+				continue
+			}
+			if cc.Status != "True" {
+				// Pod is waiting for scheduling.
+				return PodPending
+			}
+		}
+
+		if sigev := significantEvent(p.Events()); sigev.Type == "Warning" {
+			return PodStucking
+		}
+
+		return PodPending
+	default:
+		return PodPhase(p.description.Status.Phase)
+	}
 }
 
 func (p *pod) Host() string {
@@ -482,6 +596,75 @@ func (p *pod) Close() error {
 		return nil
 	}
 	return p.onClose()
+}
+
+func (p *pod) Events() []kubeevent.Event {
+	return p.events
+}
+
+// significantEvent returns the most significant event from the given events.
+//
+// The most significant event is a warning event among the latest event for each controllers.
+// If there is no warning event, the latest event is returned.
+// If there is no event, nil is returned.
+func significantEvent(events []kubeevent.Event) *kubeevent.Event {
+	newer := func(a, b *kubeevent.Event) *kubeevent.Event {
+		if a == nil {
+			return b
+		}
+		if b == nil {
+			return a
+		}
+
+		atsp := a.EventTime.Time
+		if s := a.Series; s != nil {
+			atsp = s.LastObservedTime.Time
+		}
+		if t := a.DeprecatedFirstTimestamp.Time; t.After(atsp) {
+			atsp = t
+		}
+		if t := a.DeprecatedLastTimestamp.Time; t.After(atsp) {
+			atsp = t
+		}
+
+		btsp := b.EventTime.Time
+		if s := b.Series; s != nil {
+			btsp = s.LastObservedTime.Time
+		}
+		if t := b.DeprecatedFirstTimestamp.Time; t.After(btsp) {
+			btsp = t
+		}
+		if t := b.DeprecatedLastTimestamp.Time; t.After(btsp) {
+			btsp = t
+		}
+
+		if btsp.After(atsp) {
+			return b
+		}
+		return a
+	}
+
+	latestEventsForController := map[string]*kubeevent.Event{}
+	for _, ev := range events {
+		ctl := ev.ReportingController
+		latestEventsForController[ctl] = newer(latestEventsForController[ctl], &ev)
+	}
+
+	var significant *kubeevent.Event
+	for _, ev := range latestEventsForController {
+		if significant == nil {
+			significant = ev
+			continue
+		}
+
+		if ev.Type == significant.Type {
+			significant = newer(significant, ev)
+		} else if ev.Type == "Warning" {
+			significant = ev
+		}
+	}
+
+	return significant
 }
 
 type Cluster interface {
@@ -698,7 +881,7 @@ type Cluster interface {
 	//
 	// Whether or not the Promise has Error, Pod can be created.
 	// So, you may need to Close() it.
-	NewPod(context.Context, retry.Backoff, *kubecore.Pod, ...Requirement[*kubecore.Pod]) retry.Promise[Pod]
+	NewPod(context.Context, retry.Backoff, *kubecore.Pod, ...Requirement[WithEvents[*kubecore.Pod]]) retry.Promise[Pod]
 
 	//	Get existing Pod
 	//
@@ -727,7 +910,7 @@ type Cluster interface {
 	//
 	// Whether or not the Promise has Error, Pod can be found.
 	// So, you may need to Close() it.
-	GetPod(context.Context, retry.Backoff, string, ...Requirement[*kubecore.Pod]) retry.Promise[Pod]
+	GetPod(context.Context, retry.Backoff, string, ...Requirement[WithEvents[*kubecore.Pod]]) retry.Promise[Pod]
 
 	// GetSecret gets a k8s Secrets from the cluster.
 	//
@@ -758,6 +941,15 @@ type Cluster interface {
 	//
 	// - error: error if any
 	UpsertSecret(context.Context, *applyconfigurations.SecretApplyConfiguration) (Secret, error)
+}
+
+type WithEvents[T any] struct {
+	Value  T
+	Events []kubeevent.Event
+}
+
+func (w WithEvents[T]) SignificantEvent() *kubeevent.Event {
+	return significantEvent(w.Events)
 }
 
 type k8sCluster struct {
@@ -1030,24 +1222,6 @@ func (c *k8sCluster) NewJob(
 		}
 		return retry.Failed[Job](err)
 	}
-	_close := func() error {
-		return c.client.DeleteJob(
-			context.Background(), c.namespace, _job.ObjectMeta.Name,
-		)
-	}
-
-	if err := satisfyAll(_job, requirements); err == nil {
-		pods, err := c.client.FindPods(
-			ctx, c.namespace,
-			LabelsToSelecor(_job.Spec.Selector.MatchLabels),
-		)
-		if err != nil {
-			pods = []kubecore.Pod{}
-		}
-		return retry.Ok[Job](&job{job: _job, pods: pods, close: _close})
-	} else if !errors.Is(err, retry.ErrRetry) {
-		return retry.Failed[Job](err)
-	}
 
 	return c.GetJob(ctx, p, _job.ObjectMeta.Name, requirements...)
 }
@@ -1091,8 +1265,8 @@ func (c *k8sCluster) GetJob(
 	})
 }
 
-var PodHasBeenRunning Requirement[*kubecore.Pod] = func(p *kubecore.Pod) error {
-	switch p.Status.Phase {
+var PodHasBeenRunning Requirement[WithEvents[*kubecore.Pod]] = func(p WithEvents[*kubecore.Pod]) error {
+	switch p.Value.Status.Phase {
 	case kubecore.PodRunning, kubecore.PodFailed, kubecore.PodSucceeded:
 		return nil
 	default:
@@ -1100,8 +1274,8 @@ var PodHasBeenRunning Requirement[*kubecore.Pod] = func(p *kubecore.Pod) error {
 	}
 }
 
-var PodHasBeenPending Requirement[*kubecore.Pod] = func(p *kubecore.Pod) error {
-	switch p.Status.Phase {
+var PodHasBeenPending Requirement[WithEvents[*kubecore.Pod]] = func(p WithEvents[*kubecore.Pod]) error {
+	switch p.Value.Status.Phase {
 	case kubecore.PodPending, kubecore.PodRunning, kubecore.PodFailed, kubecore.PodSucceeded:
 		return nil
 	default:
@@ -1111,20 +1285,15 @@ var PodHasBeenPending Requirement[*kubecore.Pod] = func(p *kubecore.Pod) error {
 
 func (c *k8sCluster) NewPod(
 	ctx context.Context, r retry.Backoff, p *kubecore.Pod,
-	requirements ...Requirement[*kubecore.Pod],
+	requirements ...Requirement[WithEvents[*kubecore.Pod]],
 ) retry.Promise[Pod] {
 	if len(requirements) == 0 {
-		requirements = []Requirement[*kubecore.Pod]{PodHasBeenRunning}
+		requirements = []Requirement[WithEvents[*kubecore.Pod]]{PodHasBeenRunning}
 	}
 	select {
 	case <-ctx.Done():
 		return retry.Failed[Pod](ctx.Err())
 	default:
-	}
-
-	_close := func() error {
-		ctx := context.Background()
-		return c.client.DeletePod(ctx, c.namespace, p.ObjectMeta.Name)
 	}
 
 	_pod, err := c.client.CreatePod(ctx, c.namespace, p)
@@ -1134,21 +1303,16 @@ func (c *k8sCluster) NewPod(
 		}
 		return retry.Failed[Pod](err)
 	}
-	if err := satisfyAll(_pod, requirements); err == nil {
-		return retry.Ok[Pod](&pod{description: *_pod, onClose: _close})
-	} else if !errors.Is(err, retry.ErrRetry) {
-		return retry.Failed[Pod](err)
-	}
 
 	return c.GetPod(ctx, r, _pod.ObjectMeta.Name, requirements...)
 }
 
 func (c *k8sCluster) GetPod(
 	ctx context.Context, r retry.Backoff, name string,
-	requirements ...Requirement[*kubecore.Pod],
+	requirements ...Requirement[WithEvents[*kubecore.Pod]],
 ) retry.Promise[Pod] {
 	if len(requirements) == 0 {
-		requirements = []Requirement[*kubecore.Pod]{PodHasBeenRunning}
+		requirements = []Requirement[WithEvents[*kubecore.Pod]]{PodHasBeenRunning}
 	}
 	_close := func() error {
 		ctx := context.Background()
@@ -1164,7 +1328,14 @@ func (c *k8sCluster) GetPod(
 			}
 			return ret, err
 		}
-		return ret, satisfyAll(_pod, requirements)
+
+		// error is ignored because it is not critical.
+		ev, _ := c.client.GetEvents(ctx, "Pod", _pod.ObjectMeta)
+		ret.events = ev
+
+		podWithEvents := WithEvents[*kubecore.Pod]{Value: _pod, Events: ev}
+
+		return ret, satisfyAll(podWithEvents, requirements)
 	})
 }
 

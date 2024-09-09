@@ -12,6 +12,8 @@ import (
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"
+	kubeevents "k8s.io/api/events/v1"
+	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyconfigurations "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
@@ -100,6 +102,8 @@ type MockClient struct {
 		GetSecret    func(ctx context.Context, namespace string, name string) (*kubecore.Secret, error)
 		DeleteSecret func(ctx context.Context, namespace string, name string) error
 
+		GetEvents func(ctx context.Context, kind string, target kubeapimeta.ObjectMeta) ([]kubeevents.Event, error)
+
 		Log func(ctx context.Context, namespace string, pod string, container string) (io.ReadCloser, error)
 	}
 	Called struct {
@@ -127,6 +131,8 @@ type MockClient struct {
 		UpsertSecret uint64
 		GetSecret    uint64
 		DeleteSecret uint64
+
+		GetEvents uint64
 
 		Log uint64
 	}
@@ -231,7 +237,7 @@ func (m *MockClient) CreatePod(ctx context.Context, namespace string, pod *kubec
 	if m.Impl.CreatePod == nil {
 		return nil, errors.New("[MOCK] not implemented")
 	}
-	panic("not implemented")
+	return m.Impl.CreatePod(ctx, namespace, pod)
 }
 func (m *MockClient) GetPod(ctx context.Context, namespace string, name string) (*kubecore.Pod, error) {
 	m.Called.GetPod += 1
@@ -239,7 +245,7 @@ func (m *MockClient) GetPod(ctx context.Context, namespace string, name string) 
 	if m.Impl.GetPod == nil {
 		return nil, errors.New("[MOCK] not implemented")
 	}
-	panic("not implemented")
+	return m.Impl.GetPod(ctx, namespace, name)
 }
 func (m *MockClient) DeletePod(ctx context.Context, namespace string, name string) error {
 	m.Called.DeletePod += 1
@@ -247,7 +253,7 @@ func (m *MockClient) DeletePod(ctx context.Context, namespace string, name strin
 	if m.Impl.DeletePod == nil {
 		return errors.New("[MOCK] not implemented")
 	}
-	panic("not implemented")
+	return m.Impl.DeletePod(ctx, namespace, name)
 }
 func (m *MockClient) FindPods(ctx context.Context, namespace string, ls k8s.LabelSelector) ([]kubecore.Pod, error) {
 	m.Called.FindPods += 1
@@ -263,7 +269,7 @@ func (m *MockClient) Log(ctx context.Context, namespace string, pod string, cont
 	if m.Impl.Log == nil {
 		return nil, errors.New("[MOCK] not implemented")
 	}
-	panic("not implemented")
+	return m.Impl.Log(ctx, namespace, pod, container)
 }
 
 func (m *MockClient) UpsertSecret(ctx context.Context, namespace string, spec *applyconfigurations.SecretApplyConfiguration) (*kubecore.Secret, error) {
@@ -291,6 +297,15 @@ func (m *MockClient) DeleteSecret(ctx context.Context, namespace string, name st
 		return errors.New("[MOCK] not implemented")
 	}
 	return m.Impl.DeleteSecret(ctx, namespace, name)
+}
+
+func (m *MockClient) GetEvents(ctx context.Context, kind string, target kubeapimeta.ObjectMeta) ([]kubeevents.Event, error) {
+	m.Called.GetEvents += 1
+
+	if m.Impl.GetEvents == nil {
+		return nil, errors.New("[MOCK] not implemented")
+	}
+	return m.Impl.GetEvents(ctx, kind, target)
 }
 
 func NewMockClient() *MockClient {

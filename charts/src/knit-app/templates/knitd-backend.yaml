@@ -66,6 +66,9 @@ rules:
     resources: ["secrets"]
     resourceNames: ["{{ .Values.knitd_backend.component }}-signer-for-import-token"]
     verbs: ["get", "create", "update", "patch"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["list"]
 
 
 ---

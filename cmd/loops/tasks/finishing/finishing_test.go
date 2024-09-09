@@ -339,7 +339,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 type FakeWorker struct {
 	runId     string
-	jobStatus worker.Status
+	jobStatus k8s.JobStatus
 	closed    bool
 	closeErr  error
 
@@ -352,7 +352,7 @@ func (fw *FakeWorker) RunId() string {
 	return fw.runId
 }
 
-func (fw *FakeWorker) JobStatus() worker.Status {
+func (fw *FakeWorker) JobStatus(context.Context) k8s.JobStatus {
 	return fw.jobStatus
 }
 
@@ -500,9 +500,11 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 				},
 			},
 			workerFromFind: &FakeWorker{
-				runId:     "run-id-0",
-				jobStatus: worker.Done,
-				closed:    false,
+				runId: "run-id-0",
+				jobStatus: k8s.JobStatus{
+					Type: k8s.Succeeded,
+				},
+				closed: false,
 			},
 		},
 		Then{
@@ -533,7 +535,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			},
 			workerFromFind: &FakeWorker{
 				runId:     "run-id-0",
-				jobStatus: worker.Failed,
+				jobStatus: k8s.JobStatus{Type: k8s.Failed, Code: 1},
 				closed:    false,
 			},
 		},
@@ -713,7 +715,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 				},
 				workerFromFind: &FakeWorker{
 					runId:     "run-id-0",
-					jobStatus: worker.Done,
+					jobStatus: k8s.JobStatus{Type: k8s.Succeeded},
 					closeErr:  fakeError,
 				},
 			},

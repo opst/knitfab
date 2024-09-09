@@ -11,6 +11,7 @@ import (
 	xe "github.com/opst/knitfab/pkg/errors"
 	"github.com/opst/knitfab/pkg/utils/retry"
 	k8s "github.com/opst/knitfab/pkg/workloads/k8s"
+	kubecore "k8s.io/api/core/v1"
 )
 
 const dataagtPortName = "dataagt-port"
@@ -169,6 +170,30 @@ func Spawn(
 	promPod := kcluster.NewPod(
 		ctx, retry.StaticBackoff(200*time.Millisecond), spec.Pod,
 		k8s.WithCheckpoint(k8s.PodHasBeenPending, pendingDeadline),
+		func(value k8s.WithEvents[*kubecore.Pod]) error {
+			scheduled := false
+			for _, c := range value.Value.Status.Conditions {
+				if c.Status != kubecore.ConditionTrue {
+					continue
+				}
+				if c.Type == kubecore.PodScheduled {
+					scheduled = true
+					break
+				}
+			}
+			if !scheduled {
+				return retry.ErrRetry
+			}
+
+			sigev := value.SignificantEvent()
+			if sigev == nil {
+				return nil
+			}
+			if sigev.Type == "Warning" {
+				return fmt.Errorf("data agent cannot start: %s", sigev.Reason)
+			}
+			return nil
+		},
 		k8s.PodHasBeenRunning,
 	)
 
