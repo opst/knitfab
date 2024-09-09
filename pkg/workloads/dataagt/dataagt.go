@@ -171,6 +171,20 @@ func Spawn(
 		ctx, retry.StaticBackoff(200*time.Millisecond), spec.Pod,
 		k8s.WithCheckpoint(k8s.PodHasBeenPending, pendingDeadline),
 		func(value k8s.WithEvents[*kubecore.Pod]) error {
+			scheduled := false
+			for _, c := range value.Value.Status.Conditions {
+				if c.Status != kubecore.ConditionTrue {
+					continue
+				}
+				if c.Type == kubecore.PodScheduled {
+					scheduled = true
+					break
+				}
+			}
+			if !scheduled {
+				return retry.ErrRetry
+			}
+
 			sigev := value.SignificantEvent()
 			if sigev == nil {
 				return nil
