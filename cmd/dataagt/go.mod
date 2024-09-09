@@ -1,6 +1,6 @@
 module github.com/opst/knitfab/cmd/dataagt
 
-go 1.22.2
+go 1.23.1
 
 replace github.com/opst/knitfab v1.2.1 => ../..
 
