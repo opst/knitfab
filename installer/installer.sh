@@ -847,7 +847,7 @@ Install is done.
 Next Step
 ----------
 
-* Handouts for your user is generated at ${SETTINGS}/handout .
+* Handouts for your user is generated at ${SETTINGS}/handouts .
   - Please pass the files to your user.
 
 * Uninstaller is generated at ${SETTINGS}/uninstaller.sh .
