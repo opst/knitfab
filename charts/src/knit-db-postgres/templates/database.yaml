@@ -88,6 +88,8 @@ spec:
       app.kubernetes.io/part-of: knitfab
       app.kubernetes.io/component: {{ .Values.component }}
       database.knitfab/type: postgres
+  strategy:
+    type: Recreate
   template:
     metadata:
       namespace: {{ .Release.Namespace | quote }}
