@@ -1104,17 +1104,17 @@ Knitfab をインストールした Namespace 内であれば、 `knitd_backend`
 
 Data インポートは次の流れで進みます。
 
-1. `POST /api/backend/data/import/begin` にリクエストすることで、Data のインポート開始を Knitfab に通知します。
+1. バックエンド WebAPI の `POST /api/backend/data/import/begin` にリクエストすることで、Data のインポート開始を Knitfab に通知します。
   - リクエストボディとして送信すべきものはありません。空のリクエストを送ってください。
-  - レスポンスのボディには JWT が返されます。
+  - レスポンスのボディには JSON Web Token (JWT) が返されます。
 2. レスポンスボディの JWT から `sub` を読みとります。
   - この値が、Knitfab がこのインポート用に確保した PersistentVolumeClaim(PVC) の名前です。
-  - Knitfab は JWT 検証用の証明書を公開 *しません*。JWT のペイロードを検証なしで読み取ってください。
-3. `sub` に指定された PVC と、それに Bind する PersistentVolume (PV) を作成します。
-  - PVC と PV は Bound になっていることを確認してください。
-4. `POST /api/backend/data/import/end` にリクエストして、JWT を Knitfab に送り返し、インポートの終了を通知します。
+  - Knitfab は JWT 検証用の証明書を公開 *しません*。JWT のクレームを検証なしで読み取ってください。
+3. `sub` に指定された PVC と、PersistentVolume (PV) を作成し、バインドします。
+4.  バックエンド WebAPI の `POST /api/backend/data/import/end` にリクエストして、インポートの終了を通知します。
+  - このとき、JWT をリクエストボディに設定してください。
   - リクエスト時のヘッダには `Content-Type: application/jwt` を含めてください。
-  - Knitfab は PVC が Bound になっていることを検証できたら、成功レスポンス(200) を返します。
+  - Knitfab がインポートを受理すると、成功レスポンス(200) を返します。
 
 このうち、手順 3. では任意の方法で PVC と PV を作成してよいので、必要に応じた任意のインポート手法を実現できます。
 
