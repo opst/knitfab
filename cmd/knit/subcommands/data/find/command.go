@@ -32,10 +32,10 @@ func NewErrUnknwonTransientFlag(actualValue string) error {
 }
 
 type Flag struct {
-	Tags      *kflag.Tags             `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Find Data with this Tag. Repeatable."`
-	Transient string                  `flag:"transient" metavar:"both|yes|true|no|false" help:"yes|true (transient Data only) / no|false (non transient Data only) / both"`
-	Since     *kflag.LooseRFC3339     `flag:"since" metavar:"YYYY-mm-dd[THH[:MM[:SS]]][TZ]" help:"Find Data only updated at this time or later."`
-	Duration  *kflag.OptionalDuration `flag:"duration" metavar:"DURATION" help:"Find Data only updated at a time in --duration from --since."`
+	Tags      *kflag.Tags                 `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Find Data with this Tag. Repeatable."`
+	Transient string                      `flag:"transient" metavar:"both|yes|true|no|false" help:"yes|true (transient Data only) / no|false (non transient Data only) / both"`
+	Since     *kflag.OptionalLooseRFC3339 `flag:"since" metavar:"YYYY-mm-dd[THH[:MM[:SS]]][TZ]" help:"Find Data only updated at this time or later."`
+	Duration  *kflag.OptionalDuration     `flag:"duration" metavar:"DURATION" help:"Find Data only updated at a time in --duration from --since."`
 }
 
 type Option struct {
@@ -74,7 +74,7 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 		Flag{
 			Tags:      &kflag.Tags{},
 			Transient: "both",
-			Since:     &kflag.LooseRFC3339{},
+			Since:     &kflag.OptionalLooseRFC3339{},
 			Duration:  &kflag.OptionalDuration{},
 		},
 		flarc.Args{},
@@ -268,7 +268,7 @@ func FindData(
 
 	switch q.Transient {
 	case TransientAny:
-		return result, nil
+		filter = func(apidata.Detail) bool { return true }
 	case TransientOnly:
 		// noop. filter is "isTransient", already.
 	case TransientExclude:

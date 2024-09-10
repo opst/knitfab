@@ -70,6 +70,35 @@ func (t *LooseRFC3339) Time() *time.Time {
 	return (*time.Time)(t)
 }
 
+type OptionalLooseRFC3339 struct {
+	v     time.Time
+	isSet bool
+}
+
+func (t *OptionalLooseRFC3339) String() string {
+	if t == nil || !t.isSet {
+		return ""
+	}
+	return t.v.String()
+}
+
+func (t *OptionalLooseRFC3339) Set(v string) error {
+	got, err := rfctime.ParseLooseRFC3339(v)
+	if err != nil {
+		return err
+	}
+	t.v = got.Time()
+	t.isSet = true
+	return nil
+}
+
+func (t *OptionalLooseRFC3339) Time() *time.Time {
+	if t == nil || !t.isSet {
+		return nil
+	}
+	return &t.v
+}
+
 type OptionalDuration struct {
 	d     time.Duration
 	isSet bool
