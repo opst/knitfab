@@ -345,12 +345,14 @@ func TestFindDataCommand(t *testing.T) {
 		duration := new(kflag.OptionalDuration)
 		duration.Set(d.String())
 
-		since := kflag.LooseRFC3339(timestamp)
+		s := kflag.LooseRFC3339(timestamp)
+		since := &kflag.OptionalLooseRFC3339{}
+		since.Set(s.String())
 		t.Run("when since and duration are passed, it should call task with since and duration", theory(
 			when{
 				flag: data_find.Flag{
 					Transient: "both",
-					Since:     &since,
+					Since:     since,
 					Duration:  duration,
 				},
 				presentation: presentationItems,
