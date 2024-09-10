@@ -25,6 +25,7 @@ Table of Contents
   - [7.1. WebHooks](#71-webhooks)
   - [7.2. Lifecycle Hooks](#72-lifecycle-hooks)
   - [7.3. Register Extended Web API](#73-register-extended-web-api)
+  - [7.4. Add Custom Data Import Process](#74-add-custom-data-import-process)
 
 
 # 1. Cluster Information to Disclose to Users
@@ -903,3 +904,36 @@ Each elements in `extraApi.endpoints` has 2 keys: `path` and `proxy_to`.
 For `path`, set a path of URL to be exposed as Knitfab API. For `proxy_to`, set a URL where requests are forwarded to. Any requests sent to `path` or its subpath are forwarded to the correspond (sub)path of `proxy_to`. (see examples above)
 
 To apply the change, rerun `./installer.sh --install`.
+
+## 7.4. Add Custom Data Import Process
+
+The backend WebAPIs of Knitfab supports Custom Data Import process.
+
+Kubernetes Service `knitd_backend`, a component of Knitfab, is the endpoint of backend WebAPI.
+In the Namespace where Knitfab is installed, hostname `knitd_backend` points to the Service.
+
+> [!Note]
+>
+> The Service name `knitd_backend` is the default value.
+>
+> If you have overwritten the helm value `knitd_backend.service` at the install time,
+> its value is the Service name. Please replace them.
+
+Data Import process goes as following:
+
+1. Send a request `POST /api/backend/data/import/begin` to the backend WebAPI endpoint, to notify for Knitfab to begin Data Import process.
+  - No request body is needed. Send an empty request.
+  - Response Body has a JSON Web Token (JWT).
+2. Extract `sub` from JWT in the response.
+  - the value is the name of the PersistentVolumeClaim for importing Data reserved by Knitfab.
+  - Knitfab do NOT provide certificates to verify JWT. Read JWT Claim without verification.
+3. Create PVC specified in `sub` and Persistent Volume and bind them.
+4. Send a request `POST /api/backend/data/import/end` to the backend WebAPI endpoint, to notify for Knitfab to end Data Import oricess
+  - On sending the request, send back JWT in the request body.
+  - Put `Content-Type: application/jwt` in HTTP Headers.
+  - Knitfab returns a success (200) response if the import is accepted.
+
+In these steps, step 3. can have arbitary program to create PV/PVC, so you can make any import method as you need.
+
+We suppose that Custom Data import process is build as a Web server, deployed in the same Namespace with Knitfab,
+and registered as Custom WebAPI of Knitfab. And, to provide the process to your users, make client application as Custom CLI Subcommand.
