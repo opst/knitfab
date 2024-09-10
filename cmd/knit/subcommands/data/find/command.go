@@ -268,7 +268,7 @@ func FindData(
 
 	switch q.Transient {
 	case TransientAny:
-		filter = func(apidata.Detail) bool { return true }
+		return result, nil
 	case TransientOnly:
 		// noop. filter is "isTransient", already.
 	case TransientExclude:
@@ -276,6 +276,10 @@ func FindData(
 	}
 
 	satisfied, _ := utils.Group(result, filter)
+
+	if satisfied == nil {
+		return []apidata.Detail{}, nil
+	}
 
 	return satisfied, nil
 }
