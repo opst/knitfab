@@ -212,46 +212,35 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 		failedStatus = utils.Map(kdb.FailedStatuses(), kdb.KnitRunStatus.String)
 	}
 
-	if len(query.userTag) == 0 {
-		rows, err := conn.Query(
-			ctx,
-			`
-			select "knit_id" from "data"
-			inner join "run" using("run_id")
-			left join "knit_timestamp" using("knit_id")
-			where
-				($1::varchar is null or "knit_id" = $1::varchar)
-				and (cardinality($2::runStatus[]) = 0 or "status" = any($2::runStatus[]))
-				and (cardinality($3::runStatus[]) = 0 or "status" = any($3::runStatus[]))
-				and ($4::timestamp with time zone is null or "timestamp" = $4::timestamp with time zone)
-				and ($5::timestamp with time zone is null or "timestamp" >= $5::timestamp with time zone)
-				and ($6::timestamp with time zone is null or "timestamp" < $6::timestamp with time zone)
-			order by "timestamp" ASC NULLS LAST, "knit_id"
-			`,
-			query.sysKnitId, processingStatus, failedStatus, timestamp, query.updatedSince, query.updatedUntil,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var knitId string
-			rows.Scan(&knitId)
-			knitIds = append(knitIds, knitId)
-		}
-		return knitIds, nil
-	}
-
 	rows, err := conn.Query(
 		ctx,
 		`
 		with
+		"__data" as (
+			select
+				"knit_id" as "knit_id",
+				"timestamp" as "raw_timestamp",
+				coalesce("timestamp", "run"."updated_at") as "timestamp"
+			from "data"
+			inner join "run" using("run_id")
+			left outer join "knit_timestamp" using("knit_id")
+			where
+				($1::varchar is null or "knit_id" = $1::varchar)
+				and (cardinality($2::runStatus[]) = 0 or "status" = any($2::runStatus[]))
+				and (cardinality($3::runStatus[]) = 0 or "status" = any($3::runStatus[]))
+		),
+		"_data" as (
+			select "knit_id", "raw_timestamp", "timestamp" from "__data"
+			where
+				($4::timestamp with time zone is null or "timestamp" = $4::timestamp with time zone)
+				and ($5::timestamp with time zone is null or "timestamp" >= $5::timestamp with time zone)
+				and ($6::timestamp with time zone is null or "timestamp" < $6::timestamp with time zone)
+		),
 		"_query" as (
 			select
 				unnest("c"[:][1:1]) as "key",
 				unnest("c"[:][2:2]) as "value"
-			from (select $1::varchar[][]) as "t"("c")
+			from (select $7::varchar[][]) as "t"("c")
 		),
 		"_tag_key" as (
 			select "key", "id" as "key_id"
@@ -264,32 +253,24 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 			inner join "_tag_key" using("key_id")
 			where ("key", "value") in (select * from "_query")
 		),
-		"tag_data" as (
+		"data" as (
 			select "knit_id" from "tag_data"
 			inner join "query" using("tag_id")
+			inner join "_data" using("knit_id")
 			group by "knit_id"
 			having count(*) = (select count(*) from "_query")
-		),
-		"timestamped" as (
-			select "knit_id", "timestamp" from "data"
-			inner join "run" using("run_id")
-			left join "knit_timestamp" using("knit_id")
-			where
-				($2::varchar is null or "knit_id" = $2::varchar)
-				and (cardinality($3::runStatus[]) = 0 or "status" = any($3::runStatus[]))
-				and (cardinality($4::runStatus[]) = 0 or "status" = any($4::runStatus[]))
-				and ($5::timestamp with time zone is null or "timestamp" = $5::timestamp with time zone)
-				and ($6::timestamp with time zone is null or "timestamp" >= $6::timestamp with time zone)
-				and ($7::timestamp with time zone is null or "timestamp" < $7::timestamp with time zone)
+
+			union
+
+			select "knit_id" from "_data"
+			where (select count(*) from "_query") = 0
 		)
-		select "knit_id" from "tag_data"
-		inner join "timestamped" using("knit_id")
-		order by "timestamp" ASC NULLS LAST, "knit_id"
+		select "knit_id" from "data"
+		inner join "_data" using("knit_id")
+		order by "raw_timestamp" ASC NULLS LAST, "knit_id"
 		`,
-		utils.Map(query.userTag, func(t kdb.Tag) [2]string {
-			return [2]string{t.Key, t.Value}
-		}),
 		query.sysKnitId, processingStatus, failedStatus, timestamp, query.updatedSince, query.updatedUntil,
+		utils.Map(query.userTag, func(t kdb.Tag) [2]string { return [2]string{t.Key, t.Value} }),
 	)
 	if err != nil {
 		return nil, err
