@@ -25,6 +25,7 @@
   - [7.1. ウェブフック](#71-ウェブフック)
   - [7.2. ライフサイクル・フック](#72-ライフサイクルフック)
   - [7.3. 拡張 Web API を登録する](#73-拡張-web-api-を登録する)
+  - [7.4. カスタムなデータインポート機構を追加する](#74-カスタムなデータインポート機構を追加する)
 
 # 1. ユーザに開示すべきクラスタの情報
 
@@ -57,7 +58,7 @@ resource として公開されます。具体的に指定できるリソース�
 ### 1.2.1. "プラン"の `on_node` で利用できるラベル: ノードの label と taint
 
 Knitfab の"プラン"定義には Kubernetes のノードに設定された label と taint を利用
-した機能 [`on_node`](#6213-プランの-on_node-はどのように-label-と-taint-を利用しているのか) 
+した機能 [`on_node`](#6213-プランの-on_node-はどのように-label-と-taint-を利用しているのか)
 
 があります。
 
@@ -299,7 +300,7 @@ housekeeping イベントループは、停止しているが破棄されてい�
 garbage collector イベントループは、knitd によって「削除して良い」とマークされた
 PVC と PV を定期的に削除します。
 
-図中に登場する Data Agent は、Knitfab が有するもうひとつの 
+図中に登場する Data Agent は、Knitfab が有するもうひとつの
 **動的なコンポーネント** です。
 
 この実体は Pod です。ユーザが "データ" をアップロードしたりダウンロードしたりし
@@ -310,7 +311,7 @@ PVC と PV を定期的に削除します。
 公開レジストリ (`ghcr.io/opst/Knitfab`) から提供されます。
 
 ユーザは自作したプライベートなコンテナイメージをクラスタ内イメージレジストリ
-(image-registry) に `docker push` します。 
+(image-registry) に `docker push` します。
 
 Worker が起動するに当たり、ユーザ定義のイメージは image-registry から pull され
 ることになるでしょう。その他、Workerを構成するコンテナは、Knitfab の公開レジスト
@@ -395,7 +396,7 @@ worker-run-3cb1b091-01ad-41b1-acac-3f042f9df97c-wkgrq
 
 のような Pod Name です。
 
-この Pod を確認したら、 `kubectl describe pod ${POD_NAME}` や 
+この Pod を確認したら、 `kubectl describe pod ${POD_NAME}` や
 `kubectl get pod -o yaml pod ${POD_NAME}` を使って原因を探ります。
 
 たとえば、上記コマンドの出力に：
@@ -1086,3 +1087,38 @@ extraApi:
 に送られます(上例参照)。
 
 設定変更を反映するには、 `./installer.sh --install` を再実行してください。
+
+## 7.4. カスタムなデータインポート機構を追加する
+
+Knitfab のバックエンド WebAPI は、Data のカスタムなインポートをサポートしています。
+
+Knitfab を構成する Kubernetes の Service のうち、`knitd_backend` がバックエンドAPIのエンドポイントとなっています。
+Knitfab をインストールした Namespace 内であれば、 `knitd_backend` がそのまま Service を指すホスト名として解決できます。
+
+> [!Note]
+>
+> この Service 名 `knitd_backend` はデフォルトのものです。
+>
+> インストール時に helm に渡した values において `knitd_backend.service` を上書きしていた場合には、
+> その値がバックエンドAPIの Service 名となります。適宜読み替えてください。
+
+Data インポートは次の流れで進みます。
+
+1. `POST /api/backend/data/import/begin` にリクエストすることで、Data のインポート開始を Knitfab に通知します。
+  - リクエストボディとして送信すべきものはありません。空のリクエストを送ってください。
+  - レスポンスのボディには JWT が返されます。
+2. レスポンスボディの JWT から `sub` を読みとります。
+  - この値が、Knitfab がこのインポート用に確保した PersistentVolumeClaim(PVC) の名前です。
+  - Knitfab は JWT 検証用の証明書を公開 *しません*。JWT のペイロードを検証なしで読み取ってください。
+3. `sub` に指定された PVC と、それに Bind する PersistentVolume (PV) を作成します。
+  - PVC と PV は Bound になっていることを確認してください。
+4. `POST /api/backend/data/import/end` にリクエストして、JWT を Knitfab に送り返し、インポートの終了を通知します。
+  - リクエスト時のヘッダには `Content-Type: application/jwt` を含めてください。
+  - Knitfab は PVC が Bound になっていることを検証できたら、成功レスポンス(200) を返します。
+
+このうち、手順 3. では任意の方法で PVC と PV を作成してよいので、必要に応じた任意のインポート手法を実現できます。
+
+カスタムなインポート手順は、Web サーバとして構成され、Knitfab と同じ Namespace にデプロイされて、
+Knitfab にカスタム API として登録されることを想定しています。
+また、カスタムなインポート手順をユーザに提供するためには、CLI のカスタムサブコマンドとして
+クライアントを開発するとよいでしょう。
