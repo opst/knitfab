@@ -1,0 +1,124 @@
+{{ if not .Values.nfs.external }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.nfs.server }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.nfs.server }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  selector:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+  ports:
+    - protocol: TCP
+      port: 2049
+      targetPort: 2049
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.component }}-nfsd-init
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}-nfsd-init
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+data:
+  init.sh: |-
+    if ! [ -w /export ]; then
+      echo "exporting directory is not writable"
+      exit 1
+    fi
+    exec "/usr/bin/nfsd.sh"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  {{ .Values.component }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+      app.kubernetes.io/name: {{ .Values.component }}
+      app.kubernetes.io/managed-by: {{ .Release.Service }}
+      app.kubernetes.io/version: {{ .Chart.AppVersion }}
+      app.kubernetes.io/component: {{ .Values.component }}
+      app.kubernetes.io/part-of: knitfab
+  template:
+    metadata:
+      name: {{ .Values.component }}-nfsd
+      namespace: {{ .Release.Namespace | quote }}
+      labels:
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/name: {{ .Values.component }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: {{ .Values.component }}
+        app.kubernetes.io/part-of: knitfab
+    spec:
+      {{ if .Values.nfs.node }}nodeName: {{ .Values.nfs.node }}{{ end }}
+      containers:
+        - name: nfsd
+          image: "itsthenetwork/nfs-server-alpine:12"
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN", "SETPCAP"]
+          ports:
+           - containerPort: 2049  # nfsd
+          command:
+            ["bash", "/container-init/init.sh"]
+          env:
+            - name: SHARED_DIRECTORY
+              value: /export
+            - name: SYNC
+              value: "1"
+          volumeMounts:
+            - name: nfs-root
+              mountPath: /export
+              readOnly: false
+            - name: container-init
+              mountPath: /container-init
+              readOnly: true
+      volumes:
+        {{ if .Values.nfs.hostPath }}
+        - name: nfs-root
+          hostPath:
+            path: {{ .Values.nfs.hostPath }}
+            type: DirectoryOrCreate
+        {{ else }}
+        - name: nfs-root
+          emptyDir: {}
+        {{ end }}
+        - name: container-init
+          configMap:
+            name: {{ .Values.component }}-nfsd-init
+
+{{ end }}
