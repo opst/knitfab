@@ -477,6 +477,12 @@ if [ -z "${NAMESPACE}" ] ; then
 fi
 NAMESPACE=${NAMESPACE:-knitfab}
 
+if [ -z "${KUBECONFIG}" ] ; then
+	_KUBECONFIG=${SETTINGS}/kubeconfig
+	if [ -r ${_KUBECONFIG} ] ; then
+		KUBECONFIG=${_KUBECONFIG}
+	fi
+fi
 if [ -n "${KUBECONFIG}" ] ; then
 	KUBECONFIG=$(abspath ${KUBECONFIG})
 fi
@@ -620,7 +626,7 @@ set -e
 
 # Knitfab Uninstaller
 
-export KUBECONFIG="${KUBECONFIG}"
+export KUBECONFIG="\${KUBECONFIG:-${KUBECONFIG}}"
 JQ=\${JQ:-jq}
 
 if [ "\$1" == "--hard" ] ; then
