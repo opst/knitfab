@@ -1,4 +1,55 @@
-v.1.2.1
+v1.3.0-beta
+===========
+
+- Date: 2024-09-11
+
+The v1.3.0-beta release includes a new API, "Custom Data Import", and several bug fixes.
+
+## Important Changes
+
+### New Feature
+
+"Custom Data Import" API, aimed at advanced users, has been added.
+
+With the new API, you can create a custom process for importing Data using Kubernetes PV/PVC.
+
+For more details, see the documentation at docs/03.admin-guide/admin-guide-deep-dive.
+
+### Bug Fix
+
+- installer: `installer.sh --prepare` appended `./knitfab-install-settings/values/knit-db-postgres.yaml`.
+    - This issue has been fixed to update the entire YAML file.
+    - A typo in installer messages has been fixed.
+- dataagt, run worker: Pods were not terminated if they failed to start before scheduled (for example: Volume could not be mounted).
+    - Knitfab detects if scheduled Pods that become "stuck", and marks the task as "failed".
+- database: During an upgrade, it was possible that both the new and old databases would run simultaneously. If it occurs, database's files could become corrupted, preventing it from starting up normally.
+    - With this change, the new database is started after stopping the old one.
+
+### Miscellaneous
+
+- The Go version used to build Knitfab has been upgraded to v1.23.1.
+- The Admin Guide has been split into two parts, "installation" and "deep-dive".
+    - The "installation" part explains how to install Knitfab.
+    - The "deep-dive" part provides operational guides and advanced topics.
+
+## How to Try
+
+### Knitfab System
+
+Download the installer from branch [develop/v1.3.0](https://github.com/opst/knitfab/tree/develop/v1.3.0), and run
+
+```
+BRANCH=develop/v1.3.0 CHART_VERSION=v1.3.0-beta installer.sh --install
+```
+
+in the directory where you have installed Knitfab.
+
+### CLI `knit`
+
+Download from assets of this release.
+
+
+v1.2.1
 ===========
 
 - Date: 2024-08-05
