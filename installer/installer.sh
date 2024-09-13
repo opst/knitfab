@@ -211,7 +211,7 @@ vex:
 
 EOF
 
-	cat <<EOF >> values/knit-db-postgres.yaml
+	cat <<EOF > values/knit-db-postgres.yaml
 # # # values/knit-db-postgres.yaml # # #
 
 # # this file declares install paramaters for Database of Knitfab.
@@ -465,14 +465,27 @@ while [ 0 -lt ${#} ] ; do
 	esac
 done
 
-if [ -n "${KUBECONFIG}" ] ; then
-	KUBECONFIG=$(abspath ${KUBECONFIG})
-fi
-
 if [ -z "${SETTINGS}" ] ; then
 	SETTINGS=${HERE}/knitfab-install-settings
 fi
 export SETTINGS=$(abspath ${SETTINGS})
+
+if [ -z "${NAMESPACE}" ] ; then
+	if [ -r "${SETTINGS}/namespace" ] ; then
+		NAMESPACE=$(cat ${SETTINGS}/namespace)
+	fi
+fi
+NAMESPACE=${NAMESPACE:-knitfab}
+
+if [ -z "${KUBECONFIG}" ] ; then
+	_KUBECONFIG=${SETTINGS}/kubeconfig
+	if [ -r ${_KUBECONFIG} ] ; then
+		KUBECONFIG=${_KUBECONFIG}
+	fi
+fi
+if [ -n "${KUBECONFIG}" ] ; then
+	KUBECONFIG=$(abspath ${KUBECONFIG})
+fi
 
 if [ -n "${TLSCACERT}" ] ; then
 	export TLSCACERT=$(abspath ${TLSCACERT})
@@ -570,6 +583,7 @@ EOF
 	exit 1
 fi
 
+
 if [ -n "${PREPARE}" ] ; then
 	if [ -n "${INSTALL}" ] ; then
 		message "ERROR: --prepare and --install are exclusive."
@@ -603,13 +617,16 @@ if [ -z "${INSTALL}" ] ; then
 	exit 0
 fi
 
+# save actual namespace
+echo ${NAMESPACE} > ${SETTINGS}/namespace
+
 cat <<EOF > ${SETTINGS}/uninstaller.sh
 #! /bin/bash
 set -e
 
 # Knitfab Uninstaller
 
-export KUBECONFIG="${KUBECONFIG}"
+export KUBECONFIG="\${KUBECONFIG:-${KUBECONFIG}}"
 JQ=\${JQ:-jq}
 
 if [ "\$1" == "--hard" ] ; then
@@ -703,11 +720,7 @@ run ${HELM} repo add --force-update knitfab ${CHART_REPOSITORY_ROOT}
 message "[2 / 3] install knit middlewares..."
 
 message "[2 / 3] #1 install storage driver"
-MODE=install
-if ${HELM} status knit-storage-nfs -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	-f ${VALUES}/knit-storage-nfs.yaml \
@@ -715,22 +728,17 @@ knit-storage-nfs knitfab/knit-storage-nfs
 sleep 5
 
 message "[2 / 3] #2 install tls certificates"
-MODE=install
-if ${HELM} status knit-certs -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	-f ${VALUES}/knit-certs.yaml \
 	knit-certs knitfab/knit-certs
 
 message "[2 / 3] #3 install database"
-MODE=install
 if ${HELM} status knit-db-postgres -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
 	MODE=upgrade
 fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
@@ -738,11 +746,7 @@ run ${HELM} ${MODE} --dependency-update --wait \
 	knit-db-postgres knitfab/knit-db-postgres
 
 message "[2 / 3] #4 install image registry"
-MODE=install
-if ${HELM} status knit-image-registry -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
@@ -752,11 +756,7 @@ run ${HELM} ${MODE} --dependency-update --wait \
 
 message "[3 / 3] install Knitfab app"
 message "[3 / 3] #1 run database upgrade job"
-MODE=install
-if ${HELM} status knit-schema-upgrader -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --wait \
+run ${HELM} upgrade -i --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
@@ -765,11 +765,7 @@ run ${HELM} ${MODE} --wait \
 	knit-schema-upgrader knitfab/knit-schema-upgrader
 
 message "[3 / 3] #2 install knit app"
-MODE=install
-if ${HELM} status knit-app -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} ${MODE} --dependency-update --wait \
+run ${HELM} upgrade -i --dependency-update --wait \
 	-n ${NAMESPACE} --create-namespace \
 	--version ${CHART_VERSION} \
 	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
@@ -836,7 +832,7 @@ Install is done.
 Next Step
 ----------
 
-* Handouts for your user is generated at ${SETTINGS}/handout .
+* Handouts for your user is generated at ${SETTINGS}/handouts .
   - Please pass the files to your user.
 
 * Uninstaller is generated at ${SETTINGS}/uninstaller.sh .

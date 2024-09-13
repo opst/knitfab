@@ -27,6 +27,7 @@ func (p PseudoPlanName) String() string {
 const (
 	// File upload plan
 	Uploaded PseudoPlanName = "knit#uploaded"
+	Imported PseudoPlanName = "knit#imported"
 )
 
 type PlanInterface interface {

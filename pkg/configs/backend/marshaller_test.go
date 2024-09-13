@@ -27,6 +27,9 @@ cluster:
     nurse:
       image: knit-repo/nurse:v0.0.3
       serviceAccount: fake-service-account
+  keychains:
+    signKeyForImportToken:
+      name: fake-sign-key-name
 `)
 		result, err := kback.Unmarshal(backendYml)
 
@@ -122,5 +125,12 @@ cluster:
 			}
 		})
 
+		t.Run(".cluster.keychain.names.signKeyForImportToken", func(t *testing.T) {
+			actual := result.Cluster().Keychains().SignKeyForImportToken().Name()
+			expected := "fake-sign-key-name"
+			if actual != expected {
+				t.Errorf("mismatch. (expected, actual) = (%v, %v)", expected, actual)
+			}
+		})
 	})
 }

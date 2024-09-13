@@ -1,13 +1,17 @@
 module github.com/opst/knitfab/cmd/knitd_backend
 
-go 1.22.2
+go 1.23.1
 
 replace github.com/opst/knitfab v1.2.1 => ../..
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/google/uuid v1.6.0
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/labstack/gommon v0.4.2
 	github.com/opst/knitfab v1.2.1
+	k8s.io/api v0.30.3
+	k8s.io/apimachinery v0.30.3
 )
 
 require (
@@ -24,7 +28,6 @@ require (
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-containerregistry v0.20.1 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.3 // indirect
@@ -59,8 +62,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.30.3 // indirect
-	k8s.io/apimachinery v0.30.3 // indirect
 	k8s.io/client-go v0.30.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240730131305-7a9a4e85957e // indirect

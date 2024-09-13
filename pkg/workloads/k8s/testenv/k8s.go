@@ -17,8 +17,10 @@ import (
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"
+	kubeevent "k8s.io/api/events/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	applyconfigurations "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -53,9 +55,9 @@ func Images() struct {
 		Nurse   string
 		Empty   string
 	}{
-		Dataagt: kos.GetEnvOr(ENV_IMAGE_DATAAGT, "knit-dataagt:TEST"),
-		Nurse:   kos.GetEnvOr(ENV_IMAGE_NURSE, "knit-nurse:TEST"),
-		Empty:   kos.GetEnvOr(ENV_IMAGE_EMPTY, "knit-empty:TEST"),
+		Dataagt: kos.GetEnvOr(ENV_IMAGE_DATAAGT, "knit-dataagt:TEST-test"),
+		Nurse:   kos.GetEnvOr(ENV_IMAGE_NURSE, "knit-nurse:TEST-test"),
+		Empty:   kos.GetEnvOr(ENV_IMAGE_EMPTY, "knit-empty:TEST-test"),
 	}
 }
 
@@ -520,4 +522,20 @@ func (kc *k8sclient) FindPods(ctx context.Context, namespace string, labelSelect
 
 func (kc *k8sclient) Log(ctx context.Context, namespace, podname, containerName string) (io.ReadCloser, error) {
 	return kc.base.Log(ctx, namespace, podname, containerName)
+}
+
+func (kc *k8sclient) UpsertSecret(ctx context.Context, namespace string, secret *applyconfigurations.SecretApplyConfiguration) (*kubecore.Secret, error) {
+	return kc.base.UpsertSecret(ctx, namespace, secret)
+}
+
+func (kc *k8sclient) GetSecret(ctx context.Context, namespace string, name string) (*kubecore.Secret, error) {
+	return kc.base.GetSecret(ctx, namespace, name)
+}
+
+func (kc *k8sclient) DeleteSecret(ctx context.Context, namespace string, name string) error {
+	return kc.base.DeleteSecret(ctx, namespace, name)
+}
+
+func (k8s *k8sclient) GetEvents(ctx context.Context, kind string, target kubeapimeta.ObjectMeta) ([]kubeevent.Event, error) {
+	return k8s.base.GetEvents(ctx, kind, target)
 }

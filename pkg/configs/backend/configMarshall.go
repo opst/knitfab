@@ -24,9 +24,7 @@ type BackendConfigMarshall struct {
 	Cluster *KnitClusterConfigMarshall `yaml:"cluster"`
 }
 
-func (b *BackendConfigMarshall) TrySeal() *BackendConfig {
-	return TrySeal[*BackendConfig](b)
-}
+var _ Marshalled[*BackendConfig] = &BackendConfigMarshall{}
 
 func (b *BackendConfigMarshall) trySeal(path string) *BackendConfig {
 	return &BackendConfig{
@@ -46,6 +44,7 @@ type KnitClusterConfigMarshall struct {
 	Database  string                   `yaml:"database"`
 	DataAgent *DataAgentConfigMarshall `yaml:"dataAgent"`
 	Worker    *WorkerConfigMarshall    `yaml:"worker"`
+	Keychains *KeychainsConfigMarshall `yaml:"keychains"`
 }
 
 // verify configuration value and create "readonly" version of this.
@@ -66,6 +65,7 @@ func (km *KnitClusterConfigMarshall) trySeal(path string) *KnitClusterConfig {
 		database:  required(km.Database, path+".database"),
 		dataAgent: nonnil(km.DataAgent, path+".dataAgent").trySeal(path + ".dataAgent"),
 		worker:    nonnil(km.Worker, path+".worker").trySeal(path + ".worker"),
+		keychains: nonnil(km.Keychains, path+".keychain").trySeal(path + ".keychain"),
 	}
 }
 
@@ -135,6 +135,26 @@ func (n *NurseContainerConfigMarshall) trySeal(path string) *NurseContainerConfi
 	return &NurseContainerConfig{
 		image:          required(n.Image, path+".image"),
 		serviceAccount: required(n.ServiceAccount, path+".serviceAccount"),
+	}
+}
+
+type KeychainsConfigMarshall struct {
+	SignKeyForImportToken *HS256KeyChainMarshall `yaml:"signKeyForImportToken"`
+}
+
+func (kc *KeychainsConfigMarshall) trySeal(path string) *KeychainsConfig {
+	return &KeychainsConfig{
+		signKeyForImportToken: nonnil(kc.SignKeyForImportToken, path+".signKeyForImportToken").trySeal(path + ".signKeyForImportToken"),
+	}
+}
+
+type HS256KeyChainMarshall struct {
+	Name string `yaml:"name"`
+}
+
+func (kn *HS256KeyChainMarshall) trySeal(path string) *HS256KeychainsConfig {
+	return &HS256KeychainsConfig{
+		name: required(kn.Name, path+".name"),
 	}
 }
 

@@ -6,5 +6,6 @@ type KnitDatabase interface {
 	Plan() PlanInterface
 	Garbage() GarbageInterface
 	Schema() SchemaInterface
+	Keychain() KeychainInterface
 	Close() error
 }
