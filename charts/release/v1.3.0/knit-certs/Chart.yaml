@@ -1,0 +1,6 @@
+apiVersion: v2
+name: knit-certs
+description: certificate management for knitfab
+type: application
+version: v1.3.0
+appVersion: v1.3.0-58c2103
