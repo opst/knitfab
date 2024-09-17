@@ -15,18 +15,18 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	apidata "github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	apitag "github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knitd_backend/handlers"
 	mockkeyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider/mockKeyprovider"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	backendapidata "github.com/opst/knitfab/pkg/api/backends/types/data"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	"github.com/opst/knitfab/pkg/api/types/plans"
-	"github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
+	binddata "github.com/opst/knitfab/pkg/api-types-binding/data"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	dbmock "github.com/opst/knitfab/pkg/db/mocks"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/opst/knitfab/pkg/workloads"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"
@@ -695,7 +695,7 @@ func TestPostDataHandler(t *testing.T) {
 				t.Fatalf("Response is not json. err = %v", err)
 			}
 
-			if !actualPayload.Equal(&expectedResponsePayload) {
+			if !actualPayload.Equal(expectedResponsePayload) {
 				t.Errorf(
 					"knitId in response is wrong\n===actual===\n%s\n===expected===\n%s",
 					try.To(json.MarshalIndent(actualPayload, "", "  ")).OrFatal(t),
@@ -1760,7 +1760,7 @@ func TestImportDataBeginHandler(t *testing.T) {
 
 		claim := try.To(jwt.ParseWithClaims(
 			body,
-			&backendapidata.DataImportClaim{},
+			&handlers.DataImportClaim{},
 			func(t *jwt.Token) (interface{}, error) { return k.ToVerify(), nil },
 		)).OrFatal(t)
 
@@ -1775,7 +1775,7 @@ func TestImportDataBeginHandler(t *testing.T) {
 			}
 		}
 
-		if c, ok := claim.Claims.(*backendapidata.DataImportClaim); !ok {
+		if c, ok := claim.Claims.(*handlers.DataImportClaim); !ok {
 			t.Fatalf("claim is not DataImportClaim. actual = %T", claim.Claims)
 		} else {
 			if c.ID == "" {
@@ -1996,7 +1996,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			}, nil
 		}
 
-		claim := &backendapidata.DataImportClaim{
+		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
 				Subject: "test-volume-ref",
@@ -2078,8 +2078,8 @@ func TestImpoerDataEndHandler(t *testing.T) {
 		if err := json.NewDecoder(resprec.Body).Decode(parsed); err != nil {
 			t.Fatalf("response body is not JSON: %s", err)
 		}
-		want := apidata.ComposeDetail(data)
-		if !want.Equal(parsed) {
+		want := binddata.ComposeDetail(data)
+		if !want.Equal(*parsed) {
 			t.Errorf("response body is not expected. actual = %+v, expected = %+v", parsed, want)
 		}
 	})
@@ -2118,7 +2118,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 				}, nil
 			}
 
-			claim := &backendapidata.DataImportClaim{
+			claim := &handlers.DataImportClaim{
 				RegisteredClaims: jwt.RegisteredClaims{
 					ID:      "nonce",
 					Subject: "test-volume-ref",
@@ -2198,7 +2198,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return nil, context.DeadlineExceeded
 		}
 
-		claim := &backendapidata.DataImportClaim{
+		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
 				Subject: "test-volume-ref",
@@ -2251,7 +2251,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return nil, &workloads.ErrMissing{}
 		}
 
-		claim := &backendapidata.DataImportClaim{
+		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
 				Subject: "test-volume-ref",
@@ -2305,7 +2305,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return nil, expectedError
 		}
 
-		claim := &backendapidata.DataImportClaim{
+		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
 				Subject: "test-volume-ref",
@@ -2358,7 +2358,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	t.Run("when dbData.Get does not return Data in token, it responses 500", func(t *testing.T) {
 		cluster, _ := mock.NewCluster()
 
-		claim := &backendapidata.DataImportClaim{
+		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
 				Subject: "test-volume-ref",
@@ -2409,7 +2409,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	t.Run("when dbData.Get cause error, it responses 500", func(t *testing.T) {
 		cluster, _ := mock.NewCluster()
 
-		claim := &backendapidata.DataImportClaim{
+		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
 				Subject: "test-volume-ref",
@@ -2464,7 +2464,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	t.Run("when token is invalid, it responses 400", func(t *testing.T) {
 		cluster, _ := mock.NewCluster()
 
-		claim := &backendapidata.DataImportClaim{
+		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
 				Subject: "test-volume-ref",
@@ -2509,7 +2509,7 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	t.Run("when key provider's GetKeychain cause error, it responses 500", func(t *testing.T) {
 		cluster, _ := mock.NewCluster()
 
-		claim := &backendapidata.DataImportClaim{
+		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
 				Subject: "test-volume-ref",

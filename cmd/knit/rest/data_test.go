@@ -20,19 +20,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opst/knitfab-api-types/data"
+	apierr "github.com/opst/knitfab-api-types/errors"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/archive"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kio "github.com/opst/knitfab/pkg/io"
-	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -53,55 +52,55 @@ func TestPostData(t *testing.T) {
 	theory := func(when When, then Then) func(*testing.T) {
 		return func(t *testing.T) {
 
-			response := apidata.Detail{
+			response := data.Detail{
 				KnitId: "1234",
-				Tags:   []apitag.Tag{{Key: "keydata", Value: "valdata"}},
-				Upstream: apidata.AssignedTo{
-					Run: apirun.Summary{
+				Tags:   []tags.Tag{{Key: "keydata", Value: "valdata"}},
+				Upstream: data.AssignedTo{
+					Run: runs.Summary{
 						RunId: "parent-run", Status: string(kdb.Done),
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-04-02T12:00:00+00:00",
 						)).OrFatal(t),
-						Plan: apiplan.Summary{
+						Plan: plans.Summary{
 							PlanId: "plan-trainer",
-							Image:  &apiplan.Image{Repository: "image-name", Tag: "v0.0.1"},
+							Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 						},
 					},
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/out/model",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "model-paramter"},
 							{Key: "task", Value: "LLM"},
 						},
 					},
 				},
-				Downstreams: []apidata.AssignedTo{
+				Downstreams: []data.AssignedTo{
 					{
-						Run: apirun.Summary{
+						Run: runs.Summary{
 							RunId: "evaluator-1-1", Status: string(kdb.Done),
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-04-03T12:00:00+00:00",
 							)).OrFatal(t),
-							Plan: apiplan.Summary{
+							Plan: plans.Summary{
 								PlanId: "plan-evaluate",
-								Image:  &apiplan.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
+								Image:  &plans.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
 							},
 						},
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/in/model",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "model-paramter"},
 								{Key: "task", Value: "LLM"},
 							},
 						},
 					},
 				},
-				Nomination: []apidata.NominatedBy{
+				Nomination: []data.NominatedBy{
 					{
-						Mountpoint: apiplan.Mountpoint{Path: "/in/model"},
-						Plan: apiplan.Summary{
+						Mountpoint: plans.Mountpoint{Path: "/in/model"},
+						Plan: plans.Summary{
 							PlanId: "plan-evaluate",
-							Image:  &apiplan.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
+							Image:  &plans.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
 						},
 					},
 				},
@@ -159,7 +158,7 @@ func TestPostData(t *testing.T) {
 			if !ok {
 				t.Fatalf("unexpected result. it not failed: %s", prog.Error())
 			}
-			if !gotResponse.Equal(&response) {
+			if !gotResponse.Equal(response) {
 				t.Errorf("unexpected response: %v", gotResponse)
 			}
 
@@ -337,9 +336,9 @@ func TestPostData(t *testing.T) {
 		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.Errorf("request should not be sent.")
 
-			data := apidata.Summary{
+			data := data.Summary{
 				KnitId: "1234",
-				Tags:   []apitag.Tag{{Key: "keydata", Value: "valdata"}},
+				Tags:   []tags.Tag{{Key: "keydata", Value: "valdata"}},
 			}
 			respBody := try.To(json.Marshal(data)).OrFatal(t)
 
@@ -370,22 +369,22 @@ func TestPostData(t *testing.T) {
 func TestPutTagshWithKnitId(t *testing.T) {
 	t.Run("when `PutTag` is completed it returns registered tag information.", func(t *testing.T) {
 
-		expectedAddTags := []apitag.UserTag{
+		expectedAddTags := []tags.UserTag{
 			{Key: "tagkey1", Value: "tagval1"},
 			{Key: "tagkey2", Value: "tagval2"},
 		}
-		expectedRemoveTags := []apitag.UserTag{
+		expectedRemoveTags := []tags.UserTag{
 			{Key: "tagkeyrem1", Value: "tagvalrem1"},
 			{Key: "tagkeyrem2", Value: "tagvalrem2"},
 		}
-		expectedTags := []apitag.Tag{
+		expectedTags := []tags.Tag{
 			{Key: "tagkey1", Value: "tagval1"},
 			{Key: "tagkey2", Value: "tagval2"},
 			{Key: "tagkeyrem1", Value: "tagvalrem1"},
 			{Key: "tagkeyrem2", Value: "tagvalrem2"},
 		}
 
-		expected := apidata.Summary{KnitId: "1234", Tags: expectedTags}
+		expected := data.Summary{KnitId: "1234", Tags: expectedTags}
 		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if r.Method != http.MethodPut {
@@ -396,7 +395,7 @@ func TestPutTagshWithKnitId(t *testing.T) {
 				t.Error("unmatch header Content-Type.")
 			}
 
-			tags := apitag.Change{}
+			tags := tags.Change{}
 			b := try.To(io.ReadAll(r.Body)).OrFatal(t)
 			// compare request body
 			if err := json.Unmarshal(b, &tags); err != nil {
@@ -423,7 +422,7 @@ func TestPutTagshWithKnitId(t *testing.T) {
 
 		ci := try.To(krst.NewClient(&profile)).OrFatal(t)
 
-		tags := apitag.Change{}
+		tags := tags.Change{}
 		tags.AddTags = expectedAddTags
 		tags.RemoveTags = expectedRemoveTags
 		res := try.To(ci.PutTagsForData("1234", tags)).OrFatal(t)
@@ -444,8 +443,8 @@ func TestPutTagshWithKnitId(t *testing.T) {
 
 		ci := try.To(krst.NewClient(&profile)).OrFatal(t)
 
-		tags := apitag.Change{
-			AddTags: []apitag.UserTag{
+		tags := tags.Change{
+			AddTags: []tags.UserTag{
 				{Key: "tagkey1", Value: "tagval1"},
 				{Key: "tagkey2", Value: "tagval2"},
 			},
@@ -478,8 +477,8 @@ func TestPutTagshWithKnitId(t *testing.T) {
 
 		ci := try.To(krst.NewClient(&profile)).OrFatal(t)
 
-		tags := apitag.Change{
-			AddTags: []apitag.UserTag{
+		tags := tags.Change{
+			AddTags: []tags.UserTag{
 				{Key: "tagkey1", Value: "tagval1"},
 				{Key: "tagkey2", Value: "tagval2"},
 			},
@@ -512,8 +511,8 @@ func TestPutTagshWithKnitId(t *testing.T) {
 
 		ci := try.To(krst.NewClient(&profile)).OrFatal(t)
 
-		tags := apitag.Change{
-			AddTags: []apitag.UserTag{
+		tags := tags.Change{
+			AddTags: []tags.UserTag{
 				{Key: "tagkey1", Value: "tagval1"},
 				{Key: "tagkey2", Value: "tagval2"},
 			},
@@ -527,7 +526,7 @@ func TestPutTagshWithKnitId(t *testing.T) {
 
 func TestFindData(t *testing.T) {
 	t.Run("a server responding successfully	is given", func(t *testing.T) {
-		handlerFactory := func(t *testing.T, resp []apidata.Detail) (http.Handler, func() *http.Request) {
+		handlerFactory := func(t *testing.T, resp []data.Detail) (http.Handler, func() *http.Request) {
 			var request *http.Request
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				t.Helper()
@@ -543,7 +542,7 @@ func TestFindData(t *testing.T) {
 		}
 
 		type when struct {
-			tags     []apitag.Tag
+			tags     []tags.Tag
 			since    *time.Time
 			duration *time.Duration
 		}
@@ -573,7 +572,7 @@ func TestFindData(t *testing.T) {
 			},
 			"when query with tags, server receives them": {
 				when: when{
-					tags: []apitag.Tag{
+					tags: []tags.Tag{
 						{Key: "key-a", Value: "value/a"},
 						{Key: "type", Value: "unknown?"},
 						{Key: "knit#id", Value: "some-knit-id"},
@@ -597,7 +596,7 @@ func TestFindData(t *testing.T) {
 		} {
 			t.Run(name, func(t *testing.T) {
 				ctx := context.Background()
-				response := []apidata.Detail{} //empty. this is out of scope of these testcases.
+				response := []data.Detail{} //empty. this is out of scope of these testcases.
 
 				handler, getLastRequest := handlerFactory(t, response)
 				ts := httptest.NewServer(handler)
@@ -612,10 +611,7 @@ func TestFindData(t *testing.T) {
 				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 				result := try.To(testee.FindData(ctx, when.tags, when.since, when.duration)).OrFatal(t)
 
-				if !cmp.SliceContentEqWith(
-					utils.RefOf(result), utils.RefOf(response),
-					(*apidata.Detail).Equal,
-				) {
+				if !cmp.SliceContentEqWith(result, response, data.Detail.Equal) {
 					t.Errorf(
 						"response is wrong:\n- actual:\n%#v\n- expected:\n%#v",
 						result, response,
@@ -641,162 +637,162 @@ func TestFindData(t *testing.T) {
 		t.Run("when server returns data, it returns that as is", func(t *testing.T) {
 			ctx := context.Background()
 
-			expectedResponse := []apidata.Detail{
+			expectedResponse := []data.Detail{
 				{
 					KnitId: "model-parameter-1",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "knit#id", Value: "model-parameter-1"},
 						{Key: "knit#timestamp", Value: "2022-04-01T12:34:56+00:00"},
 						{Key: "type", Value: "model-paramter"},
 						{Key: "task", Value: "LLM"},
 						{Key: "tag-a", Value: "value-a"},
 					},
-					Upstream: apidata.AssignedTo{
-						Run: apirun.Summary{
+					Upstream: data.AssignedTo{
+						Run: runs.Summary{
 							RunId: "parent-run", Status: string(kdb.Done),
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-04-02T12:00:00+00:00",
 							)).OrFatal(t),
-							Plan: apiplan.Summary{
+							Plan: plans.Summary{
 								PlanId: "plan-trainer",
-								Image:  &apiplan.Image{Repository: "image-name", Tag: "v0.0.1"},
+								Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 							},
 						},
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/out/model",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "model-paramter"},
 								{Key: "task", Value: "LLM"},
 							},
 						},
 					},
-					Downstreams: []apidata.AssignedTo{
+					Downstreams: []data.AssignedTo{
 						{
-							Run: apirun.Summary{
+							Run: runs.Summary{
 								RunId: "evaluator-1-1", Status: string(kdb.Done),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-03T12:00:00+00:00",
 								)).OrFatal(t),
-								Plan: apiplan.Summary{
+								Plan: plans.Summary{
 									PlanId: "plan-evaluate",
-									Image:  &apiplan.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
+									Image:  &plans.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
 								},
 							},
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: plans.Mountpoint{
 								Path: "/in/model",
-								Tags: []apitag.Tag{
+								Tags: []tags.Tag{
 									{Key: "type", Value: "model-paramter"},
 									{Key: "task", Value: "LLM"},
 								},
 							},
 						},
 						{
-							Run: apirun.Summary{
+							Run: runs.Summary{
 								RunId: "evaluator-1-2", Status: string(kdb.Running),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-04T12:00:00+00:00",
 								)).OrFatal(t),
-								Plan: apiplan.Summary{
+								Plan: plans.Summary{
 									PlanId: "plan-evaluate",
-									Image:  &apiplan.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
+									Image:  &plans.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
 								},
 							},
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: plans.Mountpoint{
 								Path: "/in/model",
-								Tags: []apitag.Tag{
+								Tags: []tags.Tag{
 									{Key: "task", Value: "LLM"},
 								},
 							},
 						},
 					},
-					Nomination: []apidata.NominatedBy{
+					Nomination: []data.NominatedBy{
 						{
-							Mountpoint: apiplan.Mountpoint{Path: "/in/model"},
-							Plan: apiplan.Summary{
+							Mountpoint: plans.Mountpoint{Path: "/in/model"},
+							Plan: plans.Summary{
 								PlanId: "plan-evaluate",
-								Image:  &apiplan.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
+								Image:  &plans.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
 							},
 						},
 					},
 				},
 				{
 					KnitId: "model-parameter-2",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "knit#id", Value: "model-parameter-2"},
 						{Key: "knit#timestamp", Value: "2022-07-20T13:57:20+00:00"},
 						{Key: "tag-a", Value: "value-a"},
 						{Key: "tag-b", Value: "value-b"},
 					},
-					Upstream: apidata.AssignedTo{
-						Run: apirun.Summary{
+					Upstream: data.AssignedTo{
+						Run: runs.Summary{
 							RunId: "parent-run", Status: string(kdb.Done),
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-04-02T12:00:00+00:00",
 							)).OrFatal(t),
-							Plan: apiplan.Summary{
+							Plan: plans.Summary{
 								PlanId: "plan-trainer",
-								Image:  &apiplan.Image{Repository: "image-name", Tag: "v0.0.1"},
+								Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 							},
 						},
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/out/model",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "model-paramter"},
 								{Key: "task", Value: "LLM"},
 							},
 						},
 					},
-					Downstreams: []apidata.AssignedTo{
+					Downstreams: []data.AssignedTo{
 						{
-							Run: apirun.Summary{
+							Run: runs.Summary{
 								RunId: "evaluator-2-1", Status: string(kdb.Running),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-02T12:30:00+00:00",
 								)).OrFatal(t),
-								Plan: apiplan.Summary{
+								Plan: plans.Summary{
 									PlanId: "plan-evaluate",
-									Image:  &apiplan.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
+									Image:  &plans.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
 								},
 							},
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: plans.Mountpoint{
 								Path: "/in/model",
-								Tags: []apitag.Tag{
+								Tags: []tags.Tag{
 									{Key: "task", Value: "LLM"},
 								},
 							},
 						},
 						{
-							Run: apirun.Summary{
+							Run: runs.Summary{
 								RunId: "evaluator-2-2", Status: string(kdb.Running),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-02T12:30:00+00:00",
 								)).OrFatal(t),
-								Plan: apiplan.Summary{
+								Plan: plans.Summary{
 									PlanId: "plan-evaluate",
-									Image:  &apiplan.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
+									Image:  &plans.Image{Repository: "child-image-1", Tag: "0.1-alpha"},
 								},
 							},
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: plans.Mountpoint{
 								Path: "/in/model",
-								Tags: []apitag.Tag{
+								Tags: []tags.Tag{
 									{Key: "task", Value: "LLM"},
 								},
 							},
 						},
 						{
-							Run: apirun.Summary{
+							Run: runs.Summary{
 								RunId: "done-hook", Status: string(kdb.Done),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-02T12:30:00+00:00",
 								)).OrFatal(t),
-								Plan: apiplan.Summary{
+								Plan: plans.Summary{
 									PlanId: "notifier",
-									Image:  &apiplan.Image{Repository: "slack-notifier", Tag: "beta"},
+									Image:  &plans.Image{Repository: "slack-notifier", Tag: "beta"},
 								},
 							},
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: plans.Mountpoint{
 								Path: "/in/trigger",
-								Tags: []apitag.Tag{
+								Tags: []tags.Tag{
 									{Key: "type", Value: "model-paramter"},
 									{Key: "task", Value: "LLM"},
 								},
@@ -813,7 +809,7 @@ func TestFindData(t *testing.T) {
 
 			// prepare for the tests
 			profile := kprof.KnitProfile{ApiRoot: ts.URL}
-			queryTags := []apitag.Tag{
+			queryTags := []tags.Tag{
 				{Key: "tag-a", Value: "value-a"},
 			}
 
@@ -823,10 +819,7 @@ func TestFindData(t *testing.T) {
 			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 			actualResponse := try.To(testee.FindData(ctx, queryTags, &since, &duration)).OrFatal(t)
 
-			if !cmp.SliceContentEqWith(
-				actualResponse, expectedResponse,
-				func(a, b apidata.Detail) bool { return a.Equal(&b) },
-			) {
+			if !cmp.SliceContentEqWith(actualResponse, expectedResponse, data.Detail.Equal) {
 				t.Errorf(
 					"response is in unexpected form:\n===actual===\n%+v\n===expected===\n%+v",
 					actualResponse, expectedResponse,
@@ -862,7 +855,7 @@ func TestFindData(t *testing.T) {
 
 				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 
-				queryTags := []apitag.Tag{
+				queryTags := []tags.Tag{
 					{Key: "tag-a", Value: "value-a"},
 				}
 

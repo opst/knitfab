@@ -7,18 +7,18 @@ import (
 	"net/http"
 	"strings"
 
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/runs"
 )
 
-func (c *client) GetRun(ctx context.Context, runId string) (apirun.Detail, error) {
+func (c *client) GetRun(ctx context.Context, runId string) (runs.Detail, error) {
 	resp, err := c.httpclient.Get(c.apipath("runs", runId))
 	if err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 	defer resp.Body.Close()
 
-	var dataMetas apirun.Detail
+	var dataMetas runs.Detail
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -26,7 +26,7 @@ func (c *client) GetRun(ctx context.Context, runId string) (apirun.Detail, error
 			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
 		},
 	); err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 	return dataMetas, nil
 }
@@ -67,7 +67,7 @@ func (c *client) GetRunLog(ctx context.Context, runId string, follow bool) (io.R
 func (c *client) FindRun(
 	ctx context.Context,
 	query FindRunParameter,
-) ([]apirun.Detail, error) {
+) ([]runs.Detail, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apipath("runs"), nil)
 	if err != nil {
@@ -104,7 +104,7 @@ func (c *client) FindRun(
 	}
 	defer resp.Body.Close()
 
-	dataMetas := make([]apirun.Detail, 0, 5)
+	dataMetas := make([]runs.Detail, 0, 5)
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -118,21 +118,21 @@ func (c *client) FindRun(
 	return dataMetas, nil
 }
 
-func (c *client) Tearoff(ctx context.Context, runId string) (apirun.Detail, error) {
+func (c *client) Tearoff(ctx context.Context, runId string) (runs.Detail, error) {
 	req, err := http.NewRequestWithContext(
 		ctx, http.MethodPut, c.apipath("runs", runId, "tearoff"), nil,
 	)
 	if err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 
 	resp, err := c.httpclient.Do(req)
 	if err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 	defer resp.Body.Close()
 
-	var dataMetas apirun.Detail
+	var dataMetas runs.Detail
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -140,26 +140,26 @@ func (c *client) Tearoff(ctx context.Context, runId string) (apirun.Detail, erro
 			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
 		},
 	); err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 	return dataMetas, nil
 }
 
-func (c *client) Abort(ctx context.Context, runId string) (apirun.Detail, error) {
+func (c *client) Abort(ctx context.Context, runId string) (runs.Detail, error) {
 	req, err := http.NewRequestWithContext(
 		ctx, http.MethodPut, c.apipath("runs", runId, "abort"), nil,
 	)
 	if err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 
 	resp, err := c.httpclient.Do(req)
 	if err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 	defer resp.Body.Close()
 
-	var dataMetas apirun.Detail
+	var dataMetas runs.Detail
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -167,7 +167,7 @@ func (c *client) Abort(ctx context.Context, runId string) (apirun.Detail, error)
 			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
 		},
 	); err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 	return dataMetas, nil
 }

@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/pkg/utils/rfctime"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 )
 
 func TestRFC3339(t *testing.T) {
@@ -22,7 +21,10 @@ func TestRFC3339(t *testing.T) {
 
 	t.Run("it should parse when passed rfc3396 date-time format", func(t *testing.T) {
 		s := "2021-10-22T12:34:56.987654321+07:00"
-		testee := try.To(rfctime.ParseRFC3339DateTime(s)).OrFatal(t)
+		testee, err := rfctime.ParseRFC3339DateTime(s)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		expected := time.Date(
 			2021, 10, 22, 12, 34, 56, 987654321,
@@ -41,9 +43,15 @@ func TestRFC3339(t *testing.T) {
 
 	t.Run("it can be marshalled into json", func(t *testing.T) {
 		s := "2021-10-22T12:34:56+07:00"
-		testee := try.To(rfctime.ParseRFC3339DateTime(s)).OrFatal(t)
+		testee, err := rfctime.ParseRFC3339DateTime(s)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		actual := try.To(json.Marshal(testee)).OrFatal(t)
+		actual, err := json.Marshal(testee)
+		if err != nil {
+			t.Fatal(err)
+		}
 		expected := fmt.Sprintf(`"%s"`, s) // String in json
 
 		if string(actual) != expected {
@@ -60,7 +68,10 @@ func TestRFC3339(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected := try.To(rfctime.ParseRFC3339DateTime(s)).OrFatal(t)
+		expected, err := rfctime.ParseRFC3339DateTime(s)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		if !actual.Time().Equal(expected.Time()) {
 			t.Errorf("unmatch: json unmarshall: (actual, expected) = (%s, %s)", actual, expected)
@@ -75,7 +86,7 @@ func TestRFC3339(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !actual.Equal(expected) {
+			if !actual.Equal(*expected) {
 				t.Errorf("updated by unmarshalling null, unexpectedly: %s", actual)
 			}
 		})
@@ -93,7 +104,7 @@ func TestRFC3339(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !actual.Equal(&expected) {
+			if !actual.Equal(expected) {
 				t.Errorf("updated by unmarshalling null, unexpectedly: %s", actual)
 			}
 		})

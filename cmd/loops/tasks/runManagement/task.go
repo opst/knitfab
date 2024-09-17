@@ -5,10 +5,11 @@ import (
 	"errors"
 	"time"
 
+	api_runs "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
-	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
+	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 )
 
@@ -57,7 +58,7 @@ func Task(
 		if statusChanged {
 			if newRuns, _ := irun.Get(ctx, []string{nextCursor.Head}); newRuns != nil {
 				if r, ok := newRuns[nextCursor.Head]; ok {
-					hookValue := api_runs.ComposeDetail(r)
+					hookValue := bindruns.ComposeDetail(r)
 					hook.After(hookValue)
 				}
 			}

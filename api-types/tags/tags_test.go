@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/api/types/tags"
-	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab-api-types/internal/utils/cmp"
+	"github.com/opst/knitfab-api-types/tags"
 )
 
 func TestTagParsing(t *testing.T) {
@@ -41,10 +40,7 @@ func TestTagParsing(t *testing.T) {
 			{Key: "aaa", Value: "bbb:ccc"},
 		}
 
-		if !cmp.SliceContentEqWith(
-			utils.RefOf(expectedTags), utils.RefOf(parsedTags),
-			(*tags.Tag).Equal,
-		) {
+		if !cmp.SliceEqualUnordered(expectedTags, parsedTags) {
 			t.Errorf(
 				"did not match:\n=== expected === \n%+v\n=== actual ===\n%+v",
 				expectedTags, parsedTags,

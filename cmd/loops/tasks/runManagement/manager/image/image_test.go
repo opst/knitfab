@@ -6,9 +6,10 @@ import (
 	"io"
 	"testing"
 
+	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/image"
-	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
+	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/workloads/k8s"
 	kw "github.com/opst/knitfab/pkg/workloads/worker"
@@ -95,16 +96,16 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 			testee := image.New(getWorker, startWorker, setExit)
 
 			beforeHookInvoked := false
-			h := hook.Func[api_runs.Detail]{
-				BeforeFn: func(d api_runs.Detail) error {
+			h := hook.Func[apiruns.Detail]{
+				BeforeFn: func(d apiruns.Detail) error {
 					beforeHookInvoked = true
-					want := api_runs.ComposeDetail(when.run)
-					if !d.Equal(&want) {
+					want := bindruns.ComposeDetail(when.run)
+					if !d.Equal(want) {
 						t.Errorf("got detail %v, want %v", d, want)
 					}
 					return when.errBeforeHook
 				},
-				AfterFn: func(d api_runs.Detail) error {
+				AfterFn: func(d apiruns.Detail) error {
 					t.Error("after hook should not be invoked")
 					return nil
 				},
@@ -428,16 +429,16 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 			}
 
 			beforeHookInvoked := false
-			h := hook.Func[api_runs.Detail]{
-				BeforeFn: func(d api_runs.Detail) error {
+			h := hook.Func[apiruns.Detail]{
+				BeforeFn: func(d apiruns.Detail) error {
 					beforeHookInvoked = true
-					want := api_runs.ComposeDetail(run)
-					if !d.Equal(&want) {
+					want := bindruns.ComposeDetail(run)
+					if !d.Equal(want) {
 						t.Errorf("got detail %v, want %v", d, want)
 					}
 					return when.errBeforeHook
 				},
-				AfterFn: func(d api_runs.Detail) error {
+				AfterFn: func(d apiruns.Detail) error {
 					t.Error("after hook should not be invoked")
 					return nil
 				},

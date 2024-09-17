@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/labstack/echo/v4"
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
+	apierr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	"github.com/opst/knitfab/pkg/archive"
 	kio "github.com/opst/knitfab/pkg/io"
 )

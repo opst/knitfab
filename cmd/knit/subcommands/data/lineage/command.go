@@ -9,14 +9,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/youta-t/flarc"
 
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -213,7 +213,7 @@ func NewDirectedGraph() *DirectedGraph {
 
 type DataNode struct {
 	KnitId string
-	Tags   []apitag.Tag
+	Tags   []tags.Tag
 	// FromRunId is coreresponding runId in Upstream of apidata.Detail.
 	// ToRunIds is coreresponding runIds in Downstreams of apidata.Detail.
 	// The reason for holding these two types of runIds in this node is related to the data tracking algorithm.
@@ -226,10 +226,7 @@ type DataNode struct {
 
 func (d *DataNode) Equal(o *DataNode) bool {
 	return d.KnitId == o.KnitId &&
-		cmp.SliceContentEqWith(
-			d.Tags,
-			o.Tags,
-			func(a, b apitag.Tag) bool { return a.Equal(&b) })
+		cmp.SliceContentEqWith(d.Tags, o.Tags, tags.Tag.Equal)
 }
 
 func (d *DataNode) ToDot(w io.Writer, isArgKnitId bool) error {
@@ -252,7 +249,7 @@ func (d *DataNode) ToDot(w io.Writer, isArgKnitId bool) error {
 		case kdb.KeyKnitTransient:
 			systemtag = append(systemtag, html.EscapeString(tag.String()))
 			continue
-		case apitag.KeyKnitId:
+		case tags.KeyKnitId:
 			continue
 		}
 
@@ -297,7 +294,7 @@ func (d *DataNode) ToDot(w io.Writer, isArgKnitId bool) error {
 }
 
 type RunNode struct {
-	apirun.Summary
+	runs.Summary
 }
 
 func (r *RunNode) ToDot(w io.Writer) error {
@@ -347,7 +344,7 @@ type Edge struct {
 	Label string //mountpath
 }
 
-func (g *DirectedGraph) AddDataNode(data apidata.Detail) {
+func (g *DirectedGraph) AddDataNode(data data.Detail) {
 	g.DataNodes[data.KnitId] = DataNode{
 		KnitId:    data.KnitId,
 		Tags:      data.Tags,
@@ -363,7 +360,7 @@ func (g *DirectedGraph) AddDataNode(data apidata.Detail) {
 	g.KeysDataNode = append(g.KeysDataNode, data.KnitId)
 }
 
-func (g *DirectedGraph) AddRunNode(run apirun.Detail) {
+func (g *DirectedGraph) AddRunNode(run runs.Detail) {
 	g.RunNodes[run.RunId] = RunNode{
 		Summary: run.Summary,
 	}
@@ -512,7 +509,7 @@ func AddEdgeFromRunToLog(
 	ctx context.Context,
 	client krst.KnitClient,
 	graph *DirectedGraph,
-	run apirun.Detail,
+	run runs.Detail,
 ) (string, error) {
 
 	log := run.Log
@@ -780,19 +777,19 @@ func TraceUpstreamForSingleNode(
 	return graph, nextKnitIds, nil
 }
 
-func getData(ctx context.Context, client krst.KnitClient, knitId string) (apidata.Detail, error) {
-	datas, err := client.FindData(ctx, []apitag.Tag{knitIdTag(knitId)}, nil, nil)
+func getData(ctx context.Context, client krst.KnitClient, knitId string) (data.Detail, error) {
+	datas, err := client.FindData(ctx, []tags.Tag{knitIdTag(knitId)}, nil, nil)
 	if err != nil {
-		return apidata.Detail{}, ErrFindDataWithKnitId(knitId, err)
+		return data.Detail{}, ErrFindDataWithKnitId(knitId, err)
 	}
 	if len(datas) == 0 {
-		return apidata.Detail{}, errNotFoundData(knitId)
+		return data.Detail{}, errNotFoundData(knitId)
 	}
 	return datas[0], nil
 }
 
-func knitIdTag(knitId string) apitag.Tag {
-	return apitag.Tag{
+func knitIdTag(knitId string) tags.Tag {
+	return tags.Tag{
 		Key:   kdb.KeyKnitId,
 		Value: knitId,
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpgnommock "github.com/opst/knitfab/pkg/db/postgres/nominator/mock"
@@ -16,7 +17,6 @@ import (
 	th "github.com/opst/knitfab/pkg/db/postgres/testhelpers"
 	"github.com/opst/knitfab/pkg/utils"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/opst/knitfab/pkg/utils/tuple"
 )

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	apitags "github.com/opst/knitfab/pkg/api/types/tags"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	apitags "github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 type Argslice []string

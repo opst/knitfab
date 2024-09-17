@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"time"
 )
 
@@ -53,40 +52,16 @@ func (rfctime RFC3339) Time() time.Time {
 	return time.Time(rfctime)
 }
 
-func (rfctime *RFC3339) Equal(other *RFC3339) bool {
-	if (rfctime == nil) != (other == nil) {
-		return false
-	}
-	return rfctime == nil || rfctime.Time().Equal(other.Time())
+func (rfctime RFC3339) Equal(other RFC3339) bool {
+	return rfctime.Time().Equal(other.Time())
 }
 
 // return true if this and other `.Time()` are equal.
 // If both this and other are nil, also return true.
 //
 // otherwise, return false.
-func (rfctime *RFC3339) Equiv(other interface{ Time() time.Time }) bool {
-	thisIsNil := rfctime == nil
-
-	thatIsNil := func() (isnil bool) {
-		// careing typed-nil
-
-		panicking := true
-		defer func() {
-			recover() // ignore panic from reflect
-			if panicking {
-				isnil = false
-			}
-		}()
-		isnil = reflect.ValueOf(other).IsNil() // careing typed-nil
-		panicking = false
-		return
-	}()
-
-	if thisIsNil != thatIsNil {
-		return false
-	}
-
-	return rfctime == nil || rfctime.Time().Equal(other.Time())
+func (rfctime RFC3339) Equiv(other interface{ Time() time.Time }) bool {
+	return other == nil || rfctime.Time().Equal(other.Time())
 }
 
 // get string expression.

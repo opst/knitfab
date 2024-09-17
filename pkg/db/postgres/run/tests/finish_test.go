@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgconn"
 	pgerrcode "github.com/jackc/pgerrcode"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpgnommock "github.com/opst/knitfab/pkg/db/postgres/nominator/mock"
@@ -19,7 +20,6 @@ import (
 	th "github.com/opst/knitfab/pkg/db/postgres/testhelpers"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/function"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

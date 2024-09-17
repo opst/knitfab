@@ -1,74 +1,16 @@
 package errors
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo/v4"
+	apierr "github.com/opst/knitfab-api-types/errors"
 )
 
-type ErrorResponse struct {
-	Message ErrorMessage `json:"message"`
-}
-
-type ErrorMessage struct {
-	Reason string `json:"reason"`
-	Advice string `json:"advice,omitempty"`
-	See    string `json:"see,omitempty"`
-	Cause  error  `json:"-"`
-}
-
-func (em *ErrorMessage) UnmarshalJSON(bytes []byte) error {
-	f := new(struct {
-		Reason *string `json:"reason"`
-		Advice *string `json:"advice,omitempty"`
-		See    *string `json:"see,omitempty"`
-	})
-	if err := json.Unmarshal(bytes, f); err != nil {
-		return err
-	}
-
-	if f.Reason == nil {
-		return fmt.Errorf(`required field missing: "reason"`)
-	}
-	em.Reason = *f.Reason
-
-	if f.Advice != nil {
-		em.Advice = *f.Advice
-	}
-
-	if f.See != nil {
-		em.See = *f.See
-	}
-
-	return nil
-}
-
-func (e ErrorMessage) String() string {
-	lines := []string{e.Reason}
-	if e.Advice != "" {
-		lines = append(lines, e.Advice)
-	}
-	if e.Cause != nil {
-		lines = append(lines, fmt.Sprint(" caused by:", e.Cause.Error()))
-	}
-	return strings.Join(lines, "\n")
-}
-
-func (e ErrorMessage) Error() string {
-	return e.String()
-}
-
-func (e ErrorMessage) Unwrap() error {
-	return e.Cause
-}
-
-type ErrorMessageOption func(in *ErrorMessage) *ErrorMessage
+type ErrorMessageOption func(in *apierr.ErrorMessage) *apierr.ErrorMessage
 
 func WithAdvice(advice string) ErrorMessageOption {
-	return func(in *ErrorMessage) *ErrorMessage {
+	return func(in *apierr.ErrorMessage) *apierr.ErrorMessage {
 		if advice != "" {
 			in.Advice = advice
 		}
@@ -77,7 +19,7 @@ func WithAdvice(advice string) ErrorMessageOption {
 }
 
 func WithError(err error) ErrorMessageOption {
-	return func(in *ErrorMessage) *ErrorMessage {
+	return func(in *apierr.ErrorMessage) *apierr.ErrorMessage {
 		if err != nil {
 			in.Cause = err
 		}
@@ -86,7 +28,7 @@ func WithError(err error) ErrorMessageOption {
 }
 
 func WithSee(see string) ErrorMessageOption {
-	return func(in *ErrorMessage) *ErrorMessage {
+	return func(in *apierr.ErrorMessage) *apierr.ErrorMessage {
 		if see != "" {
 			in.See = see
 		}
@@ -95,7 +37,7 @@ func WithSee(see string) ErrorMessageOption {
 }
 
 func NewErrorMessage(code int, reason string, opts ...ErrorMessageOption) *echo.HTTPError {
-	msg := ErrorMessage{Reason: reason}
+	msg := apierr.ErrorMessage{Reason: reason}
 	for _, opt := range opts {
 		msg = *opt(&msg)
 	}
@@ -104,7 +46,7 @@ func NewErrorMessage(code int, reason string, opts ...ErrorMessageOption) *echo.
 }
 
 func NewErrorAdvice(code int, reason string, advice string) *echo.HTTPError {
-	return echo.NewHTTPError(code, ErrorMessage{Reason: reason}, WithAdvice(advice))
+	return echo.NewHTTPError(code, apierr.ErrorMessage{Reason: reason}, WithAdvice(advice))
 }
 
 // cause panic with error message.
@@ -113,7 +55,7 @@ func NewErrorAdvice(code int, reason string, advice string) *echo.HTTPError {
 func Fatal(reason string, err error) {
 	panic(echo.NewHTTPError(
 		http.StatusInternalServerError,
-		ErrorMessage{
+		apierr.ErrorMessage{
 			Reason: reason,
 			Advice: "ask your system admin.",
 			Cause:  err,
@@ -129,7 +71,7 @@ func FatalWithAdvice(code int, reason string, advice string, err error) {
 	panic(
 		echo.NewHTTPError(
 			http.StatusInternalServerError,
-			ErrorMessage{
+			apierr.ErrorMessage{
 				Reason: reason,
 				Advice: advice,
 				Cause:  err,
