@@ -8,7 +8,6 @@
 !./go.mod
 !./go.sum
 !./db
-!./api-types
 
 # # # ignore list # # #
 *_test.go
