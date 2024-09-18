@@ -13,7 +13,6 @@ Directory layout
 ===================
 
 - `build/`: Scripts for building Knitfab
-- `docs`: Documents.
 - `cmd/`: Commands, say entry points of programmes.
     - `dataagt` : A single function web server -- read/write data into a directory.
         - Started as a k8s pod/service, used to create/read from Persistent Volumes of k8s.
@@ -37,17 +36,23 @@ Directory layout
 - `LICENSE`: BSL-1.1.
 - `testctl.sh` : A test environment provisioner and test runner.
 
+Related Repository
+===================
+
+- https://github.com/opst/knitfab-docs : Documentations are here.
+- https://github.com/opst/knitfab-api-types : Go module exports types for Knitfab WebAPI input/output.
+
 Getting Started
 ================
 
-Read [docs/01.getting-started](docs/01.getting-started).
+Read [docs/01.getting-started](https://github.com/opst/knitfab-docs/tree/main/01.getting-started).
 
-For more detail, see [docs/02.user-guide](docs/02.user-guide).
+For more detail, see [docs/02.user-guide](https://github.com/opst/knitfab-docs/tree/main/02.user-guide).
 
-How to Install
+How to Install and Operate
 ==============
 
-Read [docs/03.admin-guide](docs/03.admin-guide).
+Read [docs/03.admin-guide](https://github.com/opst/knitfab-docs/tree/main/03.admin-guide).
 
 Build Knitfab
 ==============
