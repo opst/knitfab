@@ -7,20 +7,20 @@ import (
 	"log"
 	"os"
 
+	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krest "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/youta-t/flarc"
 	"gopkg.in/yaml.v3"
 )
 
 type Option struct {
-	applyfunc func(context.Context, krest.KnitClient, apiplans.PlanSpec) (apiplans.Detail, error)
+	applyfunc func(context.Context, krest.KnitClient, plans.PlanSpec) (plans.Detail, error)
 }
 
 func WithApply(
-	apply func(context.Context, krest.KnitClient, apiplans.PlanSpec) (apiplans.Detail, error),
+	apply func(context.Context, krest.KnitClient, plans.PlanSpec) (plans.Detail, error),
 ) func(*Option) *Option {
 	return func(dfc *Option) *Option {
 		dfc.applyfunc = apply
@@ -54,7 +54,7 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 }
 
 func Task(
-	applyFunc func(context.Context, krest.KnitClient, apiplans.PlanSpec) (apiplans.Detail, error),
+	applyFunc func(context.Context, krest.KnitClient, plans.PlanSpec) (plans.Detail, error),
 ) common.Task[struct{}] {
 	return func(
 		ctx context.Context,
@@ -70,7 +70,7 @@ func Task(
 			return fmt.Errorf("fail to read Plan file: %w", err)
 		}
 
-		spec := new(apiplans.PlanSpec)
+		spec := new(plans.PlanSpec)
 		if err := yaml.Unmarshal(buf, spec); err != nil {
 			return fmt.Errorf("fail to parse Plan file: %w", err)
 		}
@@ -93,12 +93,12 @@ func Task(
 func ApplyPlan(
 	ctx context.Context,
 	client krest.KnitClient,
-	spec apiplans.PlanSpec,
-) (apiplans.Detail, error) {
+	spec plans.PlanSpec,
+) (plans.Detail, error) {
 
 	result, err := client.RegisterPlan(ctx, spec)
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	return result, nil
 }

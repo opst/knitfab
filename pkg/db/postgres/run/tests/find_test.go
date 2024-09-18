@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/db/postgres/pool/testenv"
 	kpgrun "github.com/opst/knitfab/pkg/db/postgres/run"
 	"github.com/opst/knitfab/pkg/db/postgres/tables"
 	th "github.com/opst/knitfab/pkg/db/postgres/testhelpers"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

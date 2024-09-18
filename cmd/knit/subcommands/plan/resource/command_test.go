@@ -8,13 +8,13 @@ import (
 	"io"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_resource "github.com/opst/knitfab/cmd/knit/subcommands/plan/resource"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -93,14 +93,14 @@ func TestCommand(t *testing.T) {
 		Flags plan_resource.Flag
 		Args  map[string][]string
 
-		PlanReturned apiplans.Detail
+		PlanReturned plans.Detail
 		Error        error
 	}
 
 	type Then struct {
 		WantApiCalled bool
 		PlanId        string
-		Change        apiplans.ResourceLimitChange
+		Change        plans.ResourceLimitChange
 		Err           error
 	}
 
@@ -108,7 +108,7 @@ func TestCommand(t *testing.T) {
 		return func(t *testing.T) {
 			client := mock.New(t)
 
-			client.Impl.UpdateResources = func(ctx context.Context, planId string, res apiplans.ResourceLimitChange) (apiplans.Detail, error) {
+			client.Impl.UpdateResources = func(ctx context.Context, planId string, res plans.ResourceLimitChange) (plans.Detail, error) {
 				if planId != then.PlanId {
 					t.Errorf("UpdateResources() planId = %v, want %v", planId, then.PlanId)
 				}
@@ -154,47 +154,47 @@ func TestCommand(t *testing.T) {
 			}
 
 			if then.WantApiCalled {
-				actual := new(apiplans.Detail)
+				actual := new(plans.Detail)
 				if err := json.Unmarshal(buf.Bytes(), actual); err != nil {
 					t.Fatal(err)
 				}
-				if !when.PlanReturned.Equal(actual) {
+				if !when.PlanReturned.Equal(*actual) {
 					t.Errorf("Execute() = %v, want %v", actual, when.PlanReturned)
 				}
 			}
 		}
 	}
 
-	planRetuened := apiplans.Detail{
-		Summary: apiplans.Summary{
+	planRetuened := plans.Detail{
+		Summary: plans.Summary{
 			PlanId: "test",
-			Image: &apiplans.Image{
+			Image: &plans.Image{
 				Repository: "image.invalid/test",
 				Tag:        "v1.0",
 			},
 		},
-		Resources: apiplans.Resources{
+		Resources: plans.Resources{
 			"cpu":    resource.MustParse("1"),
 			"memory": resource.MustParse("1Gi"),
 		},
-		Inputs: []apiplans.Mountpoint{
+		Inputs: []plans.Mountpoint{
 			{
 				Path: "/in/1",
-				Tags: []apitags.Tag{
+				Tags: []tags.Tag{
 					{Key: "tag", Value: "value"},
 				},
 			},
 		},
-		Outputs: []apiplans.Mountpoint{
+		Outputs: []plans.Mountpoint{
 			{
 				Path: "/out/1",
-				Tags: []apitags.Tag{
+				Tags: []tags.Tag{
 					{Key: "tag", Value: "value"},
 				},
 			},
 		},
-		Log: &apiplans.LogPoint{
-			Tags: []apitags.Tag{
+		Log: &plans.LogPoint{
+			Tags: []tags.Tag{
 				{Key: "tag", Value: "value"},
 			},
 		},
@@ -229,7 +229,7 @@ func TestCommand(t *testing.T) {
 		Then{
 			WantApiCalled: true,
 			PlanId:        "test",
-			Change: apiplans.ResourceLimitChange{
+			Change: plans.ResourceLimitChange{
 				Set: map[string]resource.Quantity{
 					"cpu": resource.MustParse("2"),
 				},
@@ -250,7 +250,7 @@ func TestCommand(t *testing.T) {
 		Then{
 			WantApiCalled: true,
 			PlanId:        "test",
-			Change: apiplans.ResourceLimitChange{
+			Change: plans.ResourceLimitChange{
 				Unset: []string{"cpu"},
 			},
 		},
@@ -270,7 +270,7 @@ func TestCommand(t *testing.T) {
 		Then{
 			WantApiCalled: true,
 			PlanId:        "test",
-			Change: apiplans.ResourceLimitChange{
+			Change: plans.ResourceLimitChange{
 				Set:   map[string]resource.Quantity{"cpu": resource.MustParse("2")},
 				Unset: []string{"memory"},
 			},
@@ -293,7 +293,7 @@ func TestCommand(t *testing.T) {
 		Then{
 			WantApiCalled: true,
 			PlanId:        "test",
-			Change: apiplans.ResourceLimitChange{
+			Change: plans.ResourceLimitChange{
 				Set:   map[string]resource.Quantity{"cpu": resource.MustParse("2")},
 				Unset: []string{"memory"},
 			},

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab/pkg/utils/base64marshall"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 type MarshalKey struct {
@@ -36,7 +36,7 @@ func (k MarshalKey) String() string {
 
 func (k MarshalKey) Equal(other MarshalKey) bool {
 	return k.Alg == other.Alg &&
-		k.Exp.Equal(&other.Exp) &&
+		k.Exp.Equal(other.Exp) &&
 		bytes.Equal(k.ToSign.Bytes(), other.ToSign.Bytes()) &&
 		bytes.Equal(k.ToVerify.Bytes(), other.ToVerify.Bytes())
 }

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	kpool "github.com/opst/knitfab/pkg/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 // get current timestamp in postgres.

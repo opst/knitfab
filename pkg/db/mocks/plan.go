@@ -4,11 +4,31 @@ import (
 	"context"
 	"errors"
 
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
+	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+type PlanFindArgs struct {
+	Active   logic.Ternary
+	ImageVer kdb.ImageIdentifier
+	InTag    []kdb.Tag
+	OutTag   []kdb.Tag
+}
+
+func (s *PlanFindArgs) Equal(d *PlanFindArgs) bool {
+
+	if !cmp.SliceContentEqWith(utils.RefOf(s.InTag), utils.RefOf(d.InTag), (*kdb.Tag).Equal) {
+		return false
+	}
+	if !cmp.SliceContentEqWith(utils.RefOf(s.OutTag), utils.RefOf(d.OutTag), (*kdb.Tag).Equal) {
+		return false
+	}
+
+	return s.Active == d.Active && s.ImageVer == d.ImageVer
+}
 
 type PlanInterface struct {
 	Impl struct {
@@ -23,7 +43,7 @@ type PlanInterface struct {
 		Get      CallLog[[]string]
 		Register CallLog[*kdb.PlanSpec]
 		Activate CallLog[string]
-		Find     CallLog[apiplan.FindArgs]
+		Find     CallLog[PlanFindArgs]
 	}
 }
 
@@ -77,7 +97,7 @@ func (m *PlanInterface) UnsetResourceLimit(ctx context.Context, planId string, r
 }
 
 func (m *PlanInterface) Find(ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier, inTag []kdb.Tag, outTag []kdb.Tag) ([]string, error) {
-	m.Calls.Find = append(m.Calls.Find, apiplan.FindArgs{
+	m.Calls.Find = append(m.Calls.Find, PlanFindArgs{
 		Active: active,
 		ImageVer: kdb.ImageIdentifier{
 			Image:   imageVer.Image,

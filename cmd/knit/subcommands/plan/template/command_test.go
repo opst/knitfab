@@ -11,10 +11,10 @@ import (
 	gcr "github.com/google/go-containerregistry/pkg/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/env"
 	plan_template "github.com/opst/knitfab/cmd/knit/subcommands/plan/template"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/images/analyzer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -23,7 +23,7 @@ func TestNewPlanFromScratch(t *testing.T) {
 	testee := plan_template.FromScratch()
 
 	knitenv := env.KnitEnv{
-		Tag: []apitag.Tag{
+		Tag: []tags.Tag{
 			{Key: "type", Value: "raw data"},
 			{Key: "format", Value: "rgb image"},
 		},
@@ -38,30 +38,30 @@ func TestNewPlanFromScratch(t *testing.T) {
 		ctx, nil, "repo.invalid/image:tag", knitenv,
 	)).OrFatal(t)
 
-	expected := apiplans.PlanSpec{
-		Image: apiplans.Image{
+	expected := plans.PlanSpec{
+		Image: plans.Image{
 			Repository: "repo.invalid/image",
 			Tag:        "tag",
 		},
-		Inputs: []apiplans.Mountpoint{
+		Inputs: []plans.Mountpoint{
 			{Path: "/in", Tags: knitenv.Tag},
 		},
-		Outputs: []apiplans.Mountpoint{
+		Outputs: []plans.Mountpoint{
 			{Path: "/out", Tags: knitenv.Tag},
 		},
-		Resources: apiplans.Resources{
+		Resources: plans.Resources{
 			"cpu":    resource.MustParse("0.5"),
 			"memory": resource.MustParse("500Mi"),
 		},
-		Log: &apiplans.LogPoint{
+		Log: &plans.LogPoint{
 			Tags: append(
-				[]apitag.Tag{{Key: "type", Value: "log"}},
+				[]tags.Tag{{Key: "type", Value: "log"}},
 				knitenv.Tag...,
 			),
 		},
 	}
 
-	if !expected.Equal(&actual) {
+	if !expected.Equal(actual) {
 		t.Errorf("expected: %v, actual: %v", expected, actual)
 	}
 }
@@ -95,7 +95,7 @@ func TestNewPlanFromImage(t *testing.T) {
 	}
 
 	type Then struct {
-		plan apiplans.PlanSpec
+		plan plans.PlanSpec
 		err  error
 	}
 
@@ -120,7 +120,7 @@ func TestNewPlanFromImage(t *testing.T) {
 				return
 			}
 
-			if !then.plan.Equal(&actual) {
+			if !then.plan.Equal(actual) {
 				t.Errorf(
 					"\n===actual===\n%+v\n===expected===\n%+v\n",
 					actual, then.plan,
@@ -137,7 +137,7 @@ func TestNewPlanFromImage(t *testing.T) {
 					Err: expectedErr,
 				},
 				env: env.KnitEnv{
-					Tag: []apitag.Tag{
+					Tag: []tags.Tag{
 						{Key: "type", Value: "raw data"},
 						{Key: "format", Value: "rgb image"},
 					},
@@ -209,7 +209,7 @@ func TestNewPlanFromImage(t *testing.T) {
 					},
 				},
 				env: env.KnitEnv{
-					Tag: []apitag.Tag{
+					Tag: []tags.Tag{
 						{Key: "project", Value: "test"},
 						{Key: "type", Value: "example"},
 					},
@@ -220,12 +220,12 @@ func TestNewPlanFromImage(t *testing.T) {
 				},
 			},
 			Then{
-				plan: apiplans.PlanSpec{
-					Image: apiplans.Image{Repository: "image", Tag: "tag"},
-					Inputs: []apiplans.Mountpoint{
+				plan: plans.PlanSpec{
+					Image: plans.Image{Repository: "image", Tag: "tag"},
+					Inputs: []plans.Mountpoint{
 						{
 							Path: "/work/in/1",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "1"},
@@ -233,7 +233,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/in/2",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "2"},
@@ -241,7 +241,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/work/3/in",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "3"},
@@ -249,7 +249,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/4/in",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "4"},
@@ -257,7 +257,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/work/in/5",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "5"},
@@ -265,7 +265,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/in/6",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "6"},
@@ -273,7 +273,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/7/in",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "7"},
@@ -281,7 +281,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/8/in",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "8"},
@@ -289,7 +289,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/in/9",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "9"},
@@ -297,7 +297,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/in/10",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "10"},
@@ -305,7 +305,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/11/in",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "11"},
@@ -313,17 +313,17 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/12/in",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "12"},
 							},
 						},
 					},
-					Outputs: []apiplans.Mountpoint{
+					Outputs: []plans.Mountpoint{
 						{
 							Path: "/out/1",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "1"},
@@ -331,7 +331,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/work/out/2",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "2"},
@@ -339,7 +339,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/3/out",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "3"},
@@ -347,7 +347,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/4/out",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "4"},
@@ -355,7 +355,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/work/out/5",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "5"},
@@ -363,7 +363,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/out/6",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "6"},
@@ -371,7 +371,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/7/out",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "7"},
@@ -379,7 +379,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/work/8/out",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "8"},
@@ -387,7 +387,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/out/9",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "9"},
@@ -395,7 +395,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/out/10",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "10"},
@@ -403,7 +403,7 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/11/out",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "11"},
@@ -411,19 +411,19 @@ func TestNewPlanFromImage(t *testing.T) {
 						},
 						{
 							Path: "/12/out",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "example"},
 								{Key: "type", Value: "12"},
 							},
 						},
 					},
-					Resources: apiplans.Resources{
+					Resources: plans.Resources{
 						"cpu":    resource.MustParse("0.5"),
 						"memory": resource.MustParse("500Mi"),
 					},
-					Log: &apiplans.LogPoint{
-						Tags: []apitag.Tag{
+					Log: &plans.LogPoint{
+						Tags: []tags.Tag{
 							{Key: "project", Value: "test"},
 							{Key: "type", Value: "example"},
 							{Key: "type", Value: "log"},
@@ -455,38 +455,38 @@ func TestNewPlanFromImage(t *testing.T) {
 					},
 				},
 				env: env.KnitEnv{
-					Tag: []apitag.Tag{
+					Tag: []tags.Tag{
 						{Key: "project", Value: "test"},
 					},
 				},
 			},
 			Then{
-				plan: apiplans.PlanSpec{
-					Image: apiplans.Image{Repository: "image", Tag: "tag"},
-					Inputs: []apiplans.Mountpoint{
+				plan: plans.PlanSpec{
+					Image: plans.Image{Repository: "image", Tag: "tag"},
+					Inputs: []plans.Mountpoint{
 						{
 							Path: "/work/in/1",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "1"},
 							},
 						},
 					},
-					Outputs: []apiplans.Mountpoint{
+					Outputs: []plans.Mountpoint{
 						{
 							Path: "/work/out/1",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test"},
 								{Key: "type", Value: "1"},
 							},
 						},
 					},
-					Resources: apiplans.Resources{
+					Resources: plans.Resources{
 						"cpu":    resource.MustParse("1"),
 						"memory": resource.MustParse("1Gi"),
 					},
-					Log: &apiplans.LogPoint{
-						Tags: []apitag.Tag{
+					Log: &plans.LogPoint{
+						Tags: []tags.Tag{
 							{Key: "project", Value: "test"},
 							{Key: "type", Value: "log"},
 						},

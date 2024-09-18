@@ -7,10 +7,10 @@ import (
 
 	"log"
 
+	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/youta-t/flarc"
 )
 
@@ -20,7 +20,7 @@ type Option struct {
 		client krst.KnitClient,
 		planId string,
 		isActive bool,
-	) (apiplans.Detail, error)
+	) (plans.Detail, error)
 }
 
 func WithUpdateActiveness(
@@ -29,7 +29,7 @@ func WithUpdateActiveness(
 		client krst.KnitClient,
 		planId string,
 		isActive bool,
-	) (apiplans.Detail, error),
+	) (plans.Detail, error),
 ) func(*Option) *Option {
 	return func(cmd *Option) *Option {
 		cmd.updateActiveness = updateActiveness
@@ -83,7 +83,7 @@ func Task(
 		client krst.KnitClient,
 		planId string,
 		isActive bool,
-	) (apiplans.Detail, error),
+	) (plans.Detail, error),
 ) func(
 	ctx context.Context,
 	logger *log.Logger,
@@ -135,11 +135,11 @@ func UpdateActivatePlan(
 	client krst.KnitClient,
 	planId string,
 	isActive bool,
-) (apiplans.Detail, error) {
+) (plans.Detail, error) {
 
 	result, err := client.PutPlanForActivate(ctx, planId, isActive)
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 
 	return result, nil

@@ -7,19 +7,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 const (
 	// TimestampValueFormat          string = "2006-01-02T15:04:05.999-07:00"
-	SystemTagPrefix              string = "knit#"
-	KeyKnitId                    string = SystemTagPrefix + "id"
-	KeyKnitTimestamp             string = SystemTagPrefix + "timestamp"
-	KeyKnitTransient             string = SystemTagPrefix + "transient"
-	ValueKnitTransientFailed     string = "failed"
-	ValueKnitTransientProcessing string = "processing"
+	SystemTagPrefix              string = tags.SystemTagPrefix
+	KeyKnitId                    string = tags.KeyKnitId
+	KeyKnitTimestamp             string = tags.KeyKnitTimestamp
+	KeyKnitTransient             string = tags.KeyKnitTransient
+	ValueKnitTransientFailed     string = tags.ValueKnitTransientFailed
+	ValueKnitTransientProcessing string = tags.ValueKnitTransientProcessing
 )
 
 var (

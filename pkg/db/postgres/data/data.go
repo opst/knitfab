@@ -10,13 +10,13 @@ import (
 	"github.com/jackc/pgconn"
 	pgerrcode "github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpgerr "github.com/opst/knitfab/pkg/db/postgres/errors"
 	kpgintr "github.com/opst/knitfab/pkg/db/postgres/internal"
 	kpgnom "github.com/opst/knitfab/pkg/db/postgres/nominator"
 	kpool "github.com/opst/knitfab/pkg/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/tuple"
 )
 

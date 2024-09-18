@@ -11,19 +11,19 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
 	rmock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	data_push "github.com/opst/knitfab/cmd/knit/subcommands/data/push"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	"github.com/opst/knitfab/pkg/api/types/plans"
-	"github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kflg "github.com/opst/knitfab/pkg/commandline/flag"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -39,12 +39,12 @@ func TestPush(t *testing.T) {
 		try.To(os.Create(path1)).OrFatal(t).Close()
 
 		env := kenv.KnitEnv{
-			Tag: []apitag.Tag{
+			Tag: []tags.Tag{
 				{Key: "project", Value: "knitfab"},
 			},
 		}
 
-		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*apidata.Detail] {
+		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*data.Detail] {
 			if dereference {
 				t.Errorf("unexpected dereference flag")
 			}
@@ -56,13 +56,13 @@ func TestPush(t *testing.T) {
 				EstimatedTotalSize_: 100,
 				ProgressedSize_:     100,
 				ProgressingFile_:    "source",
-				Result_: &apidata.Detail{
+				Result_: &data.Detail{
 					KnitId: "1234",
-					Tags: []apitag.Tag{
-						{Key: apitag.KeyKnitId, Value: "1234"},
-						{Key: apitag.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
+					Tags: []tags.Tag{
+						{Key: tags.KeyKnitId, Value: "1234"},
+						{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 					},
-					Upstream: apidata.AssignedTo{
+					Upstream: data.AssignedTo{
 						Run: runs.Summary{
 							RunId: "run#1", Status: "done",
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -81,16 +81,16 @@ func TestPush(t *testing.T) {
 			}
 		}
 
-		outputData := &apidata.Detail{
+		outputData := &data.Detail{
 			KnitId: "1234",
-			Tags: []apitag.Tag{
-				{Key: apitag.KeyKnitId, Value: "1234"},
-				{Key: apitag.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
+			Tags: []tags.Tag{
+				{Key: tags.KeyKnitId, Value: "1234"},
+				{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 				{Key: "project", Value: "knitfab"},
 				{Key: "type", Value: "image"},
 				{Key: "format", Value: "png"},
 			},
-			Upstream: apidata.AssignedTo{
+			Upstream: data.AssignedTo{
 				Run: runs.Summary{
 					RunId: "run#1", Status: "done",
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -103,7 +103,7 @@ func TestPush(t *testing.T) {
 				Mountpoint: plans.Mountpoint{Path: "/out"},
 			},
 		}
-		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*apidata.Detail, error) {
+		mock.Impl.PutTagsForData = func(knitId string, argtags tags.Change) (*data.Detail, error) {
 			return outputData, nil
 		}
 
@@ -146,8 +146,8 @@ func TestPush(t *testing.T) {
 			expected := []rmock.PutTagsForDataArgs{
 				{
 					KnitId: "1234",
-					Tags: apitag.Change{
-						AddTags: []apitag.UserTag{
+					Tags: tags.Change{
+						AddTags: []tags.UserTag{
 							{Key: "project", Value: "knitfab"},
 							{Key: "type", Value: "image"},
 							{Key: "format", Value: "png"},
@@ -169,12 +169,12 @@ func TestPush(t *testing.T) {
 		}
 
 		{
-			actual := new(apidata.Detail)
+			actual := new(data.Detail)
 			content := stdout.String()
 			if err := json.Unmarshal([]byte(content), actual); err != nil {
 				t.Fatal(err)
 			}
-			if !actual.Equal(outputData) {
+			if !actual.Equal(*outputData) {
 				t.Errorf(
 					"unexpected output:\n===actual===\n%+v\n===expected===\n%+v",
 					actual, outputData,
@@ -197,13 +197,13 @@ func TestPush(t *testing.T) {
 		try.To(os.Create(path2)).OrFatal(t).Close()
 
 		env := kenv.KnitEnv{
-			Tag: []apitag.Tag{
+			Tag: []tags.Tag{
 				{Key: "project", Value: "knitfab"},
 			},
 		}
 
 		nth := 0
-		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*apidata.Detail] {
+		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*data.Detail] {
 			if dereference {
 				t.Errorf("unexpected dereference flag")
 			}
@@ -214,13 +214,13 @@ func TestPush(t *testing.T) {
 				EstimatedTotalSize_: 100,
 				ProgressedSize_:     100,
 				ProgressingFile_:    "source",
-				Result_: &apidata.Detail{
+				Result_: &data.Detail{
 					KnitId: fmt.Sprintf("1234_%d", nth),
-					Tags: []apitag.Tag{
-						{Key: apitag.KeyKnitId, Value: "1234"},
-						{Key: apitag.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
+					Tags: []tags.Tag{
+						{Key: tags.KeyKnitId, Value: "1234"},
+						{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 					},
-					Upstream: apidata.AssignedTo{
+					Upstream: data.AssignedTo{
 						Run: runs.Summary{
 							RunId: "run#1", Status: "done",
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -239,16 +239,16 @@ func TestPush(t *testing.T) {
 			}
 		}
 
-		outputData := &apidata.Detail{
+		outputData := &data.Detail{
 			KnitId: "1234",
-			Tags: []apitag.Tag{
-				{Key: apitag.KeyKnitId, Value: "1234"},
-				{Key: apitag.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
+			Tags: []tags.Tag{
+				{Key: tags.KeyKnitId, Value: "1234"},
+				{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 				{Key: "project", Value: "knitfab"},
 				{Key: "type", Value: "image"},
 				{Key: "format", Value: "png"},
 			},
-			Upstream: apidata.AssignedTo{
+			Upstream: data.AssignedTo{
 				Run: runs.Summary{
 					RunId: "run#1", Status: "done",
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -261,7 +261,7 @@ func TestPush(t *testing.T) {
 				Mountpoint: plans.Mountpoint{Path: "/out"},
 			},
 		}
-		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*apidata.Detail, error) {
+		mock.Impl.PutTagsForData = func(knitId string, argtags tags.Change) (*data.Detail, error) {
 			return outputData, nil
 		}
 
@@ -305,8 +305,8 @@ func TestPush(t *testing.T) {
 			expected := []rmock.PutTagsForDataArgs{
 				{
 					KnitId: "1234_1",
-					Tags: apitag.Change{
-						AddTags: []apitag.UserTag{
+					Tags: tags.Change{
+						AddTags: []tags.UserTag{
 							{Key: "project", Value: "knitfab"},
 							{Key: "type", Value: "image"},
 							{Key: "format", Value: "png"},
@@ -316,8 +316,8 @@ func TestPush(t *testing.T) {
 				},
 				{
 					KnitId: "1234_2",
-					Tags: apitag.Change{
-						AddTags: []apitag.UserTag{
+					Tags: tags.Change{
+						AddTags: []tags.UserTag{
 							{Key: "project", Value: "knitfab"},
 							{Key: "type", Value: "image"},
 							{Key: "format", Value: "png"},
@@ -351,12 +351,12 @@ func TestPush(t *testing.T) {
 		try.To(os.Create(path1)).OrFatal(t).Close()
 
 		env := kenv.KnitEnv{
-			Tag: []apitag.Tag{
+			Tag: []tags.Tag{
 				{Key: "project", Value: "knitfab"},
 			},
 		}
 
-		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*apidata.Detail] {
+		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*data.Detail] {
 
 			if dereference {
 				t.Errorf("unexpected dereference flag")
@@ -367,13 +367,13 @@ func TestPush(t *testing.T) {
 				EstimatedTotalSize_: 100,
 				ProgressedSize_:     100,
 				ProgressingFile_:    "source",
-				Result_: &apidata.Detail{
+				Result_: &data.Detail{
 					KnitId: "1234",
-					Tags: []apitag.Tag{
-						{Key: apitag.KeyKnitId, Value: "1234"},
-						{Key: apitag.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
+					Tags: []tags.Tag{
+						{Key: tags.KeyKnitId, Value: "1234"},
+						{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 					},
-					Upstream: apidata.AssignedTo{
+					Upstream: data.AssignedTo{
 						Run: runs.Summary{
 							RunId: "run#1", Status: "done",
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -392,16 +392,16 @@ func TestPush(t *testing.T) {
 			}
 		}
 
-		outputData := &apidata.Detail{
+		outputData := &data.Detail{
 			KnitId: "1234",
-			Tags: []apitag.Tag{
-				{Key: apitag.KeyKnitId, Value: "1234"},
-				{Key: apitag.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
+			Tags: []tags.Tag{
+				{Key: tags.KeyKnitId, Value: "1234"},
+				{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 				{Key: "project", Value: "knitfab"},
 				{Key: "type", Value: "image"},
 				{Key: "format", Value: "png"},
 			},
-			Upstream: apidata.AssignedTo{
+			Upstream: data.AssignedTo{
 				Run: runs.Summary{
 					RunId: "run#1", Status: "done",
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -414,7 +414,7 @@ func TestPush(t *testing.T) {
 				Mountpoint: plans.Mountpoint{Path: "/out"},
 			},
 		}
-		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*apidata.Detail, error) {
+		mock.Impl.PutTagsForData = func(knitId string, argtags tags.Change) (*data.Detail, error) {
 			return outputData, nil
 		}
 
@@ -458,8 +458,8 @@ func TestPush(t *testing.T) {
 			expected := []rmock.PutTagsForDataArgs{
 				{
 					KnitId: "1234",
-					Tags: apitag.Change{
-						AddTags: []apitag.UserTag{
+					Tags: tags.Change{
+						AddTags: []tags.UserTag{
 							{Key: "project", Value: "knitfab"},
 							{Key: "type", Value: "image"},
 							{Key: "format", Value: "png"},
@@ -482,12 +482,12 @@ func TestPush(t *testing.T) {
 		}
 
 		{
-			actual := new(apidata.Detail)
+			actual := new(data.Detail)
 			content := stdout.String()
 			if err := json.Unmarshal([]byte(content), actual); err != nil {
 				t.Fatal(err)
 			}
-			if !actual.Equal(outputData) {
+			if !actual.Equal(*outputData) {
 				t.Errorf(
 					"unexpected output:\n===actual===\n%+v\n===expected===\n%+v",
 					actual, outputData,
@@ -507,12 +507,12 @@ func TestPush(t *testing.T) {
 		try.To(os.Create(path1)).OrFatal(t).Close()
 
 		env := kenv.KnitEnv{
-			Tag: []apitag.Tag{
+			Tag: []tags.Tag{
 				{Key: "project", Value: "knitfab"},
 			},
 		}
 
-		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*apidata.Detail] {
+		mock.Impl.PostData = func(_ context.Context, source string, dereference bool) rest.Progress[*data.Detail] {
 
 			if !dereference {
 				t.Errorf("unexpected dereference flag")
@@ -524,13 +524,13 @@ func TestPush(t *testing.T) {
 				EstimatedTotalSize_: 100,
 				ProgressedSize_:     100,
 				ProgressingFile_:    "source",
-				Result_: &apidata.Detail{
+				Result_: &data.Detail{
 					KnitId: "1234",
-					Tags: []apitag.Tag{
-						{Key: apitag.KeyKnitId, Value: "1234"},
-						{Key: apitag.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
+					Tags: []tags.Tag{
+						{Key: tags.KeyKnitId, Value: "1234"},
+						{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 					},
-					Upstream: apidata.AssignedTo{
+					Upstream: data.AssignedTo{
 						Run: runs.Summary{
 							RunId: "run#1", Status: "done",
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -549,16 +549,16 @@ func TestPush(t *testing.T) {
 			}
 		}
 
-		outputData := &apidata.Detail{
+		outputData := &data.Detail{
 			KnitId: "1234",
-			Tags: []apitag.Tag{
-				{Key: apitag.KeyKnitId, Value: "1234"},
-				{Key: apitag.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
+			Tags: []tags.Tag{
+				{Key: tags.KeyKnitId, Value: "1234"},
+				{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 				{Key: "project", Value: "knitfab"},
 				{Key: "type", Value: "image"},
 				{Key: "format", Value: "png"},
 			},
-			Upstream: apidata.AssignedTo{
+			Upstream: data.AssignedTo{
 				Run: runs.Summary{
 					RunId: "run#1", Status: "done",
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -571,7 +571,7 @@ func TestPush(t *testing.T) {
 				Mountpoint: plans.Mountpoint{Path: "/out"},
 			},
 		}
-		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*apidata.Detail, error) {
+		mock.Impl.PutTagsForData = func(knitId string, argtags tags.Change) (*data.Detail, error) {
 			return outputData, nil
 		}
 
@@ -615,8 +615,8 @@ func TestPush(t *testing.T) {
 			expected := []rmock.PutTagsForDataArgs{
 				{
 					KnitId: "1234",
-					Tags: apitag.Change{
-						AddTags: []apitag.UserTag{
+					Tags: tags.Change{
+						AddTags: []tags.UserTag{
 							{Key: "project", Value: "knitfab"},
 							{Key: "type", Value: "image"},
 							{Key: "format", Value: "png"},
@@ -638,12 +638,12 @@ func TestPush(t *testing.T) {
 		}
 
 		{
-			actual := new(apidata.Detail)
+			actual := new(data.Detail)
 			content := stdout.String()
 			if err := json.Unmarshal([]byte(content), actual); err != nil {
 				t.Fatal(err)
 			}
-			if !actual.Equal(outputData) {
+			if !actual.Equal(*outputData) {
 				t.Errorf(
 					"unexpected output:\n===actual===\n%+v\n===expected===\n%+v",
 					actual, outputData,
@@ -658,7 +658,7 @@ func TestPush(t *testing.T) {
 		logger := logger.Null()
 
 		env := kenv.KnitEnv{
-			Tag: []apitag.Tag{
+			Tag: []tags.Tag{
 				{Key: "project", Value: "knitfab"},
 			},
 		}

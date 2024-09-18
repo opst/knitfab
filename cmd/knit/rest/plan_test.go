@@ -14,19 +14,18 @@ import (
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
+	apierr "github.com/opst/knitfab-api-types/errors"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
 func TestGetPlans(t *testing.T) {
 	t.Run("when server returns data, it returns that as is", func(t *testing.T) {
-		hadelerFactory := func(t *testing.T, resp apiplan.Detail) (http.Handler, func() *http.Request) {
+		hadelerFactory := func(t *testing.T, resp plans.Detail) (http.Handler, func() *http.Request) {
 			var request *http.Request
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				request = r
@@ -44,38 +43,38 @@ func TestGetPlans(t *testing.T) {
 			return h, func() *http.Request { return request }
 		}
 
-		expectedSummary := apiplan.Summary{
+		expectedSummary := plans.Summary{
 			PlanId: "test-Id",
-			Image: &apiplan.Image{
+			Image: &plans.Image{
 				Repository: "test-image", Tag: "test-version",
 			},
 			Name: "test-Name",
 		}
-		expectedInputs := []apiplan.Mountpoint{
+		expectedInputs := []plans.Mountpoint{
 			{
 				Path: "/in/1",
-				Tags: []apitag.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "raw data"},
 					{Key: "format", Value: "rgb image"},
 				},
 			},
 		}
-		expectedOutputs := []apiplan.Mountpoint{
+		expectedOutputs := []plans.Mountpoint{
 			{
 				Path: "/out/2",
-				Tags: []apitag.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "training data"},
 					{Key: "format", Value: "mask"},
 				},
 			},
 		}
-		expectedLog := &apiplan.LogPoint{
-			Tags: []apitag.Tag{
+		expectedLog := &plans.LogPoint{
+			Tags: []tags.Tag{
 				{Key: "type", Value: "log"},
 				{Key: "format", Value: "jsonl"},
 			},
 		}
-		expectedResponse := apiplan.Detail{
+		expectedResponse := plans.Detail{
 			Summary: expectedSummary,
 			Inputs:  expectedInputs,
 			Outputs: expectedOutputs,
@@ -92,7 +91,7 @@ func TestGetPlans(t *testing.T) {
 		testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 		planId := "test-Id"
 		actualResponse := try.To(testee.GetPlans(context.Background(), planId)).OrFatal(t)
-		if !actualResponse.Equal(&expectedResponse) {
+		if !actualResponse.Equal(expectedResponse) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actualResponse, expectedResponse)
 		}
 	})
@@ -139,10 +138,10 @@ func TestGetPlans(t *testing.T) {
 func TestPutPlanForActivate(t *testing.T) {
 	type testcase struct {
 		isActive         bool
-		expectedResponse apiplan.Detail
+		expectedResponse plans.Detail
 	}
 
-	hadelerFactory := func(t *testing.T, resp apiplan.Detail, mode bool) (http.Handler, func() *http.Request) {
+	hadelerFactory := func(t *testing.T, resp plans.Detail, mode bool) (http.Handler, func() *http.Request) {
 		var request *http.Request
 		planId := "somePlanId"
 
@@ -192,7 +191,7 @@ func TestPutPlanForActivate(t *testing.T) {
 			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 
 			actualResponse := try.To(testee.PutPlanForActivate(context.Background(), "somePlanId", isActive)).OrFatal(t)
-			if !actualResponse.Equal(&expectedResponse) {
+			if !actualResponse.Equal(expectedResponse) {
 				t.Errorf("response is not equal (actual,expected): %v,%v", actualResponse, expectedResponse)
 			}
 		})
@@ -236,35 +235,35 @@ func TestPutPlanForActivate(t *testing.T) {
 	})
 }
 
-func dummyplan(isActivate bool) apiplan.Detail {
-	return apiplan.Detail{
-		Summary: apiplan.Summary{
+func dummyplan(isActivate bool) plans.Detail {
+	return plans.Detail{
+		Summary: plans.Summary{
 			PlanId: "test-Id",
-			Image: &apiplan.Image{
+			Image: &plans.Image{
 				Repository: "test-image", Tag: "test-version",
 			},
 			Name: "test-Name",
 		},
-		Inputs: []apiplan.Mountpoint{
+		Inputs: []plans.Mountpoint{
 			{
 				Path: "/in/1",
-				Tags: []apitag.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "raw data"},
 					{Key: "format", Value: "rgb image"},
 				},
 			},
 		},
-		Outputs: []apiplan.Mountpoint{
+		Outputs: []plans.Mountpoint{
 			{
 				Path: "/out/2",
-				Tags: []apitag.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "training data"},
 					{Key: "format", Value: "mask"},
 				},
 			},
 		},
-		Log: &apiplan.LogPoint{
-			Tags: []apitag.Tag{
+		Log: &plans.LogPoint{
+			Tags: []tags.Tag{
 				{Key: "type", Value: "log"},
 				{Key: "format", Value: "jsonl"},
 			},
@@ -275,20 +274,20 @@ func dummyplan(isActivate bool) apiplan.Detail {
 
 func TestRegisterPlan(t *testing.T) {
 	{
-		theory := func(spec apiplan.PlanSpec, response apiplan.Detail) func(t *testing.T) {
+		theory := func(spec plans.PlanSpec, response plans.Detail) func(t *testing.T) {
 			return func(t *testing.T) {
-				hadelerFactory := func(t *testing.T, resp apiplan.Detail) http.Handler {
+				hadelerFactory := func(t *testing.T, resp plans.Detail) http.Handler {
 					h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						{
 							b := bytes.NewBuffer(nil)
 							if _, err := b.ReadFrom(r.Body); err != nil {
 								t.Fatal(err)
 							}
-							actual := new(apiplan.PlanSpec)
+							actual := new(plans.PlanSpec)
 							if err := json.Unmarshal(b.Bytes(), actual); err != nil {
 								t.Fatal(err)
 							}
-							if !actual.Equal(&spec) {
+							if !actual.Equal(spec) {
 								t.Errorf(
 									"request body:\n=== actual ===\n+%v\n=== expected ===\n+%v\n",
 									actual, spec,
@@ -313,7 +312,7 @@ func TestRegisterPlan(t *testing.T) {
 				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 				ctx := context.Background()
 				actualResponse := try.To(testee.RegisterPlan(ctx, spec)).OrFatal(t)
-				if !actualResponse.Equal(&response) {
+				if !actualResponse.Equal(response) {
 					t.Errorf(
 						"response:\n=== actual ===\n+%v\n=== expected ===\n+%v\n",
 						actualResponse, response,
@@ -322,64 +321,64 @@ func TestRegisterPlan(t *testing.T) {
 			}
 		}
 		t.Run("when server returns data, it returns that as is", theory(
-			apiplan.PlanSpec{
-				Image: apiplan.Image{
+			plans.PlanSpec{
+				Image: plans.Image{
 					Repository: "test-image", Tag: "test-version",
 				},
-				Inputs: []apiplan.Mountpoint{
+				Inputs: []plans.Mountpoint{
 					{
 						Path: "/in/1",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "raw data"},
 							{Key: "format", Value: "rgb image"},
 						},
 					},
 				},
-				Outputs: []apiplan.Mountpoint{
+				Outputs: []plans.Mountpoint{
 					{
 						Path: "/out/2",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "training data"},
 							{Key: "format", Value: "mask"},
 						},
 					},
 				},
-				Log: &apiplan.LogPoint{
-					Tags: []apitag.Tag{
+				Log: &plans.LogPoint{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "log"},
 						{Key: "format", Value: "jsonl"},
 					},
 				},
 				Active: ref(true),
 			},
-			apiplan.Detail{
-				Summary: apiplan.Summary{
+			plans.Detail{
+				Summary: plans.Summary{
 					PlanId: "test-Id",
-					Image: &apiplan.Image{
+					Image: &plans.Image{
 						Repository: "test-image", Tag: "test-version",
 					},
 					Name: "test-Name",
 				},
-				Inputs: []apiplan.Mountpoint{
+				Inputs: []plans.Mountpoint{
 					{
 						Path: "/in/1",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "raw data"},
 							{Key: "format", Value: "rgb image"},
 						},
 					},
 				},
-				Outputs: []apiplan.Mountpoint{
+				Outputs: []plans.Mountpoint{
 					{
 						Path: "/out/2",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "training data"},
 							{Key: "format", Value: "mask"},
 						},
 					},
 				},
-				Log: &apiplan.LogPoint{
-					Tags: []apitag.Tag{
+				Log: &plans.LogPoint{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "log"},
 						{Key: "format", Value: "jsonl"},
 					},
@@ -390,7 +389,7 @@ func TestRegisterPlan(t *testing.T) {
 	}
 
 	{
-		theory := func(spec apiplan.PlanSpec, status int, message string) func(t *testing.T) {
+		theory := func(spec plans.PlanSpec, status int, message string) func(t *testing.T) {
 			return func(t *testing.T) {
 				handlerFactory := func(t *testing.T, status int, message string) http.Handler {
 					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -423,19 +422,19 @@ func TestRegisterPlan(t *testing.T) {
 		}
 
 		t.Run("when server returns 4xx error, it returns error", theory(
-			apiplan.PlanSpec{
-				Image: apiplan.Image{
+			plans.PlanSpec{
+				Image: plans.Image{
 					Repository: "test-image", Tag: "test-version",
 				},
-				Inputs: []apiplan.Mountpoint{
+				Inputs: []plans.Mountpoint{
 					{
 						Path: "/in/1",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "raw data"},
 						},
 					},
 				},
-				Outputs: []apiplan.Mountpoint{},
+				Outputs: []plans.Mountpoint{},
 				Log:     nil,
 				Active:  ref(true),
 			},
@@ -443,19 +442,19 @@ func TestRegisterPlan(t *testing.T) {
 			`{"message": "invalid request"}`,
 		))
 		t.Run("when server returns 5xx error, it returns error", theory(
-			apiplan.PlanSpec{
-				Image: apiplan.Image{
+			plans.PlanSpec{
+				Image: plans.Image{
 					Repository: "test-image", Tag: "test-version",
 				},
-				Inputs: []apiplan.Mountpoint{
+				Inputs: []plans.Mountpoint{
 					{
 						Path: "/in/1",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "raw data"},
 						},
 					},
 				},
-				Outputs: []apiplan.Mountpoint{},
+				Outputs: []plans.Mountpoint{},
 				Log:     nil,
 				Active:  ref(true),
 			},
@@ -471,7 +470,7 @@ func ref[T any](v T) *T {
 
 func TestFindPlan(t *testing.T) {
 	t.Run("a server responding successfully	is given", func(t *testing.T) {
-		handlerFactory := func(t *testing.T, resp []apiplan.Detail) (http.Handler, func() *http.Request) {
+		handlerFactory := func(t *testing.T, resp []plans.Detail) (http.Handler, func() *http.Request) {
 			var request *http.Request
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				t.Helper()
@@ -492,8 +491,8 @@ func TestFindPlan(t *testing.T) {
 		type when struct {
 			active   logic.Ternary
 			imageVer kdb.ImageIdentifier
-			inTags   []apitag.Tag
-			outTags  []apitag.Tag
+			inTags   []tags.Tag
+			outTags  []tags.Tag
 		}
 		type then struct {
 			activeInQuery   []string
@@ -512,8 +511,8 @@ func TestFindPlan(t *testing.T) {
 				when: when{
 					active:   logic.Indeterminate,
 					imageVer: kdb.ImageIdentifier{},
-					inTags:   []apitag.Tag{},
-					outTags:  []apitag.Tag{},
+					inTags:   []tags.Tag{},
+					outTags:  []tags.Tag{},
 				},
 				then: then{
 					activeInQuery:   []string{},
@@ -526,8 +525,8 @@ func TestFindPlan(t *testing.T) {
 				when: when{
 					active:   logic.True,
 					imageVer: kdb.ImageIdentifier{},
-					inTags:   []apitag.Tag{},
-					outTags:  []apitag.Tag{},
+					inTags:   []tags.Tag{},
+					outTags:  []tags.Tag{},
 				},
 				then: then{
 					activeInQuery:   []string{"true"},
@@ -540,8 +539,8 @@ func TestFindPlan(t *testing.T) {
 				when: when{
 					active:   logic.False,
 					imageVer: kdb.ImageIdentifier{},
-					inTags:   []apitag.Tag{},
-					outTags:  []apitag.Tag{},
+					inTags:   []tags.Tag{},
+					outTags:  []tags.Tag{},
 				},
 				then: then{
 					activeInQuery:   []string{"false"},
@@ -557,8 +556,8 @@ func TestFindPlan(t *testing.T) {
 						Image:   "image-test",
 						Version: "v0.0.1",
 					},
-					inTags:  []apitag.Tag{},
-					outTags: []apitag.Tag{},
+					inTags:  []tags.Tag{},
+					outTags: []tags.Tag{},
 				},
 				then: then{
 					activeInQuery:   []string{},
@@ -571,11 +570,11 @@ func TestFindPlan(t *testing.T) {
 				when: when{
 					active:   logic.Indeterminate,
 					imageVer: kdb.ImageIdentifier{},
-					inTags: []apitag.Tag{
+					inTags: []tags.Tag{
 						{Key: "key-a", Value: "value/a"},
 						{Key: "type", Value: "unknown?"},
 					},
-					outTags: []apitag.Tag{
+					outTags: []tags.Tag{
 						{Key: "knit#id", Value: "some-knit-id"},
 						{Key: "owner", Value: "100% our-team&client, of cource!"},
 					},
@@ -596,7 +595,7 @@ func TestFindPlan(t *testing.T) {
 		} {
 			t.Run(name, func(t *testing.T) {
 				ctx := context.Background()
-				response := []apiplan.Detail{} //empty. this is out of scope of these testcases.
+				response := []plans.Detail{} //empty. this is out of scope of these testcases.
 
 				handler, getLastRequest := handlerFactory(t, response)
 				ts := httptest.NewServer(handler)
@@ -615,10 +614,7 @@ func TestFindPlan(t *testing.T) {
 				)).OrFatal(t)
 
 				// check response
-				if !cmp.SliceContentEqWith(
-					utils.RefOf(result), utils.RefOf(response),
-					(*apiplan.Detail).Equal,
-				) {
+				if !cmp.SliceContentEqWith(result, response, plans.Detail.Equal) {
 					t.Errorf(
 						"response is wrong:\n- actual:\n%#v\n- expected:\n%#v",
 						result, response,
@@ -671,7 +667,7 @@ func TestFindPlan(t *testing.T) {
 		t.Run("when server returns data, it returns that as is", func(t *testing.T) {
 			ctx := context.Background()
 
-			expectedResponse := []apiplan.Detail{}
+			expectedResponse := []plans.Detail{}
 
 			handler, _ := handlerFactory(t, expectedResponse)
 
@@ -684,20 +680,17 @@ func TestFindPlan(t *testing.T) {
 			queryImagever := kdb.ImageIdentifier{
 				Image: "test-image", Version: "test-version",
 			}
-			queryInTags := []apitag.Tag{
+			queryInTags := []tags.Tag{
 				{Key: "tag-a", Value: "value-a"},
 			}
-			queryOutTags := []apitag.Tag{
+			queryOutTags := []tags.Tag{
 				{Key: "tag-b", Value: "value-b"},
 			}
 			//test start
 			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 			actualResponse := try.To(testee.FindPlan(ctx, queryActive, queryImagever, queryInTags, queryOutTags)).OrFatal(t)
 
-			if !cmp.SliceContentEqWith(
-				actualResponse, expectedResponse,
-				func(a, b apiplan.Detail) bool { return a.Equal(&b) },
-			) {
+			if !cmp.SliceContentEqWith(actualResponse, expectedResponse, plans.Detail.Equal) {
 				t.Errorf(
 					"response is in unexpected form:\n===actual===\n%+v\n===expected===\n%+v",
 					actualResponse, expectedResponse,
@@ -741,10 +734,10 @@ func TestFindPlan(t *testing.T) {
 				queryImagever := kdb.ImageIdentifier{
 					Image: "test-image", Version: "test-version",
 				}
-				queryInTags := []apitag.Tag{
+				queryInTags := []tags.Tag{
 					{Key: "tag-a", Value: "value-a"},
 				}
-				queryOutTags := []apitag.Tag{
+				queryOutTags := []tags.Tag{
 					{Key: "tag-b", Value: "value-b"},
 				}
 
@@ -758,7 +751,7 @@ func TestFindPlan(t *testing.T) {
 
 func TestUpdateResources(t *testing.T) {
 	t.Run("when server returns data, it returns that as is", func(t *testing.T) {
-		hadelerFactory := func(t *testing.T, want apiplan.ResourceLimitChange, resp apiplan.Detail) http.Handler {
+		hadelerFactory := func(t *testing.T, want plans.ResourceLimitChange, resp plans.Detail) http.Handler {
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method != http.MethodPut {
 					t.Errorf("request is not PUT actual method = %s", r.Method)
@@ -772,7 +765,7 @@ func TestUpdateResources(t *testing.T) {
 					t.Errorf("request is not /plans/:planId/resources. actual path = %s", r.URL.Path)
 				}
 
-				got := new(apiplan.ResourceLimitChange)
+				got := new(plans.ResourceLimitChange)
 				if err := json.NewDecoder(r.Body).Decode(got); err != nil {
 					t.Fatal(err)
 				}
@@ -793,34 +786,34 @@ func TestUpdateResources(t *testing.T) {
 			return h
 		}
 
-		expectedResponse := apiplan.Detail{
-			Summary: apiplan.Summary{
+		expectedResponse := plans.Detail{
+			Summary: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplan.Image{
+				Image: &plans.Image{
 					Repository: "test-image", Tag: "test-version",
 				},
 				Name: "test-Name",
 			},
-			Inputs: []apiplan.Mountpoint{
+			Inputs: []plans.Mountpoint{
 				{
 					Path: "/in/1",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "raw data"},
 						{Key: "format", Value: "rgb image"},
 					},
 				},
 			},
-			Outputs: []apiplan.Mountpoint{
+			Outputs: []plans.Mountpoint{
 				{
 					Path: "/out/2",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "training data"},
 						{Key: "format", Value: "mask"},
 					},
 				},
 			},
-			Log: &apiplan.LogPoint{
-				Tags: []apitag.Tag{
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
@@ -831,7 +824,7 @@ func TestUpdateResources(t *testing.T) {
 			},
 		}
 
-		wantedResourceChange := apiplan.ResourceLimitChange{
+		wantedResourceChange := plans.ResourceLimitChange{
 			Unset: []string{"cpu"},
 			Set: map[string]resource.Quantity{
 				"memory": resource.MustParse("2Gi"),
@@ -848,7 +841,7 @@ func TestUpdateResources(t *testing.T) {
 		ctx := context.Background()
 		planId := "test-Id"
 		actualResponse := try.To(testee.UpdateResources(ctx, planId, wantedResourceChange)).OrFatal(t)
-		if !actualResponse.Equal(&expectedResponse) {
+		if !actualResponse.Equal(expectedResponse) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actualResponse, expectedResponse)
 		}
 	})
@@ -878,7 +871,7 @@ func TestUpdateResources(t *testing.T) {
 
 				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 				planId := "test-Id"
-				if _, err := testee.UpdateResources(context.Background(), planId, apiplan.ResourceLimitChange{}); err == nil {
+				if _, err := testee.UpdateResources(context.Background(), planId, plans.ResourceLimitChange{}); err == nil {
 					t.Errorf("no error occured")
 				}
 			})

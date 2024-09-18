@@ -9,6 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	apitag "github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -16,21 +20,17 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_show "github.com/opst/knitfab/cmd/knit/subcommands/run/show"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
 func TestShowCommand(t *testing.T) {
-	rundata := apirun.Detail{
-		Summary: apirun.Summary{
+	rundata := runs.Detail{
+		Summary: runs.Summary{
 			RunId:  "test-runId",
 			Status: "done",
-			Plan: apiplan.Summary{
+			Plan: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplan.Image{
+				Image: &plans.Image{
 					Repository: "test-Image", Tag: "test-Version",
 				},
 				Name: "test-Name",
@@ -39,9 +39,9 @@ func TestShowCommand(t *testing.T) {
 				"2022-04-02T12:00:00+00:00",
 			)).OrFatal(t),
 		},
-		Inputs: []apirun.Assignment{
+		Inputs: []runs.Assignment{
 			{
-				Mountpoint: apiplan.Mountpoint{
+				Mountpoint: plans.Mountpoint{
 					Path: "/in/1",
 					Tags: []apitag.Tag{
 						{Key: "type", Value: "raw data"},
@@ -51,9 +51,9 @@ func TestShowCommand(t *testing.T) {
 				KnitId: "test-knitId-a",
 			},
 		},
-		Outputs: []apirun.Assignment{
+		Outputs: []runs.Assignment{
 			{
-				Mountpoint: apiplan.Mountpoint{
+				Mountpoint: plans.Mountpoint{
 					Path: "/out/2",
 					Tags: []apitag.Tag{
 						{Key: "type", Value: "training data"},
@@ -62,8 +62,8 @@ func TestShowCommand(t *testing.T) {
 				},
 				KnitId: "test-knitId-b",
 			}},
-		Log: &apirun.LogSummary{
-			LogPoint: apiplan.LogPoint{
+		Log: &runs.LogSummary{
+			LogPoint: plans.LogPoint{
 				Tags: []apitag.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
@@ -76,7 +76,7 @@ func TestShowCommand(t *testing.T) {
 	type when struct {
 		flags            run_show.Flags
 		runId            string
-		run              apirun.Detail
+		run              runs.Detail
 		funcForInfoError error
 		funcForLogError  error
 	}
@@ -94,7 +94,7 @@ func TestShowCommand(t *testing.T) {
 				ctx context.Context,
 				client krst.KnitClient,
 				runId string,
-			) (apirun.Detail, error) {
+			) (runs.Detail, error) {
 				if runId != when.runId {
 					t.Errorf("unexpected runId: %s", runId)
 				}
@@ -227,13 +227,13 @@ func TestRunShowRunforInfo(t *testing.T) {
 	t.Run("When client does not cause any error, it should return the runId returned by client as is", func(t *testing.T) {
 		ctx := context.Background()
 		mock := mock.New(t)
-		expectedValue := apirun.Detail{
-			Summary: apirun.Summary{
+		expectedValue := runs.Detail{
+			Summary: runs.Summary{
 				RunId:  "test-runId",
 				Status: "done",
-				Plan: apiplan.Summary{
+				Plan: plans.Summary{
 					PlanId: "test-Id",
-					Image: &apiplan.Image{
+					Image: &plans.Image{
 						Repository: "test-Image", Tag: "test-Version",
 					},
 					Name: "test-Name",
@@ -242,9 +242,9 @@ func TestRunShowRunforInfo(t *testing.T) {
 					"2022-04-02T12:00:00+00:00",
 				)).OrFatal(t),
 			},
-			Inputs: []apirun.Assignment{
+			Inputs: []runs.Assignment{
 				{
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/in/1",
 						Tags: []apitag.Tag{
 							{Key: "type", Value: "raw data"},
@@ -254,9 +254,9 @@ func TestRunShowRunforInfo(t *testing.T) {
 					KnitId: "test-knitId-a",
 				},
 			},
-			Outputs: []apirun.Assignment{
+			Outputs: []runs.Assignment{
 				{
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/out/2",
 						Tags: []apitag.Tag{
 							{Key: "type", Value: "training data"},
@@ -266,8 +266,8 @@ func TestRunShowRunforInfo(t *testing.T) {
 					KnitId: "test-knitId-b",
 				},
 			},
-			Log: &apirun.LogSummary{
-				LogPoint: apiplan.LogPoint{
+			Log: &runs.LogSummary{
+				LogPoint: plans.LogPoint{
 					Tags: []apitag.Tag{
 						{Key: "type", Value: "log"},
 						{Key: "format", Value: "jsonl"},
@@ -276,12 +276,12 @@ func TestRunShowRunforInfo(t *testing.T) {
 				KnitId: "test-knitId",
 			},
 		}
-		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
+		mock.Impl.GetRun = func(ctx context.Context, runId string) (runs.Detail, error) {
 			return expectedValue, nil
 		}
 
 		actual := try.To(run_show.RunShowRunforInfo(ctx, mock, "test-runId")).OrFatal(t)
-		if !actual.Equal(&expectedValue) {
+		if !actual.Equal(expectedValue) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actual, expectedValue)
 		}
 	})
@@ -291,14 +291,14 @@ func TestRunShowRunforInfo(t *testing.T) {
 		expectedError := errors.New("fake error")
 
 		mock := mock.New(t)
-		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
-			return apirun.Detail{}, expectedError
+		mock.Impl.GetRun = func(ctx context.Context, runId string) (runs.Detail, error) {
+			return runs.Detail{}, expectedError
 		}
 
 		actual, err := run_show.RunShowRunforInfo(ctx, mock, "test-Id")
 
-		expectedValue := apirun.Detail{}
-		if !actual.Equal(&expectedValue) {
+		expectedValue := runs.Detail{}
+		if !actual.Equal(expectedValue) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actual, expectedValue)
 		}
 		if !errors.Is(err, expectedError) {

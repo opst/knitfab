@@ -3,8 +3,8 @@ package env_test
 import (
 	"testing"
 
+	apitags "github.com/opst/knitfab-api-types/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
-	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 )
 

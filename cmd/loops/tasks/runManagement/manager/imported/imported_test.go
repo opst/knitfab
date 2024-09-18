@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/imported"
-	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -24,8 +24,8 @@ func TestImportedManager(t *testing.T) {
 				}
 
 				hookIsCalled := false
-				hooks := hook.Func[api_runs.Detail]{
-					BeforeFn: func(d api_runs.Detail) error {
+				hooks := hook.Func[apiruns.Detail]{
+					BeforeFn: func(d apiruns.Detail) error {
 						hookIsCalled = true
 						return nil
 					},
@@ -56,8 +56,8 @@ func TestImportedManager(t *testing.T) {
 		}
 
 		hookIsCalled := false
-		hooks := hook.Func[api_runs.Detail]{
-			BeforeFn: func(d api_runs.Detail) error {
+		hooks := hook.Func[apiruns.Detail]{
+			BeforeFn: func(d apiruns.Detail) error {
 				hookIsCalled = true
 				return nil
 			},
@@ -83,8 +83,8 @@ func TestImportedManager(t *testing.T) {
 		}
 
 		expectedErr := errors.New("expected error")
-		hooks := hook.Func[api_runs.Detail]{
-			BeforeFn: func(d api_runs.Detail) error {
+		hooks := hook.Func[apiruns.Detail]{
+			BeforeFn: func(d apiruns.Detail) error {
 				return expectedErr
 			},
 		}
