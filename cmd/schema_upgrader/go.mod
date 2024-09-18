@@ -4,8 +4,6 @@ go 1.23.1
 
 replace github.com/opst/knitfab v1.3.0 => ../..
 
-replace github.com/opst/knitfab-api-types => ../../api-types
-
 require (
 	github.com/opst/knitfab v1.3.0
 	github.com/youta-t/flarc v0.0.3
@@ -25,7 +23,7 @@ require (
 	github.com/jackc/pgtype v1.14.3 // indirect
 	github.com/jackc/pgx/v4 v4.18.3 // indirect
 	github.com/jackc/puddle v1.3.0 // indirect
-	github.com/opst/knitfab-api-types v0.0.0 // indirect
+	github.com/opst/knitfab-api-types v1.3.1-beta1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect

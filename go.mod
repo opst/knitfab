@@ -2,8 +2,6 @@ module github.com/opst/knitfab
 
 go 1.23.1
 
-replace github.com/opst/knitfab-api-types => ./api-types
-
 require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
@@ -15,7 +13,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/labstack/gommon v0.4.2
-	github.com/opst/knitfab-api-types v0.0.0
+	github.com/opst/knitfab-api-types v1.3.1-beta1
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.30.3
 	k8s.io/apimachinery v0.31.1

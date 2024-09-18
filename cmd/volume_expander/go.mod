@@ -4,8 +4,6 @@ go 1.23.1
 
 replace github.com/opst/knitfab v1.3.0 => ../..
 
-replace github.com/opst/knitfab-api-types => ../../api-types
-
 require (
 	github.com/opst/knitfab v1.3.0
 	github.com/prometheus/client_model v0.6.1
