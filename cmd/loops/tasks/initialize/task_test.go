@@ -355,7 +355,7 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 			}
 
 			hookAfterHasBeenCalled := false
-			testee := initialize.Task(run, nil, hook.Func[apiruns.Detail]{
+			testee := initialize.Task(run, nil, hook.Func[apiruns.Detail, struct{}]{
 				AfterFn: func(d apiruns.Detail) error {
 					hookAfterHasBeenCalled = true
 					want := bindruns.ComposeDetail(when.UpdatedRun)
@@ -655,8 +655,8 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 			}
 
 			beforeFnHasBeenCalled := false
-			testee := initialize.Task(run, pvcInitializer, hook.Func[apiruns.Detail]{
-				BeforeFn: func(d apiruns.Detail) error {
+			testee := initialize.Task(run, pvcInitializer, hook.Func[apiruns.Detail, struct{}]{
+				BeforeFn: func(d apiruns.Detail) (struct{}, error) {
 					beforeFnHasBeenCalled = true
 					if want := bindruns.ComposeDetail(pickedRun); !d.Equal(want) {
 						t.Errorf(
@@ -665,7 +665,7 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 						)
 					}
 
-					return when.BeforeErr
+					return struct{}{}, when.BeforeErr
 				},
 			})
 

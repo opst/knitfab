@@ -5,9 +5,10 @@ import (
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
 )
 
-func Build(cfg cfg_hook.WebHook) Web[apiruns.Detail] {
-	return Web[apiruns.Detail]{
+func Build[R any](cfg cfg_hook.WebHook, merge func(a, b R) R) Web[apiruns.Detail, R] {
+	return Web[apiruns.Detail, R]{
 		BeforeURL: cfg.Before,
 		AfterURL:  cfg.After,
+		Merge:     merge,
 	}
 }

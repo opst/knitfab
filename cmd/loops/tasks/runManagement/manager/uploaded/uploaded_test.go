@@ -8,6 +8,7 @@ import (
 	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
+	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
@@ -60,13 +61,45 @@ func TestManager_callGetAgentName(t *testing.T) {
 			ctx := context.Background()
 			testee := uploaded.New(dbdata)
 
-			hooks := hook.Func[apiruns.Detail]{
-				BeforeFn: func(d apiruns.Detail) error {
-					return nil
+			hooks := runManagementHook.Hooks{
+				ToStarting: hook.Func[apiruns.Detail, runManagementHook.HookResponse]{
+					BeforeFn: func(d apiruns.Detail) (runManagementHook.HookResponse, error) {
+						t.Errorf("Starting Before Hook should not be called")
+						return runManagementHook.HookResponse{}, nil
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("Starting After Hook should not be called")
+						return nil
+					},
 				},
-				AfterFn: func(d apiruns.Detail) error {
-					t.Error("after hook should not be called")
-					return nil
+				ToRunning: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						t.Errorf("Running Before Hook should not be called")
+						return struct{}{}, nil
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("Running After Hook should not be called")
+						return nil
+					},
+				},
+				ToCompleting: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						t.Error("completing before hook should not be called")
+						return struct{}{}, nil
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("completing after hook should not be called")
+						return nil
+					},
+				},
+				ToAborting: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						return struct{}{}, nil
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("aboring after hook should not be called")
+						return nil
+					},
 				},
 			}
 			try.To(testee(ctx, hooks, run)).OrFatal(t)
@@ -169,26 +202,59 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 			testee := uploaded.New(dbdata)
 
 			beforeHookHasBeenInvoked := false
-			h := hook.Func[apiruns.Detail]{
-				BeforeFn: func(d apiruns.Detail) error {
-					beforeHookHasBeenInvoked = true
 
-					want := bindruns.ComposeDetail(given)
-					if !d.Equal(want) {
-						t.Errorf(
-							"detail should be %+v: actual = %+v",
-							want, d,
-						)
-					}
-
-					return when.errBeforeHook
+			hooks := runManagementHook.Hooks{
+				ToStarting: hook.Func[apiruns.Detail, runManagementHook.HookResponse]{
+					BeforeFn: func(d apiruns.Detail) (runManagementHook.HookResponse, error) {
+						t.Errorf("Starting Before Hook should not be called")
+						return runManagementHook.HookResponse{}, nil
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("Starting After Hook should not be called")
+						return nil
+					},
 				},
-				AfterFn: func(d apiruns.Detail) error {
-					t.Error("after hook should not be called")
-					return nil
+				ToRunning: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						t.Errorf("Running Before Hook should not be called")
+						return struct{}{}, nil
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("Running After Hook should not be called")
+						return nil
+					},
+				},
+				ToCompleting: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						t.Error("completing before hook should not be called")
+						return struct{}{}, nil
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("completing after hook should not be called")
+						return nil
+					},
+				},
+				ToAborting: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						beforeHookHasBeenInvoked = true
+
+						want := bindruns.ComposeDetail(given)
+						if !d.Equal(want) {
+							t.Errorf(
+								"detail should be %+v: actual = %+v",
+								want, d,
+							)
+						}
+
+						return struct{}{}, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("aborting after hook should not be called")
+						return nil
+					},
 				},
 			}
-			status, err := testee(ctx, h, given)
+			status, err := testee(ctx, hooks, given)
 
 			if status != then.status {
 				t.Errorf(
