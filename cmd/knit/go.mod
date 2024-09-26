@@ -2,14 +2,14 @@ module github.com/opst/knitfab/cmd/knit
 
 go 1.23.1
 
-replace github.com/opst/knitfab v1.3.0 => ../..
+replace github.com/opst/knitfab v1.3.1-beta => ../..
 
 require (
 	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/google/go-containerregistry v0.20.2
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
-	github.com/opst/knitfab v1.3.0
-	github.com/opst/knitfab-api-types v1.3.1-beta1
+	github.com/opst/knitfab v1.3.1-beta
+	github.com/opst/knitfab-api-types v1.3.1
 	github.com/youta-t/flarc v0.0.3
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.31.1
