@@ -1,3 +1,44 @@
+v1.3.1
+===========
+
+- Date: 2024-09-30
+
+The v1.3.1-beta release includes repository splitting for better ecosystem.
+
+## Important Changes
+
+### Documents are moved
+
+Documents which were in the directory `./docs` are moved to the repository https://github.com/opst/knitfab-docs .
+
+With this change, documents can be updated without Knitfab upgrades.
+
+### WebAPI related types are moved
+
+Type definitions related to Knitfab WebAPI, were in the directory `./pkg/api/types`, are moved to the repository https://github.com/opst/knitfab-api-types as [golang module](https://pkg.go.dev/github.com/opst/knitfab-api-types).
+
+You can `go get opst/knitfab-api-types` and use it to build your Knitfab extensions.
+
+## License
+
+There are no changes in License.
+
+## Upgrade Path
+
+### Knitfab System
+
+Download the installer, and run
+
+```
+installer.sh --install
+```
+
+in the directory where you have installed Knitfab.
+
+### CLI `knit`
+
+Download from assets of this release.
+
 v1.3.1-beta
 ===========
 
@@ -30,7 +71,7 @@ There are no changes in License.
 Download the installer from branch [develop/v1.3.0](https://github.com/opst/knitfab/tree/develop/v1.3.0), and run
 
 ```
-BRANCH=develop/v1.3.0 CHART_VERSION=v1.3.0-beta installer.sh --install
+BRANCH=develop/v1.3.1 CHART_VERSION=v1.3.1-beta installer.sh --install
 ```
 
 in the directory where you have installed Knitfab.
