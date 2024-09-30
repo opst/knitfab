@@ -50,10 +50,15 @@ func TestRunExecutable(t *testing.T) {
 		},
 	})
 
-	theoryOk := func(when kdb.Run, then kubebatch.JobSpec) func(*testing.T) {
+	type When struct {
+		run    kdb.Run
+		envvar map[string]string
+	}
+
+	theoryOk := func(when When, then kubebatch.JobSpec) func(*testing.T) {
 		return func(t *testing.T) {
 
-			ex := try.To(worker.New(&when)).OrFatal(t)
+			ex := try.To(worker.New(&when.run, when.envvar)).OrFatal(t)
 
 			testee := ex.Build(config)
 
@@ -178,7 +183,10 @@ func TestRunExecutable(t *testing.T) {
 						cmp.SliceContentEqWith(a.VolumeMounts, b.VolumeMounts, func(a, b kubecore.VolumeMount) bool {
 							return reflect.DeepEqual(a, b)
 						}) &&
-						cmp.MapEqWith(a.Resources.Limits, b.Resources.Limits, resource.Quantity.Equal)
+						cmp.MapEqWith(a.Resources.Limits, b.Resources.Limits, resource.Quantity.Equal) &&
+						cmp.SliceContentEqWith(a.Env, b.Env, func(a, b kubecore.EnvVar) bool {
+							return a.Name == b.Name && a.Value == b.Value
+						})
 				}) {
 					t.Errorf(
 						"InitContainers:\n=== actual ===\n%+v\n=== expected ===\n%+v",
@@ -276,50 +284,56 @@ func TestRunExecutable(t *testing.T) {
 	}
 
 	t.Run("when it builds a k8s job spec with output & log, it creates job specification", theoryOk(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
+						Resources: map[string]resource.Quantity{
+							"cpu":    resource.MustParse("1"),
+							"memory": resource.MustParse("1Gi"),
+							"gpu":    resource.MustParse("1"),
+						},
+						OnNode: []kdb.OnNode{
+							{Mode: kdb.MayOnNode, Key: "key1", Value: "value1"},
+							{Mode: kdb.MayOnNode, Key: "key1", Value: "value2"},
+							{Mode: kdb.PreferOnNode, Key: "key1", Value: "value2"},
+							{Mode: kdb.PreferOnNode, Key: "key2", Value: "value2"},
+							{Mode: kdb.MustOnNode, Key: "key3", Value: "value3"},
+							{Mode: kdb.MustOnNode, Key: "key1", Value: "value3"},
+						},
 					},
-					Resources: map[string]resource.Quantity{
-						"cpu":    resource.MustParse("1"),
-						"memory": resource.MustParse("1Gi"),
-						"gpu":    resource.MustParse("1"),
+				},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
 					},
-					OnNode: []kdb.OnNode{
-						{Mode: kdb.MayOnNode, Key: "key1", Value: "value1"},
-						{Mode: kdb.MayOnNode, Key: "key1", Value: "value2"},
-						{Mode: kdb.PreferOnNode, Key: "key1", Value: "value2"},
-						{Mode: kdb.PreferOnNode, Key: "key2", Value: "value2"},
-						{Mode: kdb.MustOnNode, Key: "key3", Value: "value3"},
-						{Mode: kdb.MustOnNode, Key: "key1", Value: "value3"},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
 					},
 				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsOut4,
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
+			envvar: map[string]string{
+				"foo": "bar",
+				"baz": "qux",
 			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					KnitDataBody: dsOut4,
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 		kubebatch.JobSpec{
 			Parallelism:  ptr.Ref[int32](1),
@@ -389,6 +403,10 @@ func TestRunExecutable(t *testing.T) {
 								{
 									Name: dsOut4.KnitId, MountPath: "/out/4",
 								},
+							},
+							Env: []kubecore.EnvVar{
+								{Name: "foo", Value: "bar"},
+								{Name: "baz", Value: "qux"},
 							},
 							Resources: kubecore.ResourceRequirements{
 								Limits: kubecore.ResourceList{
@@ -619,34 +637,36 @@ func TestRunExecutable(t *testing.T) {
 		},
 	))
 	t.Run("when it builds a k8s job spec with output and no log, it creates job specification", theoryOk(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
-			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
 				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					KnitDataBody: dsOut4,
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsOut4,
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
 				},
 			},
 		},
@@ -743,28 +763,30 @@ func TestRunExecutable(t *testing.T) {
 		},
 	))
 	t.Run("when it builds a k8s job spec with log but no output, it creates job specification", theoryOk(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
-			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
 				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
+				Outputs: []kdb.Assignment{}, // empty
+				Log:     &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Outputs: []kdb.Assignment{}, // empty
-			Log:     &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 		kubebatch.JobSpec{
 			Parallelism:  ptr.Ref[int32](1),
@@ -914,24 +936,26 @@ func TestRunExecutable(t *testing.T) {
 		},
 	))
 	t.Run("when it builds a k8s job spec without output and log, it creates job specification", theoryOk(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
-			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
 				},
 			},
 		},
@@ -983,329 +1007,347 @@ func TestRunExecutable(t *testing.T) {
 		},
 	))
 
-	theoryErr := func(when kdb.Run) func(*testing.T) {
+	theoryErr := func(when When) func(*testing.T) {
 		return func(t *testing.T) {
-			if testee, err := worker.New(&when); err == nil {
+			if testee, err := worker.New(&when.run, when.envvar); err == nil {
 				t.Error("error is not caused, unexpectedly: ", testee)
 			}
 		}
 	}
 
 	t.Run("when kdb.Run has an input without data, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						// KnitDataBody: (missing) // all inputs should have data
+						MountPoint: kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut4,
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					// KnitDataBody: (missing) // all inputs should have data
-					MountPoint: kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut4,
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 	))
 	t.Run("when kdb.Run has an input without mouhtpoint path, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
-			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint: kdb.MountPoint{
-						Id:   1,
-						Path: "", // no path
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint: kdb.MountPoint{
+							Id:   1,
+							Path: "", // no path
+						},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
 					},
 				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsOut4,
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
 				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					KnitDataBody: dsOut4,
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 	))
 	t.Run("when kdb.Run has an output without data, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
+				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						// KnitDataBody: (missing) // all outputs should have data
+						MountPoint: kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					// KnitDataBody: (missing) // all outputs should have data
-					MountPoint: kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 	))
 	t.Run("when kdb.Run has an output without mountpoint path, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
-			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					KnitDataBody: dsOut4,
-					MountPoint: kdb.MountPoint{
-						Id:   4,
-						Path: "", // no path!
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
 					},
 				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsOut4,
+						MountPoint: kdb.MountPoint{
+							Id:   4,
+							Path: "", // no path!
+						},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 	))
 	t.Run("when kdb.Run has a log without data, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
-			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
 				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsOut4,
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
 				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+				Log: &kdb.Log{
+					Id: 5,
+					// KnitDataBody: (missing),
 				},
-				{
-					KnitDataBody: dsOut4,
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{
-				Id: 5,
-				// KnitDataBody: (missing),
 			},
 		},
 	))
 	t.Run("when kdb.Run has image without name, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image:   "", // no name
-						Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image:   "", // no name
+							Version: "1.0",
+						},
 					},
 				},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
+				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsOut4,
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					KnitDataBody: dsOut4,
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 	))
 	t.Run("when kdb.Run has image without version, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image:   "repo.invalid/image-name",
-						Version: "", // no version
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image:   "repo.invalid/image-name",
+							Version: "", // no version
+						},
 					},
 				},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
+				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsOut4,
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					KnitDataBody: dsOut4,
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 	))
 	t.Run("when kdb.Run has same knit ids in different output mountpoints, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
+				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsOut3, // same as Outputs[0].Data
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					KnitDataBody: dsOut3, // same as Outputs[0].Data
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 	))
 	t.Run("when kdb.Run has same knit ids in output and log mountpoints, it will cause error", theoryErr(
-		kdb.Run{
-			RunBody: kdb.RunBody{
-				Id: "test-run-id",
-				PlanBody: kdb.PlanBody{
-					PlanId: "test-plan-id",
-					Image: &kdb.ImageIdentifier{
-						Image: "repo.invalid/image-name", Version: "1.0",
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
 					},
 				},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
+					},
+				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: dsLog5, // same as Log
+						MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 			},
-			Inputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsIn1,
-					MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
-				},
-				{
-					KnitDataBody: dsIn2,
-					MountPoint:   kdb.MountPoint{Id: 2, Path: "/in/2"},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					KnitDataBody: dsOut3,
-					MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
-				},
-				{
-					KnitDataBody: dsLog5, // same as Log
-					MountPoint:   kdb.MountPoint{Id: 4, Path: "/out/4"},
-				},
-			},
-			Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
 		},
 	))
 }

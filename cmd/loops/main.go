@@ -6,12 +6,12 @@ import (
 	_ "embed"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
 	knit "github.com/opst/knitfab/pkg"
 	configs "github.com/opst/knitfab/pkg/configs/backend"
@@ -104,14 +104,24 @@ func main() {
 		loopType.Value().String(), policy.Value().String(),
 	)
 
-	err := StartLoop(
-		ctx, logger, kcluster, k8s.WrapK8sClient(kclientset),
-		LoopManifest{
-			Type:   loopType.Value(),
-			Policy: recurring.UntilError(policy.Value()),
-			Hooks:  hook.Build(hooks.Lifecycle),
-		},
-	)
+	manifest := LoopManifest{Policy: policy.Value(), Hooks: hooks}
+	var err error
+	switch loopType.Value() {
+	case kdb.Projection:
+		err = StartProjectionLoop(ctx, logger, kcluster, manifest)
+	case kdb.Initialize:
+		err = StartInitializeLoop(ctx, logger, kcluster, manifest)
+	case kdb.RunManagement:
+		err = StartRunManagementLoop(ctx, logger, kcluster, manifest)
+	case kdb.Finishing:
+		err = StartFinishingLoop(ctx, logger, kcluster, manifest)
+	case kdb.GarbageCollection:
+		err = StartGarbageCollectionLoop(ctx, logger, kcluster, k8s.WrapK8sClient(kclientset), manifest)
+	case kdb.Housekeeping:
+		err = StartHousekeepingLoop(ctx, logger, kcluster, manifest)
+	default:
+		err = fmt.Errorf("unsupported loop type: %s", loopType.Value())
+	}
 
 	if err == nil {
 		return

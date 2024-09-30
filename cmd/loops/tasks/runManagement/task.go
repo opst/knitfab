@@ -5,10 +5,9 @@ import (
 	"errors"
 	"time"
 
-	api_runs "github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
+	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 )
@@ -31,7 +30,7 @@ func Task(
 	irun kdb.RunInterface,
 	imageManager manager.Manager,
 	pseudoManagers map[kdb.PseudoPlanName]manager.Manager,
-	hook hook.Hook[api_runs.Detail],
+	hooks runManagementHook.Hooks,
 ) recurring.Task[kdb.RunCursor] {
 	return func(ctx context.Context, value kdb.RunCursor) (kdb.RunCursor, bool, error) {
 		nextCursor, statusChanged, err := irun.PickAndSetStatus(
@@ -42,14 +41,14 @@ func Task(
 				var newStatus kdb.KnitRunStatus
 				var err error
 				if r.PlanBody.Pseudo == nil {
-					newStatus, err = imageManager(ctx, hook, r)
+					newStatus, err = imageManager(ctx, hooks, r)
 				} else {
 					// m is a Manager for a specific PseudoPlan
 					m, ok := pseudoManagers[r.PlanBody.Pseudo.Name]
 					if !ok {
 						return r.Status, nil
 					}
-					newStatus, err = m(ctx, hook, r)
+					newStatus, err = m(ctx, hooks, r)
 				}
 				return newStatus, err
 			},
@@ -59,7 +58,16 @@ func Task(
 			if newRuns, _ := irun.Get(ctx, []string{nextCursor.Head}); newRuns != nil {
 				if r, ok := newRuns[nextCursor.Head]; ok {
 					hookValue := bindruns.ComposeDetail(r)
-					hook.After(hookValue)
+					switch r.Status {
+					case kdb.Starting:
+						hooks.ToStarting.After(hookValue)
+					case kdb.Running:
+						hooks.ToRunning.After(hookValue)
+					case kdb.Completing:
+						hooks.ToCompleting.After(hookValue)
+					case kdb.Aborting:
+						hooks.ToAborting.After(hookValue)
+					}
 				}
 			}
 		}

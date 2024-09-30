@@ -91,6 +91,8 @@ type Mount struct {
 type Executable struct {
 	RunIdentifier
 
+	EnvVars map[string]string
+
 	PlanId  string
 	Image   kdb.ImageIdentifier
 	Inputs  []kdb.Assignment
@@ -127,7 +129,7 @@ func Count[R any, T comparable](seq []R, dim func(R) T) counter[T] {
 	return ctr
 }
 
-func New(ex *kdb.Run) (*Executable, error) {
+func New(ex *kdb.Run, envvars map[string]string) (*Executable, error) {
 
 	if !ex.Image.Fulfilled() {
 		return nil, fmt.Errorf(
@@ -213,6 +215,7 @@ func New(ex *kdb.Run) (*Executable, error) {
 
 	return &Executable{
 		RunIdentifier: RunIdentifier{RunBody: ex.RunBody},
+		EnvVars:       envvars,
 		PlanId:        ex.PlanId,
 		Image:         *ex.Image,
 		Inputs:        ex.Inputs,
@@ -285,6 +288,13 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 
 	}
 
+	env := []kubecore.EnvVar{}
+	if r.EnvVars != nil {
+		for k, v := range r.EnvVars {
+			env = append(env, kubecore.EnvVar{Name: k, Value: v})
+		}
+	}
+
 	containers := []kubecore.Container{
 		{
 			Name:         "main",
@@ -293,6 +303,7 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 			Resources: kubecore.ResourceRequirements{
 				Limits: resLimits,
 			},
+			Env: env,
 		},
 	}
 
