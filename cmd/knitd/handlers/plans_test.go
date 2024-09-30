@@ -12,10 +12,11 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	plans "github.com/opst/knitfab-api-types/plans"
+	apitag "github.com/opst/knitfab-api-types/tags"
 	handlers "github.com/opst/knitfab/cmd/knitd/handlers"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
+	bindplans "github.com/opst/knitfab/pkg/api-types-binding/plans"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	mockdb "github.com/opst/knitfab/pkg/db/mocks"
@@ -63,7 +64,7 @@ func TestRegisterPlan(t *testing.T) {
 	type resultSuccess struct {
 		StatusCode int
 		Header     map[string][]string
-		Body       apiplan.Detail
+		Body       plans.Detail
 	}
 
 	type then struct {
@@ -191,13 +192,13 @@ func TestRegisterPlan(t *testing.T) {
 					Header: map[string][]string{
 						"Content-Type": {"application/json"},
 					},
-					Body: apiplan.Detail{
-						Summary: apiplan.Summary{
+					Body: plans.Detail{
+						Summary: plans.Summary{
 							PlanId: "plan-id-1",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
+							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []apiplan.Mountpoint{
+						Inputs: []plans.Mountpoint{
 							{
 								Path: "/in/1",
 								Tags: []apitag.Tag{
@@ -206,7 +207,7 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Outputs: []apiplan.Mountpoint{
+						Outputs: []plans.Mountpoint{
 							{
 								Path: "/out/2",
 								Tags: []apitag.Tag{
@@ -215,21 +216,21 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Log: &apiplan.LogPoint{
+						Log: &plans.LogPoint{
 							Tags: []apitag.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							},
 						},
-						OnNode: &apiplan.OnNode{
-							May: []apiplan.OnSpecLabel{
+						OnNode: &plans.OnNode{
+							May: []plans.OnSpecLabel{
 								{Key: "vram", Value: "xlarge"},
 							},
-							Prefer: []apiplan.OnSpecLabel{
+							Prefer: []plans.OnSpecLabel{
 								{Key: "vram", Value: "large"},
 								{Key: "accelerator", Value: "tpu"},
 							},
-							Must: []apiplan.OnSpecLabel{
+							Must: []plans.OnSpecLabel{
 								{Key: "accelerator", Value: "gpu"},
 							},
 						},
@@ -355,13 +356,13 @@ func TestRegisterPlan(t *testing.T) {
 					Header: map[string][]string{
 						"Content-Type": {"application/json"},
 					},
-					Body: apiplan.Detail{
-						Summary: apiplan.Summary{
+					Body: plans.Detail{
+						Summary: plans.Summary{
 							PlanId: "plan-id-1",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
+							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []apiplan.Mountpoint{
+						Inputs: []plans.Mountpoint{
 							{
 								Path: "/in/1",
 								Tags: []apitag.Tag{
@@ -370,7 +371,7 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Outputs: []apiplan.Mountpoint{
+						Outputs: []plans.Mountpoint{
 							{
 								Path: "/out/2",
 								Tags: []apitag.Tag{
@@ -379,7 +380,7 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Log: &apiplan.LogPoint{
+						Log: &plans.LogPoint{
 							Tags: []apitag.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
@@ -389,15 +390,15 @@ func TestRegisterPlan(t *testing.T) {
 							"cpu":    resource.MustParse("500m"),
 							"memory": resource.MustParse("128Mi"),
 						},
-						OnNode: &apiplan.OnNode{
-							May: []apiplan.OnSpecLabel{
+						OnNode: &plans.OnNode{
+							May: []plans.OnSpecLabel{
 								{Key: "vram", Value: "xlarge"},
 							},
-							Prefer: []apiplan.OnSpecLabel{
+							Prefer: []plans.OnSpecLabel{
 								{Key: "vram", Value: "large"},
 								{Key: "accelerator", Value: "tpu"},
 							},
-							Must: []apiplan.OnSpecLabel{
+							Must: []plans.OnSpecLabel{
 								{Key: "accelerator", Value: "gpu"},
 							},
 						},
@@ -504,13 +505,13 @@ func TestRegisterPlan(t *testing.T) {
 					Header: map[string][]string{
 						"Content-Type": {"application/json"},
 					},
-					Body: apiplan.Detail{
-						Summary: apiplan.Summary{
+					Body: plans.Detail{
+						Summary: plans.Summary{
 							PlanId: "plan-id-1",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
+							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: false,
-						Inputs: []apiplan.Mountpoint{
+						Inputs: []plans.Mountpoint{
 							{
 								Path: "/in/1",
 								Tags: []apitag.Tag{
@@ -519,7 +520,7 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Outputs: []apiplan.Mountpoint{
+						Outputs: []plans.Mountpoint{
 							{
 								Path: "/out/2",
 								Tags: []apitag.Tag{
@@ -528,7 +529,7 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Log: &apiplan.LogPoint{
+						Log: &plans.LogPoint{
 							Tags: []apitag.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
@@ -641,13 +642,13 @@ func TestRegisterPlan(t *testing.T) {
 					Header: map[string][]string{
 						"Content-Type": {"application/json"},
 					},
-					Body: apiplan.Detail{
-						Summary: apiplan.Summary{
+					Body: plans.Detail{
+						Summary: plans.Summary{
 							PlanId: "plan-id-1",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
+							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []apiplan.Mountpoint{
+						Inputs: []plans.Mountpoint{
 							{
 								Path: "/in/1",
 								Tags: []apitag.Tag{
@@ -656,7 +657,7 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Outputs: []apiplan.Mountpoint{
+						Outputs: []plans.Mountpoint{
 							{
 								Path: "/out/2",
 								Tags: []apitag.Tag{
@@ -665,7 +666,7 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Log: &apiplan.LogPoint{
+						Log: &plans.LogPoint{
 							Tags: []apitag.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
@@ -761,13 +762,13 @@ func TestRegisterPlan(t *testing.T) {
 					Header: map[string][]string{
 						"Content-Type": {"application/json"},
 					},
-					Body: apiplan.Detail{
-						Summary: apiplan.Summary{
+					Body: plans.Detail{
+						Summary: plans.Summary{
 							PlanId: "plan-id-1",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
+							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []apiplan.Mountpoint{
+						Inputs: []plans.Mountpoint{
 							{
 								Path: "/in/1",
 								Tags: []apitag.Tag{
@@ -776,7 +777,7 @@ func TestRegisterPlan(t *testing.T) {
 								},
 							},
 						},
-						Outputs: []apiplan.Mountpoint{
+						Outputs: []plans.Mountpoint{
 							{
 								Path: "/out/2",
 								Tags: []apitag.Tag{
@@ -904,13 +905,13 @@ func TestRegisterPlan(t *testing.T) {
 				}
 
 				{
-					actual := &apiplan.Detail{}
-					if err := json.NewDecoder(respRec.Body).Decode(actual); err != nil {
+					actual := plans.Detail{}
+					if err := json.NewDecoder(respRec.Body).Decode(&actual); err != nil {
 						t.Errorf("parse error: %+v", err)
-					} else if !(&then.Success.Body).Equal(actual) {
+					} else if !then.Success.Body.Equal(actual) {
 						t.Errorf(
 							"response body not match:\n- actual   : %+v\n- expected : %+v",
-							*actual, then.Success.Body,
+							actual, then.Success.Body,
 						)
 					}
 				}
@@ -1094,11 +1095,11 @@ func TestFind(t *testing.T) {
 	}
 
 	type then struct {
-		callResult  apiplan.FindArgs
+		callResult  mockdb.PlanFindArgs
 		contentType string
 		isErr       bool
 		statusCode  int
-		body        []apiplan.Detail
+		body        []plans.Detail
 	}
 
 	for name, testcase := range map[string]struct {
@@ -1155,26 +1156,26 @@ func TestFind(t *testing.T) {
 				err: nil,
 			},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
 					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
 					InTag:    []kdb.Tag{},
 					OutTag:   []kdb.Tag{},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK,
-				body: []apiplan.Detail{
+				body: []plans.Detail{
 					{
-						Summary: apiplan.Summary{
+						Summary: plans.Summary{
 							PlanId: "plan-1",
-							Image:  &apiplan.Image{Repository: "image-1", Tag: "ver-1"},
+							Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 						},
-						Inputs: []apiplan.Mountpoint{
+						Inputs: []plans.Mountpoint{
 							{
 								Path: "path-1",
 								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 							},
 						},
-						Outputs: []apiplan.Mountpoint{
+						Outputs: []plans.Mountpoint{
 							{
 								Path: "path-2",
 								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
@@ -1183,17 +1184,17 @@ func TestFind(t *testing.T) {
 						Log: nil, Active: true,
 					},
 					{
-						Summary: apiplan.Summary{
+						Summary: plans.Summary{
 							PlanId: "plan-2",
-							Image:  &apiplan.Image{Repository: "image-2", Tag: "ver-2"},
+							Image:  &plans.Image{Repository: "image-2", Tag: "ver-2"},
 						},
-						Inputs: []apiplan.Mountpoint{
+						Inputs: []plans.Mountpoint{
 							{
 								Path: "path-3",
 								Tags: []apitag.Tag{{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
 							},
 						},
-						Log: &apiplan.LogPoint{
+						Log: &plans.LogPoint{
 							Tags: []apitag.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 						},
 						Active: false,
@@ -1204,17 +1205,17 @@ func TestFind(t *testing.T) {
 		"When PlanInterface.Find returns empty result, it returns an empty response without error": {
 			when: when{request: "/api/plans?", queryResult: []*kdb.Plan{}, err: nil},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
 					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
 					InTag:    []kdb.Tag{},
 					OutTag:   []kdb.Tag{},
 				},
-				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []apiplan.Detail{}},
+				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{}},
 		},
 		"when PlanInterface.Find cause error, it returns internal server error.": {
 			when: when{request: "/api/plans?", queryResult: []*kdb.Plan{}, err: errors.New("dummy error")},
-			then: then{contentType: "application/json", isErr: true, statusCode: http.StatusInternalServerError, body: []apiplan.Detail{}},
+			then: then{contentType: "application/json", isErr: true, statusCode: http.StatusInternalServerError, body: []plans.Detail{}},
 		},
 		"When it receives query parameter, it converts it properly and passed it to PlanInterface.Find.": {
 			when: when{
@@ -1222,13 +1223,13 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.True,
 					ImageVer: kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 					InTag:    []kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
-				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []apiplan.Detail{},
+				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
 		},
 		"When active is specified incorrectly in the query, it responses Bad Request.": {
@@ -1237,8 +1238,8 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult:  apiplan.FindArgs{},
-				contentType: "application/json", isErr: true, statusCode: http.StatusBadRequest, body: []apiplan.Detail{},
+				callResult:  mockdb.PlanFindArgs{},
+				contentType: "application/json", isErr: true, statusCode: http.StatusBadRequest, body: []plans.Detail{},
 			},
 		},
 		"When active is not specified in the query, it calls PlanInterface.Find with active: Indeterminate.": {
@@ -1247,13 +1248,13 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
 					ImageVer: kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 					InTag:    []kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
-				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []apiplan.Detail{},
+				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
 		},
 		"When version is not specified in the query,  it calls PlanInterface.Find with image only.": {
@@ -1262,13 +1263,13 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
 					ImageVer: kdb.ImageIdentifier{Image: "image-1", Version: ""},
 					InTag:    []kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
-				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []apiplan.Detail{},
+				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
 		},
 		"When both image and version are not specified in the query, it calls PlanInterface.Find both with an empty character.": {
@@ -1277,13 +1278,13 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
 					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
 					InTag:    []kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
-				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []apiplan.Detail{},
+				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
 		},
 		"When the query has version but does not have image, it responses Bad Request.": {
@@ -1292,8 +1293,8 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult:  apiplan.FindArgs{},
-				contentType: "application/json", isErr: true, statusCode: http.StatusBadRequest, body: []apiplan.Detail{},
+				callResult:  mockdb.PlanFindArgs{},
+				contentType: "application/json", isErr: true, statusCode: http.StatusBadRequest, body: []plans.Detail{},
 			},
 		},
 		"When in_tag are not specified in the query, it calls PlanInterface.Find with empty InTag.": {
@@ -1302,13 +1303,13 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
 					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
 					InTag:    []kdb.Tag{},
 					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
-				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []apiplan.Detail{},
+				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
 		},
 		"When out_tag are not specified in the query, it calls PlanInterface.Find with empty OutTag.": {
@@ -1317,13 +1318,13 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
 					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
 					InTag:    []kdb.Tag{},
 					OutTag:   []kdb.Tag{},
 				},
-				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []apiplan.Detail{},
+				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
 		},
 		"When tag without delimiter is specified, it responses Bad Request.": {
@@ -1332,8 +1333,8 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult:  apiplan.FindArgs{},
-				contentType: "application/json", isErr: true, statusCode: http.StatusBadRequest, body: []apiplan.Detail{},
+				callResult:  mockdb.PlanFindArgs{},
+				contentType: "application/json", isErr: true, statusCode: http.StatusBadRequest, body: []plans.Detail{},
 			},
 		},
 		"when empty tag is specified in the query, it calls PlanInterface.Find without error": {
@@ -1342,13 +1343,13 @@ func TestFind(t *testing.T) {
 				queryResult: []*kdb.Plan{}, err: nil,
 			},
 			then: then{
-				callResult: apiplan.FindArgs{
+				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
 					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
 					InTag:    []kdb.Tag{},
 					OutTag:   []kdb.Tag{{Key: "", Value: "val-3"}, {Key: "key-4", Value: ""}},
 				},
-				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []apiplan.Detail{},
+				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
 		},
 	} {
@@ -1411,7 +1412,7 @@ func TestFind(t *testing.T) {
 						mockPlan.Calls.Find[0], testcase.then.callResult)
 				}
 
-				actualResponse := []apiplan.Detail{}
+				actualResponse := []plans.Detail{}
 
 				err = json.Unmarshal(respRec.Body.Bytes(), &actualResponse)
 				if err != nil {
@@ -1422,7 +1423,7 @@ func TestFind(t *testing.T) {
 				if actualStatusCode != testcase.then.statusCode {
 					t.Errorf("status code %d != %d", actualStatusCode, testcase.then.statusCode)
 				}
-				if !cmp.SliceEqWith(utils.RefOf(actualResponse), utils.RefOf(testcase.then.body), (*apiplan.Detail).Equal) {
+				if !cmp.SliceEqWith(actualResponse, testcase.then.body, plans.Detail.Equal) {
 					t.Errorf(
 						"data does not match. (actual, expected) = \n(%v, \n%v)",
 						actualResponse, testcase.then,
@@ -1446,7 +1447,7 @@ func TestGetPlanHandler(t *testing.T) {
 		contentType string
 		isErr       bool
 		statusCode  int
-		body        *apiplan.Detail
+		body        plans.Detail
 	}
 
 	for name, testcase := range map[string]struct {
@@ -1483,18 +1484,18 @@ func TestGetPlanHandler(t *testing.T) {
 				contentType: "application/json",
 				isErr:       false,
 				statusCode:  http.StatusOK,
-				body: &apiplan.Detail{
-					Summary: apiplan.Summary{
+				body: plans.Detail{
+					Summary: plans.Summary{
 						PlanId: "plan-1",
-						Image:  &apiplan.Image{Repository: "image-1", Tag: "ver-1"},
+						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []apiplan.Mountpoint{
+					Inputs: []plans.Mountpoint{
 						{
 							Path: "path-1",
 							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 						},
 					},
-					Outputs: []apiplan.Mountpoint{
+					Outputs: []plans.Mountpoint{
 						{
 							Path: "path-2",
 							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
@@ -1554,7 +1555,7 @@ func TestGetPlanHandler(t *testing.T) {
 					t.Fatalf("response is not illegal. error = %v", err)
 				}
 
-				actualResponse := apiplan.Detail{}
+				actualResponse := plans.Detail{}
 
 				err = json.Unmarshal(respRec.Body.Bytes(), &actualResponse)
 				if err != nil {
@@ -1613,7 +1614,7 @@ func TestActivatePlan(t *testing.T) {
 		contentType string
 		shouldError bool
 		statusCode  int
-		body        apiplan.Detail
+		body        plans.Detail
 	}
 
 	for name, testcase := range map[string]struct {
@@ -1650,18 +1651,18 @@ func TestActivatePlan(t *testing.T) {
 			},
 			then: then{
 				contentType: "application/json", shouldError: false, statusCode: http.StatusOK,
-				body: apiplan.Detail{
-					Summary: apiplan.Summary{
+				body: plans.Detail{
+					Summary: plans.Summary{
 						PlanId: "plan-1",
-						Image:  &apiplan.Image{Repository: "image-1", Tag: "ver-1"},
+						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []apiplan.Mountpoint{
+					Inputs: []plans.Mountpoint{
 						{
 							Path: "path-1",
 							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 						},
 					},
-					Outputs: []apiplan.Mountpoint{
+					Outputs: []plans.Mountpoint{
 						{
 							Path: "path-2",
 							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
@@ -1715,18 +1716,18 @@ func TestActivatePlan(t *testing.T) {
 			},
 			then: then{
 				contentType: "application/json", shouldError: false, statusCode: http.StatusOK,
-				body: apiplan.Detail{
-					Summary: apiplan.Summary{
+				body: plans.Detail{
+					Summary: plans.Summary{
 						PlanId: "plan-1",
-						Image:  &apiplan.Image{Repository: "image-1", Tag: "ver-1"},
+						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []apiplan.Mountpoint{
+					Inputs: []plans.Mountpoint{
 						{
 							Path: "path-1",
 							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 						},
 					},
-					Outputs: []apiplan.Mountpoint{
+					Outputs: []plans.Mountpoint{
 						{
 							Path: "path-2",
 							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
@@ -1809,7 +1810,7 @@ func TestActivatePlan(t *testing.T) {
 					t.Errorf("Activate did not call correctly. actual: %d, expected: %d", mockPlan.Calls.Find.Times(), expectedCallTimes)
 				}
 
-				actualResponse := apiplan.Detail{}
+				actualResponse := plans.Detail{}
 
 				err = json.Unmarshal(respRec.Body.Bytes(), &actualResponse)
 				if err != nil {
@@ -1820,7 +1821,7 @@ func TestActivatePlan(t *testing.T) {
 				if actualStatusCode != testcase.then.statusCode {
 					t.Errorf("status code %d != %d", actualStatusCode, testcase.then.statusCode)
 				}
-				if !actualResponse.Equal(&testcase.then.body) {
+				if !actualResponse.Equal(testcase.then.body) {
 					t.Errorf(
 						"data does not match. (actual, expected) = \n(%+v, \n%+v)",
 						actualResponse, testcase.then.body,
@@ -1851,7 +1852,7 @@ func TestPutPlanResource(t *testing.T) {
 
 		shouldError bool
 		statusCode  int
-		body        apiplan.Detail
+		body        plans.Detail
 	}
 
 	theory := func(when When, then Then) func(*testing.T) {
@@ -1914,7 +1915,7 @@ func TestPutPlanResource(t *testing.T) {
 				t.Errorf("Content-Type: %s != %s", actualContentType, then.contentType)
 			}
 
-			actualResponse := apiplan.Detail{}
+			actualResponse := plans.Detail{}
 
 			err = json.Unmarshal(respRec.Body.Bytes(), &actualResponse)
 			if err != nil {
@@ -1925,7 +1926,7 @@ func TestPutPlanResource(t *testing.T) {
 			if actualStatusCode != then.statusCode {
 				t.Errorf("status code %d != %d", actualStatusCode, then.statusCode)
 			}
-			if !actualResponse.Equal(&then.body) {
+			if !actualResponse.Equal(then.body) {
 				t.Errorf(
 					"data does not match. (actual, expected) = \n(%+v, \n%+v)",
 					actualResponse, then.body,
@@ -1964,7 +1965,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set: map[string]resource.Quantity{
 						"cpu":    resource.MustParse("100m"),
 						"memory": resource.MustParse("100Mi"),
@@ -1988,7 +1989,7 @@ func TestPutPlanResource(t *testing.T) {
 			unsetResource: []string{},
 			shouldError:   false,
 			statusCode:    http.StatusOK,
-			body:          apiplan.ComposeDetail(planResult),
+			body:          bindplans.ComposeDetail(planResult),
 		},
 	))
 
@@ -1996,7 +1997,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set:   map[string]resource.Quantity{},
 					Unset: []string{"cpu", "memory"},
 				}),
@@ -2014,7 +2015,7 @@ func TestPutPlanResource(t *testing.T) {
 			unsetResource: []string{"cpu", "memory"},
 			shouldError:   false,
 			statusCode:    http.StatusOK,
-			body:          apiplan.ComposeDetail(planResult),
+			body:          bindplans.ComposeDetail(planResult),
 		},
 	))
 
@@ -2022,7 +2023,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set:   map[string]resource.Quantity{"cpu": resource.MustParse("100m")},
 					Unset: []string{"memory"},
 				}),
@@ -2040,7 +2041,7 @@ func TestPutPlanResource(t *testing.T) {
 			unsetResource: []string{"memory"},
 			shouldError:   false,
 			statusCode:    http.StatusOK,
-			body:          apiplan.ComposeDetail(planResult),
+			body:          bindplans.ComposeDetail(planResult),
 		},
 	))
 
@@ -2048,7 +2049,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set:   map[string]resource.Quantity{"cpu": resource.MustParse("100m")},
 					Unset: []string{"memory"},
 				}),
@@ -2072,7 +2073,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set:   map[string]resource.Quantity{"cpu": resource.MustParse("100m")},
 					Unset: []string{"memory"},
 				}),
@@ -2096,7 +2097,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set:   map[string]resource.Quantity{"cpu": resource.MustParse("100m")},
 					Unset: []string{"cpu", "memory"},
 				}),
@@ -2121,7 +2122,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set:   map[string]resource.Quantity{"cpu": resource.MustParse("100m")},
 					Unset: []string{"cpu", "memory"},
 				}),
@@ -2146,7 +2147,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set:   map[string]resource.Quantity{"cpu": resource.MustParse("100m")},
 					Unset: []string{"cpu", "memory"},
 				}),
@@ -2167,7 +2168,7 @@ func TestPutPlanResource(t *testing.T) {
 		When{
 			planId: "plan-1",
 			request: string(try.To(
-				json.Marshal(apiplan.ResourceLimitChange{
+				json.Marshal(plans.ResourceLimitChange{
 					Set:   map[string]resource.Quantity{"cpu": resource.MustParse("100m")},
 					Unset: []string{"cpu", "memory"},
 				}),

@@ -6,6 +6,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -13,8 +15,6 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_active "github.com/opst/knitfab/cmd/knit/subcommands/plan/active"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/youta-t/flarc"
 )
@@ -22,7 +22,7 @@ import (
 func TestActiveCommand(t *testing.T) {
 
 	type task struct {
-		plan apiplan.Detail
+		plan plans.Detail
 		err  error
 	}
 
@@ -49,7 +49,7 @@ func TestActiveCommand(t *testing.T) {
 				client krst.KnitClient,
 				planId string,
 				isActive bool,
-			) (apiplan.Detail, error) {
+			) (plans.Detail, error) {
 				updateActivenessHasBeenInvoked = true
 				if planId != then.planId {
 					t.Errorf("planId is not expected one: %s", planId)
@@ -142,7 +142,7 @@ func TestActiveCommand(t *testing.T) {
 					plan_active.ARG_PLAN_ID: {"test-Id"},
 				},
 				task: task{
-					plan: apiplan.Detail{},
+					plan: plans.Detail{},
 					err:  expectedError,
 				},
 			},
@@ -164,7 +164,7 @@ func TestActiveCommand(t *testing.T) {
 					plan_active.ARG_PLAN_ID: {"test-Id"},
 				},
 				task: task{
-					plan: apiplan.Detail{},
+					plan: plans.Detail{},
 					err:  expectedError,
 				},
 			},
@@ -185,7 +185,7 @@ func TestActiveCommand(t *testing.T) {
 			},
 
 			task: task{
-				plan: apiplan.Detail{},
+				plan: plans.Detail{},
 				err:  nil,
 			},
 		},
@@ -206,13 +206,13 @@ func TestRunActivatePlan(t *testing.T) {
 			ctx context.Context,
 			planId string,
 			isActive bool,
-		) (apiplan.Detail, error) {
+		) (plans.Detail, error) {
 			return expectedValue, nil
 		}
 
 		// test start
 		actual := try.To(plan_active.UpdateActivatePlan(ctx, mock, "test-Id", true)).OrFatal(t)
-		if !actual.Equal(&expectedValue) {
+		if !actual.Equal(expectedValue) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actual, expectedValue)
 		}
 
@@ -227,14 +227,14 @@ func TestRunActivatePlan(t *testing.T) {
 			ctx context.Context,
 			planId string,
 			isActive bool,
-		) (apiplan.Detail, error) {
-			return apiplan.Detail{}, expectedError
+		) (plans.Detail, error) {
+			return plans.Detail{}, expectedError
 		}
 
 		// test start
 		actual, err := plan_active.UpdateActivatePlan(ctx, mock, "test-Id", true)
-		expectedValue := apiplan.Detail{}
-		if !actual.Equal(&expectedValue) {
+		expectedValue := plans.Detail{}
+		if !actual.Equal(expectedValue) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actual, expectedValue)
 		}
 
@@ -246,35 +246,35 @@ func TestRunActivatePlan(t *testing.T) {
 }
 
 // setting data for test
-func dummyplan(isActivate bool) apiplan.Detail {
-	return apiplan.Detail{
-		Summary: apiplan.Summary{
+func dummyplan(isActivate bool) plans.Detail {
+	return plans.Detail{
+		Summary: plans.Summary{
 			PlanId: "test-Id",
-			Image: &apiplan.Image{
+			Image: &plans.Image{
 				Repository: "test-image", Tag: "test-version",
 			},
 			Name: "test-Name",
 		},
-		Inputs: []apiplan.Mountpoint{
+		Inputs: []plans.Mountpoint{
 			{
 				Path: "/in/1",
-				Tags: []apitag.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "raw data"},
 					{Key: "format", Value: "rgb image"},
 				},
 			},
 		},
-		Outputs: []apiplan.Mountpoint{
+		Outputs: []plans.Mountpoint{
 			{
 				Path: "/out/2",
-				Tags: []apitag.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "training data"},
 					{Key: "format", Value: "mask"},
 				},
 			},
 		},
-		Log: &apiplan.LogPoint{
-			Tags: []apitag.Tag{
+		Log: &plans.LogPoint{
+			Tags: []tags.Tag{
 				{Key: "type", Value: "log"},
 				{Key: "format", Value: "jsonl"},
 			},

@@ -10,6 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -17,13 +21,9 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_find "github.com/opst/knitfab/cmd/knit/subcommands/run/find"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/youta-t/flarc"
 )
@@ -32,7 +32,7 @@ func TestFindCommand(t *testing.T) {
 
 	type When struct {
 		flag         run_find.Flag
-		presentation []apirun.Detail
+		presentation []runs.Detail
 		err          error
 	}
 
@@ -40,14 +40,14 @@ func TestFindCommand(t *testing.T) {
 		err error
 	}
 
-	presentationItems := []apirun.Detail{
+	presentationItems := []runs.Detail{
 		{
-			Summary: apirun.Summary{
+			Summary: runs.Summary{
 				RunId:  "test-runId",
 				Status: "done",
-				Plan: apiplan.Summary{
+				Plan: plans.Summary{
 					PlanId: "test-Id",
-					Image: &apiplan.Image{
+					Image: &plans.Image{
 						Repository: "test-image", Tag: "test-version",
 					},
 					Name: "test-Name",
@@ -56,11 +56,11 @@ func TestFindCommand(t *testing.T) {
 					"2022-04-02T12:00:00+00:00",
 				)).OrFatal(t),
 			},
-			Inputs: []apirun.Assignment{
+			Inputs: []runs.Assignment{
 				{
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/in/1",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "raw data"},
 							{Key: "format", Value: "rgb image"},
 						},
@@ -68,20 +68,20 @@ func TestFindCommand(t *testing.T) {
 					KnitId: "test-knitId-a",
 				},
 			},
-			Outputs: []apirun.Assignment{
+			Outputs: []runs.Assignment{
 				{
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/out/2",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "training data"},
 							{Key: "format", Value: "mask"},
 						},
 					},
 					KnitId: "test-knitId-b",
 				}},
-			Log: &apirun.LogSummary{
-				LogPoint: apiplan.LogPoint{
-					Tags: []apitag.Tag{
+			Log: &runs.LogSummary{
+				LogPoint: plans.LogPoint{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "log"},
 						{Key: "format", Value: "jsonl"},
 					},
@@ -102,7 +102,7 @@ func TestFindCommand(t *testing.T) {
 				_ *log.Logger,
 				_ krst.KnitClient,
 				parameter krst.FindRunParameter,
-			) ([]apirun.Detail, error) {
+			) ([]runs.Detail, error) {
 
 				checkSliceEq(t, "planId", parameter.PlanId, ptr.SafeDeref(when.flag.PlanId))
 				checkSliceEq(t, "knitIdIn", parameter.KnitIdIn, ptr.SafeDeref(when.flag.KnitIdIn))
@@ -153,14 +153,11 @@ func TestFindCommand(t *testing.T) {
 			}
 
 			if then.err == nil {
-				var actualValue []apirun.Detail
+				var actualValue []runs.Detail
 				if err := json.Unmarshal([]byte(stdout.String()), &actualValue); err != nil {
 					t.Fatal(err)
 				}
-				if !cmp.SliceContentEqWith(
-					actualValue, when.presentation,
-					func(a, b apirun.Detail) bool { return a.Equal(&b) },
-				) {
+				if !cmp.SliceContentEqWith(actualValue, when.presentation, runs.Detail.Equal) {
 					t.Errorf(
 						"stdout:\n===actual===\n%+v\n===expected===\n%+v",
 						actualValue, when.presentation,
@@ -253,14 +250,14 @@ func TestFindCommand(t *testing.T) {
 
 func TestRunFindRun(t *testing.T) {
 	t.Run("When client does not cause any error, it should return plan returned by client as is", func(t *testing.T) {
-		expectedValue := []apirun.Detail{
+		expectedValue := []runs.Detail{
 			{
-				Summary: apirun.Summary{
+				Summary: runs.Summary{
 					RunId:  "test-runId",
 					Status: "done",
-					Plan: apiplan.Summary{
+					Plan: plans.Summary{
 						PlanId: "test-Id",
-						Image: &apiplan.Image{
+						Image: &plans.Image{
 							Repository: "test-image", Tag: "test-version",
 						},
 						Name: "test-Name",
@@ -269,11 +266,11 @@ func TestRunFindRun(t *testing.T) {
 						"2022-04-02T12:00:00+00:00",
 					)).OrFatal(t),
 				},
-				Inputs: []apirun.Assignment{
+				Inputs: []runs.Assignment{
 					{
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/in/1",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "raw data"},
 								{Key: "format", Value: "rgb image"},
 							},
@@ -281,20 +278,20 @@ func TestRunFindRun(t *testing.T) {
 						KnitId: "test-knitId-a",
 					},
 				},
-				Outputs: []apirun.Assignment{
+				Outputs: []runs.Assignment{
 					{
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/out/2",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "training data"},
 								{Key: "format", Value: "mask"},
 							},
 						},
 						KnitId: "test-knitId-b",
 					}},
-				Log: &apirun.LogSummary{
-					LogPoint: apiplan.LogPoint{
-						Tags: []apitag.Tag{
+				Log: &runs.LogSummary{
+					LogPoint: plans.LogPoint{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "log"},
 							{Key: "format", Value: "jsonl"},
 						},
@@ -308,7 +305,7 @@ func TestRunFindRun(t *testing.T) {
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
 			ctx context.Context, query krst.FindRunParameter,
-		) ([]apirun.Detail, error) {
+		) ([]runs.Detail, error) {
 			return expectedValue, nil
 		}
 
@@ -330,10 +327,7 @@ func TestRunFindRun(t *testing.T) {
 			ctx, log, mock, parameter)).OrFatal(t)
 
 		//check actual
-		if !cmp.SliceContentEqWith(
-			actual, expectedValue,
-			func(a, b apirun.Detail) bool { return a.Equal(&b) },
-		) {
+		if !cmp.SliceContentEqWith(actual, expectedValue, runs.Detail.Equal) {
 			t.Errorf(
 				"response is in unexpected form:\n===actual===\n%+v\n===expected===\n%+v",
 				actual, expectedValue,
@@ -344,13 +338,13 @@ func TestRunFindRun(t *testing.T) {
 	t.Run("when client returns error, it should return the error as is", func(t *testing.T) {
 		ctx := context.Background()
 		log := logger.Null()
-		var expectedValue []apirun.Detail = nil
+		var expectedValue []runs.Detail = nil
 		expectedError := errors.New("fake error")
 
 		mock := mock.New(t)
 		mock.Impl.FindRun = func(
 			ctx context.Context, query krst.FindRunParameter,
-		) ([]apirun.Detail, error) {
+		) ([]runs.Detail, error) {
 			return expectedValue, expectedError
 		}
 

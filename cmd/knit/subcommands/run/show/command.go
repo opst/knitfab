@@ -8,10 +8,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	"github.com/youta-t/flarc"
 )
 
@@ -24,7 +24,7 @@ type ShowInfo func(
 	ctx context.Context,
 	client krst.KnitClient,
 	runId string,
-) (apirun.Detail, error)
+) (runs.Detail, error)
 
 type ShowLog func(
 	ctx context.Context,
@@ -116,10 +116,10 @@ func Task(showInfo ShowInfo, showLog ShowLog) common.Task[Flags] {
 
 func RunShowRunforInfo(
 	ctx context.Context, client krst.KnitClient, runId string,
-) (apirun.Detail, error) {
+) (runs.Detail, error) {
 	result, err := client.GetRun(ctx, runId)
 	if err != nil {
-		return apirun.Detail{}, err
+		return runs.Detail{}, err
 	}
 	return result, nil
 }

@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
+	apiplans "github.com/opst/knitfab-api-types/plans"
+	apitags "github.com/opst/knitfab-api-types/tags"
+	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
+	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
@@ -21,14 +22,14 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 		req := c.Request()
 		ctx := req.Context()
 		if strings.ToLower(req.Header.Get("content-type")) != "application/json" {
-			return apierr.BadRequest(
+			return binderr.BadRequest(
 				"unexpected content type. it shoule be application/json", nil,
 			)
 		}
 
-		specInReq := new(apiplan.PlanSpec)
+		specInReq := new(apiplans.PlanSpec)
 		if err := json.NewDecoder(req.Body).Decode(specInReq); err != nil {
-			return apierr.BadRequest(
+			return binderr.BadRequest(
 				"can not understand the requested json", err,
 			)
 		}
@@ -40,11 +41,11 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 				Active:  utils.Default(specInReq.Active, true),
 				Inputs: utils.Map(
 					specInReq.Inputs,
-					func(mp apiplan.Mountpoint) kdb.MountPointParam {
+					func(mp apiplans.Mountpoint) kdb.MountPointParam {
 						return kdb.MountPointParam{
 							Path: mp.Path,
 							Tags: kdb.NewTagSet(
-								utils.Map(mp.Tags, func(reqtag apitag.Tag) kdb.Tag {
+								utils.Map(mp.Tags, func(reqtag apitags.Tag) kdb.Tag {
 									return kdb.Tag{Key: reqtag.Key, Value: reqtag.Value}
 								}),
 							),
@@ -54,11 +55,11 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 				Resources: specInReq.Resources,
 				Outputs: utils.Map(
 					specInReq.Outputs,
-					func(mp apiplan.Mountpoint) kdb.MountPointParam {
+					func(mp apiplans.Mountpoint) kdb.MountPointParam {
 						return kdb.MountPointParam{
 							Path: mp.Path,
 							Tags: kdb.NewTagSet(
-								utils.Map(mp.Tags, func(reqtag apitag.Tag) kdb.Tag {
+								utils.Map(mp.Tags, func(reqtag apitags.Tag) kdb.Tag {
 									return kdb.Tag{Key: reqtag.Key, Value: reqtag.Value}
 								}),
 							),
@@ -80,7 +81,7 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 			if l := specInReq.Log; l != nil {
 				params.Log = &kdb.LogParam{
 					Tags: kdb.NewTagSet(
-						utils.Map(l.Tags, func(reqtag apitag.Tag) kdb.Tag {
+						utils.Map(l.Tags, func(reqtag apitags.Tag) kdb.Tag {
 							return kdb.Tag{Key: reqtag.Key, Value: reqtag.Value}
 						}),
 					),
@@ -130,24 +131,24 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 		if err != nil {
 			if errors.Is(err, kdb.ErrConflictingPlan) {
 				if planEx := new(kdb.ErrEquivPlanExists); errors.As(err, &planEx) {
-					return apierr.Conflict(
-						"there are equiverent plan", apierr.WithSee(planEx.PlanId),
+					return binderr.Conflict(
+						"there are equiverent plan", binderr.WithSee(planEx.PlanId),
 					)
 				}
-				return apierr.Conflict("plan spec conflics with others", apierr.WithError(err))
+				return binderr.Conflict("plan spec conflics with others", binderr.WithError(err))
 			}
 			if errors.Is(err, kdb.ErrInvalidPlan) {
-				return apierr.BadRequest(err.Error(), err)
+				return binderr.BadRequest(err.Error(), err)
 			}
 
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		resp := c.Response()
 		resp.Header().Add("Content-Type", "application/json")
 		c.JSON(
 			http.StatusOK,
-			apiplan.ComposeDetail(*plan),
+			bindplan.ComposeDetail(*plan),
 		)
 
 		return nil
@@ -156,12 +157,19 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 
 func FindPlanHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 
+	type FindArgs struct {
+		Active   logic.Ternary
+		ImageVer kdb.ImageIdentifier
+		InTag    []kdb.Tag
+		OutTag   []kdb.Tag
+	}
+
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
 
-		args, err := func(c echo.Context) (*apiplan.FindArgs, error) {
+		args, err := func(c echo.Context) (*FindArgs, error) {
 
-			result := apiplan.FindArgs{}
+			result := FindArgs{}
 
 			paramMap := c.QueryParams()
 			paramActive := c.QueryParam("active")
@@ -204,23 +212,23 @@ func FindPlanHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 		}(c)
 
 		if err != nil {
-			return apierr.BadRequest("query specification is incorrect", err)
+			return binderr.BadRequest("query specification is incorrect", err)
 		}
 		ctx := c.Request().Context()
 
 		planIds, err := dbplan.Find(ctx, args.Active, args.ImageVer, args.InTag, args.OutTag)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
-		plans, err := dbplan.Get(ctx, planIds)
+		ps, err := dbplan.Get(ctx, planIds)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
-		resp := make([]apiplan.Detail, 0, len(plans))
+		resp := make([]apiplans.Detail, 0, len(ps))
 		for _, planId := range planIds {
-			resp = append(resp, apiplan.ComposeDetail(*plans[planId]))
+			resp = append(resp, bindplan.ComposeDetail(*ps[planId]))
 		}
 		c.JSON(http.StatusOK, resp)
 		return nil
@@ -238,15 +246,15 @@ func GetPlanHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 
 		result, err := dbplan.Get(ctx, []string{planId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		plan, ok := result[planId]
 		if !ok {
-			return apierr.NotFound()
+			return binderr.NotFound()
 		}
 
-		c.JSON(http.StatusOK, apiplan.ComposeDetail(*plan))
+		c.JSON(http.StatusOK, bindplan.ComposeDetail(*plan))
 
 		return nil
 	}
@@ -267,16 +275,16 @@ func PutPlanForActivate(dbPlan kdb.PlanInterface, isActive bool) echo.HandlerFun
 		planId := c.Param("planId")
 
 		if err := dbPlan.Activate(ctx, planId, isActive); errors.Is(err, kdb.ErrMissing) {
-			return apierr.NotFound()
+			return binderr.NotFound()
 		} else if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		plans, err := dbPlan.Get(ctx, []string{planId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
-		c.JSON(http.StatusOK, apiplan.ComposeDetail(*plans[planId]))
+		c.JSON(http.StatusOK, bindplan.ComposeDetail(*plans[planId]))
 		return nil
 	}
 }
@@ -292,33 +300,33 @@ func PutPlanResource(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerF
 		ctx := c.Request().Context()
 		planId := c.Param(planIdParam)
 
-		req := new(apiplan.ResourceLimitChange)
+		req := new(apiplans.ResourceLimitChange)
 		if err := c.Bind(req); err != nil {
-			return apierr.BadRequest("can not understand the requested json", err)
+			return binderr.BadRequest("can not understand the requested json", err)
 		}
 
 		if err := dbPlan.SetResourceLimit(ctx, planId, req.Set); err != nil {
 			if errors.Is(err, kdb.ErrMissing) {
-				return apierr.NotFound()
+				return binderr.NotFound()
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		if err := dbPlan.UnsetResourceLimit(ctx, planId, req.Unset); err != nil {
 			if errors.Is(err, kdb.ErrMissing) {
-				return apierr.NotFound()
+				return binderr.NotFound()
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		plans, err := dbPlan.Get(ctx, []string{planId})
 		if err != nil {
 			if errors.Is(err, kdb.ErrMissing) {
-				return apierr.NotFound()
+				return binderr.NotFound()
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
-		c.JSON(http.StatusOK, apiplan.ComposeDetail(*plans[planId]))
+		c.JSON(http.StatusOK, bindplan.ComposeDetail(*plans[planId]))
 		return nil
 	}
 }

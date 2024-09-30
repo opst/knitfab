@@ -10,11 +10,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/images/analyzer"
 	"github.com/opst/knitfab/pkg/utils"
 	y "github.com/opst/knitfab/pkg/utils/yamler"
@@ -24,13 +24,13 @@ import (
 )
 
 type Option struct {
-	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error)
-	fromImage   func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error)
+	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (plans.PlanSpec, error)
+	fromImage   func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (plans.PlanSpec, error)
 }
 
 func WithTemplateMaker(
-	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error),
-	fromImage func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error),
+	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (plans.PlanSpec, error),
+	fromImage func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (plans.PlanSpec, error),
 ) func(*Option) *Option {
 	return func(cmd *Option) *Option {
 		cmd.fromScratch = fromScratch
@@ -92,8 +92,8 @@ You may need to specify image:tag explicitly when the image has multiple tags, l
 }
 
 func Task(
-	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error),
-	fromImage func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error),
+	fromScratch func(context.Context, *log.Logger, string, env.KnitEnv) (plans.PlanSpec, error),
+	fromImage func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (plans.PlanSpec, error),
 ) common.Task[Flag] {
 	return func(
 		ctx context.Context,
@@ -106,7 +106,7 @@ func Task(
 		flags := cl.Flags()
 		args := cl.Args()
 
-		var plan apiplans.PlanSpec
+		var plan plans.PlanSpec
 		if flags.Scratch {
 			image := "image:version"
 			if l := len(args[ARG_IMAGE_TAG]); 0 < l {
@@ -157,8 +157,8 @@ func Task(
 
 		yplan := planSpecWithDocument{
 			Image:    image(plan.Image),
-			Inputs:   utils.Map(plan.Inputs, func(i apiplans.Mountpoint) mountpoint { return mountpoint(i) }),
-			Outputs:  utils.Map(plan.Outputs, func(i apiplans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Inputs:   utils.Map(plan.Inputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Outputs:  utils.Map(plan.Outputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
 			Log:      (*logpoint)(plan.Log),
 			Resource: res,
 			Active:   active,
@@ -177,27 +177,27 @@ func Task(
 	}
 }
 
-func FromScratch() func(context.Context, *log.Logger, string, env.KnitEnv) (apiplans.PlanSpec, error) {
+func FromScratch() func(context.Context, *log.Logger, string, env.KnitEnv) (plans.PlanSpec, error) {
 	return func(
 		ctx context.Context,
 		l *log.Logger,
 		tag string,
 		env env.KnitEnv,
-	) (apiplans.PlanSpec, error) {
-		image := new(apiplans.Image)
+	) (plans.PlanSpec, error) {
+		image := new(plans.Image)
 		if err := image.Parse(tag); err != nil {
-			return apiplans.PlanSpec{}, err
+			return plans.PlanSpec{}, err
 		}
-		tags := env.Tags()
-		if len(tags) == 0 {
-			tags = []apitag.Tag{{Key: "example", Value: "tag"}}
+		ts := env.Tags()
+		if len(ts) == 0 {
+			ts = []tags.Tag{{Key: "example", Value: "tag"}}
 		}
 
-		ress := apiplans.Resources{}
+		ress := plans.Resources{}
 		for k, v := range env.Resource {
 			q, err := resource.ParseQuantity(v)
 			if err != nil {
-				return apiplans.PlanSpec{}, fmt.Errorf("invalid resource value: %w", err)
+				return plans.PlanSpec{}, fmt.Errorf("invalid resource value: %w", err)
 			}
 			ress[k] = q
 		}
@@ -208,17 +208,17 @@ func FromScratch() func(context.Context, *log.Logger, string, env.KnitEnv) (apip
 			ress["memory"] = resource.MustParse("1Gi")
 		}
 
-		result := apiplans.PlanSpec{
+		result := plans.PlanSpec{
 			Image: *image,
-			Inputs: []apiplans.Mountpoint{
-				{Path: "/in", Tags: tags},
+			Inputs: []plans.Mountpoint{
+				{Path: "/in", Tags: ts},
 			},
-			Outputs: []apiplans.Mountpoint{
-				{Path: "/out", Tags: tags},
+			Outputs: []plans.Mountpoint{
+				{Path: "/out", Tags: ts},
 			},
 			Resources: ress,
-			Log: &apiplans.LogPoint{Tags: append([]apitag.Tag{
-				{Key: "type", Value: "log"}}, tags...,
+			Log: &plans.LogPoint{Tags: append([]tags.Tag{
+				{Key: "type", Value: "log"}}, ts...,
 			)},
 		}
 
@@ -228,14 +228,14 @@ func FromScratch() func(context.Context, *log.Logger, string, env.KnitEnv) (apip
 
 func FromImage(
 	analyze func(io.Reader, ...analyzer.Option) (*analyzer.TaggedConfig, error),
-) func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (apiplans.PlanSpec, error) {
+) func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (plans.PlanSpec, error) {
 	return func(
 		ctx context.Context,
 		l *log.Logger,
 		source namedReader,
 		tag string,
 		env env.KnitEnv,
-	) (apiplans.PlanSpec, error) {
+	) (plans.PlanSpec, error) {
 		options := []analyzer.Option{}
 		if tag != "" {
 			options = append(options, analyzer.WithTag(tag))
@@ -244,7 +244,7 @@ func FromImage(
 		l.Printf(`...analyzing image from "%s"`, source.Name())
 		cfg, err := analyze(source, options...)
 		if err != nil {
-			return apiplans.PlanSpec{}, err
+			return plans.PlanSpec{}, err
 		}
 
 		inputs := map[string]struct{}{}
@@ -294,11 +294,11 @@ func FromImage(
 			}
 		}
 
-		ress := apiplans.Resources{}
+		ress := plans.Resources{}
 		for k, v := range env.Resource {
 			q, err := resource.ParseQuantity(v)
 			if err != nil {
-				return apiplans.PlanSpec{}, fmt.Errorf("invalid resource value: %w", err)
+				return plans.PlanSpec{}, fmt.Errorf("invalid resource value: %w", err)
 			}
 			ress[k] = q
 		}
@@ -309,8 +309,8 @@ func FromImage(
 			ress["memory"] = resource.MustParse("1Gi")
 		}
 
-		result := apiplans.PlanSpec{
-			Image: apiplans.Image{
+		result := plans.PlanSpec{
+			Image: plans.Image{
 				Repository: cfg.Tag.Repository.Name(),
 				Tag:        cfg.Tag.TagStr(),
 			},
@@ -321,9 +321,9 @@ func FromImage(
 				utils.KeysOf(outputs), mountpointBuilder("out", env.Tags()),
 			),
 			Resources: ress,
-			Log: &apiplans.LogPoint{
+			Log: &plans.LogPoint{
 				Tags: append(
-					[]apitag.Tag{{Key: "type", Value: "log"}},
+					[]tags.Tag{{Key: "type", Value: "log"}},
 					env.Tags()...,
 				),
 			},
@@ -334,8 +334,8 @@ func FromImage(
 	}
 }
 
-func mountpointBuilder(ignore string, defaultTags []apitag.Tag) func(p string) apiplans.Mountpoint {
-	return func(p string) apiplans.Mountpoint {
+func mountpointBuilder(ignore string, defaultTags []tags.Tag) func(p string) plans.Mountpoint {
+	return func(p string) plans.Mountpoint {
 		typeTag := ""
 		{
 			pp := strings.Split(p, string(os.PathSeparator))
@@ -351,12 +351,12 @@ func mountpointBuilder(ignore string, defaultTags []apitag.Tag) func(p string) a
 			}
 		}
 
-		tags := defaultTags[:]
+		dtags := defaultTags[:]
 		if typeTag != "" {
-			tags = append(tags, apitag.Tag{Key: "type", Value: typeTag})
+			dtags = append(dtags, tags.Tag{Key: "type", Value: typeTag})
 		}
 
-		return apiplans.Mountpoint{Path: p, Tags: tags}
+		return plans.Mountpoint{Path: p, Tags: dtags}
 	}
 }
 
@@ -382,24 +382,24 @@ func (r _namedReader) Name() string {
 	return r.name
 }
 
-type image apiplans.Image
+type image plans.Image
 
 func (im image) yamlNode() *yaml.Node {
-	base := apiplans.Image(im)
+	base := plans.Image(im)
 	return y.Text(base.String(), y.WithStyle(yaml.DoubleQuotedStyle))
 
 }
 
-type mountpoint apiplans.Mountpoint
+type mountpoint plans.Mountpoint
 
 func (m mountpoint) yamlNode() *yaml.Node {
-	base := apiplans.Mountpoint(m)
+	base := plans.Mountpoint(m)
 
 	return y.Map(
 		y.Entry(y.Text("path"), y.Text(m.Path, y.WithStyle(yaml.DoubleQuotedStyle))),
 		y.Entry(y.Text("tags"), y.Seq(
 			utils.Map(
-				base.Tags, func(t apitag.Tag) *yaml.Node {
+				base.Tags, func(t tags.Tag) *yaml.Node {
 					return y.Text(t.String(), y.WithStyle(yaml.DoubleQuotedStyle))
 				},
 			)...,
@@ -407,20 +407,20 @@ func (m mountpoint) yamlNode() *yaml.Node {
 	)
 }
 
-type logpoint apiplans.LogPoint
+type logpoint plans.LogPoint
 
 func (l *logpoint) yamlNode() *yaml.Node {
 	if l == nil {
 		return y.Null()
 	}
 
-	base := apiplans.LogPoint(*l)
+	base := plans.LogPoint(*l)
 
 	return y.Map(
 		y.Entry(y.Text("tags"), y.Seq(
 			utils.Map(
 				base.Tags,
-				func(t apitag.Tag) *yaml.Node { return y.Text(t.String(), y.WithStyle(yaml.DoubleQuotedStyle)) },
+				func(t tags.Tag) *yaml.Node { return y.Text(t.String(), y.WithStyle(yaml.DoubleQuotedStyle)) },
 			)...,
 		)),
 	)

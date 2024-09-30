@@ -7,10 +7,10 @@ import (
 	"log"
 	"strings"
 
+	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/youta-t/flarc"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -80,8 +80,8 @@ func Task() common.Task[Flag] {
 
 		planId := cl.Args()[ARGS_PLAN_ID][0]
 
-		change := apiplans.ResourceLimitChange{
-			Set:   apiplans.Resources(flag.Set.Map()),
+		change := plans.ResourceLimitChange{
+			Set:   plans.Resources(flag.Set.Map()),
 			Unset: flag.Unset.Slice(),
 		}
 

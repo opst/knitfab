@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
@@ -56,7 +56,7 @@ type KnitClient interface {
 	// - *apidata.Detail: metadata of created data
 	//
 	// - error
-	PostData(ctx context.Context, source string, dereference bool) Progress[*apidata.Detail]
+	PostData(ctx context.Context, source string, dereference bool) Progress[*data.Detail]
 
 	// set/remove tags to a data in knit.
 	//
@@ -71,7 +71,7 @@ type KnitClient interface {
 	// - *apidata.Detail: metadata of updated data
 	//
 	// - error
-	PutTagsForData(knitId string, tags apitag.Change) (*apidata.Detail, error)
+	PutTagsForData(knitId string, tags tags.Change) (*data.Detail, error)
 
 	// Download Data from knitfab and verify checksum.
 	//
@@ -120,7 +120,7 @@ type KnitClient interface {
 	// - []apidata.Detail: metadata of found data
 	//
 	// - error
-	FindData(ctx context.Context, tag []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error)
+	FindData(ctx context.Context, tag []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error)
 
 	// GetPlan get plan detail with given planId.
 	//
@@ -135,7 +135,7 @@ type KnitClient interface {
 	// - apiplans.Detail: metadata of found plan
 	//
 	// - error
-	GetPlans(ctx context.Context, planId string) (apiplans.Detail, error)
+	GetPlans(ctx context.Context, planId string) (plans.Detail, error)
 
 	// FindPlan find plan with given status, image and tags.
 	//
@@ -160,8 +160,8 @@ type KnitClient interface {
 	// - error
 	FindPlan(
 		ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier,
-		inTags []apitag.Tag, outTags []apitag.Tag,
-	) ([]apiplans.Detail, error)
+		inTags []tags.Tag, outTags []tags.Tag,
+	) ([]plans.Detail, error)
 
 	// Activate or deactivate a plan.
 	//
@@ -178,7 +178,7 @@ type KnitClient interface {
 	// - apiplans.Detail: metadata of updated plan
 	//
 	// - error
-	PutPlanForActivate(ctx context.Context, planId string, isActive bool) (apiplans.Detail, error)
+	PutPlanForActivate(ctx context.Context, planId string, isActive bool) (plans.Detail, error)
 
 	// Register a new plan into knitfab.
 	//
@@ -193,7 +193,7 @@ type KnitClient interface {
 	// - apiplans.Detail: metadata of created plan
 	//
 	// - error
-	RegisterPlan(ctx context.Context, spec apiplans.PlanSpec) (apiplans.Detail, error)
+	RegisterPlan(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error)
 
 	// GetRun get run detail with given runId.
 	//
@@ -208,7 +208,7 @@ type KnitClient interface {
 	// - apirun.Detail: metadata of found run
 	//
 	// - error
-	GetRun(ctx context.Context, runId string) (apirun.Detail, error)
+	GetRun(ctx context.Context, runId string) (runs.Detail, error)
 
 	// GetRunLog get log of run with given runId.
 	//
@@ -238,7 +238,7 @@ type KnitClient interface {
 	// - []apirun.Detail: metadata of found run
 	//
 	// - error
-	FindRun(context.Context, FindRunParameter) ([]apirun.Detail, error)
+	FindRun(context.Context, FindRunParameter) ([]runs.Detail, error)
 
 	// Abort abort run with given runId.
 	//
@@ -253,7 +253,7 @@ type KnitClient interface {
 	// - apirun.Detail: metadata of aborted run
 	//
 	// - error
-	Abort(ctx context.Context, runId string) (apirun.Detail, error)
+	Abort(ctx context.Context, runId string) (runs.Detail, error)
 
 	// Tearoff stop run with given runId gently.
 	//
@@ -270,7 +270,7 @@ type KnitClient interface {
 	// - apirun.Detail: metadata of run teared off
 	//
 	// - error
-	Tearoff(ctx context.Context, runId string) (apirun.Detail, error)
+	Tearoff(ctx context.Context, runId string) (runs.Detail, error)
 
 	// DeleteRun delete run with given runId.
 	//
@@ -299,7 +299,7 @@ type KnitClient interface {
 	Retry(ctx context.Context, runId string) error
 
 	// SetResources set (or unset) resource limits of plan with given planId.
-	UpdateResources(ctx context.Context, planId string, res apiplans.ResourceLimitChange) (apiplans.Detail, error)
+	UpdateResources(ctx context.Context, planId string, res plans.ResourceLimitChange) (plans.Detail, error)
 }
 
 type client struct {

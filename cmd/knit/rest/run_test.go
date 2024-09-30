@@ -14,21 +14,20 @@ import (
 	"testing"
 	"time"
 
+	apierr "github.com/opst/knitfab-api-types/errors"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
 func TestGetRun(t *testing.T) {
 	t.Run("when server returns data, it returns that as is", func(t *testing.T) {
-		hadelerFactory := func(t *testing.T, resp apirun.Detail) (http.Handler, func() *http.Request) {
+		hadelerFactory := func(t *testing.T, resp runs.Detail) (http.Handler, func() *http.Request) {
 			var request *http.Request
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -50,13 +49,13 @@ func TestGetRun(t *testing.T) {
 			})
 			return h, func() *http.Request { return request }
 		}
-		expectedResponse := apirun.Detail{
-			Summary: apirun.Summary{
+		expectedResponse := runs.Detail{
+			Summary: runs.Summary{
 				RunId:  "test-runId",
 				Status: "done",
-				Plan: apiplan.Summary{
+				Plan: plans.Summary{
 					PlanId: "test-Id",
-					Image: &apiplan.Image{
+					Image: &plans.Image{
 						Repository: "test-image",
 						Tag:        "test-version",
 					},
@@ -66,11 +65,11 @@ func TestGetRun(t *testing.T) {
 					"2022-04-02T12:00:00+00:00",
 				)).OrFatal(t),
 			},
-			Inputs: []apirun.Assignment{
+			Inputs: []runs.Assignment{
 				{
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/in/1",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "raw data"},
 							{Key: "format", Value: "rgb image"},
 						},
@@ -78,20 +77,20 @@ func TestGetRun(t *testing.T) {
 					KnitId: "test-knitId-a",
 				},
 			},
-			Outputs: []apirun.Assignment{
+			Outputs: []runs.Assignment{
 				{
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/out/2",
-						Tags: []apitag.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "training data"},
 							{Key: "format", Value: "mask"},
 						},
 					},
 					KnitId: "test-knitId-b",
 				}},
-			Log: &apirun.LogSummary{
-				LogPoint: apiplan.LogPoint{
-					Tags: []apitag.Tag{
+			Log: &runs.LogSummary{
+				LogPoint: plans.LogPoint{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "log"},
 						{Key: "format", Value: "jsonl"},
 					},
@@ -109,7 +108,7 @@ func TestGetRun(t *testing.T) {
 		testee := try.To(krst.NewClient(&profile)).OrFatal(t)
 		runId := "test-runId"
 		actualResponse := try.To(testee.GetRun(context.Background(), runId)).OrFatal(t)
-		if !actualResponse.Equal(&expectedResponse) {
+		if !actualResponse.Equal(expectedResponse) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actualResponse, expectedResponse)
 		}
 	})
@@ -294,7 +293,7 @@ func TestGetRunLog(t *testing.T) {
 
 func TestFindRun(t *testing.T) {
 	t.Run("a server responding successfully	is given", func(t *testing.T) {
-		handlerFactory := func(t *testing.T, resp []apirun.Detail) (http.Handler, func() *http.Request) {
+		handlerFactory := func(t *testing.T, resp []runs.Detail) (http.Handler, func() *http.Request) {
 			var request *http.Request
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				t.Helper()
@@ -367,7 +366,7 @@ func TestFindRun(t *testing.T) {
 		} {
 			t.Run(name, func(t *testing.T) {
 				ctx := context.Background()
-				response := []apirun.Detail{} //empty. this is out of scope of these testcases.
+				response := []runs.Detail{} //empty. this is out of scope of these testcases.
 
 				handler, getLastRequest := handlerFactory(t, response)
 				ts := httptest.NewServer(handler)
@@ -386,10 +385,7 @@ func TestFindRun(t *testing.T) {
 				)).OrFatal(t)
 
 				// check response
-				if !cmp.SliceContentEqWith(
-					utils.RefOf(result), utils.RefOf(response),
-					(*apirun.Detail).Equal,
-				) {
+				if !cmp.SliceContentEqWith(result, response, runs.Detail.Equal) {
 					t.Errorf(
 						"response is wrong:\n- actual:\n%#v\n- expected:\n%#v",
 						result, response,
@@ -426,7 +422,7 @@ func TestFindRun(t *testing.T) {
 		t.Run("when server returns data, it returns that as is", func(t *testing.T) {
 			ctx := context.Background()
 
-			expectedResponse := []apirun.Detail{}
+			expectedResponse := []runs.Detail{}
 
 			handler, _ := handlerFactory(t, expectedResponse)
 
@@ -460,10 +456,7 @@ func TestFindRun(t *testing.T) {
 				),
 			).OrFatal(t)
 
-			if !cmp.SliceContentEqWith(
-				actualResponse, expectedResponse,
-				func(a, b apirun.Detail) bool { return a.Equal(&b) },
-			) {
+			if !cmp.SliceContentEqWith(actualResponse, expectedResponse, runs.Detail.Equal) {
 				t.Errorf(
 					"response is in unexpected form:\n===actual===\n%+v\n===expected===\n%+v",
 					actualResponse, expectedResponse,
@@ -538,7 +531,7 @@ func checkSliceContentEquality(t *testing.T, name string, actual, expected []str
 func TestRunAbort(t *testing.T) {
 	type When struct {
 		statusCode    int
-		responseOk    apirun.Detail
+		responseOk    runs.Detail
 		responseError apierr.ErrorMessage
 	}
 	type Then struct {
@@ -588,7 +581,7 @@ func TestRunAbort(t *testing.T) {
 				t.Fatalf("Abort returns error: %s", err)
 			}
 
-			if !payload.Equal(&when.responseOk) {
+			if !payload.Equal(when.responseOk) {
 				t.Errorf(
 					"Abort returns wrong payload (actual, expected) = (%v, %v)",
 					payload, when.responseOk,
@@ -600,13 +593,13 @@ func TestRunAbort(t *testing.T) {
 	t.Run("when server response with 200, it returns the run detail", theory(
 		When{
 			statusCode: http.StatusOK,
-			responseOk: apirun.Detail{
-				Summary: apirun.Summary{
+			responseOk: runs.Detail{
+				Summary: runs.Summary{
 					RunId:  "test-runId",
 					Status: "done",
-					Plan: apiplan.Summary{
+					Plan: plans.Summary{
 						PlanId: "test-Id",
-						Image: &apiplan.Image{
+						Image: &plans.Image{
 							Repository: "test-image",
 							Tag:        "test-version",
 						},
@@ -617,11 +610,11 @@ func TestRunAbort(t *testing.T) {
 						"2022-04-02T12:00:00+00:00",
 					)).OrFatal(t),
 				},
-				Inputs: []apirun.Assignment{
+				Inputs: []runs.Assignment{
 					{
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/in/1",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "raw data"},
 								{Key: "format", Value: "rgb image"},
 							},
@@ -629,11 +622,11 @@ func TestRunAbort(t *testing.T) {
 						KnitId: "test-knitId-a",
 					},
 				},
-				Outputs: []apirun.Assignment{
+				Outputs: []runs.Assignment{
 					{
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/out/2",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "training data"},
 								{Key: "format", Value: "mask"},
 							},
@@ -641,9 +634,9 @@ func TestRunAbort(t *testing.T) {
 						KnitId: "test-knitId-b",
 					},
 				},
-				Log: &apirun.LogSummary{
-					LogPoint: apiplan.LogPoint{
-						Tags: []apitag.Tag{
+				Log: &runs.LogSummary{
+					LogPoint: plans.LogPoint{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "log"},
 							{Key: "format", Value: "jsonl"},
 						},
@@ -680,7 +673,7 @@ func TestRunAbort(t *testing.T) {
 func TestRunTearoff(t *testing.T) {
 	type When struct {
 		statusCode    int
-		responseOk    apirun.Detail
+		responseOk    runs.Detail
 		responseError apierr.ErrorMessage
 	}
 	type Then struct {
@@ -730,7 +723,7 @@ func TestRunTearoff(t *testing.T) {
 				t.Fatalf("Abort returns error: %s", err)
 			}
 
-			if !payload.Equal(&when.responseOk) {
+			if !payload.Equal(when.responseOk) {
 				t.Errorf(
 					"Tearoff returns wrong payload (actual, expected) = (%v, %v)",
 					payload, when.responseOk,
@@ -742,13 +735,13 @@ func TestRunTearoff(t *testing.T) {
 	t.Run("when server response with 200, it returns the run detail", theory(
 		When{
 			statusCode: http.StatusOK,
-			responseOk: apirun.Detail{
-				Summary: apirun.Summary{
+			responseOk: runs.Detail{
+				Summary: runs.Summary{
 					RunId:  "test-runId",
 					Status: "done",
-					Plan: apiplan.Summary{
+					Plan: plans.Summary{
 						PlanId: "test-Id",
-						Image: &apiplan.Image{
+						Image: &plans.Image{
 							Repository: "test-image",
 							Tag:        "test-version",
 						},
@@ -759,11 +752,11 @@ func TestRunTearoff(t *testing.T) {
 						"2022-04-02T12:00:00+00:00",
 					)).OrFatal(t),
 				},
-				Inputs: []apirun.Assignment{
+				Inputs: []runs.Assignment{
 					{
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/in/1",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "raw data"},
 								{Key: "format", Value: "rgb image"},
 							},
@@ -771,11 +764,11 @@ func TestRunTearoff(t *testing.T) {
 						KnitId: "test-knitId-a",
 					},
 				},
-				Outputs: []apirun.Assignment{
+				Outputs: []runs.Assignment{
 					{
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/out/2",
-							Tags: []apitag.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "training data"},
 								{Key: "format", Value: "mask"},
 							},
@@ -783,9 +776,9 @@ func TestRunTearoff(t *testing.T) {
 						KnitId: "test-knitId-b",
 					},
 				},
-				Log: &apirun.LogSummary{
-					LogPoint: apiplan.LogPoint{
-						Tags: []apitag.Tag{
+				Log: &runs.LogSummary{
+					LogPoint: plans.LogPoint{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "log"},
 							{Key: "format", Value: "jsonl"},
 						},

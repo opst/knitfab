@@ -11,16 +11,16 @@ import (
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	"github.com/youta-t/flarc"
 
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
 	"github.com/opst/knitfab/cmd/knit/subcommands/data/lineage"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/try"
@@ -257,8 +257,8 @@ func TestTraceDownStream(t *testing.T) {
 		RootKnitId      string
 		Depth           int
 		ArgGraph        *lineage.DirectedGraph
-		FindDataReturns [][]apidata.Detail
-		GetRunReturns   []apirun.Detail
+		FindDataReturns [][]data.Detail
+		GetRunReturns   []runs.Detail
 	}
 
 	type Then struct {
@@ -274,8 +274,8 @@ func TestTraceDownStream(t *testing.T) {
 			// Store arguments and return values for each call
 			nthData := 0
 			mock.Impl.FindData = func(
-				ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration,
-			) ([]apidata.Detail, error) {
+				ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration,
+			) ([]data.Detail, error) {
 				ret := when.FindDataReturns[nthData]
 				nthData += 1
 				return ret, nil
@@ -284,7 +284,7 @@ func TestTraceDownStream(t *testing.T) {
 			nthRun := 0
 			mock.Impl.GetRun = func(
 				ctx context.Context, runId string,
-			) (apirun.Detail, error) {
+			) (runs.Detail, error) {
 				ret := when.GetRunReturns[nthRun]
 				nthRun += 1
 				return ret, nil
@@ -312,7 +312,7 @@ func TestTraceDownStream(t *testing.T) {
 			if !cmp.MapEqWith(
 				graph.RunNodes,
 				then.Graph.RunNodes,
-				func(a, b lineage.RunNode) bool { return a.Equal(&b.Summary) },
+				func(a, b lineage.RunNode) bool { return a.Summary.Equal(b.Summary) },
 			) {
 				t.Errorf(
 					"RunNodes is not equal (actual,expected): %v,%v",
@@ -366,8 +366,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           1,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}},
-				GetRunReturns:   []apirun.Detail{run1},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}},
+				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -386,8 +386,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           -1,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}},
-				GetRunReturns:   []apirun.Detail{run1},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}},
+				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -416,8 +416,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           2,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}, {data3}, {data4}},
-				GetRunReturns:   []apirun.Detail{run1, run2},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}, {data3}, {data4}},
+				GetRunReturns:   []runs.Detail{run1, run2},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -444,8 +444,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           1,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}},
-				GetRunReturns:   []apirun.Detail{run1},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}},
+				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -475,8 +475,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           -1,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}, {data3}},
-				GetRunReturns:   []apirun.Detail{run1}},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}, {data3}},
+				GetRunReturns:   []runs.Detail{run1}},
 			Then{
 				Graph: lineage.DirectedGraph{
 					DataNodes: map[string]lineage.DataNode{
@@ -508,8 +508,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           -1,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}, {data3}, {data4}},
-				GetRunReturns:   []apirun.Detail{run1, run2, run3},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}, {data3}, {data4}},
+				GetRunReturns:   []runs.Detail{run1, run2, run3},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -551,8 +551,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           -1,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}, {data3}, {data4}},
-				GetRunReturns:   []apirun.Detail{run1, run2},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}, {data3}, {data4}},
+				GetRunReturns:   []runs.Detail{run1, run2},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -596,8 +596,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           1,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}, {data3}, {data4}},
-				GetRunReturns:   []apirun.Detail{run1, run3},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}, {data3}, {data4}},
+				GetRunReturns:   []runs.Detail{run1, run3},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -621,8 +621,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           2,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}, {data3}, {data4}},
-				GetRunReturns:   []apirun.Detail{run1, run3, run2},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}, {data3}, {data4}},
+				GetRunReturns:   []runs.Detail{run1, run3, run2},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -651,8 +651,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           3,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}, {data3}, {data4}, {data5}},
-				GetRunReturns:   []apirun.Detail{run1, run3, run2, run4},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}, {data3}, {data4}, {data5}},
+				GetRunReturns:   []runs.Detail{run1, run3, run2, run4},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -691,8 +691,8 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId:      "data1",
 				Depth:           -1,
 				ArgGraph:        lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{{data1}, {data2}},
-				GetRunReturns:   []apirun.Detail{run1, run2},
+				FindDataReturns: [][]data.Detail{{data1}, {data2}},
+				GetRunReturns:   []runs.Detail{run1, run2},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -736,8 +736,8 @@ func TestTraceDownStream(t *testing.T) {
 					},
 					RootNodes: []string{},
 				},
-				FindDataReturns: [][]apidata.Detail{{data4}},
-				GetRunReturns:   []apirun.Detail{run2},
+				FindDataReturns: [][]data.Detail{{data4}},
+				GetRunReturns:   []runs.Detail{run2},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -779,10 +779,10 @@ func TestTraceDownStream(t *testing.T) {
 				RootKnitId: "data1",
 				Depth:      -1,
 				ArgGraph:   lineage.NewDirectedGraph(),
-				FindDataReturns: [][]apidata.Detail{
+				FindDataReturns: [][]data.Detail{
 					{data1}, {data2}, {data3}, {data4},
 				},
-				GetRunReturns: []apirun.Detail{run1, run2},
+				GetRunReturns: []runs.Detail{run1, run2},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -807,11 +807,11 @@ func TestTraceDownStream(t *testing.T) {
 
 	t.Run("When FindData returns Empty array it returns ErrNotFoundData", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
-			return []apidata.Detail{}, nil
+		mock.Impl.FindData = func(ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error) {
+			return []data.Detail{}, nil
 		}
-		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
-			return apirun.Detail{}, nil
+		mock.Impl.GetRun = func(ctx context.Context, runId string) (runs.Detail, error) {
+			return runs.Detail{}, nil
 		}
 
 		ctx := context.Background()
@@ -826,11 +826,11 @@ func TestTraceDownStream(t *testing.T) {
 	expectedError := errors.New("fake error")
 	t.Run("When FindData fails, it returns the error that contains that error ", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
-			return []apidata.Detail{}, expectedError
+		mock.Impl.FindData = func(ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error) {
+			return []data.Detail{}, expectedError
 		}
-		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
-			return apirun.Detail{}, nil
+		mock.Impl.GetRun = func(ctx context.Context, runId string) (runs.Detail, error) {
+			return runs.Detail{}, nil
 		}
 
 		ctx := context.Background()
@@ -845,13 +845,13 @@ func TestTraceDownStream(t *testing.T) {
 	t.Run("When GetRun fails, it returns the error that contains that error", func(t *testing.T) {
 		mock := mock.New(t)
 		knitId := "knitId-test"
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
-			return []apidata.Detail{
+		mock.Impl.FindData = func(ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error) {
+			return []data.Detail{
 				dummyData(knitId, "run1", "run2"),
 			}, nil
 		}
-		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
-			return apirun.Detail{}, expectedError
+		mock.Impl.GetRun = func(ctx context.Context, runId string) (runs.Detail, error) {
+			return runs.Detail{}, expectedError
 		}
 		ctx := context.Background()
 		graph := lineage.NewDirectedGraph()
@@ -866,8 +866,8 @@ func TestTraceUpStream(t *testing.T) {
 	type When struct {
 		RootKnitId      string
 		Depth           int
-		FindDataReturns [][]apidata.Detail
-		GetRunReturns   []apirun.Detail
+		FindDataReturns [][]data.Detail
+		GetRunReturns   []runs.Detail
 	}
 
 	type Then struct {
@@ -883,8 +883,8 @@ func TestTraceUpStream(t *testing.T) {
 			// Store arguments and return values for each call
 			nthData := 0
 			mock.Impl.FindData = func(
-				ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) (
-				[]apidata.Detail, error) {
+				ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration) (
+				[]data.Detail, error) {
 				ret := when.FindDataReturns[nthData]
 				nthData += 1
 				return ret, nil
@@ -893,7 +893,7 @@ func TestTraceUpStream(t *testing.T) {
 			nthRun := 0
 			mock.Impl.GetRun = func(
 				ctx context.Context, runId string) (
-				apirun.Detail, error) {
+				runs.Detail, error) {
 				ret := when.GetRunReturns[nthRun]
 				nthRun += 1
 				return ret, nil
@@ -922,7 +922,7 @@ func TestTraceUpStream(t *testing.T) {
 			if !cmp.MapEqWith(
 				graph.RunNodes,
 				then.Graph.RunNodes,
-				func(a, b lineage.RunNode) bool { return a.Equal(&b.Summary) },
+				func(a, b lineage.RunNode) bool { return a.Summary.Equal(b.Summary) },
 			) {
 				t.Errorf(
 					"RunNodes is not equal (actual,expected): %v,%v",
@@ -973,8 +973,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data1",
 				Depth:           1,
-				FindDataReturns: [][]apidata.Detail{{data1}},
-				GetRunReturns:   []apirun.Detail{run1},
+				FindDataReturns: [][]data.Detail{{data1}},
+				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -991,8 +991,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data1",
 				Depth:           -1,
-				FindDataReturns: [][]apidata.Detail{{data1}},
-				GetRunReturns:   []apirun.Detail{run1},
+				FindDataReturns: [][]data.Detail{{data1}},
+				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1017,8 +1017,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data2",
 				Depth:           2,
-				FindDataReturns: [][]apidata.Detail{{data2}, {data1}},
-				GetRunReturns:   []apirun.Detail{run2, run1},
+				FindDataReturns: [][]data.Detail{{data2}, {data1}},
+				GetRunReturns:   []runs.Detail{run2, run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1039,8 +1039,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data2",
 				Depth:           1,
-				FindDataReturns: [][]apidata.Detail{{data2}, {data1}},
-				GetRunReturns:   []apirun.Detail{run2},
+				FindDataReturns: [][]data.Detail{{data2}, {data1}},
+				GetRunReturns:   []runs.Detail{run2},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1072,8 +1072,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data3",
 				Depth:           2,
-				FindDataReturns: [][]apidata.Detail{{data3}, {data2}, {data1}},
-				GetRunReturns:   []apirun.Detail{run2, run1},
+				FindDataReturns: [][]data.Detail{{data3}, {data2}, {data1}},
+				GetRunReturns:   []runs.Detail{run2, run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1109,8 +1109,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data4",
 				Depth:           -1,
-				FindDataReturns: [][]apidata.Detail{{data4}, {data2}, {data3}, {data1}},
-				GetRunReturns:   []apirun.Detail{run3, run2, run1},
+				FindDataReturns: [][]data.Detail{{data4}, {data2}, {data3}, {data1}},
+				GetRunReturns:   []runs.Detail{run3, run2, run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1154,8 +1154,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data4",
 				Depth:           1,
-				FindDataReturns: [][]apidata.Detail{{data4}, {data1}, {data3}},
-				GetRunReturns:   []apirun.Detail{run4},
+				FindDataReturns: [][]data.Detail{{data4}, {data1}, {data3}},
+				GetRunReturns:   []runs.Detail{run4},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1180,8 +1180,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data4",
 				Depth:           2,
-				FindDataReturns: [][]apidata.Detail{{data4}, {data1}, {data3}, {data2}},
-				GetRunReturns:   []apirun.Detail{run4, run1, run3},
+				FindDataReturns: [][]data.Detail{{data4}, {data1}, {data3}, {data2}},
+				GetRunReturns:   []runs.Detail{run4, run1, run3},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1209,8 +1209,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data4",
 				Depth:           3,
-				FindDataReturns: [][]apidata.Detail{{data4}, {data1}, {data3}, {data2}},
-				GetRunReturns:   []apirun.Detail{run4, run1, run3, run2},
+				FindDataReturns: [][]data.Detail{{data4}, {data1}, {data3}, {data2}},
+				GetRunReturns:   []runs.Detail{run4, run1, run3, run2},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1257,8 +1257,8 @@ func TestTraceUpStream(t *testing.T) {
 			When{
 				RootKnitId:      "data5",
 				Depth:           2,
-				FindDataReturns: [][]apidata.Detail{{data5}, {data4}, {data3}, {data2}, {data1}},
-				GetRunReturns:   []apirun.Detail{run2, run1},
+				FindDataReturns: [][]data.Detail{{data5}, {data4}, {data3}, {data2}, {data1}},
+				GetRunReturns:   []runs.Detail{run2, run1},
 			},
 			Then{
 				Graph: lineage.DirectedGraph{
@@ -1285,11 +1285,11 @@ func TestTraceUpStream(t *testing.T) {
 
 	t.Run("When FindData returns Empty array it returns ErrNotFoundData", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
-			return []apidata.Detail{}, nil
+		mock.Impl.FindData = func(ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error) {
+			return []data.Detail{}, nil
 		}
-		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
-			return apirun.Detail{}, nil
+		mock.Impl.GetRun = func(ctx context.Context, runId string) (runs.Detail, error) {
+			return runs.Detail{}, nil
 		}
 
 		ctx := context.Background()
@@ -1304,11 +1304,11 @@ func TestTraceUpStream(t *testing.T) {
 	expectedError := errors.New("fake error")
 	t.Run("When FindData fails, it returns the error that contains that error ", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
-			return []apidata.Detail{}, expectedError
+		mock.Impl.FindData = func(ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error) {
+			return []data.Detail{}, expectedError
 		}
-		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
-			return apirun.Detail{}, nil
+		mock.Impl.GetRun = func(ctx context.Context, runId string) (runs.Detail, error) {
+			return runs.Detail{}, nil
 		}
 
 		ctx := context.Background()
@@ -1322,12 +1322,12 @@ func TestTraceUpStream(t *testing.T) {
 
 	t.Run("When GetRun fails, it returns the error that contains that error", func(t *testing.T) {
 		mock := mock.New(t)
-		mock.Impl.GetRun = func(ctx context.Context, runId string) (apirun.Detail, error) {
-			return apirun.Detail{}, expectedError
+		mock.Impl.GetRun = func(ctx context.Context, runId string) (runs.Detail, error) {
+			return runs.Detail{}, expectedError
 		}
 		knitId := "knitId-test"
-		mock.Impl.FindData = func(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
-			return []apidata.Detail{
+		mock.Impl.FindData = func(ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error) {
+			return []data.Detail{
 				dummyData(knitId, "run0", "run2"),
 			}, nil
 		}
@@ -1340,7 +1340,7 @@ func TestTraceUpStream(t *testing.T) {
 	})
 }
 
-func toDataNode(data apidata.Detail) lineage.DataNode {
+func toDataNode(data data.Detail) lineage.DataNode {
 	return lineage.DataNode{
 		KnitId:    data.KnitId,
 		Tags:      data.Tags,
@@ -1355,22 +1355,22 @@ func toDataNode(data apidata.Detail) lineage.DataNode {
 	}
 }
 
-func dummyAssignedTo(runId string) apidata.AssignedTo {
-	return apidata.AssignedTo{
-		Run: apirun.Summary{
+func dummyAssignedTo(runId string) data.AssignedTo {
+	return data.AssignedTo{
+		Run: runs.Summary{
 			RunId:  runId,
 			Status: "done",
-			Plan: apiplan.Summary{
+			Plan: plans.Summary{
 				PlanId: "plan-3",
-				Image:  &apiplan.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+				Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
 			},
 		},
-		Mountpoint: apiplan.Mountpoint{Path: "/out"},
+		Mountpoint: plans.Mountpoint{Path: "/out"},
 	}
 }
 
-func dummySliceAssignedTo(runIds ...string) []apidata.AssignedTo {
-	slice := []apidata.AssignedTo{}
+func dummySliceAssignedTo(runIds ...string) []data.AssignedTo {
+	slice := []data.AssignedTo{}
 	for _, runId := range runIds {
 		element := dummyAssignedTo(runId)
 		slice = append(slice, element)
@@ -1378,10 +1378,10 @@ func dummySliceAssignedTo(runIds ...string) []apidata.AssignedTo {
 	return slice
 }
 
-func dummyData(knitId string, fromRunId string, toRunIds ...string) apidata.Detail {
-	return apidata.Detail{
+func dummyData(knitId string, fromRunId string, toRunIds ...string) data.Detail {
+	return data.Detail{
 		KnitId: knitId,
-		Tags: []apitag.Tag{
+		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
 			{Key: kdb.KeyKnitId, Value: knitId},
@@ -1389,14 +1389,14 @@ func dummyData(knitId string, fromRunId string, toRunIds ...string) apidata.Deta
 		},
 		Upstream:    dummyAssignedTo(fromRunId),
 		Downstreams: dummySliceAssignedTo(toRunIds...),
-		Nomination:  []apidata.NominatedBy{},
+		Nomination:  []data.NominatedBy{},
 	}
 }
 
-func dummyDataForFailed(knitId string, fromRunId string, toRunIds ...string) apidata.Detail {
-	return apidata.Detail{
+func dummyDataForFailed(knitId string, fromRunId string, toRunIds ...string) data.Detail {
+	return data.Detail{
 		KnitId: knitId,
-		Tags: []apitag.Tag{
+		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
 			{Key: kdb.KeyKnitId, Value: knitId},
@@ -1405,18 +1405,18 @@ func dummyDataForFailed(knitId string, fromRunId string, toRunIds ...string) api
 		},
 		Upstream:    dummyAssignedTo(fromRunId),
 		Downstreams: dummySliceAssignedTo(toRunIds...),
-		Nomination:  []apidata.NominatedBy{},
+		Nomination:  []data.NominatedBy{},
 	}
 }
 
-func dummyRun(runId string, inputs map[string]string, outputs map[string]string) apirun.Detail {
-	return apirun.Detail{
-		Summary: apirun.Summary{
+func dummyRun(runId string, inputs map[string]string, outputs map[string]string) runs.Detail {
+	return runs.Detail{
+		Summary: runs.Summary{
 			RunId:  runId,
 			Status: "done",
-			Plan: apiplan.Summary{
+			Plan: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplan.Image{
+				Image: &plans.Image{
 					Repository: "test-image",
 					Tag:        "test-version",
 				},
@@ -1429,14 +1429,14 @@ func dummyRun(runId string, inputs map[string]string, outputs map[string]string)
 	}
 }
 
-func dummyRunWithLog(runId string, knitId string, inputs map[string]string, outputs map[string]string) apirun.Detail {
-	return apirun.Detail{
-		Summary: apirun.Summary{
+func dummyRunWithLog(runId string, knitId string, inputs map[string]string, outputs map[string]string) runs.Detail {
+	return runs.Detail{
+		Summary: runs.Summary{
 			RunId:  runId,
 			Status: "done",
-			Plan: apiplan.Summary{
+			Plan: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplan.Image{
+				Image: &plans.Image{
 					Repository: "test-image",
 					Tag:        "test-version",
 				},
@@ -1445,9 +1445,9 @@ func dummyRunWithLog(runId string, knitId string, inputs map[string]string, outp
 		},
 		Inputs:  dummySliceAssignment(inputs),
 		Outputs: dummySliceAssignment(outputs),
-		Log: &apirun.LogSummary{
-			LogPoint: apiplan.LogPoint{
-				Tags: []apitag.Tag{
+		Log: &runs.LogSummary{
+			LogPoint: plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
@@ -1457,14 +1457,14 @@ func dummyRunWithLog(runId string, knitId string, inputs map[string]string, outp
 	}
 }
 
-func dummyFailedRunWithLog(runId string, knitId string, inputs map[string]string, outputs map[string]string) apirun.Detail {
-	return apirun.Detail{
-		Summary: apirun.Summary{
+func dummyFailedRunWithLog(runId string, knitId string, inputs map[string]string, outputs map[string]string) runs.Detail {
+	return runs.Detail{
+		Summary: runs.Summary{
 			RunId:  runId,
 			Status: "failed",
-			Plan: apiplan.Summary{
+			Plan: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplan.Image{
+				Image: &plans.Image{
 					Repository: "test-image",
 					Tag:        "test-version",
 				},
@@ -1473,9 +1473,9 @@ func dummyFailedRunWithLog(runId string, knitId string, inputs map[string]string
 		},
 		Inputs:  dummySliceAssignment(inputs),
 		Outputs: dummySliceAssignment(outputs),
-		Log: &apirun.LogSummary{
-			LogPoint: apiplan.LogPoint{
-				Tags: []apitag.Tag{
+		Log: &runs.LogSummary{
+			LogPoint: plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
@@ -1485,24 +1485,24 @@ func dummyFailedRunWithLog(runId string, knitId string, inputs map[string]string
 	}
 }
 
-func dummyLogData(knitId string, fromRunId string, toRunIds ...string) apidata.Detail {
-	return apidata.Detail{
+func dummyLogData(knitId string, fromRunId string, toRunIds ...string) data.Detail {
+	return data.Detail{
 		KnitId: knitId,
-		Tags: []apitag.Tag{
+		Tags: []tags.Tag{
 			{Key: "type", Value: "log"},
 			{Key: "format", Value: "jsonl"},
 		},
 		Upstream:    dummyAssignedTo(fromRunId),
 		Downstreams: dummySliceAssignedTo(toRunIds...),
-		Nomination:  []apidata.NominatedBy{},
+		Nomination:  []data.NominatedBy{},
 	}
 }
 
-func dummyAssignment(knitId string, mountPath string) apirun.Assignment {
-	return apirun.Assignment{
-		Mountpoint: apiplan.Mountpoint{
+func dummyAssignment(knitId string, mountPath string) runs.Assignment {
+	return runs.Assignment{
+		Mountpoint: plans.Mountpoint{
 			Path: mountPath,
-			Tags: []apitag.Tag{
+			Tags: []tags.Tag{
 				{Key: "type", Value: "training data"},
 				{Key: "format", Value: "mask"},
 			},
@@ -1511,8 +1511,8 @@ func dummyAssignment(knitId string, mountPath string) apirun.Assignment {
 	}
 }
 
-func dummySliceAssignment(knitIdToMoutPath map[string]string) []apirun.Assignment {
-	slice := []apirun.Assignment{}
+func dummySliceAssignment(knitIdToMoutPath map[string]string) []runs.Assignment {
+	slice := []runs.Assignment{}
 	keys := make([]string, 0, len(knitIdToMoutPath))
 	for k := range knitIdToMoutPath {
 		keys = append(keys, k)

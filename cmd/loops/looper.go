@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/finishing"
@@ -19,7 +20,6 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/imported"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
 	knit "github.com/opst/knitfab/pkg"
-	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/loop"
 	"github.com/opst/knitfab/pkg/utils"
@@ -93,7 +93,7 @@ type LoopManifest struct {
 	Policy recurring.Policy
 
 	// Hooks for the looping
-	Hooks hook.Hook[api_runs.Detail]
+	Hooks hook.Hook[apiruns.Detail]
 }
 
 // Start loop if needed.

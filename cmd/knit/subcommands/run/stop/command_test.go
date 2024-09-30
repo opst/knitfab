@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst_mock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_stop "github.com/opst/knitfab/cmd/knit/subcommands/run/stop"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 )
 
 func TestCommand_WithFail(t *testing.T) {
@@ -27,11 +27,11 @@ func TestCommand_WithFail(t *testing.T) {
 			client.Impl.Abort = func(
 				ctx context.Context,
 				runId string,
-			) (apirun.Detail, error) {
+			) (runs.Detail, error) {
 				if runId != when.runId {
 					t.Errorf("expected %+v, got %+v", when.runId, runId)
 				}
-				return apirun.Detail{}, when.err
+				return runs.Detail{}, when.err
 			}
 
 			l := logger.Null()
@@ -91,11 +91,11 @@ func TestCommand_WithoutFail(t *testing.T) {
 			client.Impl.Tearoff = func(
 				ctx context.Context,
 				runId string,
-			) (apirun.Detail, error) {
+			) (runs.Detail, error) {
 				if runId != when.runId {
 					t.Errorf("expected %+v, got %+v", when.runId, runId)
 				}
-				return apirun.Detail{}, when.err
+				return runs.Detail{}, when.err
 			}
 
 			l := logger.Null()

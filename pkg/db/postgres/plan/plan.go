@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpgerr "github.com/opst/knitfab/pkg/db/postgres/errors"
 	kpgintr "github.com/opst/knitfab/pkg/db/postgres/internal"
@@ -17,7 +18,6 @@ import (
 	xe "github.com/opst/knitfab/pkg/errors"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 type planPG struct { // implements kdb.PlanInterface
@@ -851,7 +851,7 @@ func (m *planPG) makeTagQuery(inTag []kdb.Tag, outTag []kdb.Tag) *findTagQuery {
 			}
 
 			if result.inSysTimestamp != nil {
-				if !result.inSysTimestamp.Equal(&sysTimestamp) {
+				if !result.inSysTimestamp.Equal(sysTimestamp) {
 					return nil
 				}
 			}

@@ -7,11 +7,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/opst/knitfab-api-types/data"
+	apitag "github.com/opst/knitfab-api-types/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/youta-t/flarc"
@@ -44,7 +44,7 @@ type Option struct {
 		*log.Logger,
 		krst.KnitClient,
 		Query,
-	) ([]apidata.Detail, error)
+	) ([]data.Detail, error)
 }
 
 func WithFindData(
@@ -53,7 +53,7 @@ func WithFindData(
 		*log.Logger,
 		krst.KnitClient,
 		Query,
-	) ([]apidata.Detail, error),
+	) ([]data.Detail, error),
 ) func(*Option) *Option {
 	return func(dfc *Option) *Option {
 		dfc.findData = findData
@@ -164,7 +164,7 @@ func Task(
 		logger *log.Logger,
 		client krst.KnitClient,
 		q Query,
-	) ([]apidata.Detail, error),
+	) ([]data.Detail, error),
 ) common.Task[Flag] {
 	return func(
 		ctx context.Context,
@@ -251,14 +251,14 @@ func FindData(
 	logger *log.Logger,
 	client krst.KnitClient,
 	q Query,
-) ([]apidata.Detail, error) {
+) ([]data.Detail, error) {
 
 	result, err := client.FindData(ctx, q.Tags, q.Since, q.Duration)
 	if err != nil {
 		return nil, err
 	}
 
-	isTransient := func(d apidata.Detail) bool {
+	isTransient := func(d data.Detail) bool {
 		_, ok := utils.First(d.Tags, func(t apitag.Tag) bool {
 			return t.Key == "knit#transient"
 		})
@@ -268,17 +268,17 @@ func FindData(
 
 	switch q.Transient {
 	case TransientAny:
-		filter = func(apidata.Detail) bool { return true }
+		filter = func(data.Detail) bool { return true }
 	case TransientOnly:
 		// noop. filter is "isTransient", already.
 	case TransientExclude:
-		filter = func(d apidata.Detail) bool { return !isTransient(d) }
+		filter = func(d data.Detail) bool { return !isTransient(d) }
 	}
 
 	satisfied, _ := utils.Group(result, filter)
 
 	if satisfied == nil {
-		return []apidata.Detail{}, nil
+		return []data.Detail{}, nil
 	}
 
 	return satisfied, nil

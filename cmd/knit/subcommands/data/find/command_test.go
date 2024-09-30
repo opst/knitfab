@@ -17,57 +17,57 @@ import (
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	mock "github.com/opst/knitfab/cmd/knit/rest/mock"
 
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	data_find "github.com/opst/knitfab/cmd/knit/subcommands/data/find"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
 func TestFindDataCommand(t *testing.T) {
 	type when struct {
 		flag         data_find.Flag
-		presentation []apidata.Detail
+		presentation []data.Detail
 		err          error
 	}
 	type then struct {
 		err       error
-		tags      []apitags.Tag
+		tags      []tags.Tag
 		transient data_find.TransientValue
 		since     *time.Time
 		duration  *time.Duration
 	}
 
-	presentationItems := []apidata.Detail{
+	presentationItems := []data.Detail{
 		{
 			KnitId: "sample-knit-id",
-			Tags: []apitags.Tag{
+			Tags: []tags.Tag{
 				{Key: "knit#id", Value: "sample-knit-id"},
 				{Key: "knit#transient", Value: "processing"},
 				{Key: "foo", Value: "bar"},
 				{Key: "baz", Value: "quux"},
 			},
-			Upstream: apidata.AssignedTo{
-				Run: apirun.Summary{
+			Upstream: data.AssignedTo{
+				Run: runs.Summary{
 					RunId: "sample-run-id", Status: string(kdb.Running),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 						"2022-01-08T00:12:34+00:00",
 					)).OrFatal(t),
-					Plan: apiplan.Summary{
+					Plan: plans.Summary{
 						PlanId: "sample-plan-id", Name: "knit#upload",
 					},
 				},
-				Mountpoint: apiplan.Mountpoint{Path: "/out"},
+				Mountpoint: plans.Mountpoint{Path: "/out"},
 			},
-			Downstreams: []apidata.AssignedTo{},
+			Downstreams: []data.AssignedTo{},
 		},
 	}
 
@@ -80,11 +80,8 @@ func TestFindDataCommand(t *testing.T) {
 			mockFindData := func(
 				_ context.Context, _ *log.Logger, _ krst.KnitClient,
 				q data_find.Query,
-			) ([]apidata.Detail, error) {
-				if !cmp.SliceContentEqWith(
-					q.Tags, then.tags,
-					func(a, b apitags.Tag) bool { return a.Equal(&b) },
-				) {
+			) ([]data.Detail, error) {
+				if !cmp.SliceContentEqWith(q.Tags, then.tags, tags.Tag.Equal) {
 					t.Errorf(
 						"wrong tags are passed into client:\nactual = %+v\nexpected = %+v",
 						q.Tags, then.tags,
@@ -156,14 +153,11 @@ func TestFindDataCommand(t *testing.T) {
 			}
 
 			if then.err == nil {
-				actual := []apidata.Detail{}
+				actual := []data.Detail{}
 				if err := json.Unmarshal([]byte(stdout.String()), &actual); err != nil {
 					t.Fatal(err)
 				}
-				if !cmp.SliceContentEqWith(
-					actual, when.presentation,
-					func(a, b apidata.Detail) bool { return a.Equal(&b) },
-				) {
+				if !cmp.SliceContentEqWith(actual, when.presentation, data.Detail.Equal) {
 					t.Errorf(
 						"wrong result:\nactual   = %+v\nexpected = %+v",
 						actual, when.presentation,
@@ -186,7 +180,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err: nil,
-			tags: []apitags.Tag{
+			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
 				{Key: "baz", Value: "quux"},
 			},
@@ -203,7 +197,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err:       nil,
-			tags:      []apitags.Tag{},
+			tags:      []tags.Tag{},
 			transient: data_find.TransientOnly,
 		},
 	))
@@ -217,7 +211,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err:       nil,
-			tags:      []apitags.Tag{},
+			tags:      []tags.Tag{},
 			transient: data_find.TransientOnly,
 		},
 	))
@@ -235,7 +229,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err: nil,
-			tags: []apitags.Tag{
+			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
 				{Key: "baz", Value: "quux"},
 			},
@@ -252,7 +246,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err:       nil,
-			tags:      []apitags.Tag{},
+			tags:      []tags.Tag{},
 			transient: data_find.TransientAny,
 		},
 	))
@@ -269,7 +263,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err: nil,
-			tags: []apitags.Tag{
+			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
 				{Key: "baz", Value: "quux"},
 			},
@@ -290,7 +284,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err: nil,
-			tags: []apitags.Tag{
+			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
 				{Key: "baz", Value: "quux"},
 			},
@@ -311,7 +305,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err: nil,
-			tags: []apitags.Tag{
+			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
 				{Key: "example", Value: "tag"},
 			},
@@ -331,7 +325,7 @@ func TestFindDataCommand(t *testing.T) {
 		},
 		then{
 			err: nil,
-			tags: []apitags.Tag{
+			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
 				{Key: kdb.KeyKnitId, Value: "some-knit-id"},
 			},
@@ -359,7 +353,7 @@ func TestFindDataCommand(t *testing.T) {
 			},
 			then{
 				err:       nil,
-				tags:      []apitags.Tag{},
+				tags:      []tags.Tag{},
 				transient: data_find.TransientAny,
 				since:     &timestamp,
 				duration:  &d,
@@ -389,11 +383,11 @@ func TestFindDataCommand(t *testing.T) {
 				},
 				Transient: "both",
 			},
-			presentation: []apidata.Detail{},
+			presentation: []data.Detail{},
 		},
 		then{
 			err: nil,
-			tags: []apitags.Tag{
+			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
 				{Key: kdb.KeyKnitId, Value: "some-knit-id"},
 			},
@@ -416,7 +410,7 @@ func TestFindDataCommand(t *testing.T) {
 			},
 			then{
 				err: err,
-				tags: []apitags.Tag{
+				tags: []tags.Tag{
 					{Key: "foo", Value: "bar"},
 					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
 				},
@@ -440,136 +434,136 @@ func TestFindDataCommand(t *testing.T) {
 
 func TestFindData(t *testing.T) {
 
-	notTransient1 := apidata.Detail{
+	notTransient1 := data.Detail{
 		KnitId: "item-1",
-		Tags: []apitags.Tag{
+		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
 			{Key: "knit#id", Value: "item-1"},
 			{Key: "knit#timestamp", Value: "2022-08-01T12:34:56+00:00"},
 		},
-		Upstream: apidata.AssignedTo{
-			Run: apirun.Summary{
+		Upstream: data.AssignedTo{
+			Run: runs.Summary{
 				RunId: "run-1", Status: string(kdb.Done),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),
-				Plan: apiplan.Summary{PlanId: "plan-1", Name: "knit#upload"},
+				Plan: plans.Summary{PlanId: "plan-1", Name: "knit#upload"},
 			},
-			Mountpoint: apiplan.Mountpoint{Path: "/out"},
+			Mountpoint: plans.Mountpoint{Path: "/out"},
 		},
-		Downstreams: []apidata.AssignedTo{},
-		Nomination: []apidata.NominatedBy{
+		Downstreams: []data.AssignedTo{},
+		Nomination: []data.NominatedBy{
 			{
-				Plan:       apiplan.Summary{PlanId: "plan-2"},
-				Mountpoint: apiplan.Mountpoint{Path: "/in/data-1"},
+				Plan:       plans.Summary{PlanId: "plan-2"},
+				Mountpoint: plans.Mountpoint{Path: "/in/data-1"},
 			},
 		},
 	}
 
-	notTransient2 := apidata.Detail{
+	notTransient2 := data.Detail{
 		KnitId: "item-2",
-		Tags: []apitags.Tag{
+		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
 			{Key: "knit#id", Value: "item-2"},
 			{Key: "knit#timestamp", Value: "2022-08-02T12:34:56+00:00"},
 		},
-		Upstream: apidata.AssignedTo{
-			Run: apirun.Summary{
+		Upstream: data.AssignedTo{
+			Run: runs.Summary{
 				RunId: "run-2", Status: string(kdb.Done),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),
-				Plan: apiplan.Summary{
+				Plan: plans.Summary{
 					PlanId: "plan-3",
-					Image:  &apiplan.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+					Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
 				},
 			},
-			Mountpoint: apiplan.Mountpoint{Path: "/out"},
+			Mountpoint: plans.Mountpoint{Path: "/out"},
 		},
-		Downstreams: []apidata.AssignedTo{
+		Downstreams: []data.AssignedTo{
 			{
-				Run: apirun.Summary{
+				Run: runs.Summary{
 					RunId: "run-3", Status: string(kdb.Running),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 						"2022-08-01T12:34:56+00:00",
 					)).OrFatal(t),
-					Plan: apiplan.Summary{
+					Plan: plans.Summary{
 						PlanId: "plan-4",
-						Image:  &apiplan.Image{Repository: "knit.image.repo.invalid/evaluator", Tag: "v1"},
+						Image:  &plans.Image{Repository: "knit.image.repo.invalid/evaluator", Tag: "v1"},
 					},
 				},
-				Mountpoint: apiplan.Mountpoint{Path: "/in/model"},
+				Mountpoint: plans.Mountpoint{Path: "/in/model"},
 			},
 		},
-		Nomination: []apidata.NominatedBy{
+		Nomination: []data.NominatedBy{
 			{
-				Plan: apiplan.Summary{
+				Plan: plans.Summary{
 					PlanId: "plan-4",
-					Image:  &apiplan.Image{Repository: "knit.image.repo.invalid/evaluator", Tag: "v1"},
+					Image:  &plans.Image{Repository: "knit.image.repo.invalid/evaluator", Tag: "v1"},
 				},
-				Mountpoint: apiplan.Mountpoint{Path: "/in/model"},
+				Mountpoint: plans.Mountpoint{Path: "/in/model"},
 			},
 		},
 	}
 
-	transientProcessing := apidata.Detail{
+	transientProcessing := data.Detail{
 		KnitId: "item-3",
-		Tags: []apitags.Tag{
+		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
 			{Key: kdb.KeyKnitId, Value: "item-1"},
 			{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
 		},
-		Upstream: apidata.AssignedTo{
-			Run: apirun.Summary{
+		Upstream: data.AssignedTo{
+			Run: runs.Summary{
 				RunId: "run-3", Status: string(kdb.Running),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:43:56+00:00",
 				)).OrFatal(t),
-				Plan: apiplan.Summary{PlanId: "plan-1", Name: "knit#upload"},
+				Plan: plans.Summary{PlanId: "plan-1", Name: "knit#upload"},
 			},
-			Mountpoint: apiplan.Mountpoint{Path: "/out"},
+			Mountpoint: plans.Mountpoint{Path: "/out"},
 		},
-		Downstreams: []apidata.AssignedTo{},
-		Nomination:  []apidata.NominatedBy{},
+		Downstreams: []data.AssignedTo{},
+		Nomination:  []data.NominatedBy{},
 	}
-	transientFailed := apidata.Detail{
+	transientFailed := data.Detail{
 		KnitId: "item-4",
-		Tags: []apitags.Tag{
+		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
 			{Key: kdb.KeyKnitId, Value: "item-4"},
 			{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
 		},
-		Upstream: apidata.AssignedTo{
-			Run: apirun.Summary{
+		Upstream: data.AssignedTo{
+			Run: runs.Summary{
 				RunId: "run-4", Status: string(kdb.Failed),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),
-				Plan: apiplan.Summary{
+				Plan: plans.Summary{
 					PlanId: "plan-3",
-					Image:  &apiplan.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+					Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
 				},
 			},
-			Mountpoint: apiplan.Mountpoint{Path: "/out"},
+			Mountpoint: plans.Mountpoint{Path: "/out"},
 		},
-		Downstreams: []apidata.AssignedTo{},
-		Nomination: []apidata.NominatedBy{
+		Downstreams: []data.AssignedTo{},
+		Nomination: []data.NominatedBy{
 			{
-				Plan: apiplan.Summary{
+				Plan: plans.Summary{
 					PlanId: "plan-4",
-					Image:  &apiplan.Image{Repository: "knit.image.repo.invalid/evaluator", Tag: "v1"},
+					Image:  &plans.Image{Repository: "knit.image.repo.invalid/evaluator", Tag: "v1"},
 				},
-				Mountpoint: apiplan.Mountpoint{Path: "/in/model"},
+				Mountpoint: plans.Mountpoint{Path: "/in/model"},
 			},
 		},
 	}
 
 	type when struct {
-		tags          []apitags.Tag
+		tags          []tags.Tag
 		transientFlag data_find.TransientValue
 		since         *time.Time
 		duration      *time.Duration
@@ -577,7 +571,7 @@ func TestFindData(t *testing.T) {
 
 	for name, testcase := range map[string]struct {
 		// all data responded from server
-		given []apidata.Detail
+		given []data.Detail
 
 		when when
 
@@ -585,86 +579,86 @@ func TestFindData(t *testing.T) {
 		then []string
 	}{
 		`no data are given by server. when it is passed "TransientAny", it returns empry`: {
-			given: []apidata.Detail{},
+			given: []data.Detail{},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "quux"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "quux"}},
 				transientFlag: data_find.TransientAny,
 			},
 			then: []string{},
 		},
 		`no data are given by server. when it is passed "TransientOnly", it returns empry`: {
-			given: []apidata.Detail{},
+			given: []data.Detail{},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "beep"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "beep"}},
 				transientFlag: data_find.TransientOnly,
 			},
 			then: []string{},
 		},
 		`no data are given by server. when it is passed "TransientExclude", it returns empry`: {
-			given: []apidata.Detail{},
+			given: []data.Detail{},
 			when: when{
-				tags:          []apitags.Tag{},
+				tags:          []tags.Tag{},
 				transientFlag: data_find.TransientExclude,
 			},
 			then: []string{},
 		},
 
 		`only non-transient data are given by server. when it is passed tags and "TransientAny", it returns all items in presentation form`: {
-			given: []apidata.Detail{notTransient1, notTransient2},
+			given: []data.Detail{notTransient1, notTransient2},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "bar"}},
 				transientFlag: data_find.TransientAny,
 			},
 			then: []string{notTransient1.KnitId, notTransient2.KnitId},
 		},
 		`only non-transient data are given by server. when it is passed tags and "TransientOnly", it returns empty`: {
-			given: []apidata.Detail{notTransient1, notTransient2},
+			given: []data.Detail{notTransient1, notTransient2},
 			when: when{
-				tags:          []apitags.Tag{},
+				tags:          []tags.Tag{},
 				transientFlag: data_find.TransientOnly,
 			},
 			then: []string{},
 		},
 		`only non-transient data are given by server. when it is passed tags and "TransientExclude", it returns all items in presentation form`: {
-			given: []apidata.Detail{notTransient1, notTransient2},
+			given: []data.Detail{notTransient1, notTransient2},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
 				transientFlag: data_find.TransientExclude,
 			},
 			then: []string{notTransient2.KnitId, notTransient1.KnitId},
 		},
 
 		`only transient data are given by server. when it is passed tags and "TransientAny", it returns all items in presentation form`: {
-			given: []apidata.Detail{transientProcessing, transientFailed},
+			given: []data.Detail{transientProcessing, transientFailed},
 			when: when{
-				tags:          []apitags.Tag{},
+				tags:          []tags.Tag{},
 				transientFlag: data_find.TransientAny,
 			},
 			then: []string{transientProcessing.KnitId, transientFailed.KnitId},
 		},
 		`only transient data are given by server. when it is passed tags and "TransientOnly", it returns all items in presentation form`: {
-			given: []apidata.Detail{transientProcessing, transientFailed},
+			given: []data.Detail{transientProcessing, transientFailed},
 			when: when{
-				tags:          []apitags.Tag{{Key: "fizz", Value: "bazz"}},
+				tags:          []tags.Tag{{Key: "fizz", Value: "bazz"}},
 				transientFlag: data_find.TransientOnly,
 			},
 			then: []string{transientProcessing.KnitId, transientFailed.KnitId},
 		},
 		`only transient data are given by server. when it is passed tags and "TransientExcept", it returns empty`: {
-			given: []apidata.Detail{transientProcessing, transientFailed},
+			given: []data.Detail{transientProcessing, transientFailed},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
 				transientFlag: data_find.TransientExclude,
 			},
 			then: []string{},
 		},
 
 		`both transient and non-transient data are given by server. when it is passed tags and "TransientAny", it returns all items in presentation form`: {
-			given: []apidata.Detail{
+			given: []data.Detail{
 				notTransient1, notTransient2, transientProcessing, transientFailed,
 			},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
 				transientFlag: data_find.TransientAny,
 			},
 			then: []string{
@@ -673,12 +667,12 @@ func TestFindData(t *testing.T) {
 			},
 		},
 		`both transient and non-transient data are given by server. when it is passed tags and "TransientOnly", it returns items with "knit#transient" in presentation form`: {
-			given: []apidata.Detail{
+			given: []data.Detail{
 				notTransient1, notTransient2,
 				transientProcessing, transientFailed,
 			},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
 				transientFlag: data_find.TransientOnly,
 			},
 			then: []string{
@@ -686,21 +680,21 @@ func TestFindData(t *testing.T) {
 			},
 		},
 		`both transient and non-transient data are given by server. when it is passed tags and "TransientExclude", it returns items wihtout "knit#transient" in presentation form`: {
-			given: []apidata.Detail{
+			given: []data.Detail{
 				notTransient1, notTransient2,
 				transientProcessing, transientFailed,
 			},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
 				transientFlag: data_find.TransientExclude,
 			},
 			then: []string{notTransient1.KnitId, notTransient2.KnitId},
 		},
 
 		`when since and duration are passed, it should call task with since and duration`: {
-			given: []apidata.Detail{notTransient1, notTransient2},
+			given: []data.Detail{notTransient1, notTransient2},
 			when: when{
-				tags:          []apitags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
+				tags:          []tags.Tag{{Key: "foo", Value: "bar"}, {Key: "fizz", Value: "bazz"}},
 				transientFlag: data_find.TransientAny,
 				since:         pointer.Ref(try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()),
 				duration:      pointer.Ref(2 * time.Hour),
@@ -712,7 +706,7 @@ func TestFindData(t *testing.T) {
 			ctx := context.Background()
 			logger := logger.Null()
 			mock := mock.New(t)
-			mock.Impl.FindData = func(ctx context.Context, tags []apitags.Tag, s *time.Time, d *time.Duration) ([]apidata.Detail, error) {
+			mock.Impl.FindData = func(ctx context.Context, tags []tags.Tag, s *time.Time, d *time.Duration) ([]data.Detail, error) {
 
 				if !cmp.SliceContentEq(tags, testcase.when.tags) {
 					t.Errorf(
@@ -767,8 +761,8 @@ func TestFindData(t *testing.T) {
 			)).OrFatal(t)
 
 			{
-				given := utils.ToMap(testcase.given, func(d apidata.Detail) string { return d.KnitId })
-				actual := utils.ToMap(actual, func(d apidata.Detail) string { return d.KnitId })
+				given := utils.ToMap(testcase.given, func(d data.Detail) string { return d.KnitId })
+				actual := utils.ToMap(actual, func(d data.Detail) string { return d.KnitId })
 
 				// are requied ids satisfied?
 				if !cmp.SliceContentEq(
@@ -783,7 +777,7 @@ func TestFindData(t *testing.T) {
 				// and, these are same as responded ones?
 				if !cmp.MapLeqWith(
 					actual, given, // actual ⊆ given
-					func(a, b apidata.Detail) bool { return a.Equal(&b) },
+					data.Detail.Equal,
 				) {
 					t.Errorf("wrong result:\nactual   = %+v\nexpected = %+v", actual, testcase.then)
 				}
@@ -811,7 +805,7 @@ func TestFindData(t *testing.T) {
 		expectedError := errors.New("fake error")
 
 		mock := mock.New(t)
-		mock.Impl.FindData = func(ctx context.Context, t []apitags.Tag, s *time.Time, d *time.Duration) ([]apidata.Detail, error) {
+		mock.Impl.FindData = func(ctx context.Context, t []tags.Tag, s *time.Time, d *time.Duration) ([]data.Detail, error) {
 			return nil, expectedError
 		}
 
@@ -821,7 +815,7 @@ func TestFindData(t *testing.T) {
 		actual, err := data_find.FindData(
 			ctx, logger, mock,
 			data_find.Query{
-				Tags:      []apitags.Tag{},
+				Tags:      []tags.Tag{},
 				Transient: data_find.TransientAny,
 				Since:     &since,
 				Duration:  &duration,

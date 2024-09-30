@@ -5,9 +5,11 @@ import (
 	"errors"
 	"time"
 
+	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
-	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
+	"github.com/opst/knitfab/pkg/api-types-binding/runs"
+	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/workloads"
 	k8s "github.com/opst/knitfab/pkg/workloads/k8s"
@@ -40,7 +42,7 @@ func Task(
 		runBody kdb.RunBody,
 	) (worker.Worker, error),
 	cluster k8s.Cluster,
-	hook hook.Hook[api_runs.Detail],
+	hook hook.Hook[apiruns.Detail],
 ) recurring.Task[kdb.RunCursor] {
 	return func(ctx context.Context, cursor kdb.RunCursor) (kdb.RunCursor, bool, error) {
 		nextCursor, statusChanged, err := iDbRun.PickAndSetStatus(
@@ -57,7 +59,7 @@ func Task(
 					return targetRun.Status, errors.New("unexpected run status: assertion error")
 				}
 
-				hookValue := api_runs.ComposeDetail(targetRun)
+				hookValue := runs.ComposeDetail(targetRun)
 
 				if err := hook.Before(hookValue); err != nil {
 					return targetRun.Status, err
@@ -98,7 +100,7 @@ func Task(
 		if statusChanged {
 			if runs, _ := iDbRun.Get(ctx, []string{nextCursor.Head}); runs != nil {
 				if r, ok := runs[nextCursor.Head]; ok {
-					hookVal := api_runs.ComposeDetail(r)
+					hookVal := bindruns.ComposeDetail(r)
 					hook.After(hookVal)
 				}
 			}

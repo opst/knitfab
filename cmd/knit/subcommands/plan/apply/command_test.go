@@ -5,22 +5,22 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	restmock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	plan_apply "github.com/opst/knitfab/cmd/knit/subcommands/plan/apply"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 )
 
 func TestApplyPlan(t *testing.T) {
-	theory := func(spec apiplan.PlanSpec, detail apiplan.Detail, expectedErr error) func(*testing.T) {
+	theory := func(spec plans.PlanSpec, detail plans.Detail, expectedErr error) func(*testing.T) {
 		return func(t *testing.T) {
 
 			client := restmock.New(t)
 			client.Impl.RegisterPlan = func(
 				ctx context.Context,
-				actualSpec apiplan.PlanSpec,
-			) (apiplan.Detail, error) {
-				if !spec.Equal(&actualSpec) {
+				actualSpec plans.PlanSpec,
+			) (plans.Detail, error) {
+				if !spec.Equal(actualSpec) {
 					t.Errorf(
 						"spec in request:\n===actual===\n%v\n===expected===\n%v",
 						actualSpec, spec,
@@ -36,7 +36,7 @@ func TestApplyPlan(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if !actual.Equal(&detail) {
+			if !actual.Equal(detail) {
 				t.Errorf(
 					"response\n===actual===\n%+v\n===expected===\n%+v",
 					actual, detail,
@@ -47,64 +47,64 @@ func TestApplyPlan(t *testing.T) {
 	}
 
 	t.Run("when client return plan detail, it return that detail", theory(
-		apiplan.PlanSpec{
-			Image: apiplan.Image{
+		plans.PlanSpec{
+			Image: plans.Image{
 				Repository: "test-image", Tag: "test-version",
 			},
-			Inputs: []apiplan.Mountpoint{
+			Inputs: []plans.Mountpoint{
 				{
 					Path: "/in/1",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "raw data"},
 						{Key: "format", Value: "rgb image"},
 					},
 				},
 			},
-			Outputs: []apiplan.Mountpoint{
+			Outputs: []plans.Mountpoint{
 				{
 					Path: "/out/2",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "training data"},
 						{Key: "format", Value: "mask"},
 					},
 				},
 			},
-			Log: &apiplan.LogPoint{
-				Tags: []apitag.Tag{
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
 			},
 			Active: ref(true),
 		},
-		apiplan.Detail{
-			Summary: apiplan.Summary{
+		plans.Detail{
+			Summary: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplan.Image{
+				Image: &plans.Image{
 					Repository: "test-image", Tag: "test-version",
 				},
 				Name: "test-Name",
 			},
-			Inputs: []apiplan.Mountpoint{
+			Inputs: []plans.Mountpoint{
 				{
 					Path: "/in/1",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "raw data"},
 						{Key: "format", Value: "rgb image"},
 					},
 				},
 			},
-			Outputs: []apiplan.Mountpoint{
+			Outputs: []plans.Mountpoint{
 				{
 					Path: "/out/2",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "training data"},
 						{Key: "format", Value: "mask"},
 					},
 				},
 			},
-			Log: &apiplan.LogPoint{
-				Tags: []apitag.Tag{
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
@@ -116,37 +116,37 @@ func TestApplyPlan(t *testing.T) {
 
 	expectedError := errors.New("test-error")
 	t.Run("when client return error, it return that error", theory(
-		apiplan.PlanSpec{
-			Image: apiplan.Image{
+		plans.PlanSpec{
+			Image: plans.Image{
 				Repository: "test-image", Tag: "test-version",
 			},
-			Inputs: []apiplan.Mountpoint{
+			Inputs: []plans.Mountpoint{
 				{
 					Path: "/in/1",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "raw data"},
 						{Key: "format", Value: "rgb image"},
 					},
 				},
 			},
-			Outputs: []apiplan.Mountpoint{
+			Outputs: []plans.Mountpoint{
 				{
 					Path: "/out/2",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "training data"},
 						{Key: "format", Value: "mask"},
 					},
 				},
 			},
-			Log: &apiplan.LogPoint{
-				Tags: []apitag.Tag{
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
 			},
 			Active: ref(true),
 		},
-		apiplan.Detail{},
+		plans.Detail{},
 		expectedError,
 	))
 }

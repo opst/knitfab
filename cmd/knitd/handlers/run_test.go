@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	apiplans "github.com/opst/knitfab-api-types/plans"
+	apiruns "github.com/opst/knitfab-api-types/runs"
+	apitags "github.com/opst/knitfab-api-types/tags"
 	handlers "github.com/opst/knitfab/cmd/knitd/handlers"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	mockdb "github.com/opst/knitfab/pkg/db/mocks"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -34,7 +34,7 @@ func TestRunFindHandler(t *testing.T) {
 
 		type then struct {
 			query kdb.RunFindQuery
-			body  []apirun.Detail
+			body  []apiruns.Detail
 		}
 
 		dummyUpdatedSince := try.To(rfctime.ParseRFC3339DateTime(
@@ -62,7 +62,7 @@ func TestRunFindHandler(t *testing.T) {
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried all runs": {
@@ -216,26 +216,26 @@ func TestRunFindHandler(t *testing.T) {
 				},
 				then{
 					query: kdb.RunFindQuery{}, // empty, means "match everything".
-					body: []apirun.Detail{
+					body: []apiruns.Detail{
 						{
-							Summary: apirun.Summary{
+							Summary: apiruns.Summary{
 								RunId:     "run-1",
 								Status:    string(kdb.Done),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-11-15T01:00:00.123+09:00")).OrFatal(t),
-								Plan: apiplan.Summary{
+								Plan: apiplans.Summary{
 									PlanId: "plan-1",
-									Image:  &apiplan.Image{Repository: "image-1", Tag: "ver-1"},
+									Image:  &apiplans.Image{Repository: "image-1", Tag: "ver-1"},
 									Name:   "",
 								},
-								Exit: &apirun.Exit{
+								Exit: &apiruns.Exit{
 									Code:    0,
 									Message: "success",
 								},
 							},
-							Inputs: []apirun.Assignment{
+							Inputs: []apiruns.Assignment{
 								{
 									KnitId: "knitin1",
-									Mountpoint: apiplan.Mountpoint{
+									Mountpoint: apiplans.Mountpoint{
 										Path: "C:\\mp-1",
 										Tags: []apitags.Tag{
 											{Key: "key1", Value: "tag-value"},
@@ -245,7 +245,7 @@ func TestRunFindHandler(t *testing.T) {
 								},
 								{
 									KnitId: "knitin2",
-									Mountpoint: apiplan.Mountpoint{
+									Mountpoint: apiplans.Mountpoint{
 										Path: "C:\\mp-2",
 										Tags: []apitags.Tag{
 											{Key: "key1", Value: "tag-value"},
@@ -255,7 +255,7 @@ func TestRunFindHandler(t *testing.T) {
 								},
 								{
 									KnitId: "knitin3",
-									Mountpoint: apiplan.Mountpoint{
+									Mountpoint: apiplans.Mountpoint{
 										Path: "C:\\mp-3",
 										Tags: []apitags.Tag{
 											{Key: "key1", Value: "tag-value"},
@@ -264,10 +264,10 @@ func TestRunFindHandler(t *testing.T) {
 									},
 								},
 							},
-							Outputs: []apirun.Assignment{
+							Outputs: []apiruns.Assignment{
 								{
 									KnitId: "knitout1",
-									Mountpoint: apiplan.Mountpoint{
+									Mountpoint: apiplans.Mountpoint{
 										Path: "C:\\mp-4",
 										Tags: []apitags.Tag{
 											{Key: "key1", Value: "tag-value"},
@@ -276,9 +276,9 @@ func TestRunFindHandler(t *testing.T) {
 									},
 								},
 							},
-							Log: &apirun.LogSummary{
+							Log: &apiruns.LogSummary{
 								KnitId: "knitlog1",
-								LogPoint: apiplan.LogPoint{
+								LogPoint: apiplans.LogPoint{
 									Tags: []apitags.Tag{
 										{Key: "key1", Value: "tag-value"},
 										{Key: "key2", Value: "value"},
@@ -287,63 +287,63 @@ func TestRunFindHandler(t *testing.T) {
 							},
 						},
 						{
-							Summary: apirun.Summary{
+							Summary: apiruns.Summary{
 								RunId:     "run-2",
 								Status:    string(kdb.Running),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-11-15T02:00:00.123+09:00")).OrFatal(t),
-								Plan: apiplan.Summary{
+								Plan: apiplans.Summary{
 									PlanId: "plan-1",
-									Image:  &apiplan.Image{Repository: "image-1", Tag: "ver-1"},
+									Image:  &apiplans.Image{Repository: "image-1", Tag: "ver-1"},
 									Name:   "",
 								},
 							},
-							Inputs: []apirun.Assignment{
+							Inputs: []apiruns.Assignment{
 								{
 									KnitId:     "knitin1",
-									Mountpoint: apiplan.Mountpoint{Path: "C:\\mp-1"},
+									Mountpoint: apiplans.Mountpoint{Path: "C:\\mp-1"},
 								},
 								{
 									KnitId:     "knitin2",
-									Mountpoint: apiplan.Mountpoint{Path: "C:\\mp-2"},
+									Mountpoint: apiplans.Mountpoint{Path: "C:\\mp-2"},
 								},
 								{
 									KnitId:     "knitin4",
-									Mountpoint: apiplan.Mountpoint{Path: "C:\\mp-3"},
+									Mountpoint: apiplans.Mountpoint{Path: "C:\\mp-3"},
 								},
 							},
-							Outputs: []apirun.Assignment{
+							Outputs: []apiruns.Assignment{
 								{
 									KnitId:     "knitout2",
-									Mountpoint: apiplan.Mountpoint{Path: "C:\\mp-4"},
+									Mountpoint: apiplans.Mountpoint{Path: "C:\\mp-4"},
 								},
 							},
-							Log: &apirun.LogSummary{KnitId: "knitlog2"},
+							Log: &apiruns.LogSummary{KnitId: "knitlog2"},
 						},
 						{
-							Summary: apirun.Summary{
+							Summary: apiruns.Summary{
 								RunId:     "run-3",
 								Status:    string(kdb.Waiting),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-11-15T03:00:00.123+09:00")).OrFatal(t),
-								Plan: apiplan.Summary{
+								Plan: apiplans.Summary{
 									PlanId: "plan-2",
 									Image:  nil,
 									Name:   "name-2",
 								},
 							},
-							Inputs: []apirun.Assignment{
+							Inputs: []apiruns.Assignment{
 								{
 									KnitId:     "knitin5",
-									Mountpoint: apiplan.Mountpoint{Path: "C:\\mp-6"},
+									Mountpoint: apiplans.Mountpoint{Path: "C:\\mp-6"},
 								},
 								{
 									KnitId:     "knitin6",
-									Mountpoint: apiplan.Mountpoint{Path: "C:\\mp-7"},
+									Mountpoint: apiplans.Mountpoint{Path: "C:\\mp-7"},
 								},
 							},
-							Outputs: []apirun.Assignment{
+							Outputs: []apiruns.Assignment{
 								{
 									KnitId:     "knitout3",
-									Mountpoint: apiplan.Mountpoint{Path: "C:\\mp-8"},
+									Mountpoint: apiplans.Mountpoint{Path: "C:\\mp-8"},
 								},
 							},
 							Log: nil,
@@ -358,7 +358,7 @@ func TestRunFindHandler(t *testing.T) {
 				},
 				then{
 					query: kdb.RunFindQuery{},
-					body:  []apirun.Detail{},
+					body:  []apiruns.Detail{},
 				},
 			},
 			"when it is queried about planIds": {
@@ -370,7 +370,7 @@ func TestRunFindHandler(t *testing.T) {
 					query: kdb.RunFindQuery{
 						PlanId: []string{"plan-1", "plan-2"},
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about input data": {
@@ -382,7 +382,7 @@ func TestRunFindHandler(t *testing.T) {
 					query: kdb.RunFindQuery{
 						InputKnitId: []string{"knitin1", "knitin2"},
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about output data": {
@@ -394,7 +394,7 @@ func TestRunFindHandler(t *testing.T) {
 					query: kdb.RunFindQuery{
 						OutputKnitId: []string{"knitout3", "knitlog1"},
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about status": {
@@ -406,7 +406,7 @@ func TestRunFindHandler(t *testing.T) {
 					query: kdb.RunFindQuery{
 						Status: []kdb.KnitRunStatus{kdb.Running, kdb.Done},
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about since": {
@@ -419,7 +419,7 @@ func TestRunFindHandler(t *testing.T) {
 						Status:       []kdb.KnitRunStatus{},
 						UpdatedSince: &dummyUpdatedSince,
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			// duration is assumed to be used in conjunction with since.
@@ -434,7 +434,7 @@ func TestRunFindHandler(t *testing.T) {
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except planId": {
@@ -450,7 +450,7 @@ func TestRunFindHandler(t *testing.T) {
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except input knit id": {
@@ -466,7 +466,7 @@ func TestRunFindHandler(t *testing.T) {
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except output knit id": {
@@ -482,7 +482,7 @@ func TestRunFindHandler(t *testing.T) {
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except status": {
@@ -498,7 +498,7 @@ func TestRunFindHandler(t *testing.T) {
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except since": {
@@ -513,7 +513,7 @@ func TestRunFindHandler(t *testing.T) {
 						OutputKnitId: []string{"out3", "out4"},
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 			"when it is queried about all dimensions except duration": {
@@ -529,7 +529,7 @@ func TestRunFindHandler(t *testing.T) {
 						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
 						UpdatedSince: &dummyUpdatedSince,
 					},
-					body: []apirun.Detail{},
+					body: []apiruns.Detail{},
 				},
 			},
 		} {
@@ -594,16 +594,12 @@ func TestRunFindHandler(t *testing.T) {
 				}
 
 				{
-					actual := []apirun.Detail{}
+					actual := []apiruns.Detail{}
 					body := respRec.Body.String()
 					if err := json.Unmarshal([]byte(body), &actual); err != nil {
 						t.Fatalf("response is not json: error = %v:\n===body===\n%s", err, body)
 					}
-					if !cmp.SliceEqWith(
-						utils.RefOf(actual),
-						utils.RefOf(testcase.then.body),
-						(*apirun.Detail).Equal,
-					) {
+					if !cmp.SliceEqWith(actual, testcase.then.body, apiruns.Detail.Equal) {
 						t.Errorf(
 							"data does not match. (actual, expected) = \n(%+v, \n%+v)",
 							actual, testcase.then.body,
@@ -711,7 +707,7 @@ func TestGetRunHandler(t *testing.T) {
 	t.Run("it responses OK with runs in json, when no errors have caused: ", func(t *testing.T) {
 		for runId, testcase := range map[string]struct {
 			when kdb.Run
-			then apirun.Detail
+			then apiruns.Detail
 		}{
 			"run-1/input-only": {
 				when: kdb.Run{
@@ -741,22 +737,22 @@ func TestGetRunHandler(t *testing.T) {
 						},
 					},
 				},
-				then: apirun.Detail{
-					Summary: apirun.Summary{
+				then: apiruns.Detail{
+					Summary: apiruns.Summary{
 						RunId:  "run-1/input-only",
 						Status: string(kdb.Done),
-						Plan: apiplan.Summary{
+						Plan: apiplans.Summary{
 							PlanId: "plan-1",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
+							Image:  &apiplans.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
 						},
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:25.111+09:00"),
 						).OrFatal(t),
 					},
-					Inputs: []apirun.Assignment{
+					Inputs: []apiruns.Assignment{
 						{
 							KnitId: "run-1@/in/1",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/in/1",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -794,18 +790,18 @@ func TestGetRunHandler(t *testing.T) {
 						},
 					},
 				},
-				then: apirun.Detail{
-					Summary: apirun.Summary{
+				then: apiruns.Detail{
+					Summary: apiruns.Summary{
 						RunId: "run-2/output-only", Status: string(kdb.Running),
-						Plan: apiplan.Summary{PlanId: "plan-2", Name: "pseudo-2"},
+						Plan: apiplans.Summary{PlanId: "plan-2", Name: "pseudo-2"},
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:26.111+09:00"),
 						).OrFatal(t),
 					},
-					Outputs: []apirun.Assignment{
+					Outputs: []apiruns.Assignment{
 						{
 							KnitId: "run-2@/out/1",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/out/1",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -857,22 +853,22 @@ func TestGetRunHandler(t *testing.T) {
 						},
 					},
 				},
-				then: apirun.Detail{
-					Summary: apirun.Summary{
+				then: apiruns.Detail{
+					Summary: apiruns.Summary{
 						RunId:  "run-3/in+out",
 						Status: string(kdb.Failed),
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:27.111+09:00"),
 						).OrFatal(t),
-						Plan: apiplan.Summary{
+						Plan: apiplans.Summary{
 							PlanId: "plan-3",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image-x", Tag: "v0.0"},
+							Image:  &apiplans.Image{Repository: "repo.invalid/image-x", Tag: "v0.0"},
 						},
 					},
-					Inputs: []apirun.Assignment{
+					Inputs: []apiruns.Assignment{
 						{
 							KnitId: "run-3@/in/1",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/in/1",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -881,10 +877,10 @@ func TestGetRunHandler(t *testing.T) {
 							},
 						},
 					},
-					Outputs: []apirun.Assignment{
+					Outputs: []apiruns.Assignment{
 						{
 							KnitId: "run-3@/out/1",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/out/1",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -970,22 +966,22 @@ func TestGetRunHandler(t *testing.T) {
 						}),
 					},
 				},
-				then: apirun.Detail{
-					Summary: apirun.Summary{
+				then: apiruns.Detail{
+					Summary: apiruns.Summary{
 						RunId:  "run-4/in+out+log",
 						Status: string(kdb.Failed),
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:28.111+09:00"),
 						).OrFatal(t),
-						Plan: apiplan.Summary{
+						Plan: apiplans.Summary{
 							PlanId: "plan-4",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image-x", Tag: "v4.0"},
+							Image:  &apiplans.Image{Repository: "repo.invalid/image-x", Tag: "v4.0"},
 						},
 					},
-					Inputs: []apirun.Assignment{
+					Inputs: []apiruns.Assignment{
 						{
 							KnitId: "run-4@/in/1",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/in/1",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -995,7 +991,7 @@ func TestGetRunHandler(t *testing.T) {
 						},
 						{
 							KnitId: "run-4@/in/2",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/in/2",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -1004,10 +1000,10 @@ func TestGetRunHandler(t *testing.T) {
 							},
 						},
 					},
-					Outputs: []apirun.Assignment{
+					Outputs: []apiruns.Assignment{
 						{
 							KnitId: "run-3@/out/1",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/out/1",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -1017,7 +1013,7 @@ func TestGetRunHandler(t *testing.T) {
 						},
 						{
 							KnitId: "run-3@/out/2",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/out/2",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -1026,9 +1022,9 @@ func TestGetRunHandler(t *testing.T) {
 							},
 						},
 					},
-					Log: &apirun.LogSummary{
+					Log: &apiruns.LogSummary{
 						KnitId: "run-3@/log",
-						LogPoint: apiplan.LogPoint{
+						LogPoint: apiplans.LogPoint{
 							Tags: []apitags.Tag{
 								{Key: "shared", Value: "val1"},
 								{Key: "special", Value: "for plan-4#/log"},
@@ -1084,22 +1080,22 @@ func TestGetRunHandler(t *testing.T) {
 						}),
 					},
 				},
-				then: apirun.Detail{
-					Summary: apirun.Summary{
+				then: apiruns.Detail{
+					Summary: apiruns.Summary{
 						RunId:  "run-5/waiting",
 						Status: string(kdb.Waiting),
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:28.111+09:00"),
 						).OrFatal(t),
-						Plan: apiplan.Summary{
+						Plan: apiplans.Summary{
 							PlanId: "plan-5",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image-x", Tag: "v5.0"},
+							Image:  &apiplans.Image{Repository: "repo.invalid/image-x", Tag: "v5.0"},
 						},
 					},
-					Inputs: []apirun.Assignment{
+					Inputs: []apiruns.Assignment{
 						{
 							KnitId: "run-4@/in/1",
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/in/1",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -1108,10 +1104,10 @@ func TestGetRunHandler(t *testing.T) {
 							},
 						},
 					},
-					Outputs: []apirun.Assignment{
+					Outputs: []apiruns.Assignment{
 						{
 							// no data assigned.
-							Mountpoint: apiplan.Mountpoint{
+							Mountpoint: apiplans.Mountpoint{
 								Path: "/out/2",
 								Tags: []apitags.Tag{
 									{Key: "shared", Value: "val1"},
@@ -1120,8 +1116,8 @@ func TestGetRunHandler(t *testing.T) {
 							},
 						},
 					},
-					Log: &apirun.LogSummary{
-						LogPoint: apiplan.LogPoint{
+					Log: &apiruns.LogSummary{
+						LogPoint: apiplans.LogPoint{
 							Tags: []apitags.Tag{
 								{Key: "shared", Value: "val1"},
 								{Key: "special", Value: "for plan-4#/log"},
@@ -1177,12 +1173,12 @@ func TestGetRunHandler(t *testing.T) {
 				}
 
 				{
-					actual := apirun.Detail{}
+					actual := apiruns.Detail{}
 					if err := json.Unmarshal(respRec.Body.Bytes(), &actual); err != nil {
 						t.Fatalf("response is not illegal. error = %v", err)
 					}
 
-					if !actual.Equal(&testcase.then) {
+					if !actual.Equal(testcase.then) {
 						t.Fatalf(
 							"unmatch: payload: (actual, expected) = \n(%+v, \n%+v)",
 							actual, testcase.then,
@@ -1278,7 +1274,7 @@ func TestAbortRun(t *testing.T) {
 
 	type Then struct {
 		StatusCode int
-		Response   apirun.Detail
+		Response   apiruns.Detail
 	}
 
 	theory := func(when When, then Then) func(*testing.T) {
@@ -1368,7 +1364,7 @@ func TestAbortRun(t *testing.T) {
 				)
 			}
 
-			actual := new(apirun.Detail)
+			actual := new(apiruns.Detail)
 			if err := json.Unmarshal(respRec.Body.Bytes(), actual); err != nil {
 				t.Fatalf(
 					"response is not json: error = %v:\n===body===\n%s",
@@ -1376,7 +1372,7 @@ func TestAbortRun(t *testing.T) {
 				)
 			}
 
-			if !then.Response.Equal(actual) {
+			if !then.Response.Equal(*actual) {
 				t.Errorf(
 					"unmatch: response:\n===actual===\n%+v\n===expected===\n%+v",
 					actual, then.Response,
@@ -1456,22 +1452,22 @@ func TestAbortRun(t *testing.T) {
 		},
 		Then{
 			StatusCode: http.StatusOK,
-			Response: apirun.Detail{
-				Summary: apirun.Summary{
+			Response: apiruns.Detail{
+				Summary: apiruns.Summary{
 					RunId:  "run-1",
 					Status: string(kdb.Aborting),
-					Plan: apiplan.Summary{
+					Plan: apiplans.Summary{
 						PlanId: "plan-1",
-						Image:  &apiplan.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
+						Image:  &apiplans.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
 					},
 					UpdatedAt: try.To(
 						rfctime.ParseRFC3339DateTime("2022-11-08T01:10:25.111+09:00"),
 					).OrFatal(t),
 				},
-				Inputs: []apirun.Assignment{
+				Inputs: []apiruns.Assignment{
 					{
 						KnitId: "run-1@/in/1",
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: apiplans.Mountpoint{
 							Path: "/in/1",
 							Tags: []apitags.Tag{
 								{Key: "shared", Value: "val1"},
@@ -1480,10 +1476,10 @@ func TestAbortRun(t *testing.T) {
 						},
 					},
 				},
-				Outputs: []apirun.Assignment{
+				Outputs: []apiruns.Assignment{
 					{
 						KnitId: "run-1@/out/1",
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: apiplans.Mountpoint{
 							Path: "/out/1",
 							Tags: []apitags.Tag{
 								{Key: "shared", Value: "val1"},
@@ -1492,9 +1488,9 @@ func TestAbortRun(t *testing.T) {
 						},
 					},
 				},
-				Log: &apirun.LogSummary{
+				Log: &apiruns.LogSummary{
 					KnitId: "run-1@/log",
-					LogPoint: apiplan.LogPoint{
+					LogPoint: apiplans.LogPoint{
 						Tags: []apitags.Tag{
 							{Key: "shared", Value: "val1"},
 							{Key: "special", Value: "for plan-1#log"},
@@ -1591,7 +1587,7 @@ func TestTearoffRun(t *testing.T) {
 
 	type Then struct {
 		StatusCode int
-		Response   apirun.Detail
+		Response   apiruns.Detail
 	}
 
 	theory := func(when When, then Then) func(*testing.T) {
@@ -1680,7 +1676,7 @@ func TestTearoffRun(t *testing.T) {
 				)
 			}
 
-			actual := new(apirun.Detail)
+			actual := new(apiruns.Detail)
 			if err := json.Unmarshal(respRec.Body.Bytes(), actual); err != nil {
 				t.Fatalf(
 					"response is not json: error = %v:\n===body===\n%s",
@@ -1688,7 +1684,7 @@ func TestTearoffRun(t *testing.T) {
 				)
 			}
 
-			if !then.Response.Equal(actual) {
+			if !then.Response.Equal(*actual) {
 				t.Errorf(
 					"unmatch: response:\n===actual===\n%+v\n===expected===\n%+v",
 					actual, then.Response,
@@ -1768,22 +1764,22 @@ func TestTearoffRun(t *testing.T) {
 		},
 		Then{
 			StatusCode: http.StatusOK,
-			Response: apirun.Detail{
-				Summary: apirun.Summary{
+			Response: apiruns.Detail{
+				Summary: apiruns.Summary{
 					RunId:  "run-1",
 					Status: string(kdb.Aborting),
-					Plan: apiplan.Summary{
+					Plan: apiplans.Summary{
 						PlanId: "plan-1",
-						Image:  &apiplan.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
+						Image:  &apiplans.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
 					},
 					UpdatedAt: try.To(
 						rfctime.ParseRFC3339DateTime("2022-11-08T01:10:25.111+09:00"),
 					).OrFatal(t),
 				},
-				Inputs: []apirun.Assignment{
+				Inputs: []apiruns.Assignment{
 					{
 						KnitId: "run-1@/in/1",
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: apiplans.Mountpoint{
 							Path: "/in/1",
 							Tags: []apitags.Tag{
 								{Key: "shared", Value: "val1"},
@@ -1792,10 +1788,10 @@ func TestTearoffRun(t *testing.T) {
 						},
 					},
 				},
-				Outputs: []apirun.Assignment{
+				Outputs: []apiruns.Assignment{
 					{
 						KnitId: "run-1@/out/1",
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: apiplans.Mountpoint{
 							Path: "/out/1",
 							Tags: []apitags.Tag{
 								{Key: "shared", Value: "val1"},
@@ -1804,9 +1800,9 @@ func TestTearoffRun(t *testing.T) {
 						},
 					},
 				},
-				Log: &apirun.LogSummary{
+				Log: &apiruns.LogSummary{
 					KnitId: "run-1@/log",
-					LogPoint: apiplan.LogPoint{
+					LogPoint: apiplans.LogPoint{
 						Tags: []apitags.Tag{
 							{Key: "shared", Value: "val1"},
 							{Key: "special", Value: "for plan-1#log"},

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab/pkg/utils/base64marshall"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/workloads/keychain/internal"
 )
 

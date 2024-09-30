@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -16,8 +18,6 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_find "github.com/opst/knitfab/cmd/knit/subcommands/plan/find"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/commandline/flag"
 	kdb "github.com/opst/knitfab/pkg/db"
@@ -30,7 +30,7 @@ func TestFindCommand(t *testing.T) {
 
 	type When struct {
 		flag         plan_find.Flag
-		presentation []apiplan.Detail
+		presentation []plans.Detail
 		err          error
 	}
 
@@ -40,35 +40,35 @@ func TestFindCommand(t *testing.T) {
 		imageVer kdb.ImageIdentifier
 	}
 
-	presentationItems := []apiplan.Detail{
+	presentationItems := []plans.Detail{
 		{
-			Summary: apiplan.Summary{
+			Summary: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplan.Image{
+				Image: &plans.Image{
 					Repository: "test-image", Tag: "test-version",
 				},
 				Name: "test-Name",
 			},
-			Inputs: []apiplan.Mountpoint{
+			Inputs: []plans.Mountpoint{
 				{
 					Path: "/in/1",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "raw data"},
 						{Key: "format", Value: "rgb image"},
 					},
 				},
 			},
-			Outputs: []apiplan.Mountpoint{
+			Outputs: []plans.Mountpoint{
 				{
 					Path: "/out/2",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "training data"},
 						{Key: "format", Value: "mask"},
 					},
 				},
 			},
-			Log: &apiplan.LogPoint{
-				Tags: []apitag.Tag{
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
@@ -86,9 +86,9 @@ func TestFindCommand(t *testing.T) {
 				_ context.Context, _ *log.Logger, _ krst.KnitClient,
 				active logic.Ternary,
 				image kdb.ImageIdentifier,
-				inTags []apitag.Tag,
-				outTags []apitag.Tag,
-			) ([]apiplan.Detail, error) {
+				inTags []tags.Tag,
+				outTags []tags.Tag,
+			) ([]plans.Detail, error) {
 				if active != then.active {
 					t.Errorf(
 						"wrong active: (actual, expected) != (%d, %d)",
@@ -103,7 +103,7 @@ func TestFindCommand(t *testing.T) {
 					)
 				}
 
-				expectedInTags := []apitag.Tag{}
+				expectedInTags := []tags.Tag{}
 				if when.flag.InTags != nil {
 					expectedInTags = *when.flag.InTags
 				}
@@ -114,7 +114,7 @@ func TestFindCommand(t *testing.T) {
 					)
 				}
 
-				expectedOutTags := []apitag.Tag{}
+				expectedOutTags := []tags.Tag{}
 				if when.flag.OutTags != nil {
 					expectedOutTags = *when.flag.OutTags
 				}
@@ -153,15 +153,12 @@ func TestFindCommand(t *testing.T) {
 			}
 
 			if then.err == nil {
-				var actualValue []apiplan.Detail
+				var actualValue []plans.Detail
 				if err := json.Unmarshal([]byte(stdout.String()), &actualValue); err != nil {
 					t.Fatal(err)
 				}
 
-				if !cmp.SliceContentEqWith(
-					actualValue, when.presentation,
-					func(a, b apiplan.Detail) bool { return a.Equal(&b) },
-				) {
+				if !cmp.SliceContentEqWith(actualValue, when.presentation, plans.Detail.Equal) {
 					t.Errorf(
 						"stdout:\n===actual===\n%+v\n===expected===\n%+v",
 						actualValue, when.presentation,
@@ -330,35 +327,35 @@ func TestFindCommand(t *testing.T) {
 }
 
 func TestRunFindPlan(t *testing.T) {
-	expectedValue := []apiplan.Detail{
+	expectedValue := []plans.Detail{
 		{
-			Summary: apiplan.Summary{
+			Summary: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplan.Image{
+				Image: &plans.Image{
 					Repository: "test-image", Tag: "test-version",
 				},
 				Name: "test-Name",
 			},
-			Inputs: []apiplan.Mountpoint{
+			Inputs: []plans.Mountpoint{
 				{
 					Path: "/in/1",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "raw data"},
 						{Key: "format", Value: "rgb image"},
 					},
 				},
 			},
-			Outputs: []apiplan.Mountpoint{
+			Outputs: []plans.Mountpoint{
 				{
 					Path: "/out/2",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "training data"},
 						{Key: "format", Value: "mask"},
 					},
 				},
 			},
-			Log: &apiplan.LogPoint{
-				Tags: []apitag.Tag{
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
@@ -372,8 +369,8 @@ func TestRunFindPlan(t *testing.T) {
 		mock := mock.New(t)
 		mock.Impl.FindPlan = func(
 			ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier,
-			inTags []apitag.Tag, outTags []apitag.Tag,
-		) ([]apiplan.Detail, error) {
+			inTags []tags.Tag, outTags []tags.Tag,
+		) ([]plans.Detail, error) {
 			return expectedValue, nil
 		}
 
@@ -381,17 +378,14 @@ func TestRunFindPlan(t *testing.T) {
 		imageVer := kdb.ImageIdentifier{
 			Image: "test-image", Version: "test-version",
 		}
-		input := []apitag.Tag{{Key: "foo", Value: "bar"}}
-		output := []apitag.Tag{{Key: "foo", Value: "bar"}}
+		input := []tags.Tag{{Key: "foo", Value: "bar"}}
+		output := []tags.Tag{{Key: "foo", Value: "bar"}}
 
 		// test start
 		actual := try.To(plan_find.RunFindPlan(
 			ctx, log, mock, logic.Indeterminate, imageVer, input, output)).OrFatal(t)
 
-		if !cmp.SliceContentEqWith(
-			actual, expectedValue,
-			func(a, b apiplan.Detail) bool { return a.Equal(&b) },
-		) {
+		if !cmp.SliceContentEqWith(actual, expectedValue, plans.Detail.Equal) {
 			t.Errorf(
 				"response is in unexpected form:\n===actual===\n%+v\n===expected===\n%+v",
 				actual, expectedValue,
@@ -408,8 +402,8 @@ func TestRunFindPlan(t *testing.T) {
 		mock := mock.New(t)
 		mock.Impl.FindPlan = func(
 			ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier,
-			inTags []apitag.Tag, outTags []apitag.Tag,
-		) ([]apiplan.Detail, error) {
+			inTags []tags.Tag, outTags []tags.Tag,
+		) ([]plans.Detail, error) {
 			return nil, expectedError
 		}
 
@@ -417,8 +411,8 @@ func TestRunFindPlan(t *testing.T) {
 		imageVer := kdb.ImageIdentifier{
 			Image: "test-image", Version: "test-version",
 		}
-		input := []apitag.Tag{{Key: "foo", Value: "bar"}}
-		output := []apitag.Tag{{Key: "foo", Value: "bar"}}
+		input := []tags.Tag{{Key: "foo", Value: "bar"}}
+		output := []tags.Tag{{Key: "foo", Value: "bar"}}
 
 		// test start
 		actual, err := plan_find.RunFindPlan(
