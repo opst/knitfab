@@ -2,10 +2,10 @@ module github.com/opst/knitfab/cmd/loops
 
 go 1.23.1
 
-replace github.com/opst/knitfab v1.3.1-beta => ../..
+replace github.com/opst/knitfab v1.3.1 => ../..
 
 require (
-	github.com/opst/knitfab v1.3.1-beta
+	github.com/opst/knitfab v1.3.1
 	github.com/opst/knitfab-api-types v1.3.1
 	k8s.io/api v0.30.3
 	k8s.io/apimachinery v0.31.1

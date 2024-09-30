@@ -2,10 +2,10 @@ module github.com/opst/knitfab/cmd/schema_manager
 
 go 1.23.1
 
-replace github.com/opst/knitfab v1.3.1-beta => ../..
+replace github.com/opst/knitfab v1.3.1 => ../..
 
 require (
-	github.com/opst/knitfab v1.3.1-beta
+	github.com/opst/knitfab v1.3.1
 	github.com/youta-t/flarc v0.0.3
 )
 
