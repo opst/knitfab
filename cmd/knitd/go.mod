@@ -2,12 +2,12 @@ module github.com/opst/knitfab/cmd/knitd
 
 go 1.23.1
 
-replace github.com/opst/knitfab v1.3.0 => ../..
+replace github.com/opst/knitfab v1.4.0-beta => ../..
 
 require (
 	github.com/labstack/echo/v4 v4.12.0
-	github.com/opst/knitfab v1.3.0
-	github.com/opst/knitfab-api-types v1.3.1-beta1
+	github.com/opst/knitfab v1.4.0-beta
+	github.com/opst/knitfab-api-types v1.3.1
 	k8s.io/apimachinery v0.31.1
 )
 
