@@ -1,0 +1,23 @@
+# component: component name. It is also Service name exposing image registry.
+component: image-registry
+
+service: image-registry
+
+# use external image registry, not in-cluster.
+#
+# If true, it skips deployment of image registry.
+external: false
+
+# port: port nunber for image registry to be requested from out of cluster.
+port: 30503
+
+# server: exposed server name for image registry to be requested from out of cluster.
+# server: "localhost"
+
+# initialCapacity: initial capcity of PVC for image regidtry storage.
+initialCapacity: 8Gi
+
+storage:
+  class: {}
+
+certs: {}

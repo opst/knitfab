@@ -5,10 +5,11 @@ import (
 	"errors"
 	"testing"
 
+	api_runs "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
-	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
+	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kdbmock "github.com/opst/knitfab/pkg/db/mocks"
@@ -67,7 +68,7 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				},
 				AfterFn: func(d api_runs.Detail) error {
 					afterHasBeenCalled = true
-					if want := api_runs.ComposeDetail(when.updatedRun); !d.Equal(&want) {
+					if want := bindruns.ComposeDetail(when.updatedRun); !d.Equal(want) {
 						t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
 					}
 					return errors.New("after hook: should be ignored")
@@ -313,17 +314,17 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 			imageManager := func(_ context.Context, h hook.Hook[api_runs.Detail], _ kdb.Run) (kdb.KnitRunStatus, error) {
 				imageManagerHasBeenInvoked = true
 
-				h.Before(api_runs.ComposeDetail(when.pickedRun))
+				h.Before(bindruns.ComposeDetail(when.pickedRun))
 				return when.newStatus, when.managerError
 			}
 			pseudoManagers := map[kdb.PseudoPlanName]manager.Manager{
 				planName1: func(_ context.Context, h hook.Hook[api_runs.Detail], _ kdb.Run) (kdb.KnitRunStatus, error) {
-					h.Before(api_runs.ComposeDetail(when.pickedRun))
+					h.Before(bindruns.ComposeDetail(when.pickedRun))
 					invokedPseudoManager = append(invokedPseudoManager, planName1)
 					return when.newStatus, when.managerError
 				},
 				planName2: func(_ context.Context, h hook.Hook[api_runs.Detail], _ kdb.Run) (kdb.KnitRunStatus, error) {
-					h.Before(api_runs.ComposeDetail(when.pickedRun))
+					h.Before(bindruns.ComposeDetail(when.pickedRun))
 					invokedPseudoManager = append(invokedPseudoManager, planName2)
 					return when.newStatus, when.managerError
 				},
@@ -333,7 +334,7 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 			testee := runManagement.Task(irun, imageManager, pseudoManagers, hook.Func[api_runs.Detail]{
 				BeforeFn: func(d api_runs.Detail) error {
 					beforeHookInvoked = true
-					if want := api_runs.ComposeDetail(when.pickedRun); !d.Equal(&want) {
+					if want := bindruns.ComposeDetail(when.pickedRun); !d.Equal(want) {
 						t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
 					}
 					return nil

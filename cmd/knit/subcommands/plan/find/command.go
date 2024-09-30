@@ -7,11 +7,11 @@ import (
 	"log"
 	"strings"
 
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/logic"
@@ -32,9 +32,9 @@ type Option struct {
 		client krst.KnitClient,
 		active logic.Ternary,
 		imageVer kdb.ImageIdentifier,
-		inTags []apitag.Tag,
-		outTags []apitag.Tag,
-	) ([]apiplan.Detail, error)
+		inTags []tags.Tag,
+		outTags []tags.Tag,
+	) ([]plans.Detail, error)
 }
 
 func WithFind(
@@ -44,9 +44,9 @@ func WithFind(
 		client krst.KnitClient,
 		active logic.Ternary,
 		imageVer kdb.ImageIdentifier,
-		inTags []apitag.Tag,
-		outTags []apitag.Tag,
-	) ([]apiplan.Detail, error),
+		inTags []tags.Tag,
+		outTags []tags.Tag,
+	) ([]plans.Detail, error),
 ) func(*Option) *Option {
 	return func(dfc *Option) *Option {
 		dfc.find = find
@@ -114,9 +114,9 @@ func Task(
 		client krst.KnitClient,
 		active logic.Ternary,
 		imageVer kdb.ImageIdentifier,
-		inTags []apitag.Tag,
-		outTags []apitag.Tag,
-	) ([]apiplan.Detail, error),
+		inTags []tags.Tag,
+		outTags []tags.Tag,
+	) ([]plans.Detail, error),
 ) common.Task[Flag] {
 	return func(
 		ctx context.Context,
@@ -152,12 +152,12 @@ func Task(
 			Version: version,
 		}
 
-		inTags := []apitag.Tag{}
+		inTags := []tags.Tag{}
 		if flags.InTags != nil {
 			inTags = *flags.InTags
 		}
 
-		outTags := []apitag.Tag{}
+		outTags := []tags.Tag{}
 		if flags.OutTags != nil {
 			outTags = *flags.OutTags
 		}
@@ -183,9 +183,9 @@ func RunFindPlan(
 	client krst.KnitClient,
 	active logic.Ternary,
 	imageVer kdb.ImageIdentifier,
-	inTags []apitag.Tag,
-	outTags []apitag.Tag,
-) ([]apiplan.Detail, error) {
+	inTags []tags.Tag,
+	outTags []tags.Tag,
+) ([]plans.Detail, error) {
 
 	result, err := client.FindPlan(ctx, active, imageVer, inTags, outTags)
 	if err != nil {

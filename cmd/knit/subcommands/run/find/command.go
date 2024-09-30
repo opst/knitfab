@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
 	kflag "github.com/opst/knitfab/pkg/commandline/flag"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/youta-t/flarc"
@@ -30,7 +30,7 @@ type Option struct {
 		log *log.Logger,
 		client krst.KnitClient,
 		parameter krst.FindRunParameter,
-	) ([]apirun.Detail, error)
+	) ([]runs.Detail, error)
 }
 
 func WithFind(
@@ -39,7 +39,7 @@ func WithFind(
 		log *log.Logger,
 		client krst.KnitClient,
 		parameter krst.FindRunParameter,
-	) ([]apirun.Detail, error),
+	) ([]runs.Detail, error),
 ) func(*Option) *Option {
 	return func(dfc *Option) *Option {
 		dfc.find = find
@@ -122,7 +122,7 @@ func Task(
 		log *log.Logger,
 		client krst.KnitClient,
 		parameter krst.FindRunParameter,
-	) ([]apirun.Detail, error),
+	) ([]runs.Detail, error),
 ) common.Task[Flag] {
 	return func(ctx context.Context, logger *log.Logger, knitEnv env.KnitEnv, client krst.KnitClient, cl flarc.Commandline[Flag], params []any) error {
 		flags := cl.Flags()
@@ -165,7 +165,7 @@ func RunFindRun(
 	logger *log.Logger,
 	client krst.KnitClient,
 	parameter krst.FindRunParameter,
-) ([]apirun.Detail, error) {
+) ([]runs.Detail, error) {
 	result, err := client.FindRun(ctx, parameter)
 	if err != nil {
 		return nil, err

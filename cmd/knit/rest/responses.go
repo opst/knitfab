@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
+	apiaerr "github.com/opst/knitfab-api-types/errors"
 	cerr "github.com/opst/knitfab/cmd/knit/errors"
-	apiaerr "github.com/opst/knitfab/pkg/api/types/errors"
 )
 
 type MessageFor map[StatusCodeRange]string

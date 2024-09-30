@@ -7,20 +7,20 @@ import (
 	"fmt"
 	"net/http"
 
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/logic"
 )
 
-func (c *client) GetPlans(ctx context.Context, planId string) (apiplans.Detail, error) {
+func (c *client) GetPlans(ctx context.Context, planId string) (plans.Detail, error) {
 	resp, err := c.httpclient.Get(c.apipath("plans", planId))
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	defer resp.Body.Close()
 
-	var dataMetas apiplans.Detail
+	var dataMetas plans.Detail
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -28,28 +28,28 @@ func (c *client) GetPlans(ctx context.Context, planId string) (apiplans.Detail, 
 			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
 		},
 	); err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	return dataMetas, nil
 }
 
-func (c *client) PutPlanForActivate(ctx context.Context, planId string, isActive bool) (apiplans.Detail, error) {
+func (c *client) PutPlanForActivate(ctx context.Context, planId string, isActive bool) (plans.Detail, error) {
 	method := http.MethodPut
 	if !isActive {
 		method = http.MethodDelete
 	}
 	req, err := http.NewRequest(method, c.apipath("plans", planId, "active"), nil)
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 
 	resp, err := c.httpclient.Do(req)
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	defer resp.Body.Close()
 
-	var dataMetas apiplans.Detail
+	var dataMetas plans.Detail
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -57,24 +57,24 @@ func (c *client) PutPlanForActivate(ctx context.Context, planId string, isActive
 			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
 		},
 	); err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	return dataMetas, nil
 }
 
-func (c *client) RegisterPlan(ctx context.Context, spec apiplans.PlanSpec) (apiplans.Detail, error) {
+func (c *client) RegisterPlan(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error) {
 	b, err := json.Marshal(spec)
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 
 	resp, err := c.httpclient.Post(c.apipath("plans"), "application/json", bytes.NewBuffer(b))
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	defer resp.Body.Close()
 
-	var dataMetas apiplans.Detail
+	var dataMetas plans.Detail
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -82,7 +82,7 @@ func (c *client) RegisterPlan(ctx context.Context, spec apiplans.PlanSpec) (apip
 			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
 		},
 	); err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	return dataMetas, nil
 }
@@ -91,9 +91,9 @@ func (c *client) FindPlan(
 	ctx context.Context,
 	active logic.Ternary,
 	imageVer kdb.ImageIdentifier,
-	inTags []apitag.Tag,
-	outTags []apitag.Tag,
-) ([]apiplans.Detail, error) {
+	inTags []tags.Tag,
+	outTags []tags.Tag,
+) ([]plans.Detail, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apipath("plans"), nil)
 	if err != nil {
@@ -137,7 +137,7 @@ func (c *client) FindPlan(
 	}
 	defer resp.Body.Close()
 
-	dataMetas := make([]apiplans.Detail, 0, 5)
+	dataMetas := make([]plans.Detail, 0, 5)
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -151,25 +151,25 @@ func (c *client) FindPlan(
 	return dataMetas, nil
 }
 
-func (c *client) UpdateResources(ctx context.Context, planId string, res apiplans.ResourceLimitChange) (apiplans.Detail, error) {
+func (c *client) UpdateResources(ctx context.Context, planId string, res plans.ResourceLimitChange) (plans.Detail, error) {
 	b, err := json.Marshal(res)
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 
 	req, err := http.NewRequest(http.MethodPut, c.apipath("plans", planId, "resources"), bytes.NewBuffer(b))
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpclient.Do(req)
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	defer resp.Body.Close()
 
-	var dataMetas apiplans.Detail
+	var dataMetas plans.Detail
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{
@@ -177,7 +177,7 @@ func (c *client) UpdateResources(ctx context.Context, planId string, res apiplan
 			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
 		},
 	); err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 	return dataMetas, nil
 }

@@ -5,15 +5,15 @@ import (
 	"errors"
 	"testing"
 
+	dara "github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	apitag "github.com/opst/knitfab-api-types/tags"
 	rmock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	data_tag "github.com/opst/knitfab/cmd/knit/subcommands/data/tag"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	"github.com/opst/knitfab/pkg/api/types/plans"
-	"github.com/opst/knitfab/pkg/api/types/runs"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -51,8 +51,8 @@ func TestDataTag(t *testing.T) {
 		}
 
 		// setting function for test
-		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*apidata.Detail, error) {
-			res := apidata.Detail{
+		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*dara.Detail, error) {
+			res := dara.Detail{
 				KnitId: knitId,
 				Tags: []apitag.Tag{
 					{Key: "key1", Value: "val1"},
@@ -61,7 +61,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: apidata.AssignedTo{
+				Upstream: dara.AssignedTo{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -72,7 +72,7 @@ func TestDataTag(t *testing.T) {
 						},
 					},
 				},
-				Downstreams: []apidata.AssignedTo{
+				Downstreams: []dara.AssignedTo{
 					{
 						Run: runs.Summary{
 							RunId: "run#2", Status: "failed",
@@ -111,7 +111,7 @@ func TestDataTag(t *testing.T) {
 						},
 					},
 				},
-				Nomination: []apidata.NominatedBy{
+				Nomination: []dara.NominatedBy{
 					{
 						Plan: plans.Summary{
 							PlanId: "plan#2",
@@ -183,8 +183,8 @@ func TestDataTag(t *testing.T) {
 		}
 
 		// setting function for test
-		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*apidata.Detail, error) {
-			res := apidata.Detail{
+		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*dara.Detail, error) {
+			res := dara.Detail{
 				KnitId: knitId,
 				Tags: []apitag.Tag{
 					{Key: "key1", Value: "val1"},
@@ -193,7 +193,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: apidata.AssignedTo{
+				Upstream: dara.AssignedTo{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -204,7 +204,7 @@ func TestDataTag(t *testing.T) {
 						},
 					},
 				},
-				Downstreams: []apidata.AssignedTo{
+				Downstreams: []dara.AssignedTo{
 					{
 						Run: runs.Summary{
 							RunId: "run#2", Status: "failed",
@@ -243,7 +243,7 @@ func TestDataTag(t *testing.T) {
 						},
 					},
 				},
-				Nomination: []apidata.NominatedBy{
+				Nomination: []dara.NominatedBy{
 					{
 						Plan: plans.Summary{
 							PlanId: "plan#2",
@@ -312,8 +312,8 @@ func TestDataTag(t *testing.T) {
 		}
 
 		// setting function for test
-		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*apidata.Detail, error) {
-			res := apidata.Detail{
+		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*dara.Detail, error) {
+			res := dara.Detail{
 				KnitId: knitId,
 				Tags: []apitag.Tag{
 					{Key: "key1", Value: "val1"},
@@ -322,7 +322,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: apidata.AssignedTo{
+				Upstream: dara.AssignedTo{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -333,7 +333,7 @@ func TestDataTag(t *testing.T) {
 						},
 					},
 				},
-				Downstreams: []apidata.AssignedTo{
+				Downstreams: []dara.AssignedTo{
 					{
 						Run: runs.Summary{
 							RunId: "run#2", Status: "failed",
@@ -372,7 +372,7 @@ func TestDataTag(t *testing.T) {
 						},
 					},
 				},
-				Nomination: []apidata.NominatedBy{
+				Nomination: []dara.NominatedBy{
 					{
 						Plan: plans.Summary{
 							PlanId: "plan#2",
@@ -429,7 +429,7 @@ func TestDataTag(t *testing.T) {
 		removeTags := []apitag.UserTag{{Key: "remkey1", Value: "remval1"}, {Key: "remkey2", Value: "remval2"}}
 
 		// setting function for test
-		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*apidata.Detail, error) {
+		mock.Impl.PutTagsForData = func(knitId string, argtags apitag.Change) (*dara.Detail, error) {
 			return nil, errors.New("Internel server error 500")
 		}
 

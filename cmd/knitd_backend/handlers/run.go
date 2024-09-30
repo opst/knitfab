@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
+	apierr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	"github.com/opst/knitfab/pkg/archive"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/echoutil"

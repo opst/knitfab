@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/initialize"
-	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
+	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kdbmock "github.com/opst/knitfab/pkg/db/mocks"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/opst/knitfab/pkg/workloads/data"
 	k8smock "github.com/opst/knitfab/pkg/workloads/k8s/mock"
@@ -354,11 +355,11 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 			}
 
 			hookAfterHasBeenCalled := false
-			testee := initialize.Task(run, nil, hook.Func[api_runs.Detail]{
-				AfterFn: func(d api_runs.Detail) error {
+			testee := initialize.Task(run, nil, hook.Func[apiruns.Detail]{
+				AfterFn: func(d apiruns.Detail) error {
 					hookAfterHasBeenCalled = true
-					want := api_runs.ComposeDetail(when.UpdatedRun)
-					if !d.Equal(&want) {
+					want := bindruns.ComposeDetail(when.UpdatedRun)
+					if !d.Equal(want) {
 						t.Errorf(
 							"unexpected detail:\n===actual==\n%+v\n===expected===\n%+v",
 							d, want,
@@ -654,10 +655,10 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 			}
 
 			beforeFnHasBeenCalled := false
-			testee := initialize.Task(run, pvcInitializer, hook.Func[api_runs.Detail]{
-				BeforeFn: func(d api_runs.Detail) error {
+			testee := initialize.Task(run, pvcInitializer, hook.Func[apiruns.Detail]{
+				BeforeFn: func(d apiruns.Detail) error {
 					beforeFnHasBeenCalled = true
-					if want := api_runs.ComposeDetail(pickedRun); !d.Equal(&want) {
+					if want := bindruns.ComposeDetail(pickedRun); !d.Equal(want) {
 						t.Errorf(
 							"unexpected detail:\n===actual==\n%+v\n===expected===\n%+v",
 							d, want,

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
 	"github.com/youta-t/flarc"
 )
 
@@ -18,7 +18,7 @@ type Option struct {
 		ctx context.Context,
 		client krst.KnitClient,
 		planId string,
-	) (apiplans.Detail, error)
+	) (plans.Detail, error)
 }
 
 func WithShow(
@@ -26,7 +26,7 @@ func WithShow(
 		ctx context.Context,
 		client krst.KnitClient,
 		planId string,
-	) (apiplans.Detail, error),
+	) (plans.Detail, error),
 ) func(*Option) *Option {
 	return func(cmd *Option) *Option {
 		cmd.show = show
@@ -65,7 +65,7 @@ func Task(
 		ctx context.Context,
 		client krst.KnitClient,
 		planId string,
-	) (apiplans.Detail, error),
+	) (plans.Detail, error),
 ) common.Task[struct{}] {
 	return func(
 		ctx context.Context,
@@ -95,11 +95,11 @@ func RunShowPlan(
 	ctx context.Context,
 	client krst.KnitClient,
 	planId string,
-) (apiplans.Detail, error) {
+) (plans.Detail, error) {
 
 	result, err := client.GetPlans(ctx, planId)
 	if err != nil {
-		return apiplans.Detail{}, err
+		return plans.Detail{}, err
 	}
 
 	return result, nil

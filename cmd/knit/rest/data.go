@@ -13,11 +13,11 @@ import (
 	"net/http"
 	"time"
 
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/pkg/archive"
 	kio "github.com/opst/knitfab/pkg/io"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 var (
@@ -62,7 +62,7 @@ type Progress[T any] interface {
 type progress struct {
 	p        archive.Progress
 	e        error
-	result   *apidata.Detail
+	result   *data.Detail
 	resultOk bool
 	done     chan struct{}
 	sent     chan struct{}
@@ -87,7 +87,7 @@ func (p *progress) Error() error {
 	return p.e
 }
 
-func (p *progress) Result() (*apidata.Detail, bool) {
+func (p *progress) Result() (*data.Detail, bool) {
 	return p.result, p.resultOk
 }
 
@@ -99,7 +99,7 @@ func (p *progress) Sent() <-chan struct{} {
 	return p.sent
 }
 
-func (c *client) PostData(sendingCtx context.Context, source string, dereference bool) Progress[*apidata.Detail] {
+func (c *client) PostData(sendingCtx context.Context, source string, dereference bool) Progress[*data.Detail] {
 	sendingCtx, cancel := context.WithCancel(sendingCtx)
 
 	r, w := io.Pipe()
@@ -163,7 +163,7 @@ func (c *client) PostData(sendingCtx context.Context, source string, dereference
 		}
 		defer resp.Body.Close()
 
-		res := &apidata.Detail{}
+		res := &data.Detail{}
 		if err := unmarshalJsonResponse(
 			resp, res,
 			MessageFor{
@@ -182,7 +182,7 @@ func (c *client) PostData(sendingCtx context.Context, source string, dereference
 	return prog
 }
 
-func (c *client) PutTagsForData(knitId string, tags apitag.Change) (*apidata.Detail, error) {
+func (c *client) PutTagsForData(knitId string, tags tags.Change) (*data.Detail, error) {
 
 	reqBody, err := json.Marshal(tags)
 	if err != nil {
@@ -201,7 +201,7 @@ func (c *client) PutTagsForData(knitId string, tags apitag.Change) (*apidata.Det
 	}
 	defer resp.Body.Close()
 
-	res := apidata.Detail{}
+	res := data.Detail{}
 	if err := unmarshalJsonResponse(
 		resp, &res,
 		MessageFor{
@@ -311,7 +311,7 @@ func (ci *client) GetData(ctx context.Context, knitid string, handler func(FileE
 	})
 }
 
-func (c *client) FindData(ctx context.Context, tags []apitag.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
+func (c *client) FindData(ctx context.Context, tags []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apipath("data"), nil)
 	if err != nil {
@@ -340,7 +340,7 @@ func (c *client) FindData(ctx context.Context, tags []apitag.Tag, since *time.Ti
 	}
 	defer resp.Body.Close()
 
-	dataMetas := make([]apidata.Detail, 0, 5)
+	dataMetas := make([]data.Detail, 0, 5)
 	if err := unmarshalJsonResponse(
 		resp, &dataMetas,
 		MessageFor{

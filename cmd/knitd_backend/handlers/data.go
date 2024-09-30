@@ -12,9 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	keyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider"
-	backendapidata "github.com/opst/knitfab/pkg/api/backends/types/data"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
+	binddata "github.com/opst/knitfab/pkg/api-types-binding/data"
+	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/echoutil"
 	"github.com/opst/knitfab/pkg/utils/retry"
@@ -37,7 +36,7 @@ func PostDataHandler(
 
 		runId, err := dbRun.NewPseudo(ctx, kdb.Uploaded, time.Until(deadline))
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		defer func() {
 			if finished {
@@ -50,17 +49,17 @@ func PostDataHandler(
 
 		runs, err := dbRun.Get(ctx, []string{runId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		run, ok := runs[runId]
 		if !ok {
-			return apierr.InternalServerError(
+			return binderr.InternalServerError(
 				errors.New("failed to get the newly created run detail"),
 			)
 		}
 		out := run.Outputs
 		if len(out) != 1 {
-			return apierr.InternalServerError(
+			return binderr.InternalServerError(
 				fmt.Errorf("plan %s requires %d data, not 1", kdb.Uploaded, len(out)),
 			)
 		}
@@ -69,15 +68,15 @@ func PostDataHandler(
 			ctx, out[0].KnitDataBody.KnitId, kdb.DataAgentWrite, time.Until(deadline),
 		)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		da, err := spawnDataAgent(ctx, daRecord, deadline)
 		if err != nil {
 			if workloads.AsConflict(err) || errors.Is(err, workloads.ErrDeadlineExceeded) {
-				return apierr.ServiceUnavailable("please retry later", err)
+				return binderr.ServiceUnavailable("please retry later", err)
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		defer func() {
 			if err := da.Close(); err != nil {
@@ -88,7 +87,7 @@ func PostDataHandler(
 
 		bresp, err := echoutil.CopyRequest(ctx, da.URL(), c.Request())
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		defer bresp.Body.Close()
 
@@ -97,10 +96,10 @@ func PostDataHandler(
 			newStatus = kdb.Completing
 		}
 		if err := dbRun.SetStatus(ctx, runId, newStatus); err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		if err := dbRun.Finish(ctx, runId); err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		finished = true
 
@@ -112,16 +111,16 @@ func PostDataHandler(
 
 		resultSet, err := dbData.Get(ctx, []string{da.KnitID()})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		data, ok := resultSet[da.KnitID()]
 		if !ok {
-			return apierr.InternalServerError(errors.New(`uploaded data "%s" is lost`))
+			return binderr.InternalServerError(errors.New(`uploaded data "%s" is lost`))
 		}
 
 		return c.JSON(
 			http.StatusOK,
-			apidata.ComposeDetail(data),
+			binddata.ComposeDetail(data),
 		)
 	}
 }
@@ -145,16 +144,16 @@ func GetDataHandler(
 		daRecord, err := data.NewAgent(ctx, knitId, kdb.DataAgentRead, timeout)
 		if err != nil {
 			if errors.Is(err, kdb.ErrMissing) {
-				return apierr.NotFound()
+				return binderr.NotFound()
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		dagt, err := spawnDataAgent(ctx, daRecord, deadline)
 		if errors.Is(err, workloads.ErrDeadlineExceeded) {
-			return apierr.ServiceUnavailable("please retry later", err)
+			return binderr.ServiceUnavailable("please retry later", err)
 		} else if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		defer func() {
 			if err := dagt.Close(); err != nil {
@@ -165,7 +164,7 @@ func GetDataHandler(
 
 		bresp, err := echoutil.CopyRequest(ctx, dagt.URL(), c.Request())
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		return echoutil.CopyResponse(&c, bresp)
@@ -183,23 +182,23 @@ func ImportDataBeginHandler(
 
 		runId, err := dbRun.NewPseudo(ctx, kdb.Imported, time.Until(deadline))
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		runs, err := dbRun.Get(ctx, []string{runId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		run, ok := runs[runId]
 		if !ok {
-			return apierr.InternalServerError(
+			return binderr.InternalServerError(
 				errors.New("failed to get the newly created run"),
 			)
 		}
 
 		out := run.Outputs
 		if len(out) != 1 {
-			return apierr.InternalServerError(
+			return binderr.InternalServerError(
 				fmt.Errorf("plan %s requires %d data, not 1", kdb.Imported, len(out)),
 			)
 		}
@@ -207,12 +206,12 @@ func ImportDataBeginHandler(
 
 		kid, key, err := kp.Provide(ctx, keychain.WithExpAfter(deadline))
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		token, err := keychain.NewJWS(
 			kid, key,
-			backendapidata.DataImportClaim{
+			DataImportClaim{
 				RegisteredClaims: jwt.RegisteredClaims{
 					// jti
 					ID: uuid.NewString(),
@@ -227,7 +226,7 @@ func ImportDataBeginHandler(
 			},
 		)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		resp := c.Response()
@@ -249,38 +248,38 @@ func ImportDataEndHandler(
 		ctx := req.Context()
 
 		if req.Header.Get("Content-Type") != "application/jwt" {
-			return apierr.BadRequest(`"Content-Type" should be "application/jwt"`, nil)
+			return binderr.BadRequest(`"Content-Type" should be "application/jwt"`, nil)
 		}
 		if req.Body == nil {
-			return apierr.BadRequest(`token given by "import/begin" is required in Body`, nil)
+			return binderr.BadRequest(`token given by "import/begin" is required in Body`, nil)
 		}
 
 		payload, err := io.ReadAll(req.Body)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		kc, err := kp.GetKeychain(ctx)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
-		claims, err := keychain.VerifyJWS[*backendapidata.DataImportClaim](kc, string(payload))
+		claims, err := keychain.VerifyJWS[*DataImportClaim](kc, string(payload))
 		if err != nil {
 			if errors.Is(err, keychain.ErrInvalidToken) {
-				return apierr.Unauthorized("invalid token", err)
+				return binderr.Unauthorized("invalid token", err)
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		knitId := claims.KnitId
 		data, err := dbData.Get(ctx, []string{knitId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		if _, ok := data[knitId]; !ok {
-			return apierr.InternalServerError(errors.New("data not found"))
+			return binderr.InternalServerError(errors.New("data not found"))
 		}
 
 		if err := func() error {
@@ -293,25 +292,33 @@ func ImportDataEndHandler(
 			return result.Err
 		}(); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || workloads.AsMissingError(err) {
-				return apierr.BadRequest(
+				return binderr.BadRequest(
 					fmt.Sprintf("retry after that PVC %s is bound", data[knitId].KnitDataBody.VolumeRef),
 					err,
 				)
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		runId := claims.RunId
 		if err := dbRun.SetStatus(ctx, runId, kdb.Completing); err != nil {
 			if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
-				return apierr.Conflict("", apierr.WithError(err))
+				return binderr.Conflict("", binderr.WithError(err))
 			}
 			if errors.Is(err, kdb.ErrMissing) {
-				return apierr.Conflict("missing Run", apierr.WithError(err))
+				return binderr.Conflict("missing Run", binderr.WithError(err))
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
-		return c.JSON(http.StatusOK, apidata.ComposeDetail(data[knitId]))
+		return c.JSON(http.StatusOK, binddata.ComposeDetail(data[knitId]))
 	}
+}
+
+type DataImportClaim struct {
+	jwt.RegisteredClaims
+
+	// private claims
+	KnitId string `json:"knitfab/knitId"`
+	RunId  string `json:"knitfab/runId"`
 }

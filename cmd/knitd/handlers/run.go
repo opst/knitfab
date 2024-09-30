@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	apiruns "github.com/opst/knitfab-api-types/runs"
+	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
+	bindrun "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	kstrings "github.com/opst/knitfab/pkg/utils/strings"
 )
 
@@ -31,7 +32,7 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 			for _, p := range kstrings.SplitIfNotEmpty(c.QueryParam("status"), ",") {
 				s, err := kdb.AsKnitRunStatus(p)
 				if err != nil || s == kdb.Invalidated {
-					return kdb.RunFindQuery{}, apierr.BadRequest(
+					return kdb.RunFindQuery{}, binderr.BadRequest(
 						`"status" should be one of "waiting", "deactivated", "starting", "running", "done" or "failed"`,
 						nil,
 					)
@@ -43,7 +44,7 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 			if since != "" {
 				t, err := rfctime.ParseRFC3339DateTime(since)
 				if err != nil {
-					return kdb.RunFindQuery{}, apierr.BadRequest(
+					return kdb.RunFindQuery{}, binderr.BadRequest(
 						`"since" should be a RFC3339 date-time format`,
 						err,
 					)
@@ -56,7 +57,7 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 			if duration != "" {
 				d, err := time.ParseDuration(duration)
 				if err != nil {
-					return kdb.RunFindQuery{}, apierr.BadRequest(
+					return kdb.RunFindQuery{}, binderr.BadRequest(
 						`"duration" should be a Go duration format`,
 						err,
 					)
@@ -75,17 +76,17 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 
 		runIds, err := dbRun.Find(ctx, query)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		result, err := dbRun.Get(ctx, runIds)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
-		resp := make([]apirun.Detail, 0, len(result))
+		resp := make([]apiruns.Detail, 0, len(result))
 		for _, r := range runIds {
-			resp = append(resp, apirun.ComposeDetail(result[r]))
+			resp = append(resp, bindrun.ComposeDetail(result[r]))
 		}
 
 		c.JSON(http.StatusOK, resp)
@@ -104,15 +105,15 @@ func GetRunHandler(dbrun kdb.RunInterface) echo.HandlerFunc {
 
 		runs, err := dbrun.Get(ctx, []string{runId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		run, ok := runs[runId]
 		if !ok {
-			return apierr.NotFound()
+			return binderr.NotFound()
 		}
 
-		c.JSON(http.StatusOK, apirun.ComposeDetail(run))
+		c.JSON(http.StatusOK, bindrun.ComposeDetail(run))
 
 		return nil
 	}
@@ -126,29 +127,29 @@ func AbortRunHandler(dbrun kdb.RunInterface, paramnRunId string) echo.HandlerFun
 
 		if err := dbrun.SetStatus(ctx, runId, kdb.Aborting); err != nil {
 			if errors.Is(err, kdb.ErrMissing) {
-				return apierr.NotFound()
+				return binderr.NotFound()
 			} else if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
-				return apierr.Conflict("prohibited operation", apierr.WithError(err))
+				return binderr.Conflict("prohibited operation", binderr.WithError(err))
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		if err := dbrun.SetExit(ctx, runId, kdb.RunExit{
 			Code:    253,
 			Message: "aborted by user",
 		}); err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		runs, err := dbrun.Get(ctx, []string{runId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		if r, ok := runs[runId]; !ok {
-			return apierr.NotFound()
+			return binderr.NotFound()
 		} else {
-			c.JSON(http.StatusOK, apirun.ComposeDetail(r))
+			c.JSON(http.StatusOK, bindrun.ComposeDetail(r))
 		}
 
 		return nil
@@ -163,28 +164,28 @@ func TearoffRunHandler(dbrun kdb.RunInterface, paramnRunId string) echo.HandlerF
 
 		if err := dbrun.SetStatus(ctx, runId, kdb.Completing); err != nil {
 			if errors.Is(err, kdb.ErrMissing) {
-				return apierr.NotFound()
+				return binderr.NotFound()
 			} else if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
-				return apierr.Conflict("prohibited operation", apierr.WithError(err))
+				return binderr.Conflict("prohibited operation", binderr.WithError(err))
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		if err := dbrun.SetExit(ctx, runId, kdb.RunExit{
 			Code:    0,
 			Message: "stopped by user",
 		}); err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		runs, err := dbrun.Get(ctx, []string{runId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		if r, ok := runs[runId]; !ok {
-			return apierr.NotFound()
+			return binderr.NotFound()
 		} else {
-			c.JSON(http.StatusOK, apirun.ComposeDetail(r))
+			c.JSON(http.StatusOK, bindrun.ComposeDetail(r))
 		}
 
 		return nil
@@ -201,11 +202,11 @@ func DeleteRunHandler(dbrun kdb.RunInterface) echo.HandlerFunc {
 
 		if err := dbrun.Delete(ctx, runId); err != nil {
 			if errors.Is(err, kdb.ErrMissing) {
-				return apierr.NotFound()
+				return binderr.NotFound()
 			} else if errors.Is(err, kdb.ErrRunIsProtected) {
-				return apierr.Conflict("output of the run is in use", apierr.WithError(err))
+				return binderr.Conflict("output of the run is in use", binderr.WithError(err))
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		c.Response().WriteHeader(http.StatusNoContent)
@@ -221,41 +222,41 @@ func RetryRunHandler(dbrun kdb.RunInterface, paramRunId string) echo.HandlerFunc
 
 		err := dbrun.Retry(ctx, runId)
 		if errors.Is(err, kdb.ErrMissing) {
-			return apierr.NotFound()
+			return binderr.NotFound()
 		}
 		if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
-			return apierr.Conflict(
+			return binderr.Conflict(
 				"the run have not finished yet",
-				apierr.WithError(err),
-				apierr.WithAdvice("Wait for the run to finish, or abort it"),
+				binderr.WithError(err),
+				binderr.WithAdvice("Wait for the run to finish, or abort it"),
 			)
 		}
 		if errors.Is(err, kdb.ErrRunIsProtected) {
 			message := "prohibited operation"
-			options := []apierr.ErrorMessageOption{apierr.WithError(err)}
+			options := []binderr.ErrorMessageOption{binderr.WithError(err)}
 			if errors.Is(err, kdb.ErrRunHasDownstreams) {
 				message = "output of the run is in use"
 				options = append(
 					options,
-					apierr.WithAdvice("Delete all downstreams of the run first"),
+					binderr.WithAdvice("Delete all downstreams of the run first"),
 				)
 			} else if errors.Is(err, kdb.ErrWorkerActive) {
 				message = "the run may not be finished"
 				options = append(
 					options,
-					apierr.WithAdvice("Wait for the run to finish, or abort it"),
+					binderr.WithAdvice("Wait for the run to finish, or abort it"),
 				)
 			} else {
 				options = append(
 					options,
-					apierr.WithAdvice("Root run cannot be retried"),
+					binderr.WithAdvice("Root run cannot be retried"),
 				)
 			}
 
-			return apierr.Conflict(message, options...)
+			return binderr.Conflict(message, options...)
 		}
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		return nil

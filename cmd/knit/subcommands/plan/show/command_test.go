@@ -6,6 +6,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -13,40 +15,38 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_show "github.com/opst/knitfab/cmd/knit/subcommands/plan/show"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	apitag "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
 func TestShowCommand(t *testing.T) {
-	plandata := apiplans.Detail{
-		Summary: apiplans.Summary{
+	plandata := plans.Detail{
+		Summary: plans.Summary{
 			PlanId: "test-Id",
-			Image: &apiplans.Image{
+			Image: &plans.Image{
 				Repository: "test-Image", Tag: "test-Version",
 			},
 			Name: "test-Name",
 		},
-		Inputs: []apiplans.Mountpoint{
+		Inputs: []plans.Mountpoint{
 			{
 				Path: "/in/1",
-				Tags: []apitag.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "raw data"},
 					{Key: "format", Value: "rgb image"},
 				},
 			},
 		},
-		Outputs: []apiplans.Mountpoint{
+		Outputs: []plans.Mountpoint{
 			{
 				Path: "/out/2",
-				Tags: []apitag.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "training data"},
 					{Key: "format", Value: "mask"},
 				},
 			},
 		},
-		Log: &apiplans.LogPoint{
-			Tags: []apitag.Tag{
+		Log: &plans.LogPoint{
+			Tags: []tags.Tag{
 				{Key: "type", Value: "log"},
 				{Key: "format", Value: "jsonl"},
 			},
@@ -56,7 +56,7 @@ func TestShowCommand(t *testing.T) {
 
 	type when struct {
 		planId []string
-		plan   apiplans.Detail
+		plan   plans.Detail
 		err    error
 	}
 
@@ -74,7 +74,7 @@ func TestShowCommand(t *testing.T) {
 				ctx context.Context,
 				client krst.KnitClient,
 				planId string,
-			) (apiplans.Detail, error) {
+			) (plans.Detail, error) {
 				if planId != then.planId {
 					t.Errorf("wrong planId: %s", planId)
 				}
@@ -124,7 +124,7 @@ func TestShowCommand(t *testing.T) {
 		t.Run("when, error is caused in client, it returns the error", theory(
 			when{
 				planId: []string{"test-Id"},
-				plan:   apiplans.Detail{},
+				plan:   plans.Detail{},
 				err:    expectedError,
 			},
 			then{
@@ -140,47 +140,47 @@ func TestRunShowplan(t *testing.T) {
 	t.Run("When client does not cause any error, it should return the planId returned by client as is", func(t *testing.T) {
 		ctx := context.Background()
 		mock := mock.New(t)
-		expectedValue := apiplans.Detail{
-			Summary: apiplans.Summary{
+		expectedValue := plans.Detail{
+			Summary: plans.Summary{
 				PlanId: "test-Id",
-				Image: &apiplans.Image{
+				Image: &plans.Image{
 					Repository: "test-Image", Tag: "test-Version",
 				},
 				Name: "test-Name",
 			},
-			Inputs: []apiplans.Mountpoint{
+			Inputs: []plans.Mountpoint{
 				{
 					Path: "/in/1",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "raw data"},
 						{Key: "format", Value: "rgb image"},
 					},
 				},
 			},
-			Outputs: []apiplans.Mountpoint{
+			Outputs: []plans.Mountpoint{
 				{
 					Path: "/out/2",
-					Tags: []apitag.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "training data"},
 						{Key: "format", Value: "mask"},
 					},
 				},
 			},
-			Log: &apiplans.LogPoint{
-				Tags: []apitag.Tag{
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "log"},
 					{Key: "format", Value: "jsonl"},
 				},
 			},
 			Active: true,
 		}
-		mock.Impl.GetPlans = func(ctx context.Context, planId string) (apiplans.Detail, error) {
+		mock.Impl.GetPlans = func(ctx context.Context, planId string) (plans.Detail, error) {
 			return expectedValue, nil
 		}
 
 		actual := try.To(plan_show.RunShowPlan(ctx, mock, "test-Id")).OrFatal(t)
 
-		if !actual.Equal(&expectedValue) {
+		if !actual.Equal(expectedValue) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actual, expectedValue)
 		}
 
@@ -191,14 +191,14 @@ func TestRunShowplan(t *testing.T) {
 		expectedError := errors.New("fake error")
 
 		mock := mock.New(t)
-		mock.Impl.GetPlans = func(ctx context.Context, planId string) (apiplans.Detail, error) {
-			return apiplans.Detail{}, expectedError
+		mock.Impl.GetPlans = func(ctx context.Context, planId string) (plans.Detail, error) {
+			return plans.Detail{}, expectedError
 		}
 
 		actual, err := plan_show.RunShowPlan(ctx, mock, "test-Id")
 
-		expectedValue := apiplans.Detail{}
-		if !actual.Equal(&expectedValue) {
+		expectedValue := plans.Detail{}
+		if !actual.Equal(expectedValue) {
 			t.Errorf("response is not equal (actual,expected): %v,%v", actual, expectedValue)
 		}
 

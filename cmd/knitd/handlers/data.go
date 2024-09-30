@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apierr "github.com/opst/knitfab/pkg/api/types/errors"
-	apitags "github.com/opst/knitfab/pkg/api/types/tags"
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	apitags "github.com/opst/knitfab-api-types/tags"
+	binddata "github.com/opst/knitfab/pkg/api-types-binding/data"
+	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 )
 
 func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
@@ -27,16 +28,16 @@ func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
 		tags, err := queryParamToTags(paramTag)
 		if err != nil {
 			if errors.Is(err, errIncorrectQueryTag) {
-				return apierr.BadRequest(`each tag should be formatted as KEY:VALUE`, err)
+				return binderr.BadRequest(`each tag should be formatted as KEY:VALUE`, err)
 			}
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		var since *time.Time
 		if paramSicne := c.QueryParam("since"); paramSicne != "" {
 			t, err := rfctime.ParseRFC3339DateTime(paramSicne)
 			if err != nil {
-				return apierr.BadRequest(
+				return binderr.BadRequest(
 					`"since" should be a RFC3339 date-time format`,
 					err,
 				)
@@ -49,7 +50,7 @@ func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
 		if paramDuration := c.QueryParam("duration"); paramDuration != "" {
 			d, err := time.ParseDuration(paramDuration)
 			if err != nil {
-				return apierr.BadRequest(
+				return binderr.BadRequest(
 					`"duration" should be a Go duration format`,
 					err,
 				)
@@ -60,21 +61,21 @@ func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
 
 		knitIds, err := dbData.Find(ctx, tags, since, until)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 		if len(knitIds) == 0 {
-			return c.JSON(http.StatusOK, []apidata.Detail{})
+			return c.JSON(http.StatusOK, []data.Detail{})
 		}
 
-		data, err := dbData.Get(ctx, knitIds)
+		d, err := dbData.Get(ctx, knitIds)
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
-		found := make([]apidata.Detail, 0, len(data))
-		for _, d := range knitIds {
-			if v, ok := data[d]; ok {
-				found = append(found, apidata.ComposeDetail(v))
+		found := make([]data.Detail, 0, len(d))
+		for _, id := range knitIds {
+			if v, ok := d[id]; ok {
+				found = append(found, binddata.ComposeDetail(v))
 			}
 		}
 
@@ -123,46 +124,46 @@ func PutTagForDataHandler(dbData kdb.DataInterface, paramKey string) echo.Handle
 		decoder.DisallowUnknownFields()
 
 		if err := decoder.Decode(&change); err != nil {
-			return apierr.NewErrorMessage(
+			return binderr.NewErrorMessage(
 				http.StatusBadRequest,
 				"format error",
-				apierr.WithAdvice(err.Error()),
-				apierr.WithError(err),
+				binderr.WithAdvice(err.Error()),
+				binderr.WithError(err),
 			)
 		}
 
 		delta := kdb.TagDelta{}
 		for _, tag := range change.AddTags {
 			if t, err := kdb.NewTag(tag.Key, tag.Value); err != nil {
-				apierr.BadRequest(fmt.Sprintf("bad tag: %s", tag), err)
+				binderr.BadRequest(fmt.Sprintf("bad tag: %s", tag), err)
 			} else {
 				delta.Add = append(delta.Add, t)
 			}
 		}
 		for _, tag := range change.RemoveTags {
 			if t, err := kdb.NewTag(tag.Key, tag.Value); err != nil {
-				apierr.BadRequest(fmt.Sprintf("bad tag: %s", tag), err)
+				binderr.BadRequest(fmt.Sprintf("bad tag: %s", tag), err)
 			} else {
 				delta.Remove = append(delta.Remove, t)
 			}
 		}
 
 		if err := dbData.UpdateTag(ctx, knitId, delta); errors.Is(err, kdb.ErrMissing) {
-			return apierr.NewErrorMessage(http.StatusNotFound, "correspontind data is missing")
+			return binderr.NewErrorMessage(http.StatusNotFound, "correspontind data is missing")
 		} else if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		resultSet, err := dbData.Get(ctx, []string{knitId})
 		if err != nil {
-			return apierr.InternalServerError(err)
+			return binderr.InternalServerError(err)
 		}
 
 		d, ok := resultSet[knitId]
 		if !ok {
-			return apierr.InternalServerError(errors.New("data not found; the data was updated tag just now"))
+			return binderr.InternalServerError(errors.New("data not found; the data was updated tag just now"))
 		}
 
-		return c.JSON(http.StatusOK, apidata.ComposeDetail(d))
+		return c.JSON(http.StatusOK, binddata.ComposeDetail(d))
 	}
 }

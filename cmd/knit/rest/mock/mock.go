@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	apitags "github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/rest"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apiplans "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/logic"
 )
@@ -59,7 +59,7 @@ type MockedPostDataProgress struct {
 
 	Error_ error
 
-	Result_ *apidata.Detail
+	Result_ *data.Detail
 
 	ResultOk_ bool
 
@@ -80,7 +80,7 @@ func (m *MockedPostDataProgress) ProgressingFile() string {
 	return m.ProgressingFile_
 }
 
-func (m *MockedPostDataProgress) Result() (*apidata.Detail, bool) {
+func (m *MockedPostDataProgress) Result() (*data.Detail, bool) {
 	return m.Result_, m.ResultOk_
 }
 
@@ -99,24 +99,24 @@ func (m *MockedPostDataProgress) Sent() <-chan struct{} {
 type mockKnitClient struct {
 	t    *testing.T
 	Impl struct {
-		PostData       func(ctx context.Context, source string, dereference bool) rest.Progress[*apidata.Detail]
-		PutTagsForData func(knitId string, tags apitags.Change) (*apidata.Detail, error)
+		PostData       func(ctx context.Context, source string, dereference bool) rest.Progress[*data.Detail]
+		PutTagsForData func(knitId string, tags apitags.Change) (*data.Detail, error)
 		GetDataRaw     func(context.Context, string, func(io.Reader) error) error
 		GetData        func(context.Context, string, func(rest.FileEntry) error) error
-		FindData       func(ctx context.Context, tags []apitags.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error)
-		GetPlans       func(ctx context.Context, planId string) (apiplans.Detail, error)
+		FindData       func(ctx context.Context, tags []apitags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error)
+		GetPlans       func(ctx context.Context, planId string) (plans.Detail, error)
 		FindPlan       func(
 			ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier,
 			inTags []apitags.Tag, outTags []apitags.Tag,
-		) ([]apiplans.Detail, error)
-		PutPlanForActivate func(ctx context.Context, planId string, isActive bool) (apiplans.Detail, error)
-		UpdateResources    func(ctx context.Context, runId string, resources apiplans.ResourceLimitChange) (apiplans.Detail, error)
-		RegisterPlan       func(ctx context.Context, spec apiplans.PlanSpec) (apiplans.Detail, error)
-		GetRun             func(ctx context.Context, runId string) (apirun.Detail, error)
+		) ([]plans.Detail, error)
+		PutPlanForActivate func(ctx context.Context, planId string, isActive bool) (plans.Detail, error)
+		UpdateResources    func(ctx context.Context, runId string, resources plans.ResourceLimitChange) (plans.Detail, error)
+		RegisterPlan       func(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error)
+		GetRun             func(ctx context.Context, runId string) (runs.Detail, error)
 		GetRunLog          func(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
-		FindRun            func(ctx context.Context, query rest.FindRunParameter) ([]apirun.Detail, error)
-		Abort              func(ctx context.Context, runId string) (apirun.Detail, error)
-		Tearoff            func(ctx context.Context, runId string) (apirun.Detail, error)
+		FindRun            func(ctx context.Context, query rest.FindRunParameter) ([]runs.Detail, error)
+		Abort              func(ctx context.Context, runId string) (runs.Detail, error)
+		Tearoff            func(ctx context.Context, runId string) (runs.Detail, error)
 		DeleteRun          func(ctx context.Context, runId string) error
 		Retry              func(ctx context.Context, runId string) error
 	}
@@ -131,9 +131,9 @@ type mockKnitClient struct {
 		PutPlanForActivate []string
 		UpdateResources    []struct {
 			PlanId    string
-			Resources apiplans.ResourceLimitChange
+			Resources plans.ResourceLimitChange
 		}
-		RegisterPlan []apiplans.PlanSpec
+		RegisterPlan []plans.PlanSpec
 		GetRun       []string
 		GetRunLog    []struct {
 			RunId  string
@@ -149,7 +149,7 @@ type mockKnitClient struct {
 
 var _ rest.KnitClient = &mockKnitClient{}
 
-func (m *mockKnitClient) PostData(ctx context.Context, src string, dereference bool) rest.Progress[*apidata.Detail] {
+func (m *mockKnitClient) PostData(ctx context.Context, src string, dereference bool) rest.Progress[*data.Detail] {
 	m.t.Helper()
 
 	m.Calls.PostData = append(m.Calls.PostData, PostDataArgs{Source: src})
@@ -159,7 +159,7 @@ func (m *mockKnitClient) PostData(ctx context.Context, src string, dereference b
 	return m.Impl.PostData(ctx, src, dereference)
 }
 
-func (m *mockKnitClient) PutTagsForData(knitId string, argtags apitags.Change) (*apidata.Detail, error) {
+func (m *mockKnitClient) PutTagsForData(knitId string, argtags apitags.Change) (*data.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.PutTagsForData = append(m.Calls.PutTagsForData, PutTagsForDataArgs{KnitId: knitId, Tags: argtags})
@@ -190,7 +190,7 @@ func (m *mockKnitClient) GetData(ctx context.Context, knitId string, handler fun
 	return m.Impl.GetData(ctx, knitId, handler)
 }
 
-func (m *mockKnitClient) FindData(ctx context.Context, tags []apitags.Tag, since *time.Time, duration *time.Duration) ([]apidata.Detail, error) {
+func (m *mockKnitClient) FindData(ctx context.Context, tags []apitags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.FindData = append(
@@ -204,7 +204,7 @@ func (m *mockKnitClient) FindData(ctx context.Context, tags []apitags.Tag, since
 	return m.Impl.FindData(ctx, tags, since, duration)
 }
 
-func (m *mockKnitClient) GetPlans(ctx context.Context, planId string) (apiplans.Detail, error) {
+func (m *mockKnitClient) GetPlans(ctx context.Context, planId string) (plans.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.GetPlans = append(m.Calls.GetPlans, planId)
@@ -220,7 +220,7 @@ func (m *mockKnitClient) FindPlan(
 	imageVer kdb.ImageIdentifier,
 	inTags []apitags.Tag,
 	outTags []apitags.Tag,
-) ([]apiplans.Detail, error) {
+) ([]plans.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.Findplan = append(m.Calls.Findplan, FindPlanArgs{active, imageVer, inTags, outTags})
@@ -230,7 +230,7 @@ func (m *mockKnitClient) FindPlan(
 	return m.Impl.FindPlan(ctx, active, imageVer, inTags, outTags)
 }
 
-func (m *mockKnitClient) PutPlanForActivate(ctx context.Context, planId string, isActive bool) (apiplans.Detail, error) {
+func (m *mockKnitClient) PutPlanForActivate(ctx context.Context, planId string, isActive bool) (plans.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.PutPlanForActivate = append(m.Calls.PutPlanForActivate, planId)
@@ -240,7 +240,7 @@ func (m *mockKnitClient) PutPlanForActivate(ctx context.Context, planId string, 
 	return m.Impl.PutPlanForActivate(ctx, planId, isActive)
 }
 
-func (m *mockKnitClient) RegisterPlan(ctx context.Context, spec apiplans.PlanSpec) (apiplans.Detail, error) {
+func (m *mockKnitClient) RegisterPlan(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.RegisterPlan = append(m.Calls.RegisterPlan, spec)
@@ -250,12 +250,12 @@ func (m *mockKnitClient) RegisterPlan(ctx context.Context, spec apiplans.PlanSpe
 	return m.Impl.RegisterPlan(ctx, spec)
 }
 
-func (m *mockKnitClient) UpdateResources(ctx context.Context, runId string, resources apiplans.ResourceLimitChange) (apiplans.Detail, error) {
+func (m *mockKnitClient) UpdateResources(ctx context.Context, runId string, resources plans.ResourceLimitChange) (plans.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.UpdateResources = append(m.Calls.UpdateResources, struct {
 		PlanId    string
-		Resources apiplans.ResourceLimitChange
+		Resources plans.ResourceLimitChange
 	}{PlanId: runId, Resources: resources})
 	if m.Impl.UpdateResources == nil {
 		m.t.Fatal("UpdateResources is not ready to be called")
@@ -263,7 +263,7 @@ func (m *mockKnitClient) UpdateResources(ctx context.Context, runId string, reso
 	return m.Impl.UpdateResources(ctx, runId, resources)
 }
 
-func (m *mockKnitClient) GetRun(ctx context.Context, runId string) (apirun.Detail, error) {
+func (m *mockKnitClient) GetRun(ctx context.Context, runId string) (runs.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.GetRun = append(m.Calls.GetRun, runId)
@@ -292,7 +292,7 @@ func (m *mockKnitClient) GetRunLog(ctx context.Context, runId string, follow boo
 func (m *mockKnitClient) FindRun(
 	ctx context.Context,
 	query rest.FindRunParameter,
-) ([]apirun.Detail, error) {
+) ([]runs.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.FindRun = append(
@@ -305,7 +305,7 @@ func (m *mockKnitClient) FindRun(
 	return m.Impl.FindRun(ctx, query)
 }
 
-func (m *mockKnitClient) Abort(ctx context.Context, runId string) (apirun.Detail, error) {
+func (m *mockKnitClient) Abort(ctx context.Context, runId string) (runs.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.Abort = append(m.Calls.Abort, runId)
@@ -315,7 +315,7 @@ func (m *mockKnitClient) Abort(ctx context.Context, runId string) (apirun.Detail
 	return m.Impl.Abort(ctx, runId)
 }
 
-func (m *mockKnitClient) Tearoff(ctx context.Context, runId string) (apirun.Detail, error) {
+func (m *mockKnitClient) Tearoff(ctx context.Context, runId string) (runs.Detail, error) {
 	m.t.Helper()
 
 	m.Calls.Tearoff = append(m.Calls.Tearoff, runId)

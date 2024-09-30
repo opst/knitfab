@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
+	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
-	api_runs "github.com/opst/knitfab/pkg/api/types/runs"
+	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/db/mocks"
@@ -59,11 +60,11 @@ func TestManager_callGetAgentName(t *testing.T) {
 			ctx := context.Background()
 			testee := uploaded.New(dbdata)
 
-			hooks := hook.Func[api_runs.Detail]{
-				BeforeFn: func(d api_runs.Detail) error {
+			hooks := hook.Func[apiruns.Detail]{
+				BeforeFn: func(d apiruns.Detail) error {
 					return nil
 				},
-				AfterFn: func(d api_runs.Detail) error {
+				AfterFn: func(d apiruns.Detail) error {
 					t.Error("after hook should not be called")
 					return nil
 				},
@@ -168,12 +169,12 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 			testee := uploaded.New(dbdata)
 
 			beforeHookHasBeenInvoked := false
-			h := hook.Func[api_runs.Detail]{
-				BeforeFn: func(d api_runs.Detail) error {
+			h := hook.Func[apiruns.Detail]{
+				BeforeFn: func(d apiruns.Detail) error {
 					beforeHookHasBeenInvoked = true
 
-					want := api_runs.ComposeDetail(given)
-					if !d.Equal(&want) {
+					want := bindruns.ComposeDetail(given)
+					if !d.Equal(want) {
 						t.Errorf(
 							"detail should be %+v: actual = %+v",
 							want, d,
@@ -182,7 +183,7 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 
 					return when.errBeforeHook
 				},
-				AfterFn: func(d api_runs.Detail) error {
+				AfterFn: func(d apiruns.Detail) error {
 					t.Error("after hook should not be called")
 					return nil
 				},

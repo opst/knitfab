@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	apidata "github.com/opst/knitfab/pkg/api/types/data"
-	apiplan "github.com/opst/knitfab/pkg/api/types/plans"
-	apirun "github.com/opst/knitfab/pkg/api/types/runs"
-	apitags "github.com/opst/knitfab/pkg/api/types/tags"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	dbmock "github.com/opst/knitfab/pkg/db/mocks"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/rfctime"
 	"github.com/opst/knitfab/pkg/utils/try"
 
 	"github.com/opst/knitfab/cmd/knitd/handlers"
@@ -195,10 +195,10 @@ func TestGetDataForDataHandler(t *testing.T) {
 			t.Error("DataInterface.Find did not call with correct userTag args.")
 		}
 
-		expected := []apidata.Detail{
+		expected := []data.Detail{
 			{
 				KnitId: "knit-1",
-				Tags: []apitags.Tag{
+				Tags: []tags.Tag{
 					{Key: "project", Value: "test-project"},
 					{Key: "series", Value: "42"},
 					{Key: "type", Value: "training-dataset"},
@@ -206,31 +206,31 @@ func TestGetDataForDataHandler(t *testing.T) {
 					{Key: kdb.KeyKnitId, Value: "knit-1"},
 					{Key: kdb.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
 				},
-				Upstream: apidata.AssignedTo{
-					Run: apirun.Summary{
+				Upstream: data.AssignedTo{
+					Run: runs.Summary{
 						RunId: "run-1", Status: string(kdb.Done),
-						Plan: apiplan.Summary{PlanId: "plan-1", Name: "knit#uploaded"},
+						Plan: plans.Summary{PlanId: "plan-1", Name: "knit#uploaded"},
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-07-29T01:10:25.666+09:00",
 						)).OrFatal(t),
 					},
-					Mountpoint: apiplan.Mountpoint{Path: "/out"},
+					Mountpoint: plans.Mountpoint{Path: "/out"},
 				},
-				Downstreams: []apidata.AssignedTo{
+				Downstreams: []data.AssignedTo{
 					{
-						Run: apirun.Summary{
+						Run: runs.Summary{
 							RunId: "run-2", Status: string(kdb.Running),
-							Plan: apiplan.Summary{
+							Plan: plans.Summary{
 								PlanId: "plan-2",
-								Image:  &apiplan.Image{Repository: "repo.invalid/trainer", Tag: "v1"},
+								Image:  &plans.Image{Repository: "repo.invalid/trainer", Tag: "v1"},
 							},
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-07-30T01:10:25.222+09:00",
 							)).OrFatal(t),
 						},
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/in",
-							Tags: []apitags.Tag{
+							Tags: []tags.Tag{
 								{Key: "project", Value: "test-project"},
 								{Key: "type", Value: "training-dataset"},
 								{Key: "format", Value: "semantic-segmentation"},
@@ -239,15 +239,15 @@ func TestGetDataForDataHandler(t *testing.T) {
 					},
 					// invalidated run should not appear
 				},
-				Nomination: []apidata.NominatedBy{
+				Nomination: []data.NominatedBy{
 					{
-						Plan: apiplan.Summary{
+						Plan: plans.Summary{
 							PlanId: "plan-2",
-							Image:  &apiplan.Image{Repository: "repo.invalid/trainer", Tag: "v1"},
+							Image:  &plans.Image{Repository: "repo.invalid/trainer", Tag: "v1"},
 						},
-						Mountpoint: apiplan.Mountpoint{
+						Mountpoint: plans.Mountpoint{
 							Path: "/in",
-							Tags: []apitags.Tag{
+							Tags: []tags.Tag{
 								{Key: "type", Value: "training-dataset"},
 								{Key: "format", Value: "semantic-segmentation"},
 							},
@@ -257,47 +257,44 @@ func TestGetDataForDataHandler(t *testing.T) {
 			},
 			{
 				KnitId: "knit-2",
-				Tags: []apitags.Tag{
+				Tags: []tags.Tag{
 					{Key: "type", Value: "model-parameter"},
 					{Key: "framework", Value: "pytorch"},
 					{Key: "task", Value: "semantic-segmentation"},
 					{Key: kdb.KeyKnitId, Value: "knit-2"},
 					{Key: kdb.KeyKnitTransient, Value: "processing"},
 				},
-				Upstream: apidata.AssignedTo{
-					Run: apirun.Summary{
+				Upstream: data.AssignedTo{
+					Run: runs.Summary{
 						RunId: "run-2", Status: string(kdb.Running),
-						Plan: apiplan.Summary{
+						Plan: plans.Summary{
 							PlanId: "plan-2",
-							Image:  &apiplan.Image{Repository: "repo.invalid/trainer", Tag: "v1"},
+							Image:  &plans.Image{Repository: "repo.invalid/trainer", Tag: "v1"},
 						},
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-07-30T01:10:25.222+09:00",
 						)).OrFatal(t),
 					},
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/out",
-						Tags: []apitags.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "framework", Value: "pytorch"},
 							{Key: "task", Value: "semantic-segmentation"},
 						},
 					},
 				},
-				Downstreams: []apidata.AssignedTo{},
-				Nomination:  []apidata.NominatedBy{},
+				Downstreams: []data.AssignedTo{},
+				Nomination:  []data.NominatedBy{},
 			},
 		}
 
-		actualResponse := []apidata.Detail{}
+		actualResponse := []data.Detail{}
 		if err := json.Unmarshal(respRec.Body.Bytes(), &actualResponse); err != nil {
 			t.Errorf("response is not illegal. error = %v", err)
 		}
 
-		if !cmp.SliceEqWith(
-			actualResponse, expected,
-			func(a, b apidata.Detail) bool { return a.Equal(&b) },
-		) {
+		if !cmp.SliceEqWith(actualResponse, expected, data.Detail.Equal) {
 			t.Errorf(
 				"data does not match. (actual, expected) = \n(%+v, \n%+v)",
 				actualResponse, expected,
@@ -334,17 +331,14 @@ func TestGetDataForDataHandler(t *testing.T) {
 			t.Errorf("Content-Type: %s != %s", expectedContentType, contentTypeBody)
 		}
 
-		expected := []apidata.Detail{}
-		actualResponse := []apidata.Detail{}
+		expected := []data.Detail{}
+		actualResponse := []data.Detail{}
 		err = json.Unmarshal(respRec.Body.Bytes(), &actualResponse)
 		if err != nil {
 			t.Errorf("response is not illegal. error = %v", err)
 		}
 
-		if !cmp.SliceContentEqWith(
-			utils.RefOf(actualResponse), utils.RefOf(expected),
-			(*apidata.Detail).Equal,
-		) {
+		if !cmp.SliceContentEqWith(actualResponse, expected, data.Detail.Equal) {
 			t.Errorf(
 				"data does not match. (actual, expected) = \n(%v, \n%v)",
 				actualResponse, expected,
@@ -452,7 +446,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 							{Key: "project", Value: "testing"},
 							{Key: "addtag1", Value: "addVal1"},
 							{Key: "addtag2", Value: "addVal2"},
-							{Key: apitags.KeyKnitId, Value: knitId},
+							{Key: tags.KeyKnitId, Value: knitId},
 						}),
 					},
 					Upsteram: kdb.Dependency{
@@ -541,45 +535,45 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			},
 		}
 
-		expectedResponse := apidata.Detail{
+		expectedResponse := data.Detail{
 			KnitId: knitId,
-			Tags: []apitags.Tag{
+			Tags: []tags.Tag{
 				{Key: "type", Value: "model-parameter"},
 				{Key: "project", Value: "testing"},
 				{Key: "addtag1", Value: "addVal1"},
 				{Key: "addtag2", Value: "addVal2"},
-				{Key: apitags.KeyKnitId, Value: knitId},
+				{Key: tags.KeyKnitId, Value: knitId},
 			},
-			Upstream: apidata.AssignedTo{
-				Run: apirun.Summary{
+			Upstream: data.AssignedTo{
+				Run: runs.Summary{
 					RunId: "run#1", Status: string(kdb.Done),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-11T12:34:56+09:00")).OrFatal(t),
-					Plan: apiplan.Summary{
+					Plan: plans.Summary{
 						PlanId: "plan#1",
-						Image:  &apiplan.Image{Repository: "repo.invalid/image", Tag: "v1"},
+						Image:  &plans.Image{Repository: "repo.invalid/image", Tag: "v1"},
 					},
 				},
-				Mountpoint: apiplan.Mountpoint{
+				Mountpoint: plans.Mountpoint{
 					Path: "/out/1",
-					Tags: []apitags.Tag{
+					Tags: []tags.Tag{
 						{Key: "type", Value: "model-parameter"},
 						{Key: "project", Value: "testing"},
 					},
 				},
 			},
-			Downstreams: []apidata.AssignedTo{
+			Downstreams: []data.AssignedTo{
 				{
-					Run: apirun.Summary{
+					Run: runs.Summary{
 						RunId: "run#2", Status: string(kdb.Running),
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-12T12:34:56+09:00")).OrFatal(t),
-						Plan: apiplan.Summary{
+						Plan: plans.Summary{
 							PlanId: "plan#2",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image", Tag: "v2"},
+							Image:  &plans.Image{Repository: "repo.invalid/image", Tag: "v2"},
 						},
 					},
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/in",
-						Tags: []apitags.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "project", Value: "testing"},
 							{Key: "remTag1", Value: "remVal1"},
@@ -587,17 +581,17 @@ func TestPutTagsForDataHandler(t *testing.T) {
 					},
 				},
 				{
-					Run: apirun.Summary{
+					Run: runs.Summary{
 						RunId: "run#3", Status: string(kdb.Starting),
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-12T13:34:56+09:00")).OrFatal(t),
-						Plan: apiplan.Summary{
+						Plan: plans.Summary{
 							PlanId: "plan#3",
-							Image:  &apiplan.Image{Repository: "repo.invalid/image", Tag: "v3"},
+							Image:  &plans.Image{Repository: "repo.invalid/image", Tag: "v3"},
 						},
 					},
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/in",
-						Tags: []apitags.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "project", Value: "testing"},
 							{Key: "remTag2", Value: "remVal2"},
@@ -605,15 +599,15 @@ func TestPutTagsForDataHandler(t *testing.T) {
 					},
 				},
 			},
-			Nomination: []apidata.NominatedBy{
+			Nomination: []data.NominatedBy{
 				{
-					Plan: apiplan.Summary{
+					Plan: plans.Summary{
 						PlanId: "plan#4",
-						Image:  &apiplan.Image{Repository: "repo.invalid/image", Tag: "v3"},
+						Image:  &plans.Image{Repository: "repo.invalid/image", Tag: "v3"},
 					},
-					Mountpoint: apiplan.Mountpoint{
+					Mountpoint: plans.Mountpoint{
 						Path: "/in",
-						Tags: []apitags.Tag{
+						Tags: []tags.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "project", Value: "testing"},
 							{Key: "addTag1", Value: "addVal1"},
@@ -654,10 +648,10 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			t.Error("UpdateTagofData did not call with correct args.")
 		}
 
-		actualResponse := apidata.Detail{}
+		actualResponse := data.Detail{}
 		if err := json.Unmarshal(respRec.Body.Bytes(), &actualResponse); err != nil {
 			t.Errorf("response is not DataChangeResult. error = %v", err)
-		} else if !expectedResponse.Equal(&actualResponse) {
+		} else if !expectedResponse.Equal(actualResponse) {
 			t.Errorf(
 				"unmatch body:\n===actual===\n%s\n===expected===\n%s",
 				try.To(json.MarshalIndent(actualResponse, "", "  ")).OrFatal(t),
