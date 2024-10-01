@@ -139,6 +139,11 @@ type PlanInterface interface {
 	Find(context.Context, logic.Ternary, ImageIdentifier, []Tag, []Tag) ([]string, error)
 }
 
+type Annotation struct {
+	Key   string
+	Value string
+}
+
 // Main body of plan, describes "what it is".
 //
 // Use Plan if you need PlanBody & relationship with others.
@@ -172,6 +177,12 @@ type PlanBody struct {
 	Resources map[string]resource.Quantity
 
 	OnNode []OnNode
+
+	// ServiceAccount is the name of the service agent that Workers of this Plan should use.
+	ServiceAccount string
+
+	// Annotations is a list of annotations for this Plan.
+	Annotations []Annotation
 }
 
 // true iff pb and other are equal, means they represent same entity
