@@ -28,8 +28,8 @@ func TestYamler(t *testing.T) {
 		yamler.Entry(yamler.Text("key3"), yamler.Bool(false)),
 		yamler.Entry(yamler.Text("key4"), yamler.Number(42)),
 		yamler.Entry(yamler.Text("key4.2"), yamler.Number(4.2)),
-		yamler.Entry(yamler.Text("key5"), yamler.Map(
-			yamler.Entry(yamler.Text("child1", yamler.WithHeadComment("comment on child")), yamler.Text("child value 1: with colon")),
+		yamler.Entry(yamler.Text("key5", yamler.WithFootComment("foot comment")), yamler.Map(
+			yamler.Entry(yamler.Text("child1", yamler.WithHeadComment("comment on child"), yamler.WithFootComment("foot comment on child")), yamler.Text("child value 1: with colon")),
 		)),
 		yamler.Entry(
 			yamler.Text("key6"),
@@ -64,6 +64,9 @@ key4.2: 4.2
 key5:
   # comment on child
   child1: 'child value 1: with colon'
+  # foot comment on child
+# foot comment
+
 key6:
   - abc
   - true

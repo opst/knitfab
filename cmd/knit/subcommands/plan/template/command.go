@@ -426,17 +426,45 @@ func (l *logpoint) yamlNode() *yaml.Node {
 	)
 }
 
+type annotations plans.Annotations
+
+func (a annotations) yamlNode() *yaml.Node {
+	base := plans.Annotations(a)
+
+	yannots := make([]*yaml.Node, len(base))
+	for i, ann := range base {
+		yannots[i] = y.Text(ann.Key+"="+ann.Value, y.WithStyle(yaml.DoubleQuotedStyle))
+	}
+
+	return y.Seq(yannots...)
+}
+
 type planSpecWithDocument struct {
-	Image    image
-	Inputs   []mountpoint
-	Outputs  []mountpoint
-	Log      *logpoint
-	Resource map[string]string
-	Active   bool
+	Image       image
+	Inputs      []mountpoint
+	Outputs     []mountpoint
+	Log         *logpoint
+	Resource    map[string]string
+	Active      bool
+	Annotations annotations
 }
 
 func (p planSpecWithDocument) MarshalYAML() (interface{}, error) {
 	doc := y.Map(
+		y.Entry(
+			y.Text("annotations",
+				y.WithHeadComment(`
+annotations (optional, mutable):
+  Set Annotations of this Plan in list of "key=value" format string.
+  You can use this for your own purpose, for example documentation. This does not affect lineage tracking.
+  Knitfab Extensions may refer this.
+`),
+				y.WithFootComment(`  - "key=value"
+  - "description=This is a Plan for ..."
+`),
+			),
+			p.Annotations.yamlNode(),
+		),
 		y.Entry(
 			y.Text("image", y.WithHeadComment(`
 image:
@@ -476,7 +504,7 @@ log (optional):
 		),
 		y.Entry(
 			y.Text("active", y.WithHeadComment(`
-active (optional):
+active (optional, mutable):
   To suspend executing Runs by this Plan, set false explicitly.
   If missing or null, it is assumed as true.
 `)),
@@ -484,7 +512,7 @@ active (optional):
 		),
 		y.Entry(
 			y.Text("resouces", y.WithHeadComment(`
-resource (optional):
+resource (optional, mutable):
 Specify the resource , cpu or memory for example, requirements for this Plan.
 This value can be changed after the Plan is applied.
 
@@ -546,6 +574,11 @@ memory (optional; default = 1Gi):
 #   #   If no node matches, runs of the plan will be scheduled but not started.
 #   must:
 #     - "accelarator=gpu"
+#
+# # service_account (optional, mutable):
+# #   Specify the service account to run this Plan.
+# #   If missing or null, the service account is not used.
+# service_account: "default"
 `
 
 	return doc, nil
