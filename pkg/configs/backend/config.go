@@ -122,16 +122,16 @@ func (icc *InitContainerConfig) Image() string {
 }
 
 type NurseContainerConfig struct {
-	image          string
-	serviceAccount string
+	image               string
+	serviceAccountSeret string
 }
 
 func (ncc *NurseContainerConfig) Image() string {
 	return ncc.image
 }
 
-func (ncc *NurseContainerConfig) ServiceAccount() string {
-	return ncc.serviceAccount
+func (ncc *NurseContainerConfig) ServiceAccountSecret() string {
+	return ncc.serviceAccountSeret
 }
 
 type KeychainsConfig struct {

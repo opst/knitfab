@@ -127,14 +127,14 @@ func (i *InitContainerConfigMarshall) trySeal(path string) *InitContainerConfig 
 }
 
 type NurseContainerConfigMarshall struct {
-	Image          string `yaml:"image"`
-	ServiceAccount string `yaml:"serviceAccount"`
+	Image                string `yaml:"image"`
+	ServiceAccountSecret string `yaml:"serviceAccountSecret"`
 }
 
 func (n *NurseContainerConfigMarshall) trySeal(path string) *NurseContainerConfig {
 	return &NurseContainerConfig{
-		image:          required(n.Image, path+".image"),
-		serviceAccount: required(n.ServiceAccount, path+".serviceAccount"),
+		image:               required(n.Image, path+".image"),
+		serviceAccountSeret: required(n.ServiceAccountSecret, path+".serviceAccountSecret"),
 	}
 }
 

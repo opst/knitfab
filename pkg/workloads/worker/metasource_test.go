@@ -39,8 +39,8 @@ func TestRunExecutable(t *testing.T) {
 				Image: "repo.invalid/init:latest",
 			},
 			Nurse: &bconf.NurseContainerConfigMarshall{
-				ServiceAccount: "test-sa",
-				Image:          "repo.invalid/nurse:latest",
+				ServiceAccountSecret: "test-sa-secret",
+				Image:                "repo.invalid/nurse:latest",
 			},
 		},
 		Keychains: &bconf.KeychainsConfigMarshall{
@@ -340,7 +340,7 @@ func TestRunExecutable(t *testing.T) {
 			BackoffLimit: ptr.Ref[int32](0),
 			Template: kubecore.PodTemplateSpec{
 				Spec: kubecore.PodSpec{
-					ServiceAccountName:           config.Worker().Nurse().ServiceAccount(),
+					ServiceAccountName:           "",
 					AutomountServiceAccountToken: ptr.Ref(false),
 					EnableServiceLinks:           ptr.Ref(false),
 					RestartPolicy:                kubecore.RestartPolicyNever,
@@ -456,38 +456,8 @@ func TestRunExecutable(t *testing.T) {
 						{
 							Name: "serviceaccount",
 							VolumeSource: kubecore.VolumeSource{
-								Projected: &kubecore.ProjectedVolumeSource{
-									DefaultMode: ptr.Ref[int32](0644),
-									Sources: []kubecore.VolumeProjection{
-										{
-											ServiceAccountToken: &kubecore.ServiceAccountTokenProjection{
-												Path: "token",
-											},
-										},
-										{
-											ConfigMap: &kubecore.ConfigMapProjection{
-												LocalObjectReference: kubecore.LocalObjectReference{
-													Name: "kube-root-ca.crt",
-												},
-												Items: []kubecore.KeyToPath{
-													{Key: "ca.crt", Path: "ca.crt"},
-												},
-											},
-										},
-										{
-											DownwardAPI: &kubecore.DownwardAPIProjection{
-												Items: []kubecore.DownwardAPIVolumeFile{
-													{
-														Path: "namespace",
-														FieldRef: &kubecore.ObjectFieldSelector{
-															APIVersion: "v1",
-															FieldPath:  "metadata.namespace",
-														},
-													},
-												},
-											},
-										},
-									},
+								Secret: &kubecore.SecretVolumeSource{
+									SecretName: "test-sa-secret",
 								},
 							},
 						},
@@ -636,6 +606,170 @@ func TestRunExecutable(t *testing.T) {
 			},
 		},
 	))
+
+	t.Run("when it builds with service account, it reflects to job spec", theoryOk(
+		When{
+			run: kdb.Run{
+				RunBody: kdb.RunBody{
+					Id: "test-run-id",
+					PlanBody: kdb.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &kdb.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
+						ServiceAccount: "service-account-name",
+					},
+				},
+				Inputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   kdb.MountPoint{Id: 1, Path: "/in/1"},
+					},
+				},
+				Outputs: []kdb.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   kdb.MountPoint{Id: 3, Path: "/out/3"},
+					},
+				},
+				Log: &kdb.Log{Id: 5, KnitDataBody: dsLog5},
+			},
+		},
+		kubebatch.JobSpec{
+			Parallelism:  ptr.Ref[int32](1),
+			BackoffLimit: ptr.Ref[int32](0),
+			Template: kubecore.PodTemplateSpec{
+				Spec: kubecore.PodSpec{
+					ServiceAccountName:           "service-account-name",
+					AutomountServiceAccountToken: ptr.Ref(true),
+					EnableServiceLinks:           ptr.Ref(false),
+					RestartPolicy:                kubecore.RestartPolicyNever,
+					InitContainers: []kubecore.Container{
+						{
+							Name:  "init-main",
+							Image: config.Worker().Init().Image(),
+							Args:  []string{"/out/3"},
+							VolumeMounts: []kubecore.VolumeMount{
+								{
+									Name: dsOut3.KnitId, MountPath: "/out/3",
+									ReadOnly: true,
+								},
+							},
+							Resources: kubecore.ResourceRequirements{
+								Limits: kubecore.ResourceList{
+									"cpu":    resource.MustParse("50m"),
+									"memory": resource.MustParse("100Mi"),
+								},
+							},
+						},
+						{
+							Name:  "init-log",
+							Image: config.Worker().Init().Image(),
+							Args:  []string{"/log"},
+							VolumeMounts: []kubecore.VolumeMount{
+								{
+									Name: dsLog5.KnitId, MountPath: "/log",
+									ReadOnly: true,
+								},
+							},
+							Resources: kubecore.ResourceRequirements{
+								Limits: kubecore.ResourceList{
+									"cpu":    resource.MustParse("50m"),
+									"memory": resource.MustParse("100Mi"),
+								},
+							},
+						},
+					},
+					Containers: []kubecore.Container{
+						{
+							Name:  "main",
+							Image: "repo.invalid/image-name:1.0",
+							VolumeMounts: []kubecore.VolumeMount{
+								{
+									Name: dsIn1.KnitId, MountPath: "/in/1",
+									ReadOnly: true,
+								},
+								{
+									Name: dsOut3.KnitId, MountPath: "/out/3",
+									ReadOnly: false,
+								},
+							},
+						},
+						{
+							Name:  "nurse",
+							Image: config.Worker().Nurse().Image(),
+							Args:  []string{"main", "/log/log"},
+							Resources: kubecore.ResourceRequirements{
+								Limits: kubecore.ResourceList{
+									"cpu":    resource.MustParse("50m"),
+									"memory": resource.MustParse("100Mi"),
+								},
+							},
+							VolumeMounts: []kubecore.VolumeMount{
+								{
+									Name: dsLog5.KnitId, MountPath: "/log",
+								},
+								{
+									Name:      "serviceaccount",
+									MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+									ReadOnly:  true,
+								},
+							},
+							Env: []kubecore.EnvVar{
+								{
+									Name: "POD_NAME",
+									ValueFrom: &kubecore.EnvVarSource{
+										FieldRef: &kubecore.ObjectFieldSelector{FieldPath: "metadata.name"},
+									},
+								},
+								{
+									Name: "NAMESPACE",
+									ValueFrom: &kubecore.EnvVarSource{
+										FieldRef: &kubecore.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+									},
+								},
+							},
+						},
+					},
+					Volumes: []kubecore.Volume{
+						{
+							Name: "serviceaccount",
+							VolumeSource: kubecore.VolumeSource{
+								Secret: &kubecore.SecretVolumeSource{
+									SecretName: "test-sa-secret",
+								},
+							},
+						},
+						{
+							Name: dsIn1.KnitId,
+							VolumeSource: kubecore.VolumeSource{
+								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
+									ClaimName: dsIn1.VolumeRef,
+								},
+							},
+						},
+						{
+							Name: dsOut3.KnitId,
+							VolumeSource: kubecore.VolumeSource{
+								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
+									ClaimName: dsOut3.VolumeRef,
+								},
+							},
+						},
+						{
+							Name: dsLog5.KnitId,
+							VolumeSource: kubecore.VolumeSource{
+								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
+									ClaimName: dsLog5.VolumeRef,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	))
+
 	t.Run("when it builds a k8s job spec with output and no log, it creates job specification", theoryOk(
 		When{
 			run: kdb.Run{
@@ -675,7 +809,7 @@ func TestRunExecutable(t *testing.T) {
 			BackoffLimit: ptr.Ref[int32](0),
 			Template: kubecore.PodTemplateSpec{
 				Spec: kubecore.PodSpec{
-					ServiceAccountName:           config.Worker().Nurse().ServiceAccount(),
+					ServiceAccountName:           "",
 					AutomountServiceAccountToken: ptr.Ref(false),
 					EnableServiceLinks:           ptr.Ref(false),
 					RestartPolicy:                kubecore.RestartPolicyNever,
@@ -793,7 +927,7 @@ func TestRunExecutable(t *testing.T) {
 			BackoffLimit: ptr.Ref[int32](0),
 			Template: kubecore.PodTemplateSpec{
 				Spec: kubecore.PodSpec{
-					ServiceAccountName:           config.Worker().Nurse().ServiceAccount(),
+					ServiceAccountName:           "",
 					AutomountServiceAccountToken: ptr.Ref(false),
 					EnableServiceLinks:           ptr.Ref(false),
 					RestartPolicy:                kubecore.RestartPolicyNever,
@@ -871,38 +1005,8 @@ func TestRunExecutable(t *testing.T) {
 						{
 							Name: "serviceaccount",
 							VolumeSource: kubecore.VolumeSource{
-								Projected: &kubecore.ProjectedVolumeSource{
-									DefaultMode: ptr.Ref[int32](0644),
-									Sources: []kubecore.VolumeProjection{
-										{
-											ServiceAccountToken: &kubecore.ServiceAccountTokenProjection{
-												Path: "token",
-											},
-										},
-										{
-											ConfigMap: &kubecore.ConfigMapProjection{
-												LocalObjectReference: kubecore.LocalObjectReference{
-													Name: "kube-root-ca.crt",
-												},
-												Items: []kubecore.KeyToPath{
-													{Key: "ca.crt", Path: "ca.crt"},
-												},
-											},
-										},
-										{
-											DownwardAPI: &kubecore.DownwardAPIProjection{
-												Items: []kubecore.DownwardAPIVolumeFile{
-													{
-														Path: "namespace",
-														FieldRef: &kubecore.ObjectFieldSelector{
-															APIVersion: "v1",
-															FieldPath:  "metadata.namespace",
-														},
-													},
-												},
-											},
-										},
-									},
+								Secret: &kubecore.SecretVolumeSource{
+									SecretName: "test-sa-secret",
 								},
 							},
 						},
@@ -964,7 +1068,7 @@ func TestRunExecutable(t *testing.T) {
 			BackoffLimit: ptr.Ref[int32](0),
 			Template: kubecore.PodTemplateSpec{
 				Spec: kubecore.PodSpec{
-					ServiceAccountName:           config.Worker().Nurse().ServiceAccount(),
+					ServiceAccountName:           "",
 					AutomountServiceAccountToken: ptr.Ref(false),
 					EnableServiceLinks:           ptr.Ref(false),
 					RestartPolicy:                kubecore.RestartPolicyNever,

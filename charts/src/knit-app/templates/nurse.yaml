@@ -55,3 +55,22 @@ subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: {{ .Values.nurse.serviceAccount }}
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.nurse.serviceAccount }}-secret
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: nurse
+    app.kubernetes.io/name: nurse
+  annotations:
+    kubernetes.io/service-account.name: {{ .Values.nurse.serviceAccount }}
+type: kubernetes.io/service-account-token
