@@ -353,6 +353,40 @@ func registerPlan(ctx context.Context, tx kpool.Tx, plan *kdb.PlanSpec) (string,
 			return "", xe.Wrap(err)
 		}
 
+		if annotations := plan.Annotations(); 0 < len(annotations) {
+			annoKeys := make([]string, len(annotations))
+			annoValues := make([]string, len(annotations))
+
+			for i, anno := range plan.Annotations() {
+				annoKeys[i] = anno.Key
+				annoValues[i] = anno.Value
+			}
+
+			if _, err := tx.Exec(
+				ctx,
+				`
+				insert into "plan_annotation" ("plan_id", "key", "value")
+				select $1 as "plan_id", unnest($2::varchar[]) as "key", unnest($3::varchar[]) as "value"
+				on conflict do nothing
+				`,
+				planId, annoKeys, annoValues,
+			); err != nil {
+				return "", xe.Wrap(err)
+			}
+		}
+
+		if serviceAccount := plan.ServiceAccount(); serviceAccount != "" {
+			if _, err := tx.Exec(
+				ctx,
+				`
+				insert into "plan_service_account" ("plan_id", "service_account")
+				values ($1, $2)
+				`,
+				planId, serviceAccount,
+			); err != nil {
+				return "", xe.Wrap(err)
+			}
+		}
 		return
 	}
 

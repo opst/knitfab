@@ -95,13 +95,15 @@ func (step *Step) apply(tbls *Tables) error {
 
 // Declare premise of test.
 type Operation struct {
-	Plan          []Plan
-	PlanResources []PlanResource
-	OnNode        []PlanOnNode
-	PlanImage     []PlanImage
-	PlanPseudo    []PlanPseudo
-	Inputs        map[Input]InputAttr
-	Outputs       map[Output]OutputAttr
+	Plan               []Plan
+	PlanResources      []PlanResource
+	OnNode             []PlanOnNode
+	PlanImage          []PlanImage
+	PlanPseudo         []PlanPseudo
+	Inputs             map[Input]InputAttr
+	Outputs            map[Output]OutputAttr
+	PlanAnnotations    []Annotation
+	PlanServiceAccount []ServiceAccount
 
 	Steps []Step
 
@@ -180,6 +182,16 @@ func (prem *Operation) Apply(ctx context.Context, pool kpool.Pool) error {
 				return err
 			}
 		}
+	}
+
+	for _, sa := range prem.PlanServiceAccount {
+		if err := tbls.InsertPlanServiceAccount(&sa); err != nil {
+			return err
+		}
+	}
+
+	if err := tbls.InsertPlanAnnotations(prem.PlanAnnotations); err != nil {
+		return err
 	}
 
 	for nth, step := range prem.Steps {
