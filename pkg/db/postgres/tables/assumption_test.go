@@ -134,6 +134,16 @@ func TestOperation(t *testing.T) {
 				KnitId: []string{th.Padding36("data-a.run-b.plan-c")},
 			},
 		},
+		PlanServiceAccount: []tables.ServiceAccount{
+			{PlanId: th.Padding36("plan-1"), ServiceAccount: "service-account-1"},
+			{PlanId: th.Padding36("plan-2"), ServiceAccount: "service-account-2"},
+		},
+		PlanAnnotations: []tables.Annotation{
+			{PlanId: th.Padding36("plan-2"), Key: "anno2-1", Value: "val2-1"},
+			{PlanId: th.Padding36("plan-2"), Key: "anno2-2", Value: "val2-2"},
+			{PlanId: th.Padding36("plan-3"), Key: "anno3-1", Value: "val3a"},
+			{PlanId: th.Padding36("plan-3"), Key: "anno3-1", Value: "val3b"},
+		},
 		Steps: []tables.Step{
 			{
 				Run: tables.Run{
@@ -636,6 +646,41 @@ func TestOperation(t *testing.T) {
 			actual, expected,
 			func(a, b knitIdTimestamp) bool {
 				return a.InputId == b.InputId && a.Timestamp.Equal(b.Timestamp)
+			},
+		) {
+			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)
+		}
+	})
+
+	t.Run("service account", func(t *testing.T) {
+		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
+		defer conn.Release()
+
+		actual := try.To(scanner.New[tables.ServiceAccount]().QueryAll(
+			ctx, conn, `table "plan_service_account"`,
+		)).OrFatal(t)
+
+		expected := testee.PlanServiceAccount
+
+		if !cmp.SliceContentEq(actual, expected) {
+			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)
+		}
+	})
+
+	t.Run("plan_annotations", func(t *testing.T) {
+		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
+		defer conn.Release()
+
+		actual := try.To(scanner.New[tables.Annotation]().QueryAll(
+			ctx, conn, `table "plan_annotation"`,
+		)).OrFatal(t)
+
+		expected := testee.PlanAnnotations
+
+		if !cmp.SliceContentEqWith(
+			actual, expected,
+			func(a, b tables.Annotation) bool {
+				return a.PlanId == b.PlanId && a.Key == b.Key && a.Value == b.Value
 			},
 		) {
 			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)

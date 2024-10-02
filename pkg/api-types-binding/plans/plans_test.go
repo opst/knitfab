@@ -19,8 +19,13 @@ func TestComposeDetail(t *testing.T) {
 			when: kdb.Plan{
 				PlanBody: kdb.PlanBody{
 					PlanId: "plan-1", Active: true, Hash: "hash1",
-					Image:  &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-					Pseudo: &kdb.PseudoPlanDetail{},
+					Image:          &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+					Pseudo:         &kdb.PseudoPlanDetail{},
+					ServiceAccount: "service-account-name",
+					Annotations: []kdb.Annotation{
+						{Key: "anno1", Value: "val1"},
+						{Key: "anno2", Value: "val2"},
+					},
 				},
 				Inputs: []kdb.MountPoint{
 					{
@@ -54,6 +59,10 @@ func TestComposeDetail(t *testing.T) {
 						Repository: "image-1",
 						Tag:        "ver-1",
 					},
+					Annotations: apiplans.Annotations{
+						{Key: "anno1", Value: "val1"},
+						{Key: "anno2", Value: "val2"},
+					},
 				},
 				Inputs: []apiplans.Mountpoint{
 
@@ -79,7 +88,8 @@ func TestComposeDetail(t *testing.T) {
 						{Key: "logkey2", Value: "logval2"},
 					},
 				},
-				Active: true,
+				Active:         true,
+				ServiceAccount: "service-account-name",
 			},
 		},
 		"When a plan without log is passed, it should compose a Detail corresponding to the plan.": {

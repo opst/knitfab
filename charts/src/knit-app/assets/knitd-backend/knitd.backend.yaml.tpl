@@ -14,7 +14,7 @@ cluster:
         init:
             image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.empty.image }}:{{ .Chart.AppVersion }}"
         nurse:
-            serviceAccount: "{{ .Values.nurse.serviceAccount }}"
+            serviceAccountSecret: "{{ .Values.nurse.serviceAccount }}-secret"
             image: "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.nurse.image }}:{{ .Chart.AppVersion }}"
     keychains:
         signKeyForImportToken:

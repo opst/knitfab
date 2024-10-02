@@ -54,10 +54,11 @@ func GetPlanBody(ctx context.Context, conn kpool.Queryer, planIds []string) (map
 		select
 			"plan_id", "active", "hash",
 			"image" is not null as "is_image", coalesce("image", ''), coalesce("version", ''),
-			"name" is not null as "is_pseudo", coalesce("name", '')
+			"name" is not null as "is_pseudo", coalesce("name", ''), coalesce("service_account", '')
 		from "plan"
 		left outer join "plan_image" using ("plan_id")
 		left outer join "plan_pseudo" using ("plan_id")
+		left outer join "plan_service_account" using ("plan_id")
 		`,
 		planIds,
 	)
@@ -77,7 +78,7 @@ func GetPlanBody(ctx context.Context, conn kpool.Queryer, planIds []string) (map
 		if err := rows.Scan(
 			&plan.PlanId, &plan.Active, &plan.Hash,
 			&isImage, &image.Image, &image.Version,
-			&isPseudo, &pseudoDetail.Name,
+			&isPseudo, &pseudoDetail.Name, &plan.ServiceAccount,
 		); err != nil {
 			return nil, err
 		}
@@ -139,6 +140,29 @@ func GetPlanBody(ctx context.Context, conn kpool.Queryer, planIds []string) (map
 		}
 		plan := result[planId]
 		plan.Resources[typ] = resource.Quantity(value)
+		result[planId] = plan
+	}
+
+	annotations_rows, err := conn.Query(
+		ctx,
+		`
+		select "plan_id", "key", "value" from "plan_annotation"
+		where "plan_id" = any($1)
+		`,
+		planIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer annotations_rows.Close()
+
+	for annotations_rows.Next() {
+		var planId, key, value string
+		if err := annotations_rows.Scan(&planId, &key, &value); err != nil {
+			return nil, err
+		}
+		plan := result[planId]
+		plan.Annotations = append(plan.Annotations, kdb.Annotation{Key: key, Value: value})
 		result[planId] = plan
 	}
 

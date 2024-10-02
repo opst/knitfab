@@ -304,6 +304,13 @@ func Test_Get(t *testing.T) {
 					{PlanId: Padding36("plan/ch3#1:trainer"), Type: "cpu", Value: marshal.ResourceQuantity(resource.MustParse("0.5"))},
 					{PlanId: Padding36("plan/ch3#1:trainer"), Type: "memory", Value: marshal.ResourceQuantity(resource.MustParse("1Gi"))},
 				},
+				PlanAnnotations: []tables.Annotation{
+					{PlanId: Padding36("plan/ch3#1:trainer"), Key: "model-version", Value: "1"},
+					{PlanId: Padding36("plan/ch3#1:trainer"), Key: "description", Value: "testing"},
+				},
+				PlanServiceAccount: []tables.ServiceAccount{
+					{PlanId: Padding36("plan/ch3#1:trainer"), ServiceAccount: "trainer"},
+				},
 				OnNode: []tables.PlanOnNode{
 					{
 						PlanId: Padding36("plan/ch3#1:trainer"), Mode: kdb.MustOnNode,
@@ -463,6 +470,11 @@ func Test_Get(t *testing.T) {
 								"cpu":    resource.MustParse("0.5"),
 								"memory": resource.MustParse("1Gi"),
 							},
+							Annotations: []kdb.Annotation{
+								{Key: "model-version", Value: "1"},
+								{Key: "description", Value: "testing"},
+							},
+							ServiceAccount: "trainer",
 						},
 						Inputs: []kdb.MountPoint{
 							{
@@ -529,6 +541,11 @@ func Test_Get(t *testing.T) {
 									"cpu":    resource.MustParse("0.5"),
 									"memory": resource.MustParse("1Gi"),
 								},
+								Annotations: []kdb.Annotation{
+									{Key: "model-version", Value: "1"},
+									{Key: "description", Value: "testing"},
+								},
+								ServiceAccount: "trainer",
 							},
 						},
 						Inputs: []kdb.Assignment{

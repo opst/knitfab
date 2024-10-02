@@ -145,6 +145,24 @@ func TestPlan_Register(t *testing.T) {
 						actual, then,
 					)
 				}
+
+				if !cmp.SliceContentEqWith(actual, then, func(a, b *kdb.Plan) bool {
+					return cmp.SliceContentEq(a.Annotations, b.Annotations)
+				}) {
+					t.Errorf(
+						"Annotations of Plans are not equal:\n===actual===\n%+v\n===expected===\n%+v",
+						actual, then,
+					)
+				}
+
+				if !cmp.SliceContentEqWith(actual, then, func(a, b *kdb.Plan) bool {
+					return a.ServiceAccount == b.ServiceAccount
+				}) {
+					t.Errorf(
+						"ServiceAccount of Plans are not equal:\n===actual===\n%+v\n===expected===\n%+v",
+						actual, then,
+					)
+				}
 			}
 
 			expectedNominatorCalls := [][]int{
@@ -214,6 +232,13 @@ func TestPlan_Register(t *testing.T) {
 						{Mode: kdb.PreferOnNode, Key: "ram", Value: "xlarge"},
 						{Mode: kdb.MayOnNode, Key: "ram", Value: "x2large"},
 					},
+					ServiceAccount: "service-account",
+					Annotations: []kdb.Annotation{
+						{Key: "anno1", Value: "val1"},
+						{Key: "anno1", Value: "val1.2"},
+						{Key: "anno2", Value: "val2"},
+						{Key: "anno2", Value: "val2"}, // duplicate items shoud be ignored
+					},
 				},
 			),
 		},
@@ -234,6 +259,12 @@ func TestPlan_Register(t *testing.T) {
 					Resources: map[string]resource.Quantity{
 						"cpu":    resource.MustParse("1"),
 						"memory": resource.MustParse("1Gi"),
+					},
+					ServiceAccount: "service-account",
+					Annotations: []kdb.Annotation{
+						{Key: "anno1", Value: "val1"},
+						{Key: "anno1", Value: "val1.2"},
+						{Key: "anno2", Value: "val2"},
 					},
 				},
 				Inputs: []kdb.MountPoint{

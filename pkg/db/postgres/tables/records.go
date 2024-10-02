@@ -101,6 +101,15 @@ type Log struct {
 	OutputId int
 	PlanId   int
 }
+type Annotation struct {
+	PlanId string
+	Key    string
+	Value  string
+}
+type ServiceAccount struct {
+	PlanId         string
+	ServiceAccount string
+}
 
 type Run struct {
 	RunId                 string

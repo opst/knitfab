@@ -97,7 +97,12 @@ func TestRegisterPlan(t *testing.T) {
 		"may": ["vram=xlarge"],
 		"prefer": ["vram=large", "accelerator=tpu"],
 		"must": ["accelerator=gpu"]
-	}
+	},
+	"service_account": "example-service-account",
+	"annotations": [
+		"annot1=val1",
+		"annot2=val2"
+	]
 }`,
 				},
 				registerResult{
@@ -116,6 +121,11 @@ func TestRegisterPlan(t *testing.T) {
 							Resources: map[string]resource.Quantity{
 								"cpu":    resource.MustParse("1"),
 								"memory": resource.MustParse("1Gi"),
+							},
+							ServiceAccount: "example-service-account",
+							Annotations: []kdb.Annotation{
+								{Key: "annot1", Value: "val1"},
+								{Key: "annot2", Value: "val2"},
 							},
 						},
 						Inputs: []kdb.MountPoint{
@@ -147,7 +157,7 @@ func TestRegisterPlan(t *testing.T) {
 				},
 			},
 			then{
-				Query: allValidated[*kdb.PlanSpec](t, []kdb.PlanParam{
+				Query: allValidated(t, []kdb.PlanParam{
 					{
 						Image: "repo.invalid/image-1", Version: "0.1.0", Active: true,
 						Inputs: []kdb.MountPointParam{
@@ -185,6 +195,11 @@ func TestRegisterPlan(t *testing.T) {
 							"cpu":    resource.MustParse("1"),
 							"memory": resource.MustParse("1Gi"),
 						},
+						ServiceAccount: "example-service-account",
+						Annotations: []kdb.Annotation{
+							{Key: "annot1", Value: "val1"},
+							{Key: "annot2", Value: "val2"},
+						},
 					},
 				}),
 				Success: &resultSuccess{
@@ -196,6 +211,10 @@ func TestRegisterPlan(t *testing.T) {
 						Summary: plans.Summary{
 							PlanId: "plan-id-1",
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
+							Annotations: plans.Annotations{
+								{Key: "annot1", Value: "val1"},
+								{Key: "annot2", Value: "val2"},
+							},
 						},
 						Active: true,
 						Inputs: []plans.Mountpoint{
@@ -234,6 +253,11 @@ func TestRegisterPlan(t *testing.T) {
 								{Key: "accelerator", Value: "gpu"},
 							},
 						},
+						Resources: map[string]resource.Quantity{
+							"cpu":    resource.MustParse("1"),
+							"memory": resource.MustParse("1Gi"),
+						},
+						ServiceAccount: "example-service-account",
 					},
 				},
 			},

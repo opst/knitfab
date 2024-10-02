@@ -66,6 +66,10 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 						}
 					},
 				),
+				ServiceAccount: specInReq.ServiceAccount,
+				Annotations: utils.Map(specInReq.Annotations, func(a apiplans.Annotation) kdb.Annotation {
+					return kdb.Annotation{Key: a.Key, Value: a.Value}
+				}),
 			}
 
 			if params.Resources == nil {

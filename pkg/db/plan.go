@@ -139,6 +139,11 @@ type PlanInterface interface {
 	Find(context.Context, logic.Ternary, ImageIdentifier, []Tag, []Tag) ([]string, error)
 }
 
+type Annotation struct {
+	Key   string
+	Value string
+}
+
 // Main body of plan, describes "what it is".
 //
 // Use Plan if you need PlanBody & relationship with others.
@@ -172,6 +177,12 @@ type PlanBody struct {
 	Resources map[string]resource.Quantity
 
 	OnNode []OnNode
+
+	// ServiceAccount is the name of the service agent that Workers of this Plan should use.
+	ServiceAccount string
+
+	// Annotations is a list of annotations for this Plan.
+	Annotations []Annotation
 }
 
 // true iff pb and other are equal, means they represent same entity
@@ -186,7 +197,9 @@ func (pb *PlanBody) Equiv(other *PlanBody) bool {
 		pb.Image.Equal(other.Image) &&
 		pb.Pseudo.Equal(other.Pseudo) &&
 		cmp.SliceContentEq(pb.OnNode, other.OnNode) &&
-		cmp.MapEqWith(pb.Resources, other.Resources, resource.Quantity.Equal)
+		cmp.MapEqWith(pb.Resources, other.Resources, resource.Quantity.Equal) &&
+		pb.ServiceAccount == other.ServiceAccount &&
+		cmp.SliceContentEq(pb.Annotations, other.Annotations)
 }
 
 // how to schedule the run of this plan
@@ -374,14 +387,16 @@ func (m *MountPoint) Equiv(other *MountPoint) bool {
 }
 
 type PlanParam struct {
-	Image     string
-	Version   string
-	Active    bool
-	Inputs    []MountPointParam
-	Outputs   []MountPointParam
-	Log       *LogParam
-	OnNode    []OnNode
-	Resources map[string]resource.Quantity
+	Image          string
+	Version        string
+	Active         bool
+	Inputs         []MountPointParam
+	Outputs        []MountPointParam
+	Log            *LogParam
+	OnNode         []OnNode
+	Resources      map[string]resource.Quantity
+	ServiceAccount string
+	Annotations    []Annotation
 }
 
 // validate parameters and create PlanSpec.
@@ -398,6 +413,8 @@ func (pp PlanParam) Validate() (*PlanSpec, error) {
 	copy(outputs, pp.Outputs)
 	onNode := make([]OnNode, len(pp.OnNode))
 	copy(onNode, pp.OnNode)
+	annotations := make([]Annotation, len(pp.Annotations))
+	copy(annotations, pp.Annotations)
 	resources := make(map[string]resource.Quantity, len(pp.Resources))
 	for k, v := range pp.Resources {
 		resources[k] = v
@@ -406,14 +423,16 @@ func (pp PlanParam) Validate() (*PlanSpec, error) {
 	// take snapshot to guard from changing pp.mountpoint after return this method.
 
 	ret := &PlanSpec{
-		image:     pp.Image,
-		version:   pp.Version,
-		active:    pp.Active,
-		inputs:    inputs,
-		outputs:   outputs,
-		onNode:    onNode,
-		log:       pp.Log,
-		resources: resources,
+		image:          pp.Image,
+		version:        pp.Version,
+		active:         pp.Active,
+		inputs:         inputs,
+		outputs:        outputs,
+		onNode:         onNode,
+		log:            pp.Log,
+		resources:      resources,
+		serviceaccount: pp.ServiceAccount,
+		annotations:    annotations,
 	}
 	if err := ret.Validate(); err != nil {
 		return nil, err
@@ -431,6 +450,8 @@ func BypassValidation(hash string, err error, pp PlanParam) *PlanSpec {
 	copy(outputs, pp.Outputs)
 	onNode := make([]OnNode, len(pp.OnNode))
 	copy(onNode, pp.OnNode)
+	annotations := make([]Annotation, len(pp.Annotations))
+	copy(annotations, pp.Annotations)
 	resources := make(map[string]resource.Quantity, len(pp.Resources))
 	for k, v := range pp.Resources {
 		resources[k] = v
@@ -447,6 +468,9 @@ func BypassValidation(hash string, err error, pp PlanParam) *PlanSpec {
 		onNode:    onNode,
 		hash:      hash,
 		resources: resources,
+
+		serviceaccount: pp.ServiceAccount,
+		annotations:    annotations,
 
 		validated: true,
 		vErr:      err,
@@ -469,6 +493,9 @@ type PlanSpec struct {
 	log     *LogParam
 	onNode  []OnNode
 	hash    string
+
+	serviceaccount string
+	annotations    []Annotation
 
 	resources map[string]resource.Quantity
 
@@ -536,6 +563,14 @@ func (ps *PlanSpec) Resources() map[string]resource.Quantity {
 	return ps.resources
 }
 
+func (ps *PlanSpec) Annotations() []Annotation {
+	return ps.annotations
+}
+
+func (ps *PlanSpec) ServiceAccount() string {
+	return ps.serviceaccount
+}
+
 func (ps *PlanSpec) Equal(other *PlanSpec) bool {
 	return ps.image == other.image &&
 		ps.version == other.version &&
@@ -549,7 +584,9 @@ func (ps *PlanSpec) Equal(other *PlanSpec) bool {
 		ps.log.Equal(other.log) &&
 		cmp.SliceContentEq(ps.onNode, other.onNode) &&
 		cmp.MapEqWith(ps.resources, other.resources, resource.Quantity.Equal) &&
-		ps.Hash() == other.Hash()
+		ps.Hash() == other.Hash() &&
+		ps.serviceaccount == other.serviceaccount &&
+		cmp.SliceContentEq(ps.annotations, other.annotations)
 }
 
 // true, iff this PlanSpec is equiverent with `plan`. otherwise false.

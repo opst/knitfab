@@ -118,7 +118,7 @@ cluster:
 		})
 
 		t.Run(".cluster.worker.nurse.serviceAccount", func(t *testing.T) {
-			actual := result.Cluster().Worker().Nurse().ServiceAccount()
+			actual := result.Cluster().Worker().Nurse().ServiceAccountSecret()
 			expected := "fake-service-account"
 			if actual != expected {
 				t.Errorf("mismatch. (expected, actual) = (%v, %v)", expected, actual)
