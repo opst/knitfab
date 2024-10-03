@@ -2221,3 +2221,246 @@ func TestPutPlanResource(t *testing.T) {
 		},
 	))
 }
+
+func TestPutAnnotations(t *testing.T) {
+	type When struct {
+		planId      string
+		request     string
+		contentType string
+
+		queryResult            map[string]*kdb.Plan
+		getError               error
+		updateAnnotationsError error
+	}
+
+	type Then struct {
+		requestedDelta kdb.AnnotationDelta
+
+		contentType string
+		statusCode  int
+		body        plans.Detail
+		wantError   bool
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			mockPlan := mockdb.NewPlanInteraface()
+
+			mockPlan.Impl.UpdateAnnotations = func(ctx context.Context, planId string, annotations kdb.AnnotationDelta) error {
+				if planId != when.planId {
+					t.Errorf("unmatch: planId: (actual, expected) = (%s, %s)", planId, when.planId)
+				}
+
+				if !cmp.SliceContentEq(annotations.Add, then.requestedDelta.Add) {
+					t.Errorf("unmatch: Add: (actual, expected) = (%v, %v)", annotations.Add, then.requestedDelta.Add)
+				}
+
+				if !cmp.SliceContentEq(annotations.Remove, then.requestedDelta.Remove) {
+					t.Errorf("unmatch: Remove: (actual, expected) = (%v, %v)", annotations.Remove, then.requestedDelta.Remove)
+				}
+
+				return when.updateAnnotationsError
+			}
+
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
+				return when.queryResult, when.getError
+			}
+
+			e := echo.New()
+			c, _ := httptestutil.Put(
+				e, "/api/plan/:planId/annotations", bytes.NewReader([]byte(when.request)),
+				httptestutil.WithHeader("content-type", when.contentType),
+			)
+			c.SetParamNames("planId")
+			c.SetParamValues(when.planId)
+
+			testee := handlers.PutPlanAnnotations(mockPlan, "planId")
+			err := testee(c)
+
+			if err != nil {
+				if !then.wantError {
+					t.Fatalf("response should be error, but not")
+				}
+			} else {
+				if then.wantError {
+					t.Fatalf("response should not be error, but not")
+				}
+			}
+
+			actualContentType := strings.Split(c.Response().Header().Get("Content-Type"), ";")[0]
+			if actualContentType != then.contentType {
+				t.Errorf("unexpected content type: %s (want %s)", actualContentType, then.contentType)
+			}
+
+			if herr := new(echo.HTTPError); errors.As(err, &herr) {
+				if herr.Code != then.statusCode {
+					t.Errorf("unexpected status code: %d", herr.Code)
+				}
+			} else {
+				actualStatusCode := c.Response().Status
+				if actualStatusCode != then.statusCode {
+					t.Errorf("unexpected status code: %d (want %d)", actualStatusCode, then.statusCode)
+				}
+			}
+		}
+	}
+
+	t.Run("When request has valid JSON, it should update annotations", theory(
+		When{
+			planId: "plan-1",
+			request: string(try.To(
+				json.Marshal(plans.AnnotationChange{
+					Add:    plans.Annotations{{Key: "annot-1", Value: "val-1"}},
+					Remove: plans.Annotations{{Key: "annot-2", Value: "val-2"}},
+				}),
+			).OrFatal(t)),
+			contentType: "application/json",
+			queryResult: map[string]*kdb.Plan{
+				"plan-1": {
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-1", Active: true, Hash: "hash-1",
+						Image: &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+						Annotations: []kdb.Annotation{
+							{Key: "annot-1", Value: "val-1"},
+							{Key: "annot-2", Value: "val-2"},
+						},
+					},
+					Inputs: []kdb.MountPoint{
+						{
+							Id: 1, Path: "/in/1",
+							Tags: kdb.NewTagSet([]kdb.Tag{
+								{Key: "key-1", Value: "val-1"},
+								{Key: "key-2", Value: "val-2"},
+							}),
+						},
+					},
+					Outputs: []kdb.MountPoint{
+						{
+							Id: 2, Path: "/out/1",
+							Tags: kdb.NewTagSet([]kdb.Tag{
+								{Key: "key-1", Value: "val-3"},
+								{Key: "key-3", Value: "val-4"},
+							}),
+						},
+					},
+				},
+			},
+		},
+		Then{
+			requestedDelta: kdb.AnnotationDelta{
+				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
+				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
+			},
+			contentType: "application/json",
+			statusCode:  http.StatusOK,
+			body: plans.Detail{
+				Summary: plans.Summary{
+					PlanId: "plan-1",
+					Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
+					Annotations: plans.Annotations{
+						{Key: "annot-1", Value: "val-1"},
+						{Key: "annot-2", Value: "val-2"},
+					},
+				},
+				Inputs: []plans.Mountpoint{
+					{
+						Path: "/in/1",
+						Tags: []apitag.Tag{
+							{Key: "key-1", Value: "val-1"},
+							{Key: "key-2", Value: "val-2"},
+						},
+					},
+				},
+				Outputs: []plans.Mountpoint{
+					{
+						Path: "/out/1",
+						Tags: []apitag.Tag{
+							{Key: "key-1", Value: "val-3"},
+							{Key: "key-3", Value: "val-4"},
+						},
+					},
+				},
+			},
+		},
+	))
+
+	t.Run("When request has invalid JSON, it should return 400 bad request error", theory(
+		When{
+			planId:      "plan-1",
+			request:     "invalid-json",
+			contentType: "application/json",
+		},
+		Then{
+			statusCode: http.StatusBadRequest,
+			wantError:  true,
+		},
+	))
+
+	t.Run("When UpdateAnnotations return Missing, it should return 404 not found error", theory(
+		When{
+			planId: "plan-1",
+			request: string(try.To(
+				json.Marshal(plans.AnnotationChange{
+					Add:    plans.Annotations{{Key: "annot-1", Value: "val-1"}},
+					Remove: plans.Annotations{{Key: "annot-2", Value: "val-2"}},
+				}),
+			).OrFatal(t)),
+			contentType:            "application/json",
+			queryResult:            map[string]*kdb.Plan{},
+			updateAnnotationsError: kdb.ErrMissing,
+		},
+		Then{
+			requestedDelta: kdb.AnnotationDelta{
+				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
+				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
+			},
+			statusCode: http.StatusNotFound,
+			wantError:  true,
+		},
+	))
+
+	t.Run("When UpdateAnnotations return other error, it should return 500 internal server error", theory(
+		When{
+			planId: "plan-1",
+			request: string(try.To(
+				json.Marshal(plans.AnnotationChange{
+					Add:    plans.Annotations{{Key: "annot-1", Value: "val-1"}},
+					Remove: plans.Annotations{{Key: "annot-2", Value: "val-2"}},
+				}),
+			).OrFatal(t)),
+			contentType:            "application/json",
+			queryResult:            map[string]*kdb.Plan{},
+			updateAnnotationsError: errors.New("dummy error"),
+		},
+		Then{
+			requestedDelta: kdb.AnnotationDelta{
+				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
+				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
+			},
+			statusCode: http.StatusInternalServerError,
+			wantError:  true,
+		},
+	))
+
+	t.Run("When Get return error, it should return 404 not found error", theory(
+		When{
+			planId: "plan-1",
+			request: string(try.To(
+				json.Marshal(plans.AnnotationChange{
+					Add:    plans.Annotations{{Key: "annot-1", Value: "val-1"}},
+					Remove: plans.Annotations{{Key: "annot-2", Value: "val-2"}},
+				}),
+			).OrFatal(t)),
+			contentType: "application/json",
+			getError:    errors.New("dummy error"),
+		},
+		Then{
+			requestedDelta: kdb.AnnotationDelta{
+				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
+				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
+			},
+			statusCode: http.StatusInternalServerError,
+			wantError:  true,
+		},
+	))
+}

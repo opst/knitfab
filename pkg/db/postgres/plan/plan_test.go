@@ -2283,3 +2283,313 @@ func TestUnsetResourceLimit(t *testing.T) {
 		},
 	))
 }
+
+func TestUpdateAnnotations(t *testing.T) {
+	given := tables.Operation{
+		Plan: []tables.Plan{
+			{
+				PlanId: th.Padding36("plan-1"),
+				Active: true,
+				Hash:   th.Padding64("xxx-hash-xxx"),
+			},
+			{
+				PlanId: th.Padding36("plan-2"),
+				Active: true,
+				Hash:   th.Padding64("yyy-hash-yyy"),
+			},
+			{
+				PlanId: th.Padding36("plan-3"),
+				Active: true,
+				Hash:   th.Padding64("zzz-hash-zzz"),
+			},
+		},
+		PlanAnnotations: []tables.Annotation{
+			{
+				PlanId: th.Padding36("plan-1"),
+				Key:    "key1",
+				Value:  "val1",
+			},
+			{
+				PlanId: th.Padding36("plan-1"),
+				Key:    "key2",
+				Value:  "val2",
+			},
+			{
+				PlanId: th.Padding36("plan-3"),
+				Key:    "key1",
+				Value:  "val1",
+			},
+		},
+	}
+
+	type When struct {
+		planId string
+		delta  kdb.AnnotationDelta
+	}
+
+	type Then struct {
+		want      []tables.Annotation
+		wantError error
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			poolBroaker := testenv.NewPoolBroaker(ctx, t)
+			pgpool := poolBroaker.GetPool(ctx, t)
+
+			if err := given.Apply(ctx, pgpool); err != nil {
+				t.Fatal(err)
+			}
+
+			testee := kpgplan.New(pgpool)
+
+			err := testee.UpdateAnnotations(ctx, when.planId, when.delta)
+			if err != nil {
+				if then.wantError == nil {
+					t.Fatal(err)
+				} else if !errors.Is(err, then.wantError) {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+
+			conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
+			defer conn.Release()
+			actual := try.To(
+				scanner.New[tables.Annotation]().QueryAll(
+					ctx, conn, `table "plan_annotation"`,
+				),
+			).OrFatal(t)
+
+			if !cmp.SliceContentEq(actual, then.want) {
+				t.Errorf(
+					"plan_annotation\n===actual===\n%+v\n===expected===\n%+v",
+					actual, then.want,
+				)
+			}
+		}
+	}
+
+	t.Run("when adding annotations to a plan, it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Add: []kdb.Annotation{
+					{Key: "key3", Value: "val3"},
+					{Key: "key4", Value: "val4"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key3",
+					Value:  "val3",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key4",
+					Value:  "val4",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when removing annotations to a plan, it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Remove: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when adding annotation to a non existing plan, it returns ErrMissing (add only)", theory(
+		When{
+			planId: th.Padding36("plan-9"),
+			delta: kdb.AnnotationDelta{
+				Add: []kdb.Annotation{
+					{Key: "key3", Value: "val3"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+			wantError: kdb.ErrMissing,
+		},
+	))
+
+	t.Run("when adding annotation to a non existing plan, it returns ErrMissing (remove only)", theory(
+		When{
+			planId: th.Padding36("plan-9"),
+			delta: kdb.AnnotationDelta{
+				Remove: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+			wantError: kdb.ErrMissing,
+		},
+	))
+
+	t.Run("when adding annotation as same as existing one, it should do nothing", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Add: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when removing annotation not existing, it should do nothing", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Remove: []kdb.Annotation{
+					{Key: "key3", Value: "val3"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when adding and removing annotations to a plan, remove should be done first", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Add: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+					{Key: "key3", Value: "val3"},
+				},
+				Remove: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+					{Key: "key2", Value: "val2"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key3",
+					Value:  "val3",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+}

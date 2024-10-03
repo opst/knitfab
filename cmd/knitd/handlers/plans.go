@@ -150,12 +150,11 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 
 		resp := c.Response()
 		resp.Header().Add("Content-Type", "application/json")
-		c.JSON(
+
+		return c.JSON(
 			http.StatusOK,
 			bindplan.ComposeDetail(*plan),
 		)
-
-		return nil
 	}
 }
 
@@ -234,8 +233,8 @@ func FindPlanHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 		for _, planId := range planIds {
 			resp = append(resp, bindplan.ComposeDetail(*ps[planId]))
 		}
-		c.JSON(http.StatusOK, resp)
-		return nil
+
+		return c.JSON(http.StatusOK, resp)
 	}
 }
 
@@ -258,9 +257,7 @@ func GetPlanHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 			return binderr.NotFound()
 		}
 
-		c.JSON(http.StatusOK, bindplan.ComposeDetail(*plan))
-
-		return nil
+		return c.JSON(http.StatusOK, bindplan.ComposeDetail(*plan))
 	}
 }
 
@@ -288,8 +285,12 @@ func PutPlanForActivate(dbPlan kdb.PlanInterface, isActive bool) echo.HandlerFun
 		if err != nil {
 			return binderr.InternalServerError(err)
 		}
-		c.JSON(http.StatusOK, bindplan.ComposeDetail(*plans[planId]))
-		return nil
+
+		if p, ok := plans[planId]; ok {
+			return c.JSON(http.StatusOK, bindplan.ComposeDetail(*p))
+		} else {
+			return binderr.NotFound()
+		}
 	}
 }
 
@@ -330,7 +331,50 @@ func PutPlanResource(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerF
 			}
 			return binderr.InternalServerError(err)
 		}
-		c.JSON(http.StatusOK, bindplan.ComposeDetail(*plans[planId]))
-		return nil
+
+		if p, ok := plans[planId]; ok {
+			return c.JSON(http.StatusOK, bindplan.ComposeDetail(*p))
+		} else {
+			return binderr.NotFound()
+		}
+	}
+}
+
+func PutPlanAnnotations(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+		planId := c.Param(planIdParam)
+
+		req := new(apiplans.AnnotationChange)
+		if err := c.Bind(req); err != nil {
+			return binderr.BadRequest("can not understand the requested json", err)
+		}
+
+		delta := kdb.AnnotationDelta{
+			Add: utils.Map(req.Add, func(a apiplans.Annotation) kdb.Annotation {
+				return kdb.Annotation{Key: a.Key, Value: a.Value}
+			}),
+			Remove: utils.Map(req.Remove, func(a apiplans.Annotation) kdb.Annotation {
+				return kdb.Annotation{Key: a.Key, Value: a.Value}
+			}),
+		}
+
+		if err := dbPlan.UpdateAnnotations(ctx, planId, delta); err != nil {
+			if errors.Is(err, kdb.ErrMissing) {
+				return binderr.NotFound()
+			}
+			return binderr.InternalServerError(err)
+		}
+
+		plans, err := dbPlan.Get(ctx, []string{planId})
+		if err != nil {
+			return binderr.InternalServerError(err)
+		}
+
+		if p, ok := plans[planId]; ok {
+			return c.JSON(http.StatusOK, bindplan.ComposeDetail(*p))
+		} else {
+			return binderr.NotFound()
+		}
 	}
 }

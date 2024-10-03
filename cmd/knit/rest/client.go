@@ -195,6 +195,42 @@ type KnitClient interface {
 	// - error
 	RegisterPlan(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error)
 
+	// SetResources set (or unset) resource limits of plan with given planId.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string: planId to be updated
+	//
+	// - apiplans.ResourceLimitChange: change of resource limits
+	//
+	// Returns
+	//
+	// - apiplans.Detail: metadata of updated plan
+	//
+	// - error
+	//
+	UpdateResources(ctx context.Context, planId string, res plans.ResourceLimitChange) (plans.Detail, error)
+
+	// UpdateAnnotations update annotations of plan with given planId.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string: planId to be updated
+	//
+	// - apiplans.AnnotationChange: change of annotations
+	//
+	// Returns
+	//
+	// - apiplans.Detail: metadata of updated plan
+	//
+	// - error
+	//
+	UpdateAnnotations(ctx context.Context, planId string, change plans.AnnotationChange) (plans.Detail, error)
+
 	// GetRun get run detail with given runId.
 	//
 	// Args
@@ -297,9 +333,6 @@ type KnitClient interface {
 	//
 	// - error
 	Retry(ctx context.Context, runId string) error
-
-	// SetResources set (or unset) resource limits of plan with given planId.
-	UpdateResources(ctx context.Context, planId string, res plans.ResourceLimitChange) (plans.Detail, error)
 }
 
 type client struct {
