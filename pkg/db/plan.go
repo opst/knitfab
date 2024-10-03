@@ -137,11 +137,41 @@ type PlanInterface interface {
 	//
 	// - error
 	Find(context.Context, logic.Ternary, ImageIdentifier, []Tag, []Tag) ([]string, error)
+
+	// UpdateAnnotations updates Annotations of a Plan.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string : Plan ID
+	//
+	// - AnnotationDelta : Annotations to be added and removed
+	//
+	// Returns
+	//
+	// - error
+	UpdateAnnotations(context.Context, string, AnnotationDelta) error
 }
 
 type Annotation struct {
 	Key   string
 	Value string
+}
+
+// AnnotationDelta is a struct that represents the changesets of annotations.
+//
+// Remove is applied first, and then Add is applied.
+type AnnotationDelta struct {
+	// Add is a list of annotations to be added.
+	//
+	// If Plan already has an annotation in Add, it will be ignored.
+	Add []Annotation
+
+	// Remove is a list of annotations to be removed.
+	//
+	// If Plan does not have an annotation in Remove, it will be ignored.
+	Remove []Annotation
 }
 
 // Main body of plan, describes "what it is".

@@ -30,6 +30,11 @@ func (s *PlanFindArgs) Equal(d *PlanFindArgs) bool {
 	return s.Active == d.Active && s.ImageVer == d.ImageVer
 }
 
+type UpdateAnnotationsArgs struct {
+	PlanId string
+	Delta  kdb.AnnotationDelta
+}
+
 type PlanInterface struct {
 	Impl struct {
 		Get                func(context.Context, []string) (map[string]*kdb.Plan, error)
@@ -38,12 +43,14 @@ type PlanInterface struct {
 		SetResourceLimit   func(context.Context, string, map[string]resource.Quantity) error
 		UnsetResourceLimit func(context.Context, string, []string) error
 		Find               func(context.Context, logic.Ternary, kdb.ImageIdentifier, []kdb.Tag, []kdb.Tag) ([]string, error)
+		UpdateAnnotations  func(context.Context, string, kdb.AnnotationDelta) error
 	}
 	Calls struct {
-		Get      CallLog[[]string]
-		Register CallLog[*kdb.PlanSpec]
-		Activate CallLog[string]
-		Find     CallLog[PlanFindArgs]
+		Get               CallLog[[]string]
+		Register          CallLog[*kdb.PlanSpec]
+		Activate          CallLog[string]
+		Find              CallLog[PlanFindArgs]
+		UpdateAnnotations CallLog[UpdateAnnotationsArgs]
 	}
 }
 
@@ -108,6 +115,18 @@ func (m *PlanInterface) Find(ctx context.Context, active logic.Ternary, imageVer
 	})
 	if m.Impl.Find != nil {
 		return m.Impl.Find(ctx, active, imageVer, inTag, outTag)
+	}
+
+	panic(errors.New("should not be called"))
+}
+
+func (m *PlanInterface) UpdateAnnotations(ctx context.Context, planId string, annotations kdb.AnnotationDelta) error {
+	m.Calls.UpdateAnnotations = append(m.Calls.UpdateAnnotations, UpdateAnnotationsArgs{
+		PlanId: planId,
+		Delta:  annotations,
+	})
+	if m.Impl.UpdateAnnotations != nil {
+		return m.Impl.UpdateAnnotations(ctx, planId, annotations)
 	}
 
 	panic(errors.New("should not be called"))
