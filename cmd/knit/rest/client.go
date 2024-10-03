@@ -231,6 +231,40 @@ type KnitClient interface {
 	//
 	UpdateAnnotations(ctx context.Context, planId string, change plans.AnnotationChange) (plans.Detail, error)
 
+	// SetServiceAccount set service account of plan with given planId.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string: planId to be updated
+	//
+	// - string: service account to be set
+	//
+	// Returns
+	//
+	// - apiplans.Detail: metadata of updated plan
+	//
+	// - error
+	//
+	SetServiceAccount(ctx context.Context, planId string, serviceAccount plans.SetServiceAccount) (plans.Detail, error)
+
+	// UnsetServiceAccount unset service account of plan with given planId.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string: planId to be updated
+	//
+	// Returns
+	//
+	// - apiplans.Detail: metadata of updated plan
+	//
+	// - error
+	//
+	UnsetServiceAccount(ctx context.Context, planId string) (plans.Detail, error)
+
 	// GetRun get run detail with given runId.
 	//
 	// Args

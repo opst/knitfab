@@ -2267,7 +2267,7 @@ func TestPutAnnotations(t *testing.T) {
 			}
 
 			e := echo.New()
-			c, _ := httptestutil.Put(
+			c, resprec := httptestutil.Put(
 				e, "/api/plan/:planId/annotations", bytes.NewReader([]byte(when.request)),
 				httptestutil.WithHeader("content-type", when.contentType),
 			)
@@ -2300,6 +2300,18 @@ func TestPutAnnotations(t *testing.T) {
 				actualStatusCode := c.Response().Status
 				if actualStatusCode != then.statusCode {
 					t.Errorf("unexpected status code: %d (want %d)", actualStatusCode, then.statusCode)
+				}
+			}
+
+			if !then.wantError {
+				actualResponse := plans.Detail{}
+				err = json.Unmarshal(resprec.Body.Bytes(), &actualResponse)
+				if err != nil {
+					t.Errorf("failed to unmarshal response: %v", err)
+				}
+
+				if !actualResponse.Equal(then.body) {
+					t.Errorf("unexpected response: %v (want %v)", actualResponse, then.body)
 				}
 			}
 		}
@@ -2362,6 +2374,7 @@ func TestPutAnnotations(t *testing.T) {
 						{Key: "annot-2", Value: "val-2"},
 					},
 				},
+				Active: true,
 				Inputs: []plans.Mountpoint{
 					{
 						Path: "/in/1",
@@ -2459,6 +2472,397 @@ func TestPutAnnotations(t *testing.T) {
 				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
 				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
 			},
+			statusCode: http.StatusInternalServerError,
+			wantError:  true,
+		},
+	))
+}
+
+func TestPutPlanServiceAccount(t *testing.T) {
+	type When struct {
+		planId         string
+		serviceAccount string
+		contentType    string
+
+		queryResult               map[string]*kdb.Plan
+		getError                  error
+		updateServiceAccountError error
+	}
+
+	type Then struct {
+		contentType string
+		statusCode  int
+		body        plans.Detail
+		wantError   bool
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			mockPlan := mockdb.NewPlanInteraface()
+
+			mockPlan.Impl.SetServiceAccount = func(ctx context.Context, planId string, sa string) error {
+				if planId != when.planId {
+					t.Errorf("unmatch: planId: (actual, expected) = (%s, %s)", planId, when.planId)
+				}
+				if sa != when.serviceAccount {
+					t.Errorf("unmatch: serviceAccount: (actual, expected) = (%s, %s)", sa, when.serviceAccount)
+				}
+				return when.updateServiceAccountError
+			}
+
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
+				return when.queryResult, when.getError
+			}
+
+			e := echo.New()
+			payload := plans.SetServiceAccount{ServiceAccount: when.serviceAccount}
+			c, resprec := httptestutil.Put(
+				e, "/api/plan/:planId/serviceaccount",
+				bytes.NewReader(try.To(json.Marshal(payload)).OrFatal(t)),
+				httptestutil.WithHeader("content-type", when.contentType),
+			)
+			c.SetParamNames("planId")
+			c.SetParamValues(when.planId)
+
+			testee := handlers.PutPlanServiceAccount(mockPlan, "planId")
+			err := testee(c)
+
+			if err != nil {
+				if !then.wantError {
+					t.Fatalf("response should not be error, but not")
+				}
+			} else {
+				if then.wantError {
+					t.Fatalf("response should be error, but not")
+				}
+			}
+
+			actualContentType := strings.Split(c.Response().Header().Get("Content-Type"), ";")[0]
+			if actualContentType != then.contentType {
+				t.Errorf("unexpected content type: %s (want %s)", actualContentType, then.contentType)
+			}
+
+			if herr := new(echo.HTTPError); errors.As(err, &herr) {
+				if herr.Code != then.statusCode {
+					t.Errorf("unexpected status code: %d", herr.Code)
+				}
+			} else {
+				actualStatusCode := c.Response().Status
+				if actualStatusCode != then.statusCode {
+					t.Errorf("unexpected status code: %d (want %d)", actualStatusCode, then.statusCode)
+				}
+			}
+
+			if !then.wantError {
+				actualResponse := plans.Detail{}
+				err = json.Unmarshal(resprec.Body.Bytes(), &actualResponse)
+				if err != nil {
+					t.Errorf("failed to unmarshal response: %v", err)
+				}
+
+				if !actualResponse.Equal(then.body) {
+					t.Errorf("unexpected response: %v (want %v)", actualResponse, then.body)
+				}
+			}
+		}
+	}
+
+	t.Run("When requested planId exists, it should set service account", theory(
+		When{
+			planId:         "plan-1",
+			serviceAccount: "service-account-1",
+			contentType:    "application/json",
+
+			queryResult: map[string]*kdb.Plan{
+				"plan-1": {
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-1", Active: true, Hash: "hash-1",
+						Image:          &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+						ServiceAccount: "service-account-1",
+					},
+					Inputs: []kdb.MountPoint{
+						{
+							Id: 1, Path: "/in/1",
+							Tags: kdb.NewTagSet([]kdb.Tag{
+								{Key: "key-1", Value: "val-1"},
+							}),
+						},
+					},
+					Outputs: []kdb.MountPoint{
+						{
+							Id: 2, Path: "/out/1",
+							Tags: kdb.NewTagSet([]kdb.Tag{
+								{Key: "key-1", Value: "val-3"},
+							}),
+						},
+					},
+				},
+			},
+		},
+		Then{
+			contentType: "application/json",
+			statusCode:  http.StatusOK,
+			body: plans.Detail{
+				Summary: plans.Summary{
+					PlanId: "plan-1",
+					Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
+				},
+				Active:         true,
+				ServiceAccount: "service-account-1",
+				Inputs: []plans.Mountpoint{
+					{
+						Path: "/in/1",
+						Tags: []apitag.Tag{
+							{Key: "key-1", Value: "val-1"},
+						},
+					},
+				},
+				Outputs: []plans.Mountpoint{
+					{
+						Path: "/out/1",
+						Tags: []apitag.Tag{
+							{Key: "key-1", Value: "val-3"},
+						},
+					},
+				},
+			},
+		},
+	))
+
+	t.Run("When requested planId does not exist, it should return 404 not found error", theory(
+		When{
+			planId:         "plan-1",
+			serviceAccount: "service-account-1",
+			contentType:    "application/json",
+
+			queryResult: map[string]*kdb.Plan{},
+			getError:    nil,
+
+			updateServiceAccountError: kdb.ErrMissing,
+		},
+		Then{
+			statusCode: http.StatusNotFound,
+			wantError:  true,
+		},
+	))
+
+	t.Run("When UpdateServiceAccount return other error, it should return 500 internal server error", theory(
+		When{
+			planId:         "plan-1",
+			serviceAccount: "service-account-1",
+			contentType:    "application/json",
+
+			queryResult: map[string]*kdb.Plan{},
+
+			updateServiceAccountError: errors.New("dummy error"),
+		},
+
+		Then{
+			statusCode: http.StatusInternalServerError,
+			wantError:  true,
+		},
+	))
+
+	t.Run("When request has invalid JSON, it should return 400 bad request error", theory(
+		When{
+			planId:         "plan-1",
+			serviceAccount: "service-account-1",
+			contentType:    "text/plain",
+		},
+		Then{
+			statusCode: http.StatusBadRequest,
+			wantError:  true,
+		},
+	))
+
+	t.Run("When Get return error, it should return 500 internal server error", theory(
+		When{
+			planId:         "plan-1",
+			serviceAccount: "service-account-1",
+			contentType:    "application/json",
+
+			getError: errors.New("dummy error"),
+		},
+		Then{
+			statusCode: http.StatusInternalServerError,
+			wantError:  true,
+		},
+	))
+}
+
+func TestDeletePlanServiceAccount(t *testing.T) {
+	type When struct {
+		planId string
+
+		queryResult               map[string]*kdb.Plan
+		getError                  error
+		updateServiceAccountError error
+	}
+
+	type Then struct {
+		contentType string
+		statusCode  int
+		body        plans.Detail
+		wantError   bool
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			mockPlan := mockdb.NewPlanInteraface()
+
+			mockPlan.Impl.UnsetServiceAccount = func(ctx context.Context, planId string) error {
+				if planId != when.planId {
+					t.Errorf("unmatch: planId: (actual, expected) = (%s, %s)", planId, when.planId)
+				}
+				return when.updateServiceAccountError
+			}
+
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
+				return when.queryResult, when.getError
+			}
+
+			e := echo.New()
+			c, resprec := httptestutil.Delete(
+				e, "/api/plan/:planId/serviceaccount",
+			)
+			c.SetParamNames("planId")
+			c.SetParamValues(when.planId)
+
+			testee := handlers.DeletePlanServiceAccount(mockPlan, "planId")
+			err := testee(c)
+
+			if err != nil {
+				if !then.wantError {
+					t.Fatalf("response should not be error, but not")
+				}
+			} else {
+				if then.wantError {
+					t.Fatalf("response should be error, but not")
+				}
+			}
+
+			actualContentType := strings.Split(c.Response().Header().Get("Content-Type"), ";")[0]
+			if actualContentType != then.contentType {
+				t.Errorf("unexpected content type: %s (want %s)", actualContentType, then.contentType)
+			}
+
+			if herr := new(echo.HTTPError); errors.As(err, &herr) {
+				if herr.Code != then.statusCode {
+					t.Errorf("unexpected status code: %d", herr.Code)
+				}
+			} else {
+				actualStatusCode := c.Response().Status
+				if actualStatusCode != then.statusCode {
+					t.Errorf("unexpected status code: %d (want %d)", actualStatusCode, then.statusCode)
+				}
+			}
+
+			if !then.wantError {
+				actualResponse := plans.Detail{}
+				err = json.Unmarshal(resprec.Body.Bytes(), &actualResponse)
+				if err != nil {
+					t.Errorf("failed to unmarshal response: %v", err)
+				}
+
+				if !actualResponse.Equal(then.body) {
+					t.Errorf("unexpected response: %+v (want %+v)", actualResponse, then.body)
+				}
+			}
+		}
+	}
+
+	t.Run("When requested planId exists, it should unset service account", theory(
+		When{
+			planId: "plan-1",
+
+			queryResult: map[string]*kdb.Plan{
+				"plan-1": {
+					PlanBody: kdb.PlanBody{
+						PlanId: "plan-1", Active: true, Hash: "hash-1",
+						Image: &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+					},
+					Inputs: []kdb.MountPoint{
+						{
+							Id: 1, Path: "/in/1",
+							Tags: kdb.NewTagSet([]kdb.Tag{
+								{Key: "key-1", Value: "val-1"},
+							}),
+						},
+					},
+					Outputs: []kdb.MountPoint{
+						{
+							Id: 2, Path: "/out/1",
+							Tags: kdb.NewTagSet([]kdb.Tag{
+								{Key: "key-1", Value: "val-3"},
+							}),
+						},
+					},
+				},
+			},
+		},
+		Then{
+			contentType: "application/json",
+			statusCode:  http.StatusOK,
+			body: plans.Detail{
+				Summary: plans.Summary{
+					PlanId: "plan-1",
+					Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
+				},
+				Active: true,
+				Inputs: []plans.Mountpoint{
+					{
+						Path: "/in/1",
+						Tags: []apitag.Tag{
+							{Key: "key-1", Value: "val-1"},
+						},
+					},
+				},
+				Outputs: []plans.Mountpoint{
+					{
+						Path: "/out/1",
+						Tags: []apitag.Tag{
+							{Key: "key-1", Value: "val-3"},
+						},
+					},
+				},
+			},
+		},
+	))
+
+	t.Run("When requested planId does not exist, it should return 404 not found error", theory(
+		When{
+			planId: "plan-1",
+
+			queryResult: map[string]*kdb.Plan{},
+			getError:    nil,
+
+			updateServiceAccountError: kdb.ErrMissing,
+		},
+		Then{
+			statusCode: http.StatusNotFound,
+			wantError:  true,
+		},
+	))
+
+	t.Run("When UnsetServiceAccount return other error, it should return 500 internal server error", theory(
+		When{
+			planId: "plan-1",
+
+			queryResult:               map[string]*kdb.Plan{},
+			updateServiceAccountError: errors.New("dummy error"),
+		},
+		Then{
+			statusCode: http.StatusInternalServerError,
+			wantError:  true,
+		},
+	))
+
+	t.Run("When Get return error, it should return 500 internal server error", theory(
+		When{
+			planId:   "plan-1",
+			getError: errors.New("dummy error"),
+		},
+		Then{
 			statusCode: http.StatusInternalServerError,
 			wantError:  true,
 		},

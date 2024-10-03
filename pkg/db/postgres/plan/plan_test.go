@@ -2593,3 +2593,272 @@ func TestUpdateAnnotations(t *testing.T) {
 		},
 	))
 }
+
+func TestSetServiceAccount(t *testing.T) {
+	given := tables.Operation{
+		Plan: []tables.Plan{
+			{
+				PlanId: th.Padding36("plan-1"),
+				Active: true,
+				Hash:   th.Padding64("xxx-hash-xxx"),
+			},
+			{
+				PlanId: th.Padding36("plan-2"),
+				Active: true,
+				Hash:   th.Padding64("yyy-hash-yyy"),
+			},
+			{
+				PlanId: th.Padding36("plan-3"),
+				Active: true,
+				Hash:   th.Padding64("zzz-hash-zzz"),
+			},
+		},
+		PlanServiceAccount: []tables.ServiceAccount{
+			{
+				PlanId:         th.Padding36("plan-1"),
+				ServiceAccount: "sa1",
+			},
+			{
+				PlanId:         th.Padding36("plan-3"),
+				ServiceAccount: "sa2",
+			},
+		},
+	}
+
+	type When struct {
+		planId string
+		sa     string
+	}
+
+	type Then struct {
+		want    []tables.ServiceAccount
+		wantErr error
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			poolBroaker := testenv.NewPoolBroaker(ctx, t)
+			pgpool := poolBroaker.GetPool(ctx, t)
+
+			if err := given.Apply(ctx, pgpool); err != nil {
+				t.Fatal(err)
+			}
+
+			testee := kpgplan.New(pgpool)
+
+			err := testee.SetServiceAccount(ctx, when.planId, when.sa)
+			if err != nil {
+				if then.wantErr == nil {
+					t.Fatal(err)
+				} else if !errors.Is(err, then.wantErr) {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+
+			conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
+			defer conn.Release()
+			actual := try.To(
+				scanner.New[tables.ServiceAccount]().QueryAll(
+					ctx, conn, `table "plan_service_account"`,
+				),
+			).OrFatal(t)
+
+			if !cmp.SliceContentEq(actual, then.want) {
+				t.Errorf(
+					"plan_service_account\n===actual===\n%+v\n===expected===\n%+v",
+					actual, then.want,
+				)
+			}
+		}
+	}
+
+	t.Run("when setting a service account to a plan which have service account, it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			sa:     "sa3",
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa3",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+		},
+	))
+
+	t.Run("when setting a service account to a plan which have no service account, it should be inserted", theory(
+		When{
+			planId: th.Padding36("plan-2"),
+			sa:     "sa3",
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa1",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+				{
+					PlanId:         th.Padding36("plan-2"),
+					ServiceAccount: "sa3",
+				},
+			},
+		},
+	))
+
+	t.Run("when setting a service account to a non existing plan, it returns ErrMissing", theory(
+		When{
+			planId: th.Padding36("plan-9"),
+			sa:     "sa3",
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa1",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+			wantErr: kdb.ErrMissing,
+		},
+	))
+}
+
+func TestUnsetServiceAccount(t *testing.T) {
+	given := tables.Operation{
+		Plan: []tables.Plan{
+			{
+				PlanId: th.Padding36("plan-1"),
+				Active: true,
+				Hash:   th.Padding64("xxx-hash-xxx"),
+			},
+			{
+				PlanId: th.Padding36("plan-2"),
+				Active: true,
+				Hash:   th.Padding64("yyy-hash-yyy"),
+			},
+			{
+				PlanId: th.Padding36("plan-3"),
+				Active: true,
+				Hash:   th.Padding64("zzz-hash-zzz"),
+			},
+		},
+		PlanServiceAccount: []tables.ServiceAccount{
+			{
+				PlanId:         th.Padding36("plan-1"),
+				ServiceAccount: "sa1",
+			},
+			{
+				PlanId:         th.Padding36("plan-3"),
+				ServiceAccount: "sa2",
+			},
+		},
+	}
+
+	type When struct {
+		planId string
+	}
+
+	type Then struct {
+		want    []tables.ServiceAccount
+		wantErr error
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			poolBroaker := testenv.NewPoolBroaker(ctx, t)
+			pgpool := poolBroaker.GetPool(ctx, t)
+
+			if err := given.Apply(ctx, pgpool); err != nil {
+				t.Fatal(err)
+			}
+
+			testee := kpgplan.New(pgpool)
+
+			err := testee.UnsetServiceAccount(ctx, when.planId)
+			if err != nil {
+				if then.wantErr == nil {
+					t.Fatal(err)
+				} else if !errors.Is(err, then.wantErr) {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+
+			conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
+			defer conn.Release()
+			actual := try.To(
+				scanner.New[tables.ServiceAccount]().QueryAll(
+					ctx, conn, `table "plan_service_account"`,
+				),
+			).OrFatal(t)
+
+			if !cmp.SliceContentEq(actual, then.want) {
+				t.Errorf("plan_service_account\n===actual===\n%+v\n===expected===\n%+v", actual, then.want)
+			}
+		}
+	}
+
+	t.Run("when unsetting a service account to a plan which have service account, it should be removed", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+		},
+	))
+
+	t.Run("when unsetting a service account to a plan which have no service account, it should do nothing", theory(
+		When{
+			planId: th.Padding36("plan-2"),
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa1",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+		},
+	))
+
+	t.Run("when unsetting a service account to a non existing plan, it returns ErrMissing", theory(
+		When{
+			planId: th.Padding36("plan-9"),
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa1",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+			wantErr: kdb.ErrMissing,
+		},
+	))
+}

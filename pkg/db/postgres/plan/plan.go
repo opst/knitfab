@@ -2,6 +2,7 @@ package plan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -1120,6 +1121,82 @@ on conflict do nothing
 		); err != nil {
 			return err
 		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *planPG) SetServiceAccount(ctx context.Context, planId string, serviceAccount string) error {
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(
+		ctx,
+		`
+		with "plan" as (
+			select "plan_id" from "plan" where "plan_id" = $1 for key share
+		)
+		insert into "plan_service_account" ("plan_id", "service_account")
+		select "plan_id", $2 as "service_account" from "plan"
+		on conflict ("plan_id") do update set "service_account" = excluded."service_account"
+		returning "plan_id"
+		`,
+		planId, serviceAccount,
+	).Scan(nil)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return kpgerr.Missing{
+				Table:    "plan",
+				Identity: fmt.Sprintf("plan_id='%s'", planId),
+			}
+		}
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *planPG) UnsetServiceAccount(ctx context.Context, planId string) error {
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	{
+		if err := tx.QueryRow(
+			ctx,
+			`select "plan_id" from "plan" where "plan_id" = $1 for key share`,
+			planId,
+		).Scan(nil); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return kpgerr.Missing{
+					Table:    "plan",
+					Identity: fmt.Sprintf("plan_id='%s'", planId),
+				}
+			}
+			return err
+		}
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		`delete from "plan_service_account" where "plan_id" = $1`,
+		planId,
+	)
+
+	if err != nil {
+		return err
 	}
 
 	if err := tx.Commit(ctx); err != nil {

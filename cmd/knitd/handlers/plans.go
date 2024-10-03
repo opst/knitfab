@@ -347,7 +347,7 @@ func PutPlanAnnotations(dbPlan kdb.PlanInterface, planIdParam string) echo.Handl
 
 		req := new(apiplans.AnnotationChange)
 		if err := c.Bind(req); err != nil {
-			return binderr.BadRequest("can not understand the requested json", err)
+			return binderr.BadRequest("can not understand the request", err)
 		}
 
 		delta := kdb.AnnotationDelta{
@@ -360,6 +360,61 @@ func PutPlanAnnotations(dbPlan kdb.PlanInterface, planIdParam string) echo.Handl
 		}
 
 		if err := dbPlan.UpdateAnnotations(ctx, planId, delta); err != nil {
+			if errors.Is(err, kdb.ErrMissing) {
+				return binderr.NotFound()
+			}
+			return binderr.InternalServerError(err)
+		}
+
+		plans, err := dbPlan.Get(ctx, []string{planId})
+		if err != nil {
+			return binderr.InternalServerError(err)
+		}
+
+		if p, ok := plans[planId]; ok {
+			return c.JSON(http.StatusOK, bindplan.ComposeDetail(*p))
+		} else {
+			return binderr.NotFound()
+		}
+	}
+}
+
+func PutPlanServiceAccount(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+		planId := c.Param(planIdParam)
+
+		req := new(apiplans.SetServiceAccount)
+		if err := c.Bind(req); err != nil {
+			return binderr.BadRequest("can not understand the request", err)
+		}
+
+		if err := dbPlan.SetServiceAccount(ctx, planId, req.ServiceAccount); err != nil {
+			if errors.Is(err, kdb.ErrMissing) {
+				return binderr.NotFound()
+			}
+			return binderr.InternalServerError(err)
+		}
+
+		plans, err := dbPlan.Get(ctx, []string{planId})
+		if err != nil {
+			return binderr.InternalServerError(err)
+		}
+
+		if p, ok := plans[planId]; ok {
+			return c.JSON(http.StatusOK, bindplan.ComposeDetail(*p))
+		} else {
+			return binderr.NotFound()
+		}
+	}
+}
+
+func DeletePlanServiceAccount(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+		planId := c.Param(planIdParam)
+
+		if err := dbPlan.UnsetServiceAccount(ctx, planId); err != nil {
 			if errors.Is(err, kdb.ErrMissing) {
 				return binderr.NotFound()
 			}
