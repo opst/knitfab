@@ -143,6 +143,8 @@ func main() {
 		e.DELETE(api("plans/:planId/active"), handlers.PutPlanForActivate(db.Plan(), false))
 		e.PUT(api("plans/:planId/resources"), handlers.PutPlanResource(db.Plan(), "planId"))
 		e.PUT(api("plans/:planId/annotations"), handlers.PutPlanAnnotations(db.Plan(), "planId"))
+		e.PUT(api("plans/:planId/serviceaccount"), handlers.PutPlanServiceAccount(db.Plan(), "planId"))
+		e.DELETE(api("plans/:planId/serviceaccount"), handlers.DeletePlanServiceAccount(db.Plan(), "planId"))
 	}
 
 	{

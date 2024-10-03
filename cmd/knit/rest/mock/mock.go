@@ -115,10 +115,12 @@ type mockKnitClient struct {
 			ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier,
 			inTags []apitags.Tag, outTags []apitags.Tag,
 		) ([]plans.Detail, error)
-		PutPlanForActivate func(ctx context.Context, planId string, isActive bool) (plans.Detail, error)
-		UpdateResources    func(ctx context.Context, runId string, resources plans.ResourceLimitChange) (plans.Detail, error)
-		RegisterPlan       func(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error)
-		UpdateAnnotations  func(ctx context.Context, planId string, annotations plans.AnnotationChange) (plans.Detail, error)
+		PutPlanForActivate  func(ctx context.Context, planId string, isActive bool) (plans.Detail, error)
+		UpdateResources     func(ctx context.Context, runId string, resources plans.ResourceLimitChange) (plans.Detail, error)
+		RegisterPlan        func(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error)
+		UpdateAnnotations   func(ctx context.Context, planId string, annotations plans.AnnotationChange) (plans.Detail, error)
+		SetServiceAccount   func(ctx context.Context, planId string, serviceAccount plans.SetServiceAccount) (plans.Detail, error)
+		UnsetServiceAccount func(ctx context.Context, planId string) (plans.Detail, error)
 
 		GetRun    func(ctx context.Context, runId string) (runs.Detail, error)
 		GetRunLog func(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
@@ -143,7 +145,12 @@ type mockKnitClient struct {
 			Resources plans.ResourceLimitChange
 		}
 		UpdateAnnotations []UpdateAnnotationsArgs
-		RegisterPlan      []plans.PlanSpec
+		SetServiceAccount []struct {
+			PlanId         string
+			ServiceAccount plans.SetServiceAccount
+		}
+		UnsetServiceAccount []string
+		RegisterPlan        []plans.PlanSpec
 
 		GetRun    []string
 		GetRunLog []struct {
@@ -282,6 +289,29 @@ func (m *mockKnitClient) UpdateAnnotations(ctx context.Context, planId string, a
 		m.t.Fatal("UpdateAnnotations is not ready to be called")
 	}
 	return m.Impl.UpdateAnnotations(ctx, planId, annotations)
+}
+
+func (m *mockKnitClient) SetServiceAccount(ctx context.Context, planId string, serviceAccount plans.SetServiceAccount) (plans.Detail, error) {
+	m.t.Helper()
+
+	m.Calls.SetServiceAccount = append(m.Calls.SetServiceAccount, struct {
+		PlanId         string
+		ServiceAccount plans.SetServiceAccount
+	}{PlanId: planId, ServiceAccount: serviceAccount})
+	if m.Impl.SetServiceAccount == nil {
+		m.t.Fatal("SetServiceAccount is not ready to be called")
+	}
+	return m.Impl.SetServiceAccount(ctx, planId, serviceAccount)
+}
+
+func (m *mockKnitClient) UnsetServiceAccount(ctx context.Context, planId string) (plans.Detail, error) {
+	m.t.Helper()
+
+	m.Calls.UnsetServiceAccount = append(m.Calls.UnsetServiceAccount, planId)
+	if m.Impl.UnsetServiceAccount == nil {
+		m.t.Fatal("UnsetServiceAccount is not ready to be called")
+	}
+	return m.Impl.UnsetServiceAccount(ctx, planId)
 }
 
 func (m *mockKnitClient) GetRun(ctx context.Context, runId string) (runs.Detail, error) {

@@ -152,6 +152,34 @@ type PlanInterface interface {
 	//
 	// - error
 	UpdateAnnotations(context.Context, string, AnnotationDelta) error
+
+	// SetServiceAccount sets the service account for a Plan.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string : Plan ID
+	//
+	// - string : Service Account name
+	//
+	// Returns
+	//
+	// - error
+	SetServiceAccount(ctx context.Context, planId, serviceAccount string) error
+
+	// UnsetServiceAccount unsets the service account for a Plan.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string : Plan ID
+	//
+	// Returns
+	//
+	// - error
+	UnsetServiceAccount(ctx context.Context, planId string) error
 }
 
 type Annotation struct {
