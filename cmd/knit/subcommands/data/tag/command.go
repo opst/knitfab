@@ -39,7 +39,7 @@ func New() (flarc.Command, error) {
 		flarc.WithDescription(`
 Add and/or remove Tags on Data in knitfab.
 
-If the same Tag is specified in both add and remove, the Tag will be removed.
+If the same Tag is specified in both add and remove, the Tag will be added. (remove first, then add)
 `),
 	)
 }

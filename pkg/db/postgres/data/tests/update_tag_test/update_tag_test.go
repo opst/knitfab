@@ -28,6 +28,7 @@ func TestUpdateTag(t *testing.T) {
 		},
 		Outputs: map[tables.Output]tables.OutputAttr{
 			{PlanId: "test-plan", OutputId: 1_010, Path: "/out"}: {},
+			{PlanId: "test-plan", OutputId: 1_020, Path: "/out"}: {},
 		},
 		Steps: []tables.Step{
 			{
@@ -51,6 +52,19 @@ func TestUpdateTag(t *testing.T) {
 							"2022-10-11T12:13:15.567+09:00",
 						)).OrFatal(t).Time()),
 					},
+					{
+						KnitId: Padding36("test-knit-running-2"), VolumeRef: "#test-knit-running-2",
+						PlanId: "test-plan", RunId: "test-run-running-1", OutputId: 1_020,
+					}: {
+						UserTag: []kdb.Tag{
+							{Key: "tag-a", Value: "value 1"},
+							{Key: "tag-a", Value: "value 2"},
+							{Key: "tag-b", Value: "value 1"},
+						},
+						Timestamp: pointer.Ref(try.To(rfctime.ParseRFC3339DateTime(
+							"2022-10-11T12:13:15.567+09:00",
+						)).OrFatal(t).Time()),
+					},
 				},
 			},
 			{
@@ -62,7 +76,7 @@ func TestUpdateTag(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("test-knit-running-2"), VolumeRef: "#test-knit-running-2",
+						KnitId: Padding36("test-knit-running-3"), VolumeRef: "#test-knit-running-3",
 						PlanId: "test-plan", RunId: "test-run-running-2", OutputId: 1_010,
 					}: {},
 				},
@@ -191,6 +205,11 @@ func TestUpdateTag(t *testing.T) {
 					{Key: "tag-a", Value: "value 2"},
 					{Key: "tag-b", Value: "value 1"},
 				},
+				Padding36("test-knit-running-2"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
 			},
 			Error: kdb.ErrMissing,
 		},
@@ -215,6 +234,11 @@ func TestUpdateTag(t *testing.T) {
 					{Key: "tag-b", Value: "value 1"},
 					{Key: "tag-c", Value: "value 1"},
 				},
+				Padding36("test-knit-running-2"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
 			},
 			Error: nil,
 		},
@@ -233,6 +257,11 @@ func TestUpdateTag(t *testing.T) {
 			},
 			Tagging: map[string][]kdb.Tag{
 				Padding36("test-knit-running-1"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
+				Padding36("test-knit-running-2"): {
 					{Key: "tag-a", Value: "value 1"},
 					{Key: "tag-a", Value: "value 2"},
 					{Key: "tag-b", Value: "value 1"},
@@ -258,6 +287,11 @@ func TestUpdateTag(t *testing.T) {
 					{Key: "tag-a", Value: "value 2"},
 					{Key: "tag-b", Value: "value 1"},
 				},
+				Padding36("test-knit-running-2"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
 			},
 			Error: nil,
 		},
@@ -278,6 +312,11 @@ func TestUpdateTag(t *testing.T) {
 				Padding36("test-knit-running-1"): {
 					{Key: "tag-b", Value: "value 1"},
 				},
+				Padding36("test-knit-running-2"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
 			},
 			Error: nil,
 		},
@@ -296,6 +335,11 @@ func TestUpdateTag(t *testing.T) {
 			},
 			Tagging: map[string][]kdb.Tag{
 				Padding36("test-knit-running-1"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
+				Padding36("test-knit-running-2"): {
 					{Key: "tag-a", Value: "value 1"},
 					{Key: "tag-a", Value: "value 2"},
 					{Key: "tag-b", Value: "value 1"},
@@ -322,12 +366,17 @@ func TestUpdateTag(t *testing.T) {
 					{Key: "tag-a", Value: "value 2"},
 					{Key: "tag-b", Value: "value 1"},
 				},
+				Padding36("test-knit-running-2"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
 			},
 			Error: nil,
 		},
 	))
 
-	t.Run("when adding and removing tags, it adds and then removes the tags", theory(
+	t.Run("when adding and removing tags, it removes and then add the tags", theory(
 		When{
 			KnitId: Padding36("test-knit-running-1"),
 			Delta: kdb.TagDelta{
@@ -348,12 +397,17 @@ func TestUpdateTag(t *testing.T) {
 					{Key: "tag-a", Value: "value 2"},
 					{Key: "tag-c", Value: "value 1"},
 				},
+				Padding36("test-knit-running-2"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
 			},
 			Error: nil,
 		},
 	))
 
-	t.Run("when adding and removing same new tag, it results as it was", theory(
+	t.Run("when adding and removing same new tag, the new tag is added", theory(
 		When{
 			KnitId: Padding36("test-knit-running-1"),
 			Delta: kdb.TagDelta{
@@ -372,6 +426,12 @@ func TestUpdateTag(t *testing.T) {
 				Padding36("test-knit-running-1"): {
 					{Key: "tag-a", Value: "value 1"},
 					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-a", Value: "value 3"},
+					{Key: "tag-b", Value: "value 1"},
+				},
+				Padding36("test-knit-running-2"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
 					{Key: "tag-b", Value: "value 1"},
 				},
 			},
@@ -379,7 +439,7 @@ func TestUpdateTag(t *testing.T) {
 		},
 	))
 
-	t.Run("when adding and removing same existing tag, it removes the tags", theory(
+	t.Run("when adding and removing same existing tag, the tags are remained", theory(
 		When{
 			KnitId: Padding36("test-knit-running-1"),
 			Delta: kdb.TagDelta{
@@ -396,6 +456,12 @@ func TestUpdateTag(t *testing.T) {
 			Tagging: map[string][]kdb.Tag{
 				Padding36("test-knit-running-1"): {
 					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
+				Padding36("test-knit-running-2"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
 					{Key: "tag-b", Value: "value 1"},
 				},
 			},

@@ -415,11 +415,11 @@ func (d *dataPG) updateTag(ctx context.Context, tx kpool.Tx, knitId string, delt
 		return err
 	}
 
-	if err := addTagsForData(ctx, tx, knitId, delta.Add); err != nil {
+	if err := removeTagsFromData(ctx, tx, knitId, delta.Remove, delta.RemoveKey); err != nil {
 		return err
 	}
 
-	if err := removeTagsFromData(ctx, tx, knitId, delta.Remove, delta.RemoveKey); err != nil {
+	if err := addTagsForData(ctx, tx, knitId, delta.Add); err != nil {
 		return err
 	}
 
