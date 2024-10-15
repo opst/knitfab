@@ -35,9 +35,9 @@ func (an *Annotation) String() string {
 }
 
 type Flag struct {
-	Add       []string `flag:"add" help:"Add an annotation in the form key=value. Repeatable."`
-	Remove    []string `flag:"remove" help:"Remove an annotation in the form key=value. Repeatable."`
-	RemoveKey []string `flag:"remove-key" help:"Remove an annotation by key. Repeatable."`
+	Add       []string `flag:"add" metavar:"KEY=VALUE..." help:"Add an annotation in the form key=value. Repeatable."`
+	Remove    []string `flag:"remove" metavar:"KEY=VALUE..." help:"Remove an annotation in the form key=value. Repeatable."`
+	RemoveKey []string `flag:"remove-key" metavar:"KEY..." help:"Remove an annotation by key. Repeatable."`
 }
 
 const ARGS_PLAN_ID = "PLAN_ID"
