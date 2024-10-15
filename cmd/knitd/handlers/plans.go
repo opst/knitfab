@@ -357,6 +357,7 @@ func PutPlanAnnotations(dbPlan kdb.PlanInterface, planIdParam string) echo.Handl
 			Remove: utils.Map(req.Remove, func(a apiplans.Annotation) kdb.Annotation {
 				return kdb.Annotation{Key: a.Key, Value: a.Value}
 			}),
+			RemoveKey: req.RemoveKey,
 		}
 
 		if err := dbPlan.UpdateAnnotations(ctx, planId, delta); err != nil {

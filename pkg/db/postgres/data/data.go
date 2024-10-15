@@ -415,11 +415,11 @@ func (d *dataPG) updateTag(ctx context.Context, tx kpool.Tx, knitId string, delt
 		return err
 	}
 
-	if err := addTagsForData(ctx, tx, knitId, delta.Add); err != nil {
+	if err := removeTagsFromData(ctx, tx, knitId, delta.Remove, delta.RemoveKey); err != nil {
 		return err
 	}
 
-	if err := removeTagsFromData(&ctx, tx, knitId, delta.Remove); err != nil {
+	if err := addTagsForData(ctx, tx, knitId, delta.Add); err != nil {
 		return err
 	}
 
@@ -499,30 +499,54 @@ func addTagsForData(ctx context.Context, conn kpool.Queryer, knitId string, addT
 	return nil
 }
 
-func removeTagsFromData(ctx *context.Context, conn kpool.Queryer, knitId string, remTags []kdb.Tag) error {
+func removeTagsFromData(ctx context.Context, conn kpool.Queryer, knitId string, remTags []kdb.Tag, remKeys []string) error {
+
+	remtagKeys := []string{}
+	remtagValues := []string{}
 
 	for _, t := range remTags {
+		remtagKeys = append(remtagKeys, t.Key)
+		remtagValues = append(remtagValues, t.Value)
+	}
 
-		// get tag_key_id
-		_, err := conn.Exec(
-			*ctx,
-			`
-			with
-			"tag" as (select "id", "key_id" from "tag" where "value" = $1),
-			"key" as (select "id" from "tag_key" where "key" = $2),
-			"tag_remove" as (
-				select "tag"."id" as "id"
-				from "tag"
-				inner join "key" on "tag"."key_id" = "key"."id"
-			)
-			delete from "tag_data"
-			where "tag_id" in(select "id" from "tag_remove") and "knit_id" = $3
-			`,
-			t.Value, t.Key, knitId,
+	_, err := conn.Exec(
+		ctx,
+		`
+		with
+		"request" as (
+			select unnest($1::varchar[]) as "key", unnest($2::varchar[]) as "value"
+		),
+		"tag_data" as (
+			select "tag_id", "knit_id" from "tag_data" where "knit_id" = $4
+		),
+		"tag_value" as (
+			select "id" as "tag_id", "key_id", "value" from "tag"
+			where "id" in (select "tag_id" from "tag_data")
+		),
+		"full_tag" as (
+			select "tag_id", "key", "value" from "tag_value" as "v"
+			inner join "tag_key" as "k" on "v"."key_id" = "k"."id"
+		),
+		"tags_to_be_removed" as (
+			select "tag_id" from "full_tag"
+			inner join "request" using ("key", "value")
+		),
+		"tag_keys_to_be_removed" as (
+			select "tag_id" from "full_tag"
+			where "key" = any($3::varchar[])
+		),
+		"target_tag_ids" as (
+			select "tag_id" from "tags_to_be_removed"
+			union
+			select "tag_id" from "tag_keys_to_be_removed"
 		)
-		if err != nil {
-			return err
-		}
+		delete from "tag_data" where "knit_id" = $4 and "tag_id" in (table "target_tag_ids")
+		`,
+		remtagKeys, remtagValues, remKeys, knitId,
+	)
+
+	if err != nil {
+		return err
 	}
 
 	return nil

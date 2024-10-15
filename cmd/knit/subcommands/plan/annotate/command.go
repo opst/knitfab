@@ -35,8 +35,9 @@ func (an *Annotation) String() string {
 }
 
 type Flag struct {
-	Add    []string `flag:"add" help:"Add an annotation in the form key=value. repeatable."`
-	Remove []string `flag:"remove" help:"Remove an annotation in the form key=value. repeatable."`
+	Add       []string `flag:"add" metavar:"KEY=VALUE..." help:"Add an annotation in the form key=value. Repeatable."`
+	Remove    []string `flag:"remove" metavar:"KEY=VALUE..." help:"Remove an annotation in the form key=value. Repeatable."`
+	RemoveKey []string `flag:"remove-key" metavar:"KEY..." help:"Remove an annotation by key. Repeatable."`
 }
 
 const ARGS_PLAN_ID = "PLAN_ID"
@@ -62,13 +63,15 @@ To add,
 
     {{ .Command }} --add key1=value1 --add key2=value2
 
-To remove,
+To remove exact key-value pair,
 
     {{ .Command }} --remove key1=value1 --remove key2=value2
 
-On remove, the key AND value must match the annotation to be removed.
+To remove by key,
 
-Flags --add and --remove can be passed at once.
+    {{ .Command }} --remove-key key1 --remove-key key2
+
+Flags --add, --remove and --remove-key can be passed at once.
 If do so, Knitfab applies "remove" first, then "add" (= addition take precedence).
 `),
 	)
@@ -110,8 +113,9 @@ func Task() common.Task[Flag] {
 		}
 
 		change := plans.AnnotationChange{
-			Add:    plans.Annotations(add),
-			Remove: plans.Annotations(remove),
+			Add:       plans.Annotations(add),
+			Remove:    plans.Annotations(remove),
+			RemoveKey: flags.RemoveKey,
 		}
 
 		pln, err := client.UpdateAnnotations(ctx, planId, change)

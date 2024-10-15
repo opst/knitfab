@@ -1057,6 +1057,19 @@ select count("plan_id") from "plan"
 		}
 	}
 
+	if removeKeys := delta.RemoveKey; 0 < len(removeKeys) {
+		if _, err := tx.Exec(
+			ctx,
+			`
+			delete from "plan_annotation"
+			where "plan_id" = $1 and "key" = any($2::varchar[])
+			`,
+			planId, removeKeys,
+		); err != nil {
+			return err
+		}
+	}
+
 	if remove := delta.Remove; 0 < len(remove) {
 		keys := make([]string, len(remove))
 		values := make([]string, len(remove))
