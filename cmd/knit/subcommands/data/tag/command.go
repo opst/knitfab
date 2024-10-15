@@ -15,8 +15,9 @@ import (
 )
 
 type Flag struct {
-	AddTag    *kflg.Tags `flag:"add" metavar:"KEY:VALUE..." help:"add Tags to Data. It can be specified multiple times."`
-	RemoveTag *kflg.Tags `flag:"remove" metavar:"KEY:VALUE..." help:"remove Tags from Data. It can be specified multiple times."`
+	AddTag    *kflg.Tags `flag:"add" metavar:"KEY:VALUE..." help:"add Tags to Data. Repeatable."`
+	RemoveTag *kflg.Tags `flag:"remove" metavar:"KEY:VALUE..." help:"remove Tags from Data. Repeatable."`
+	RemoveKey []string   `flag:"remove-key" metavar:"KEY..." help:"remove Tags by key. Repeatable"`
 }
 
 var ARG_KNITID = "KNIT_ID"
@@ -54,10 +55,13 @@ func Task(
 	args := cl.Args()
 	knitId := args[ARG_KNITID][0]
 
-	addTag := []apitag.UserTag{}
-	removeTag := []apitag.UserTag{}
-
 	flags := cl.Flags()
+	change := apitag.Change{
+		AddTags:    []apitag.UserTag{},
+		RemoveTags: []apitag.UserTag{},
+		RemoveKey:  flags.RemoveKey,
+	}
+
 	if flags.AddTag != nil {
 		for _, t := range *flags.AddTag {
 			if ut := new(apitag.UserTag); !t.AsUserTag(ut) {
@@ -65,7 +69,7 @@ func Task(
 					"%w: tag key %s is reserved for system tags", flarc.ErrUsage, t.Key,
 				)
 			} else {
-				addTag = append(addTag, *ut)
+				change.AddTags = append(change.AddTags, *ut)
 			}
 		}
 	}
@@ -76,12 +80,12 @@ func Task(
 					"%w: tag key %s is reserved for system tags", flarc.ErrUsage, t.Key,
 				)
 			} else {
-				removeTag = append(removeTag, *ut)
+				change.RemoveTags = append(change.RemoveTags, *ut)
 			}
 		}
 	}
 
-	if err := UpdateTag(ctx, l, c, knitId, addTag, removeTag); err != nil {
+	if err := UpdateTag(ctx, l, c, knitId, change); err != nil {
 		return err
 	}
 
@@ -93,15 +97,13 @@ func UpdateTag(
 	logger *log.Logger,
 	ci krst.KnitClient,
 	knitid string,
-	addTags []apitag.UserTag,
-	removeTags []apitag.UserTag,
+	change apitag.Change,
 ) error {
 
-	tagChange := apitag.Change{AddTags: addTags, RemoveTags: removeTags}
 	logger.Printf("tagging to knit#id:%s", knitid)
-	res, err := ci.PutTagsForData(knitid, tagChange)
+	res, err := ci.PutTagsForData(knitid, change)
 	if err != nil {
-		buf, _err := json.MarshalIndent(tagChange, "", "    ")
+		buf, _err := json.MarshalIndent(change, "", "    ")
 		if _err != nil {
 			return fmt.Errorf("unexpected error: %w", err)
 		}

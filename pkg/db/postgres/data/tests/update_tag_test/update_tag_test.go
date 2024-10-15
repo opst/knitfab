@@ -263,6 +263,26 @@ func TestUpdateTag(t *testing.T) {
 		},
 	))
 
+	t.Run("when removing existing tag by key, it removes the tag", theory(
+		When{
+			KnitId: Padding36("test-knit-running-1"),
+			Delta:  kdb.TagDelta{RemoveKey: []string{"tag-a"}},
+		},
+		Then{
+			KnownTags: []kdb.Tag{
+				{Key: "tag-a", Value: "value 1"},
+				{Key: "tag-a", Value: "value 2"},
+				{Key: "tag-b", Value: "value 1"},
+			},
+			Tagging: map[string][]kdb.Tag{
+				Padding36("test-knit-running-1"): {
+					{Key: "tag-b", Value: "value 1"},
+				},
+			},
+			Error: nil,
+		},
+	))
+
 	t.Run("when removing non-existing tag, it does nothing", theory(
 		When{
 			KnitId: Padding36("test-knit-running-1"),
@@ -285,12 +305,35 @@ func TestUpdateTag(t *testing.T) {
 		},
 	))
 
-	t.Run("when adding and removing tags, it adds and removes the tags", theory(
+	t.Run("when removing non-existing tag by key, it does nothing", theory(
+		When{
+			KnitId: Padding36("test-knit-running-1"),
+			Delta:  kdb.TagDelta{RemoveKey: []string{"tag-c"}},
+		},
+		Then{
+			KnownTags: []kdb.Tag{
+				{Key: "tag-a", Value: "value 1"},
+				{Key: "tag-a", Value: "value 2"},
+				{Key: "tag-b", Value: "value 1"},
+			},
+			Tagging: map[string][]kdb.Tag{
+				Padding36("test-knit-running-1"): {
+					{Key: "tag-a", Value: "value 1"},
+					{Key: "tag-a", Value: "value 2"},
+					{Key: "tag-b", Value: "value 1"},
+				},
+			},
+			Error: nil,
+		},
+	))
+
+	t.Run("when adding and removing tags, it adds and then removes the tags", theory(
 		When{
 			KnitId: Padding36("test-knit-running-1"),
 			Delta: kdb.TagDelta{
-				Add:    []kdb.Tag{{Key: "tag-c", Value: "value 1"}},
-				Remove: []kdb.Tag{{Key: "tag-a", Value: "value 1"}},
+				Add:       []kdb.Tag{{Key: "tag-c", Value: "value 1"}},
+				Remove:    []kdb.Tag{{Key: "tag-a", Value: "value 1"}},
+				RemoveKey: []string{"tag-b"},
 			},
 		},
 		Then{
@@ -303,7 +346,6 @@ func TestUpdateTag(t *testing.T) {
 			Tagging: map[string][]kdb.Tag{
 				Padding36("test-knit-running-1"): {
 					{Key: "tag-a", Value: "value 2"},
-					{Key: "tag-b", Value: "value 1"},
 					{Key: "tag-c", Value: "value 1"},
 				},
 			},

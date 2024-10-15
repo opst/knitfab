@@ -9,6 +9,7 @@ import (
 	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/tags"
 	apitag "github.com/opst/knitfab-api-types/tags"
 	rmock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	data_tag "github.com/opst/knitfab/cmd/knit/subcommands/data/tag"
@@ -34,6 +35,9 @@ func TestDataTag(t *testing.T) {
 			{Key: "remkey1", Value: "remval1"},
 			{Key: "remkey2", Value: "remval2"},
 		}
+		removeKey := []string{
+			"remkey3", "remkey4",
+		}
 		expectedPutHist := []rmock.PutTagsForDataArgs{
 			{
 				KnitId: "1234",
@@ -45,6 +49,9 @@ func TestDataTag(t *testing.T) {
 					RemoveTags: []apitag.UserTag{
 						{Key: "remkey1", Value: "remval1"},
 						{Key: "remkey2", Value: "remval2"},
+					},
+					RemoveKey: []string{
+						"remkey3", "remkey4",
 					},
 				},
 			},
@@ -145,7 +152,11 @@ func TestDataTag(t *testing.T) {
 		// test start
 
 		ctx := context.Background()
-		err := data_tag.UpdateTag(ctx, logger, mock, "1234", addTags, removeTags)
+		err := data_tag.UpdateTag(ctx, logger, mock, "1234", tags.Change{
+			AddTags:    addTags,
+			RemoveTags: removeTags,
+			RemoveKey:  removeKey,
+		})
 
 		if err != nil {
 			t.Errorf("unexpected error occured:%v\n", err)
@@ -276,7 +287,7 @@ func TestDataTag(t *testing.T) {
 
 		// test start
 		ctx := context.Background()
-		err := data_tag.UpdateTag(ctx, logger, mock, "1234", addTags, removeTags)
+		err := data_tag.UpdateTag(ctx, logger, mock, "1234", tags.Change{AddTags: addTags, RemoveTags: removeTags})
 
 		if err != nil {
 			t.Errorf("unexpected error occured:%v\n", err)
@@ -405,7 +416,7 @@ func TestDataTag(t *testing.T) {
 
 		// test start
 		ctx := context.Background()
-		err := data_tag.UpdateTag(ctx, logger, mock, "1234", addTags, removeTags)
+		err := data_tag.UpdateTag(ctx, logger, mock, "1234", tags.Change{AddTags: addTags, RemoveTags: removeTags})
 
 		if err != nil {
 			t.Errorf("unexpected error occured:%v\n", err)
@@ -435,7 +446,7 @@ func TestDataTag(t *testing.T) {
 
 		// test start
 		ctx := context.Background()
-		err := data_tag.UpdateTag(ctx, logger, mock, "1234", addTags, removeTags)
+		err := data_tag.UpdateTag(ctx, logger, mock, "1234", tags.Change{AddTags: addTags, RemoveTags: removeTags})
 
 		if err == nil {
 			t.Errorf("unmatch error")
@@ -454,7 +465,8 @@ func comparePutHist(actualHist, expectedHist []rmock.PutTagsForDataArgs) bool {
 
 	for i, a := range actualHist {
 		if !cmp.SliceContentEq(a.Tags.AddTags, expectedHist[i].Tags.AddTags) ||
-			!cmp.SliceContentEq(a.Tags.RemoveTags, expectedHist[i].Tags.RemoveTags) {
+			!cmp.SliceContentEq(a.Tags.RemoveTags, expectedHist[i].Tags.RemoveTags) ||
+			!cmp.SliceContentEq(a.Tags.RemoveKey, expectedHist[i].Tags.RemoveKey) {
 			return false
 		}
 	}
