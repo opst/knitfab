@@ -2315,6 +2315,11 @@ func TestUpdateAnnotations(t *testing.T) {
 				Value:  "val2",
 			},
 			{
+				PlanId: th.Padding36("plan-1"),
+				Key:    "key2",
+				Value:  "val2b",
+			},
+			{
 				PlanId: th.Padding36("plan-3"),
 				Key:    "key1",
 				Value:  "val1",
@@ -2394,6 +2399,11 @@ func TestUpdateAnnotations(t *testing.T) {
 				},
 				{
 					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
 					Key:    "key3",
 					Value:  "val3",
 				},
@@ -2411,7 +2421,7 @@ func TestUpdateAnnotations(t *testing.T) {
 		},
 	))
 
-	t.Run("when removing annotations to a plan, it should be updated", theory(
+	t.Run("when removing annotations from a plan, it should be updated", theory(
 		When{
 			planId: th.Padding36("plan-1"),
 			delta: kdb.AnnotationDelta{
@@ -2427,6 +2437,55 @@ func TestUpdateAnnotations(t *testing.T) {
 					Key:    "key2",
 					Value:  "val2",
 				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when removing annotations by key from a plan, it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				RemoveKey: []string{"key2"},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when removing annotations , it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Remove: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+				},
+				RemoveKey: []string{"key2"},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
 				{
 					PlanId: th.Padding36("plan-3"),
 					Key:    "key1",
@@ -2456,6 +2515,11 @@ func TestUpdateAnnotations(t *testing.T) {
 					PlanId: th.Padding36("plan-1"),
 					Key:    "key2",
 					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
 				},
 				{
 					PlanId: th.Padding36("plan-3"),
@@ -2489,6 +2553,11 @@ func TestUpdateAnnotations(t *testing.T) {
 					Value:  "val2",
 				},
 				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
 					PlanId: th.Padding36("plan-3"),
 					Key:    "key1",
 					Value:  "val1",
@@ -2518,6 +2587,11 @@ func TestUpdateAnnotations(t *testing.T) {
 					PlanId: th.Padding36("plan-1"),
 					Key:    "key2",
 					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
 				},
 				{
 					PlanId: th.Padding36("plan-3"),
@@ -2550,6 +2624,11 @@ func TestUpdateAnnotations(t *testing.T) {
 					Value:  "val2",
 				},
 				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
 					PlanId: th.Padding36("plan-3"),
 					Key:    "key1",
 					Value:  "val1",
@@ -2578,6 +2657,11 @@ func TestUpdateAnnotations(t *testing.T) {
 					PlanId: th.Padding36("plan-1"),
 					Key:    "key1",
 					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
 				},
 				{
 					PlanId: th.Padding36("plan-1"),

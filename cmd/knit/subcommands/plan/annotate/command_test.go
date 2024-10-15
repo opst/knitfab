@@ -78,6 +78,13 @@ func TestCommand(t *testing.T) {
 					)
 				}
 
+				if !cmp.SliceContentEq(change.RemoveKey, then.UpdateAnnotationsArgsChange.RemoveKey) {
+					t.Errorf(
+						"change.RemoveKey in request:\n===actual===\n%v\n===expected===\n%v",
+						change.RemoveKey, then.UpdateAnnotationsArgsChange.RemoveKey,
+					)
+				}
+
 				return when.UpdateAnnotationsReturn, when.UpdateAnnotationsError
 			}
 
@@ -109,8 +116,9 @@ func TestCommand(t *testing.T) {
 	t.Run("when client return plan detail, it return that detail", theory(
 		When{
 			Flag: annotate.Flag{
-				Add:    []string{"key1=value1", "key2=value2"},
-				Remove: []string{"key3=value3", "key4=value4"},
+				Add:       []string{"key1=value1", "key2=value2"},
+				Remove:    []string{"key3=value3", "key4=value4"},
+				RemoveKey: []string{"key5", "key6"},
 			},
 			Args: map[string][]string{annotate.ARGS_PLAN_ID: {"test-plan-id"}},
 			UpdateAnnotationsReturn: plans.Detail{
@@ -154,8 +162,9 @@ func TestCommand(t *testing.T) {
 			UpdateAnnotationsArgsPlanId: "test-plan-id",
 
 			UpdateAnnotationsArgsChange: plans.AnnotationChange{
-				Add:    plans.Annotations{{Key: "key1", Value: "value1"}, {Key: "key2", Value: "value2"}},
-				Remove: plans.Annotations{{Key: "key3", Value: "value3"}, {Key: "key4", Value: "value4"}},
+				Add:       plans.Annotations{{Key: "key1", Value: "value1"}, {Key: "key2", Value: "value2"}},
+				Remove:    plans.Annotations{{Key: "key3", Value: "value3"}, {Key: "key4", Value: "value4"}},
+				RemoveKey: []string{"key5", "key6"},
 			},
 		},
 	))

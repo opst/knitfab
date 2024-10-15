@@ -132,7 +132,9 @@ func PutTagForDataHandler(dbData kdb.DataInterface, paramKey string) echo.Handle
 			)
 		}
 
-		delta := kdb.TagDelta{}
+		delta := kdb.TagDelta{
+			RemoveKey: change.RemoveKey,
+		}
 		for _, tag := range change.AddTags {
 			if t, err := kdb.NewTag(tag.Key, tag.Value); err != nil {
 				binderr.BadRequest(fmt.Sprintf("bad tag: %s", tag), err)

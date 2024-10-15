@@ -200,6 +200,9 @@ type AnnotationDelta struct {
 	//
 	// If Plan does not have an annotation in Remove, it will be ignored.
 	Remove []Annotation
+
+	// RemoveKey is a list of annotation keys to be removed.
+	RemoveKey []string
 }
 
 // Main body of plan, describes "what it is".
