@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
@@ -176,37 +175,25 @@ func (s *scanner[T]) ScanAll(rows pgx.Rows) ([]T, error) {
 	}
 
 	ret := make([]T, 0, rows.CommandTag().RowsAffected())
-	rtSqlScanner := reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+	// rtSqlScanner := reflect.TypeOf((*sql.Scanner)(nil)).Elem()
 	for rows.Next() {
 		elem := new(T)
 		re := reflect.ValueOf(elem)
+		rr := reflect.ValueOf(rows)
 
-		sqlValues, err := rows.Values()
-		if err != nil {
-			return nil, err
+		fldPtr := make([]reflect.Value, len(fields))
+		for nth, f := range fields {
+			fldPtr[nth] = re.Elem().FieldByName(f.Name).Addr()
 		}
 
-		for nth, sqlv := range sqlValues {
-			f := fields[nth]
-			if _sqlv := reflect.ValueOf(sqlv); !_sqlv.CanConvert(f.Type) {
-
-				if reflect.PointerTo(f.Type).Implements(rtSqlScanner) {
-					if err := re.Elem().FieldByName(f.Name).Addr().Interface().(sql.Scanner).Scan(sqlv); err != nil {
-						return nil, fmt.Errorf(
-							`field "%s" (type: %s in sql, %T in golang) can not be convert to type %s (field: "%T.%s")`,
-							sqlColumns[nth].Name, pgOID2String(sqlColumns[nth].DataTypeOID), sqlv, f.Type.Name(), *elem, f.Name,
-						)
-					}
-					continue
-				}
-
-				return nil, fmt.Errorf(
-					`field "%s" (type: %s in sql, %T in golang) can not be convert to type %s (field: "%T.%s")`,
-					sqlColumns[nth].Name, pgOID2String(sqlColumns[nth].DataTypeOID), sqlv, f.Type.Name(), *elem, f.Name,
-				)
+		rret := rr.MethodByName("Scan").Call(fldPtr)
+		if len(rret) != 1 {
+			return nil, fmt.Errorf("unexpected return value from pgx.Rows.Scan: %v", rret)
+		}
+		if err, ok := rret[0].Interface().(error); ok {
+			if err != nil {
+				return nil, err
 			}
-			v := reflect.ValueOf(sqlv).Convert(f.Type)
-			re.Elem().FieldByName(f.Name).Set(v)
 		}
 		ret = append(ret, *elem)
 	}
