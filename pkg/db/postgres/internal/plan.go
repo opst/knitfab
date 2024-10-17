@@ -50,15 +50,23 @@ func GetPlanBody(ctx context.Context, conn kpool.Queryer, planIds []string) (map
 		),
 		"plan_pseudo" as (
 			select "plan_id", "name" from "plan_pseudo" where "plan_id" = any($1)
+		),
+		"plan_entrypoint" as (
+			select "plan_id", "entrypoint" from "plan_entrypoint" where "plan_id" = any($1)
+		),
+		"plan_args" as (
+			select "plan_id", "args" from "plan_args" where "plan_id" = any($1)
 		)
 		select
-			"plan_id", "active", "hash",
+			"plan_id", "active", "hash", "entrypoint", "args",
 			"image" is not null as "is_image", coalesce("image", ''), coalesce("version", ''),
 			"name" is not null as "is_pseudo", coalesce("name", ''), coalesce("service_account", '')
 		from "plan"
 		left outer join "plan_image" using ("plan_id")
 		left outer join "plan_pseudo" using ("plan_id")
 		left outer join "plan_service_account" using ("plan_id")
+		left outer join "plan_entrypoint" using ("plan_id")
+		left outer join "plan_args" using ("plan_id")
 		`,
 		planIds,
 	)
@@ -76,7 +84,7 @@ func GetPlanBody(ctx context.Context, conn kpool.Queryer, planIds []string) (map
 		image := kdb.ImageIdentifier{}
 		pseudoDetail := kdb.PseudoPlanDetail{}
 		if err := rows.Scan(
-			&plan.PlanId, &plan.Active, &plan.Hash,
+			&plan.PlanId, &plan.Active, &plan.Hash, &plan.Entrypoint, &plan.Args,
 			&isImage, &image.Image, &image.Version,
 			&isPseudo, &pseudoDetail.Name, &plan.ServiceAccount,
 		); err != nil {

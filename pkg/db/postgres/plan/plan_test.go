@@ -190,6 +190,8 @@ func TestPlan_Register(t *testing.T) {
 				th.Padding64("test-hash"), nil,
 				kdb.PlanParam{
 					Image: "repo.invalid/test-image", Version: "v0.1", Active: true,
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					Inputs: []kdb.MountPointParam{
 						{
 							Path: "/in/1",
@@ -249,6 +251,8 @@ func TestPlan_Register(t *testing.T) {
 					Image: &kdb.ImageIdentifier{
 						Image: "repo.invalid/test-image", Version: "v0.1",
 					},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					OnNode: []kdb.OnNode{
 						{Mode: kdb.MustOnNode, Key: "accelarator", Value: "gpu"},
 						{Mode: kdb.MustOnNode, Key: "ram", Value: "large"},
@@ -328,6 +332,8 @@ func TestPlan_Register(t *testing.T) {
 				kdb.PlanParam{
 					Active: true,
 					Image:  "repo.invalid/test-image-2", Version: "v0.2",
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					Inputs: []kdb.MountPointParam{
 						{
 							Path: "/in/data",
@@ -379,7 +385,9 @@ func TestPlan_Register(t *testing.T) {
 			{
 				PlanBody: kdb.PlanBody{
 					PlanId: th.Padding36("UNKNOWN"), Active: true, Hash: th.Padding64("example-hash"),
-					Image: &kdb.ImageIdentifier{Image: "repo.invalid/test-image-2", Version: "v0.2"},
+					Image:      &kdb.ImageIdentifier{Image: "repo.invalid/test-image-2", Version: "v0.2"},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
 				Inputs: []kdb.MountPoint{
 					{
@@ -449,7 +457,9 @@ func TestPlan_Register(t *testing.T) {
 				th.Padding64("hash:plan-x"), nil,
 				kdb.PlanParam{
 					Image: "repo.invalid/image-x", Version: "0.0.1",
-					Active: true,
+					Active:     true,
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					Inputs: []kdb.MountPointParam{
 						{
 							Path: "/in/x",
@@ -514,7 +524,9 @@ func TestPlan_Register(t *testing.T) {
 			{
 				PlanBody: kdb.PlanBody{
 					PlanId: th.Padding36("UNKNOWN"), Active: true, Hash: th.Padding64("hash:plan-x"),
-					Image: &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "0.0.1"},
+					Image:      &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "0.0.1"},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
 				Inputs: []kdb.MountPoint{
 					{
@@ -582,7 +594,9 @@ func TestPlan_Register(t *testing.T) {
 				th.Padding64("hash:plan-x"), nil,
 				kdb.PlanParam{
 					Image: "repo.invalid/image-x", Version: "0.0.1",
-					Active: true,
+					Active:     true,
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					Inputs: []kdb.MountPointParam{
 						{
 							Path: "/in/x",
@@ -649,7 +663,9 @@ func TestPlan_Register(t *testing.T) {
 			{
 				PlanBody: kdb.PlanBody{
 					PlanId: th.Padding36("UNKNOWN"), Active: true, Hash: th.Padding64("hash:plan-x"),
-					Image: &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "0.0.1"},
+					Image:      &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "0.0.1"},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
 				Inputs: []kdb.MountPoint{
 					{

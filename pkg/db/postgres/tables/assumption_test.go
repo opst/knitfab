@@ -45,6 +45,12 @@ func TestOperation(t *testing.T) {
 			{PlanId: th.Padding36("plan-3"), Image: "repo.invalid/image-3", Version: "v0.1"},
 			{PlanId: th.Padding36("plan-4"), Image: "repo.invalid/image-4", Version: "v0.2"},
 		},
+		PlanEntrypoint: []tables.PlanEntrypoint{
+			{PlanId: th.Padding36("plan-3"), Entrypoint: []string{"python", "main.py"}},
+		},
+		PlanArgs: []tables.PlanArgs{
+			{PlanId: th.Padding36("plan-4"), Args: []string{"--arg1", "val1", "--arg2", "val2"}},
+		},
 		Outputs: map[tables.Output]tables.OutputAttr{
 			{OutputId: 1010, PlanId: th.Padding36("plan-1"), Path: "/out/1"}: {},
 			{OutputId: 2010, PlanId: th.Padding36("plan-2"), Path: "/out/1"}: {},
@@ -454,6 +460,32 @@ func TestOperation(t *testing.T) {
 		expected := testee.PlanImage
 
 		if !cmp.SliceContentEq(actual, expected) {
+			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)
+		}
+	})
+
+	t.Run("plan_entrypoint", func(t *testing.T) {
+		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
+		defer conn.Release()
+		actual := try.To(scanner.New[tables.PlanEntrypoint]().QueryAll(
+			ctx, conn, `table "plan_entrypoint"`,
+		)).OrFatal(t)
+
+		expected := testee.PlanEntrypoint
+		if !cmp.SliceContentEqWith(actual, expected, tables.PlanEntrypoint.Equal) {
+			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)
+		}
+	})
+
+	t.Run("plan_args", func(t *testing.T) {
+		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
+		defer conn.Release()
+		actual := try.To(scanner.New[tables.PlanArgs]().QueryAll(
+			ctx, conn, `table "plan_args"`,
+		)).OrFatal(t)
+
+		expected := testee.PlanArgs
+		if !cmp.SliceContentEqWith(actual, expected, tables.PlanArgs.Equal) {
 			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)
 		}
 	})

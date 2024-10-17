@@ -96,6 +96,8 @@ func (step *Step) apply(tbls *Tables) error {
 // Declare premise of test.
 type Operation struct {
 	Plan               []Plan
+	PlanEntrypoint     []PlanEntrypoint
+	PlanArgs           []PlanArgs
 	PlanResources      []PlanResource
 	OnNode             []PlanOnNode
 	PlanImage          []PlanImage
@@ -135,6 +137,18 @@ func (prem *Operation) Apply(ctx context.Context, pool kpool.Pool) error {
 
 	for _, im := range prem.PlanImage {
 		if err := tbls.InsertPlanImage(&im); err != nil {
+			return err
+		}
+	}
+
+	for _, pent := range prem.PlanEntrypoint {
+		if err := tbls.InsertPlanEntrypoint(&pent); err != nil {
+			return err
+		}
+	}
+
+	for _, pa := range prem.PlanArgs {
+		if err := tbls.InsertPlanArgs(&pa); err != nil {
 			return err
 		}
 	}

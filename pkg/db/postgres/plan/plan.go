@@ -354,6 +354,36 @@ func registerPlan(ctx context.Context, tx kpool.Tx, plan *kdb.PlanSpec) (string,
 			return "", xe.Wrap(err)
 		}
 
+		if entrypoint := plan.Entrypoint(); 0 < len(entrypoint) {
+			_, err := tx.Exec(
+				ctx,
+				`
+				insert into "plan_entrypoint" ("plan_id", "entrypoint")
+				values ($1, $2)
+				`,
+				planId, entrypoint,
+			)
+
+			if err != nil {
+				return "", xe.Wrap(err)
+			}
+		}
+
+		if args := plan.Args(); 0 < len(args) {
+			_, err := tx.Exec(
+				ctx,
+				`
+				insert into "plan_args" ("plan_id", "args")
+				values ($1, $2)
+				`,
+				planId, args,
+			)
+
+			if err != nil {
+				return "", xe.Wrap(err)
+			}
+		}
+
 		if annotations := plan.Annotations(); 0 < len(annotations) {
 			annoKeys := make([]string, len(annotations))
 			annoValues := make([]string, len(annotations))
