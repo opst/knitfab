@@ -26,7 +26,7 @@ cluster:
       image: knit-repo/init:v0.0.2
     nurse:
       image: knit-repo/nurse:v0.0.3
-      serviceAccount: fake-service-account
+      serviceAccountSecret: fake-service-account
   keychains:
     signKeyForImportToken:
       name: fake-sign-key-name
