@@ -51,7 +51,9 @@ func ComposeDetail(plan kdb.Plan) apiplans.Detail {
 
 func ComposeSummary(planBody kdb.PlanBody) apiplans.Summary {
 	rst := apiplans.Summary{
-		PlanId: planBody.PlanId,
+		PlanId:     planBody.PlanId,
+		Entrypoint: planBody.Entrypoint,
+		Args:       planBody.Args,
 	}
 	if i := planBody.Image; i != nil {
 		rst.Image = &apiplans.Image{Repository: i.Image, Tag: i.Version}

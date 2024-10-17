@@ -36,9 +36,11 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 
 		plan, err := func() (*kdb.Plan, error) {
 			params := kdb.PlanParam{
-				Image:   specInReq.Image.Repository,
-				Version: specInReq.Image.Tag,
-				Active:  utils.Default(specInReq.Active, true),
+				Image:      specInReq.Image.Repository,
+				Version:    specInReq.Image.Tag,
+				Active:     utils.Default(specInReq.Active, true),
+				Entrypoint: specInReq.Entrypoint,
+				Args:       specInReq.Args,
 				Inputs: utils.Map(
 					specInReq.Inputs,
 					func(mp apiplans.Mountpoint) kdb.MountPointParam {
