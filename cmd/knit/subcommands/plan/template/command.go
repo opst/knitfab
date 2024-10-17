@@ -493,7 +493,7 @@ args:
   Arguments to be passed to this Plan image.
   This array overrides the CMD of the image.
 `)),
-			y.CompactSeq(utils.Map(p.Entrypoint, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
+			y.CompactSeq(utils.Map(p.Args, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
 		),
 		y.Entry(
 			y.Text("inputs", y.WithHeadComment(`
