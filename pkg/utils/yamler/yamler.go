@@ -57,6 +57,10 @@ func Seq(s ...*yaml.Node) *yaml.Node {
 	return &yaml.Node{Kind: yaml.SequenceNode, Content: s}
 }
 
+func CompactSeq(s ...*yaml.Node) *yaml.Node {
+	return &yaml.Node{Kind: yaml.SequenceNode, Style: yaml.FlowStyle, Content: s}
+}
+
 func Null() *yaml.Node {
 	return &yaml.Node{Kind: yaml.ScalarNode, Value: "null"}
 }

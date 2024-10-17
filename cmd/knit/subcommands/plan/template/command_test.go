@@ -222,6 +222,34 @@ func TestNewPlanFromImage(t *testing.T) {
 			Then{
 				plan: plans.PlanSpec{
 					Image: plans.Image{Repository: "image", Tag: "tag"},
+					Entrypoint: []string{
+						"/entrypoint.sh",
+						"in/1",
+						"/in/2",
+						"3/in",
+						"/4/in",
+						"...",
+						"/out/1",
+						"./out/2",
+						"/3/out",
+						"/4/out",
+						"...",
+					},
+					Args: []string{
+						"command-a",
+						"in/1",
+						"./in/5",
+						"/in/6",
+						"command-b",
+						"/7/in",
+						"/8/in",
+						"/out/1",
+						"out/5",
+						"/out/6",
+						"command-c",
+						"/7/out",
+						"8/out",
+					},
 					Inputs: []plans.Mountpoint{
 						{
 							Path: "/work/in/1",
@@ -463,6 +491,15 @@ func TestNewPlanFromImage(t *testing.T) {
 			Then{
 				plan: plans.PlanSpec{
 					Image: plans.Image{Repository: "image", Tag: "tag"},
+					Entrypoint: []string{
+						"/entrypoint.sh",
+						"in/1",
+					},
+					Args: []string{
+						"command-a",
+						"in/1",
+						"out/1",
+					},
 					Inputs: []plans.Mountpoint{
 						{
 							Path: "/work/in/1",
