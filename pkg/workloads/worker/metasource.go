@@ -297,10 +297,22 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 		}
 	}
 
+	var command []string = nil
+	var args []string = nil
+
+	if 0 < len(r.Entrypoint) {
+		command = r.Entrypoint
+	}
+	if 0 < len(r.Args) {
+		args = r.Args
+	}
+
 	containers := []kubecore.Container{
 		{
 			Name:         "main",
 			Image:        fmt.Sprintf("%s:%s", r.Image.Image, r.Image.Version),
+			Command:      command,
+			Args:         args,
 			VolumeMounts: utils.Concat(readonly(inputsMount), writable(outputsMount)),
 			Resources: kubecore.ResourceRequirements{
 				Limits: resLimits,

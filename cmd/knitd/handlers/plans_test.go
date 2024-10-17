@@ -85,6 +85,8 @@ func TestRegisterPlan(t *testing.T) {
 					},
 					Body: `{
 	"image": "repo.invalid/image-1:0.1.0",
+	"entrypoint": ["python", "main.py"],
+	"args": ["--arg1", "val1"],
 	"active": true,
 	"inputs": [
 		{"path": "/in/1", "tags": ["type:raw data", "format:rgb image"]}
@@ -112,6 +114,8 @@ func TestRegisterPlan(t *testing.T) {
 							Image: &kdb.ImageIdentifier{
 								Image: "repo.invalid/image-1", Version: "0.1.0",
 							},
+							Entrypoint: []string{"python", "main.py"},
+							Args:       []string{"--arg1", "val1"},
 							OnNode: []kdb.OnNode{
 								{Mode: kdb.MayOnNode, Key: "vram", Value: "xlarge"},
 								{Mode: kdb.PreferOnNode, Key: "vram", Value: "large"},
@@ -160,6 +164,8 @@ func TestRegisterPlan(t *testing.T) {
 				Query: allValidated(t, []kdb.PlanParam{
 					{
 						Image: "repo.invalid/image-1", Version: "0.1.0", Active: true,
+						Entrypoint: []string{"python", "main.py"},
+						Args:       []string{"--arg1", "val1"},
 						Inputs: []kdb.MountPointParam{
 							{
 								Path: "/in/1",
@@ -209,8 +215,10 @@ func TestRegisterPlan(t *testing.T) {
 					},
 					Body: plans.Detail{
 						Summary: plans.Summary{
-							PlanId: "plan-id-1",
-							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
+							PlanId:     "plan-id-1",
+							Image:      &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
+							Entrypoint: []string{"python", "main.py"},
+							Args:       []string{"--arg1", "val1"},
 							Annotations: plans.Annotations{
 								{Key: "annot1", Value: "val1"},
 								{Key: "annot2", Value: "val2"},

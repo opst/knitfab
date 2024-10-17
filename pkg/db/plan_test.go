@@ -54,6 +54,12 @@ func TestPlanParam_Validation(t *testing.T) {
 			Image:   "repo.invalid/image-name",
 			Version: "v0.0-alpha",
 			Active:  true,
+			Annotations: []kdb.Annotation{
+				{Key: "foo", Value: "bar"},
+				{Key: "some", Value: "annotation"},
+			},
+			Entrypoint: []string{"entry", "point"},
+			Args:       []string{"arg1", "arg2"},
 			Inputs: []kdb.MountPointParam{
 				{
 					Path: "/in/data/2",
@@ -107,6 +113,8 @@ func TestPlanParam_Validation(t *testing.T) {
 				"/out/result/1", "fizz:bazz",
 				"/out/result/2", "another:tag",
 				"/log", "fizz:bazz", "type:log",
+				"[entrypoint]", "entry", "point",
+				"[args]", "arg1", "arg2",
 			),
 		},
 	))

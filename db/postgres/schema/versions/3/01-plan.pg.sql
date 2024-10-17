@@ -12,3 +12,17 @@ create table if not exists "plan_service_account" (
     PRIMARY KEY ("plan_id"),
     FOREIGN KEY ("plan_id") REFERENCES "plan" ("plan_id")
 );
+
+create table if not exists "plan_entrypoint" (
+    "plan_id" char(36) not null,
+    "entrypoint" varchar[] not null,
+    PRIMARY KEY ("plan_id"),
+    FOREIGN KEY ("plan_id") REFERENCES "plan" ("plan_id")
+);
+
+create table if not exists "plan_args" (
+    "plan_id" char(36) not null,
+    "args" varchar[] not null,
+    PRIMARY KEY ("plan_id"),
+    FOREIGN KEY ("plan_id") REFERENCES "plan" ("plan_id")
+);

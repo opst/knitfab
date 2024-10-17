@@ -228,6 +228,12 @@ type PlanBody struct {
 	// If this property is not nil, this plan has image.
 	Image *ImageIdentifier
 
+	// Entrypoint is the entrypoint of container image
+	Entrypoint []string
+
+	// Args is the arguments for the entrypoints
+	Args []string
+
 	// If this property is not nil, this plan is pseudo.
 	Pseudo *PseudoPlanDetail
 
@@ -255,6 +261,8 @@ func (pb *PlanBody) Equal(other *PlanBody) bool {
 func (pb *PlanBody) Equiv(other *PlanBody) bool {
 	return pb.Active == other.Active &&
 		pb.Hash == other.Hash &&
+		cmp.SliceContentEq(pb.Entrypoint, other.Entrypoint) &&
+		cmp.SliceContentEq(pb.Args, other.Args) &&
 		pb.Image.Equal(other.Image) &&
 		pb.Pseudo.Equal(other.Pseudo) &&
 		cmp.SliceContentEq(pb.OnNode, other.OnNode) &&
@@ -449,6 +457,8 @@ func (m *MountPoint) Equiv(other *MountPoint) bool {
 
 type PlanParam struct {
 	Image          string
+	Entrypoint     []string
+	Args           []string
 	Version        string
 	Active         bool
 	Inputs         []MountPointParam
@@ -468,6 +478,10 @@ type PlanParam struct {
 //
 // - error: validation error. if error is not nil, *PlanSpec is nil.
 func (pp PlanParam) Validate() (*PlanSpec, error) {
+	entrypoint := make([]string, len(pp.Entrypoint))
+	copy(entrypoint, pp.Entrypoint)
+	args := make([]string, len(pp.Args))
+	copy(args, pp.Args)
 	inputs := make([]MountPointParam, len(pp.Inputs))
 	copy(inputs, pp.Inputs)
 	outputs := make([]MountPointParam, len(pp.Outputs))
@@ -485,6 +499,8 @@ func (pp PlanParam) Validate() (*PlanSpec, error) {
 
 	ret := &PlanSpec{
 		image:          pp.Image,
+		entrypoint:     entrypoint,
+		args:           args,
 		version:        pp.Version,
 		active:         pp.Active,
 		inputs:         inputs,
@@ -520,15 +536,17 @@ func BypassValidation(hash string, err error, pp PlanParam) *PlanSpec {
 	// take snapshot to guard from changing pp.mountpoint after return this method.
 
 	ps := &PlanSpec{
-		image:     pp.Image,
-		version:   pp.Version,
-		active:    pp.Active,
-		inputs:    inputs,
-		outputs:   outputs,
-		log:       pp.Log,
-		onNode:    onNode,
-		hash:      hash,
-		resources: resources,
+		image:      pp.Image,
+		entrypoint: pp.Entrypoint,
+		args:       pp.Args,
+		version:    pp.Version,
+		active:     pp.Active,
+		inputs:     inputs,
+		outputs:    outputs,
+		log:        pp.Log,
+		onNode:     onNode,
+		hash:       hash,
+		resources:  resources,
 
 		serviceaccount: pp.ServiceAccount,
 		annotations:    annotations,
@@ -546,14 +564,16 @@ func BypassValidation(hash string, err error, pp PlanParam) *PlanSpec {
 //
 // to instantiate this struct with validation, use the factory function `NewPlanSpec`.
 type PlanSpec struct {
-	image   string
-	version string
-	active  bool
-	inputs  []MountPointParam
-	outputs []MountPointParam
-	log     *LogParam
-	onNode  []OnNode
-	hash    string
+	image      string
+	version    string
+	active     bool
+	entrypoint []string
+	args       []string
+	inputs     []MountPointParam
+	outputs    []MountPointParam
+	log        *LogParam
+	onNode     []OnNode
+	hash       string
 
 	serviceaccount string
 	annotations    []Annotation
@@ -564,36 +584,16 @@ type PlanSpec struct {
 	vErr      error
 }
 
-func (ps *PlanSpec) Format(s fmt.State, r rune) {
-	fmt.Fprintf(
-		s,
-		"PlanSpec{image:%s version:%s active:%v hash:%s inputs:[",
-		ps.image, ps.version, ps.active, ps.hash,
-	)
-	if 0 < len(ps.inputs) {
-		fmt.Fprintf(s, "%+v", ps.inputs[0])
-		for _, m := range ps.inputs[1:] {
-			fmt.Fprintf(s, " %+v", m)
-		}
-	}
-	fmt.Fprintf(s, "] outputs:[")
-	if 0 < len(ps.outputs) {
-		fmt.Fprintf(s, "%+v", ps.outputs[0])
-		for _, m := range ps.inputs[1:] {
-			fmt.Fprintf(s, " %+v", m)
-		}
-	}
-	fmt.Fprintf(s, "] log:%+v", ps.log)
-	fmt.Fprintf(s, "validated:%v", ps.validated)
-	if ps.vErr != nil {
-		fmt.Fprintf(s, "vErr:%+v", ps.vErr)
-	}
-	fmt.Fprint(s, "}")
-
-}
-
 func (ps *PlanSpec) Image() string {
 	return ps.image
+}
+
+func (ps *PlanSpec) Entrypoint() []string {
+	return ps.entrypoint
+}
+
+func (ps *PlanSpec) Args() []string {
+	return ps.args
 }
 
 func (ps *PlanSpec) Version() string {
@@ -665,14 +665,26 @@ func (ps *PlanSpec) EquivPlan(plan *Plan) bool {
 		return false
 	}
 
-	return cmp.SliceContentEqWith(
+	if !cmp.SliceContentEqWith(
 		ps.inputs, utils.RefOf(plan.Inputs), MountPointParam.EquivMountPoint,
-	) &&
-		cmp.SliceContentEqWith(
-			ps.outputs, utils.RefOf(plan.Outputs), MountPointParam.EquivMountPoint,
-		) &&
-		cmp.SliceContentEq(ps.onNode, plan.OnNode)
+	) {
+		return false
+	}
+	if !cmp.SliceContentEqWith(
+		ps.outputs, utils.RefOf(plan.Outputs), MountPointParam.EquivMountPoint,
+	) {
+		return false
+	}
 
+	if !cmp.SliceContentEq(ps.entrypoint, plan.Entrypoint) {
+		return false
+	}
+
+	if !cmp.SliceContentEq(ps.args, plan.Args) {
+		return false
+	}
+
+	return true
 }
 
 // run validation if not yet.
@@ -924,6 +936,18 @@ func (ps *PlanSpec) Hash() string {
 		shahash.Write([]byte("/log"))
 		for _, t := range ps.log.Tags.Slice() {
 			shahash.Write([]byte(t.String()))
+		}
+	}
+	if 0 < len(ps.entrypoint) {
+		shahash.Write([]byte("[entrypoint]"))
+		for _, epitem := range ps.entrypoint {
+			shahash.Write([]byte(epitem))
+		}
+	}
+	if 0 < len(ps.args) {
+		shahash.Write([]byte("[args]"))
+		for _, argitem := range ps.args {
+			shahash.Write([]byte(argitem))
 		}
 	}
 

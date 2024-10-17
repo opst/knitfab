@@ -176,6 +176,7 @@ func TestRunExecutable(t *testing.T) {
 				if !cmp.SliceContentEqWith(actual, expected, func(a, b kubecore.Container) bool {
 					return a.Name == b.Name &&
 						a.Image == b.Image &&
+						cmp.SliceEq(a.Command, b.Command) &&
 						cmp.SliceEq(a.Args, b.Args) &&
 						cmp.SliceContentEqWith(a.Env, b.Env, func(a, b kubecore.EnvVar) bool {
 							return reflect.DeepEqual(a, b)
@@ -283,7 +284,7 @@ func TestRunExecutable(t *testing.T) {
 		}
 	}
 
-	t.Run("when it builds a k8s job spec with output & log, it creates job specification", theoryOk(
+	t.Run("when it builds a k8s job spec, it creates job specification", theoryOk(
 		When{
 			run: kdb.Run{
 				RunBody: kdb.RunBody{
@@ -293,6 +294,8 @@ func TestRunExecutable(t *testing.T) {
 						Image: &kdb.ImageIdentifier{
 							Image: "repo.invalid/image-name", Version: "1.0",
 						},
+						Entrypoint: []string{"python", "main.py"},
+						Args:       []string{"arg1", "arg2"},
 						Resources: map[string]resource.Quantity{
 							"cpu":    resource.MustParse("1"),
 							"memory": resource.MustParse("1Gi"),
@@ -386,8 +389,10 @@ func TestRunExecutable(t *testing.T) {
 					},
 					Containers: []kubecore.Container{
 						{
-							Name:  "main",
-							Image: "repo.invalid/image-name:1.0",
+							Name:    "main",
+							Image:   "repo.invalid/image-name:1.0",
+							Command: []string{"python", "main.py"},
+							Args:    []string{"arg1", "arg2"},
 							VolumeMounts: []kubecore.VolumeMount{
 								{
 									Name: dsIn1.KnitId, MountPath: "/in/1",

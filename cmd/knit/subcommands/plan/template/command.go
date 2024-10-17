@@ -156,12 +156,14 @@ func Task(
 		}
 
 		yplan := planSpecWithDocument{
-			Image:    image(plan.Image),
-			Inputs:   utils.Map(plan.Inputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
-			Outputs:  utils.Map(plan.Outputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
-			Log:      (*logpoint)(plan.Log),
-			Resource: res,
-			Active:   active,
+			Image:      image(plan.Image),
+			Entrypoint: plan.Entrypoint,
+			Args:       plan.Args,
+			Inputs:     utils.Map(plan.Inputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Outputs:    utils.Map(plan.Outputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Log:        (*logpoint)(plan.Log),
+			Resource:   res,
+			Active:     active,
 		}
 
 		os.Stdout.WriteString("\n")
@@ -314,6 +316,8 @@ func FromImage(
 				Repository: cfg.Tag.Repository.Name(),
 				Tag:        cfg.Tag.TagStr(),
 			},
+			Entrypoint: cfg.Config.Entrypoint,
+			Args:       cfg.Config.Cmd,
 			Inputs: utils.Map(
 				utils.KeysOf(inputs), mountpointBuilder("in", env.Tags()),
 			),
@@ -441,6 +445,8 @@ func (a annotations) yamlNode() *yaml.Node {
 
 type planSpecWithDocument struct {
 	Image       image
+	Entrypoint  []string
+	Args        []string
 	Inputs      []mountpoint
 	Outputs     []mountpoint
 	Log         *logpoint
@@ -472,6 +478,22 @@ image:
   This image-tag should be accessible from your knitfab cluster.
 `)),
 			p.Image.yamlNode(),
+		),
+		y.Entry(
+			y.Text("entrypoint", y.WithHeadComment(`
+entrypoint:
+  Command to be executed as this Plan image.
+  This array overrides the ENTRYPOINT of the image.
+`)),
+			y.CompactSeq(utils.Map(p.Entrypoint, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
+		),
+		y.Entry(
+			y.Text("args", y.WithHeadComment(`
+args:
+  Arguments to be passed to this Plan image.
+  This array overrides the CMD of the image.
+`)),
+			y.CompactSeq(utils.Map(p.Entrypoint, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
 		),
 		y.Entry(
 			y.Text("inputs", y.WithHeadComment(`

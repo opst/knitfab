@@ -21,6 +21,8 @@ func TestComposeDetail(t *testing.T) {
 					PlanId: "plan-1", Active: true, Hash: "hash1",
 					Image:          &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 					Pseudo:         &kdb.PseudoPlanDetail{},
+					Entrypoint:     []string{"python", "main.py"},
+					Args:           []string{"--arg1", "val1", "--arg2", "val2"},
 					ServiceAccount: "service-account-name",
 					Annotations: []kdb.Annotation{
 						{Key: "anno1", Value: "val1"},
@@ -59,6 +61,8 @@ func TestComposeDetail(t *testing.T) {
 						Repository: "image-1",
 						Tag:        "ver-1",
 					},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--arg1", "val1", "--arg2", "val2"},
 					Annotations: apiplans.Annotations{
 						{Key: "anno1", Value: "val1"},
 						{Key: "anno2", Value: "val2"},
