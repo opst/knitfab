@@ -1,9 +1,188 @@
+v1.4.0-beta
+===========
+
+- Date: 2024-10-23
+
+The v1.4.0-beta release includes
+
+- New fields on Plan
+- Dynamic Environmental Variable Injection to Run via Lifecycle Hook
+
+## Important Changes
+
+### New Fields on Plan
+
+We added new fields to Plan.
+
+#### Annotation
+
+Now, Plan can be "annotated".
+
+```yaml
+image: "example.com/train:v1.0"
+
+annotation:
+  - "key=value"
+  - "description=annotation can have arbitrary text content"
+  - "creator=takaoka.youta@opst.co.jp"
+
+inputs:
+  - ...
+
+outputs:
+  - ...
+
+...
+```
+
+`annotation` is `key=value` formatted metadata of Plans itself.
+They are not Tags, so Knitfab does not consider annotations when making new Runs.
+
+You can use annotations to record arbitrary text content, for example, "What is the Plan?" or "Who is creator of the Plan?".
+
+Annotations are mutable. To update them, use the `knit plan annotate` command.
+
+#### Entrypoint and Args
+
+```yaml
+image: "example.com/train:v1.0"
+
+entrypoint: ["python", "main.py"]
+args: ["--data", "/in/1/data", "--output", "/out/1/model"]
+
+inputs:
+  - path: /in/1/data
+    tags:
+      - "format:image/png"
+      - "mode:train"
+      - "type:dataset"
+      - "project:example"
+
+outputs:
+  - path: /out/1/model
+    tags:
+      - "framework:pytorch"
+      - "type:model"
+      - "project:example"
+
+...
+```
+
+With this change, Plan can have `entrypoint` and `args` which override default behavior of the image.
+
+`entrypoint` overrides `ENTRYPOINT` directive in Dockerfile, and `args` overrides `CMD` directive.
+
+These are optional, and by default, image will run as defined in its Dockerfile.
+
+#### Service Account
+
+
+```yaml
+image: "example.com/train:v1.0"
+
+inputs:
+  - ...
+
+outputs:
+  - ...
+
+service_account: service_account_name
+
+...
+```
+
+You can assign [ServiceAccount of Kubernetes](https://kubernetes.io/docs/concepts/security/service-accounts/) on Plans.
+
+When a new Run based a Plan with `service_account` is created, the Pod of the Run is started with the ServiceAccount specified on the Plan.
+
+Pods are started without ServiceAccount by default, which is sufficient for most Runs are self-contained within a Pod.
+
+When your Run needs access to the Kubernetes API or cloud platforms managed services, this feature may be useful.
+
+`service_account` is mutable. To update this, use `knit plan serviceaccount` command.
+
+### Dynamic Environmental Variable Injection to Run via Lifecycle Hook
+
+Before this change, Knitfab ignores response bodies from Lifecycle Hooks.
+
+With this change, Knitfab uses the response body of "Before starting" Lifecycle hook, if able.
+
+If the response has `Content-Type: application/json` and contains the following structure,
+Knitfab use `knitfabExtension.env` as environmental variables for the starting Pod.
+
+```ts
+{
+  // ...
+  "knitfabExtension": {
+    "env": { [key: string]: string }
+  }
+  // ...
+}
+```
+
+(the type notation is in TypeScript syntax)
+
+If the response is not `Content-Type: application/json` or does not contain the structure,
+it is ignored as it was.
+
+You can write Lifecycle Hooks which determine envvars by the Run.
+
+### `knit data tag`: behavior change
+
+#### new flag `--remove-key`
+
+Now Tags of data can be removed by the key.
+
+If you do below, all tags with key `example-key` are removed from Data identified with `SOME-KNIT-ID`.
+
+```
+knit data tag --remove-key example-key SOME-KNIT-ID
+```
+
+Unlike `--remove`, `--remove-key` does not consider the Value of Tag.
+It is useful to change Tags with a very long note.
+
+#### `knit data --remove ... --add ...`: remove and then add now
+
+With this release, execution order of `--add`, `--remove` or `--remove-key` are changed.
+
+Now, `--remove`s and `--remove-key`s are effected first, and then `--add`s are effected.
+
+The new behavior (remove first, then add) allows "update" Tags in atomic operation.
+
+Example: update long description,
+
+```
+knit data tag --remove-key description --add "description:very long note of the Data" SOME-KNIT-ID
+```
+
+Example: update Tag referred by Plans in atomic operation.
+
+```
+knit data tag --remove version:latest --add version:3 SOME-KNIT-ID
+```
+
+## How to try
+
+### Knitfab System
+
+Download the installer from branch [develop/v1.4.0](https://github.com/opst/knitfab/tree/develop/v1.4.0), and run
+
+BRANCH=develop/v1.4.0 CHART_VERSION=v1.4.0-beta installer.sh --install
+
+
+in the directory where you have installed Knitfab.
+
+### CLI knit
+
+Download from assets of this release.
+
 v1.3.1
 ===========
 
 - Date: 2024-09-30
 
-The v1.3.1-beta release includes repository splitting for better ecosystem.
+The v1.3.1 release includes repository splitting for better ecosystem.
 
 ## Important Changes
 
