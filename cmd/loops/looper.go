@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
-	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/finishing"
@@ -19,7 +17,9 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/image"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/imported"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
+	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	knit "github.com/opst/knitfab/pkg"
+	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/loop"
 	"github.com/opst/knitfab/pkg/utils"
@@ -86,17 +86,18 @@ func monitor[T any](logger *log.Logger, task loop.Task[T]) loop.Task[T] {
 
 // Manifest for starting a loop, which determines how the loop should behave.
 type LoopManifest struct {
-	// Loop type to be started
-	Type kdb.LoopType
-
 	// Policy for the looping
 	Policy recurring.Policy
 
 	// Hooks for the looping
-	Hooks hook.Hook[apiruns.Detail]
+	Hooks cfg_hook.Config
 }
 
-// Start loop if needed.
+func mergeEmptyStruct(a, b struct{}) struct{} {
+	return struct{}{}
+}
+
+// Start proection loop
 //
 // Args:
 //
@@ -104,144 +105,169 @@ type LoopManifest struct {
 //
 // - logger : logger for monitoring loop.
 //
-// - dbLoop
+// - kcluster : k8s cluster client
 //
-// - lType : loop type to be started
-//
-// - policy : How the loop control behaves for the task.
-//
-// - force : If false, loop is started only when the loop pool has some rooms.
-// otherwise, loop is emploied forcibly.
-func StartLoop(
+// - manifest
+func StartProjectionLoop(
+	ctx context.Context,
+	logger *log.Logger,
+	kcluster knit.KnitCluster,
+	manifest LoopManifest,
+) error {
+	l := byLogger(logger, Copied(), WithPrefix("[projection loop]"))
+	_, err := loop.Start(
+		ctx, projection.Seed(),
+		monitor(
+			l,
+			projection.Task(
+				l, kcluster.Database().Runs(),
+			).Applied(manifest.Policy),
+		),
+	)
+	return err
+}
+
+func StartInitializeLoop(
+	ctx context.Context,
+	logger *log.Logger,
+	kcluster knit.KnitCluster,
+	manifest LoopManifest,
+) error {
+	volumeConfig := kcluster.Config().DataAgent().Volume()
+
+	_, err := loop.Start(
+		ctx, initialize.Seed(),
+		monitor(
+			byLogger(logger, Copied(), WithPrefix("[initialize loop]")),
+			initialize.Task(
+				kcluster.Database().Runs(),
+				initialize.PVCInitializer(
+					kcluster.BaseCluster(),
+					data.VolumeTemplate{
+						Namespece:    kcluster.Namespace(),
+						StorageClass: volumeConfig.StorageClassName(),
+						Capacity:     volumeConfig.InitialCapacity(),
+					},
+				),
+				hook.Build(manifest.Hooks.Lifecycle, mergeEmptyStruct),
+			).Applied(manifest.Policy),
+		),
+		loop.WithTimeout(30*time.Second),
+	)
+	return err
+}
+
+func StartRunManagementLoop(
+	ctx context.Context,
+	logger *log.Logger,
+	kcluster knit.KnitCluster,
+	manifest LoopManifest,
+) error {
+	// A map psuedo plan name to the psuedo plan manager
+	pseudoPlanManagers := map[kdb.PseudoPlanName]manager.Manager{
+		kdb.Uploaded: uploaded.New(
+			kcluster.Database().Data(),
+		),
+		kdb.Imported: imported.New(),
+	}
+	_, err := loop.Start(
+		ctx,
+		// Initial RunCursor
+		runManagement.Seed(utils.KeysOf(pseudoPlanManagers)),
+		monitor(
+			byLogger(logger, Copied(), WithPrefix("[run management loop]")),
+			// loop body
+			runManagement.Task(
+				// Runs from DB
+				kcluster.Database().Runs(),
+				// A manager for starting a worker for a run.
+				image.New(
+					kcluster.GetWorker,
+					kcluster.SpawnWorker,
+					kcluster.Database().Runs().SetExit,
+				),
+				// A map of psuedo plan name to the psuedo plan manager
+				pseudoPlanManagers,
+
+				runManagementHook.Hooks{
+					ToStarting:   hook.Build(manifest.Hooks.Lifecycle, runManagementHook.Merge), // ready -> starting
+					ToRunning:    hook.Build(manifest.Hooks.Lifecycle, mergeEmptyStruct),        // starting -> running
+					ToCompleting: hook.Build(manifest.Hooks.Lifecycle, mergeEmptyStruct),        // running -> completing
+					ToAborting:   hook.Build(manifest.Hooks.Lifecycle, mergeEmptyStruct),        // running -> aborting
+				},
+			).Applied(manifest.Policy),
+		),
+		loop.WithTimeout(30*time.Second),
+	)
+	return err
+}
+
+func StartFinishingLoop(
+	ctx context.Context,
+	logger *log.Logger,
+	kcluster knit.KnitCluster,
+	manifest LoopManifest,
+) error {
+	pseudoPlanNames := []kdb.PseudoPlanName{
+		kdb.Uploaded,
+		kdb.Imported,
+	}
+	// Initial RunCursor
+	runCursor := finishing.Seed(pseudoPlanNames)
+
+	_, err := loop.Start(
+		ctx, runCursor,
+		monitor(
+			byLogger(logger, Copied(), WithPrefix("[finishing loop]")),
+			// loop body
+			finishing.Task(
+				// Runs from DB
+				kcluster.Database().Runs(),
+				// A worker finder function
+				worker.Find,
+				// A k8s cluster
+				kcluster.BaseCluster(),
+				hook.Build(manifest.Hooks.Lifecycle, mergeEmptyStruct),
+			).Applied(manifest.Policy),
+		),
+	)
+	return err
+}
+
+func StartGarbageCollectionLoop(
 	ctx context.Context,
 	logger *log.Logger,
 	kcluster knit.KnitCluster,
 	kclient k8s.K8sClient,
 	manifest LoopManifest,
 ) error {
+	_, err := loop.Start(
+		ctx, gc.Seed(),
+		monitor(
+			byLogger(logger, Copied(), WithPrefix("[gc loop]")),
+			gc.Task(
+				kclient, kcluster.Namespace(), kcluster.Database().Garbage(),
+			).Applied(manifest.Policy),
+		),
+	)
+	return err
+}
 
-	switch manifest.Type {
-	case kdb.Projection:
-		l := byLogger(logger, Copied(), WithPrefix("[projection loop]"))
-		_, err := loop.Start(
-			ctx, projection.Seed(),
-			monitor(
-				l,
-				projection.Task(
-					l, kcluster.Database().Runs(),
-				).Applied(manifest.Policy),
-			),
-		)
-		return err
-
-	case kdb.Initialize:
-		volumeConfig := kcluster.Config().DataAgent().Volume()
-		_, err := loop.Start(
-			ctx, initialize.Seed(),
-			monitor(
-				byLogger(logger, Copied(), WithPrefix("[initialize loop]")),
-				initialize.Task(
-					kcluster.Database().Runs(),
-					initialize.PVCInitializer(
-						kcluster.BaseCluster(),
-						data.VolumeTemplate{
-							Namespece:    kcluster.Namespace(),
-							StorageClass: volumeConfig.StorageClassName(),
-							Capacity:     volumeConfig.InitialCapacity(),
-						},
-					),
-					manifest.Hooks,
-				).Applied(manifest.Policy),
-			),
-			loop.WithTimeout(30*time.Second),
-		)
-		return err
-
-	case kdb.RunManagement:
-		// A map psuedo plan name to the psuedo plan manager
-		pseudoPlanManagers := map[kdb.PseudoPlanName]manager.Manager{
-			kdb.Uploaded: uploaded.New(
+func StartHousekeepingLoop(
+	ctx context.Context,
+	logger *log.Logger,
+	kcluster knit.KnitCluster,
+	manifest LoopManifest,
+) error {
+	_, err := loop.Start(
+		ctx, housekeeping.Seed(),
+		monitor(
+			byLogger(logger, Copied(), WithPrefix("[housekeepoing loop]")),
+			housekeeping.Task(
 				kcluster.Database().Data(),
-			),
-			kdb.Imported: imported.New(),
-		}
-		_, err := loop.Start(
-			ctx,
-			// Initial RunCursor
-			runManagement.Seed(utils.KeysOf(pseudoPlanManagers)),
-			monitor(
-				byLogger(logger, Copied(), WithPrefix("[run management loop]")),
-				// loop body
-				runManagement.Task(
-					// Runs from DB
-					kcluster.Database().Runs(),
-					// A manager for starting a worker for a run.
-					image.New(
-						kcluster.GetWorker,
-						kcluster.SpawnWorker,
-						kcluster.Database().Runs().SetExit,
-					),
-					// A map of psuedo plan name to the psuedo plan manager
-					pseudoPlanManagers,
-					manifest.Hooks,
-				).Applied(manifest.Policy),
-			),
-			loop.WithTimeout(30*time.Second),
-		)
-		return err
-
-	case kdb.Finishing:
-		pseudoPlanNames := []kdb.PseudoPlanName{
-			kdb.Uploaded,
-			kdb.Imported,
-		}
-		// Initial RunCursor
-		runCursor := finishing.Seed(pseudoPlanNames)
-
-		_, err := loop.Start(
-			ctx, runCursor,
-			monitor(
-				byLogger(logger, Copied(), WithPrefix("[finishing loop]")),
-				// loop body
-				finishing.Task(
-					// Runs from DB
-					kcluster.Database().Runs(),
-					// A worker finder function
-					worker.Find,
-					// A k8s cluster
-					kcluster.BaseCluster(),
-					manifest.Hooks,
-				).Applied(manifest.Policy),
-			),
-		)
-		return err
-
-	case kdb.GarbageCollection:
-		_, err := loop.Start(
-			ctx, gc.Seed(),
-			monitor(
-				byLogger(logger, Copied(), WithPrefix("[gc loop]")),
-				gc.Task(
-					kclient, kcluster.Namespace(), kcluster.Database().Garbage(),
-				).Applied(manifest.Policy),
-			),
-		)
-		return err
-
-	case kdb.Housekeeping:
-		_, err := loop.Start(
-			ctx, housekeeping.Seed(),
-			monitor(
-				byLogger(logger, Copied(), WithPrefix("[housekeepoing loop]")),
-				housekeeping.Task(
-					kcluster.Database().Data(),
-					kcluster.BaseCluster(),
-				).Applied(manifest.Policy),
-			),
-		)
-		return err
-
-	default:
-		return fmt.Errorf("unsupported loop type: %s", manifest.Type)
-	}
+				kcluster.BaseCluster(),
+			).Applied(manifest.Policy),
+		),
+	)
+	return err
 }

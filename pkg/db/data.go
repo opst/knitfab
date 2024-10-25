@@ -149,9 +149,15 @@ type DataInterface interface {
 	GetAgentName(ctx context.Context, knitId string, modes []DataAgentMode) ([]string, error)
 }
 
+// TagDelta represents the intent updating tags on data.
+//
+// It contains tags to be added and removed.
+//
+// If the same key is in both Add and Remove or RemoveKey, Remove and RemoveKey are applied first.
 type TagDelta struct {
-	Remove []Tag
-	Add    []Tag
+	Remove    []Tag
+	RemoveKey []string
+	Add       []Tag
 }
 
 func (td *TagDelta) Equal(other *TagDelta) bool {

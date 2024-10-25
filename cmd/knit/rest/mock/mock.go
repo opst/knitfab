@@ -46,6 +46,11 @@ type FindRunArgs struct {
 	duration  time.Duration
 }
 
+type UpdateAnnotationsArgs struct {
+	PlanId      string
+	Annotations plans.AnnotationChange
+}
+
 func New(t *testing.T) *mockKnitClient {
 	return &mockKnitClient{t: t}
 }
@@ -104,28 +109,34 @@ type mockKnitClient struct {
 		GetDataRaw     func(context.Context, string, func(io.Reader) error) error
 		GetData        func(context.Context, string, func(rest.FileEntry) error) error
 		FindData       func(ctx context.Context, tags []apitags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error)
-		GetPlans       func(ctx context.Context, planId string) (plans.Detail, error)
-		FindPlan       func(
+
+		GetPlans func(ctx context.Context, planId string) (plans.Detail, error)
+		FindPlan func(
 			ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier,
 			inTags []apitags.Tag, outTags []apitags.Tag,
 		) ([]plans.Detail, error)
-		PutPlanForActivate func(ctx context.Context, planId string, isActive bool) (plans.Detail, error)
-		UpdateResources    func(ctx context.Context, runId string, resources plans.ResourceLimitChange) (plans.Detail, error)
-		RegisterPlan       func(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error)
-		GetRun             func(ctx context.Context, runId string) (runs.Detail, error)
-		GetRunLog          func(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
-		FindRun            func(ctx context.Context, query rest.FindRunParameter) ([]runs.Detail, error)
-		Abort              func(ctx context.Context, runId string) (runs.Detail, error)
-		Tearoff            func(ctx context.Context, runId string) (runs.Detail, error)
-		DeleteRun          func(ctx context.Context, runId string) error
-		Retry              func(ctx context.Context, runId string) error
+		PutPlanForActivate  func(ctx context.Context, planId string, isActive bool) (plans.Detail, error)
+		UpdateResources     func(ctx context.Context, runId string, resources plans.ResourceLimitChange) (plans.Detail, error)
+		RegisterPlan        func(ctx context.Context, spec plans.PlanSpec) (plans.Detail, error)
+		UpdateAnnotations   func(ctx context.Context, planId string, annotations plans.AnnotationChange) (plans.Detail, error)
+		SetServiceAccount   func(ctx context.Context, planId string, serviceAccount plans.SetServiceAccount) (plans.Detail, error)
+		UnsetServiceAccount func(ctx context.Context, planId string) (plans.Detail, error)
+
+		GetRun    func(ctx context.Context, runId string) (runs.Detail, error)
+		GetRunLog func(ctx context.Context, runId string, follow bool) (io.ReadCloser, error)
+		FindRun   func(ctx context.Context, query rest.FindRunParameter) ([]runs.Detail, error)
+		Abort     func(ctx context.Context, runId string) (runs.Detail, error)
+		Tearoff   func(ctx context.Context, runId string) (runs.Detail, error)
+		DeleteRun func(ctx context.Context, runId string) error
+		Retry     func(ctx context.Context, runId string) error
 	}
 	Calls struct {
-		PostData           []PostDataArgs
-		PutTagsForData     []PutTagsForDataArgs
-		GetDataRaw         []string
-		GetData            []string
-		FindData           []FindDataArgs
+		PostData       []PostDataArgs
+		PutTagsForData []PutTagsForDataArgs
+		GetDataRaw     []string
+		GetData        []string
+		FindData       []FindDataArgs
+
 		GetPlans           []string
 		Findplan           []FindPlanArgs
 		PutPlanForActivate []string
@@ -133,9 +144,16 @@ type mockKnitClient struct {
 			PlanId    string
 			Resources plans.ResourceLimitChange
 		}
-		RegisterPlan []plans.PlanSpec
-		GetRun       []string
-		GetRunLog    []struct {
+		UpdateAnnotations []UpdateAnnotationsArgs
+		SetServiceAccount []struct {
+			PlanId         string
+			ServiceAccount plans.SetServiceAccount
+		}
+		UnsetServiceAccount []string
+		RegisterPlan        []plans.PlanSpec
+
+		GetRun    []string
+		GetRunLog []struct {
 			RunId  string
 			Follow bool
 		}
@@ -261,6 +279,39 @@ func (m *mockKnitClient) UpdateResources(ctx context.Context, runId string, reso
 		m.t.Fatal("UpdateResources is not ready to be called")
 	}
 	return m.Impl.UpdateResources(ctx, runId, resources)
+}
+
+func (m *mockKnitClient) UpdateAnnotations(ctx context.Context, planId string, annotations plans.AnnotationChange) (plans.Detail, error) {
+	m.t.Helper()
+
+	m.Calls.UpdateAnnotations = append(m.Calls.UpdateAnnotations, UpdateAnnotationsArgs{PlanId: planId, Annotations: annotations})
+	if m.Impl.UpdateAnnotations == nil {
+		m.t.Fatal("UpdateAnnotations is not ready to be called")
+	}
+	return m.Impl.UpdateAnnotations(ctx, planId, annotations)
+}
+
+func (m *mockKnitClient) SetServiceAccount(ctx context.Context, planId string, serviceAccount plans.SetServiceAccount) (plans.Detail, error) {
+	m.t.Helper()
+
+	m.Calls.SetServiceAccount = append(m.Calls.SetServiceAccount, struct {
+		PlanId         string
+		ServiceAccount plans.SetServiceAccount
+	}{PlanId: planId, ServiceAccount: serviceAccount})
+	if m.Impl.SetServiceAccount == nil {
+		m.t.Fatal("SetServiceAccount is not ready to be called")
+	}
+	return m.Impl.SetServiceAccount(ctx, planId, serviceAccount)
+}
+
+func (m *mockKnitClient) UnsetServiceAccount(ctx context.Context, planId string) (plans.Detail, error) {
+	m.t.Helper()
+
+	m.Calls.UnsetServiceAccount = append(m.Calls.UnsetServiceAccount, planId)
+	if m.Impl.UnsetServiceAccount == nil {
+		m.t.Fatal("UnsetServiceAccount is not ready to be called")
+	}
+	return m.Impl.UnsetServiceAccount(ctx, planId)
 }
 
 func (m *mockKnitClient) GetRun(ctx context.Context, runId string) (runs.Detail, error) {

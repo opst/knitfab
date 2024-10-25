@@ -67,8 +67,8 @@ func TestSpawn(t *testing.T) {
 								Image: "repo.invalid/init-image:latest",
 							},
 							Nurse: &bconf.NurseContainerConfigMarshall{
-								Image:          "repo.invalid/nurse-image:latest",
-								ServiceAccount: "fake-sa",
+								Image:                "repo.invalid/nurse-image:latest",
+								ServiceAccountSecret: "fake-sa",
 							},
 						},
 						Keychains: &bconf.KeychainsConfigMarshall{
@@ -168,8 +168,8 @@ func TestSpawn(t *testing.T) {
 								Image: "repo.invalid/init-image:latest",
 							},
 							Nurse: &bconf.NurseContainerConfigMarshall{
-								Image:          "repo.invalid/nurse-image:latest",
-								ServiceAccount: "fake-sa",
+								Image:                "repo.invalid/nurse-image:latest",
+								ServiceAccountSecret: "fake-sa",
 							},
 						},
 						Keychains: &bconf.KeychainsConfigMarshall{
@@ -239,8 +239,8 @@ func TestSpawn(t *testing.T) {
 								Image: "repo.invalid/init-image:latest",
 							},
 							Nurse: &bconf.NurseContainerConfigMarshall{
-								Image:          "repo.invalid/nurse-image:latest",
-								ServiceAccount: "fake-sa",
+								Image:                "repo.invalid/nurse-image:latest",
+								ServiceAccountSecret: "fake-sa",
 							},
 						},
 						Keychains: &bconf.KeychainsConfigMarshall{
@@ -505,8 +505,8 @@ func TestSpawn(t *testing.T) {
 					Image: "repo.invalid/init-image:latest",
 				},
 				Nurse: &bconf.NurseContainerConfigMarshall{
-					Image:          "repo.invalid/nurse-image:latest",
-					ServiceAccount: "fake-sa",
+					Image:                "repo.invalid/nurse-image:latest",
+					ServiceAccountSecret: "fake-sa",
 				},
 			},
 			Keychains: &bconf.KeychainsConfigMarshall{
@@ -559,8 +559,8 @@ func TestSpawn(t *testing.T) {
 					Image: "repo.invalid/init-image:latest",
 				},
 				Nurse: &bconf.NurseContainerConfigMarshall{
-					Image:          "repo.invalid/nurse-image:latest",
-					ServiceAccount: "fake-sa",
+					Image:                "repo.invalid/nurse-image:latest",
+					ServiceAccountSecret: "fake-sa",
 				},
 			},
 			Keychains: &bconf.KeychainsConfigMarshall{
@@ -627,8 +627,8 @@ func TestSpawn(t *testing.T) {
 					Image: "repo.invalid/init-image:latest",
 				},
 				Nurse: &bconf.NurseContainerConfigMarshall{
-					Image:          "repo.invalid/nurse-image:latest",
-					ServiceAccount: "fake-sa",
+					Image:                "repo.invalid/nurse-image:latest",
+					ServiceAccountSecret: "fake-sa",
 				},
 			},
 			Keychains: &bconf.KeychainsConfigMarshall{

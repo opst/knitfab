@@ -9,6 +9,7 @@ import (
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
+	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
@@ -30,9 +31,9 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 	}
 
 	type Then struct {
-		wantedAfterHookInvoked bool
-		wantedContinue         bool
-		wantedErr              error
+		wantedHookInvoked bool
+		wantedContinue    bool
+		wantedErr         error
 	}
 
 	theory := func(when When, then Then) func(t *testing.T) {
@@ -60,20 +61,67 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				return map[string]kdb.Run{when.returnCursor.Head: when.updatedRun}, nil
 			}
 
-			afterHasBeenCalled := false
-			testee := runManagement.Task(irun, nil, nil, hook.Func[api_runs.Detail]{
-				BeforeFn: func(d api_runs.Detail) error {
-					t.Error("before hook: should not be invoked")
-					return nil
+			toStartinfAfterHasBeenCalled := false
+			toRunningAfterHasBeenCalled := false
+			toCompletingAfterHasBeenCalled := false
+			toAbortingAfterHasBeenCalled := false
+			testee := runManagement.Task(
+				irun, nil, nil,
+				runManagementHook.Hooks{
+					ToStarting: hook.Func[api_runs.Detail, runManagementHook.HookResponse]{
+						BeforeFn: func(d api_runs.Detail) (runManagementHook.HookResponse, error) {
+							t.Error("before hook: should not be invoked")
+							return runManagementHook.HookResponse{}, nil
+						},
+						AfterFn: func(d api_runs.Detail) error {
+							toStartinfAfterHasBeenCalled = true
+							if want := bindruns.ComposeDetail(when.updatedRun); !d.Equal(want) {
+								t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
+							}
+							return errors.New("after hook: should be ignored")
+						},
+					},
+					ToRunning: hook.Func[api_runs.Detail, struct{}]{
+						BeforeFn: func(d api_runs.Detail) (struct{}, error) {
+							t.Error("before hook: should not be invoked")
+							return struct{}{}, nil
+						},
+						AfterFn: func(d api_runs.Detail) error {
+							toRunningAfterHasBeenCalled = true
+							if want := bindruns.ComposeDetail(when.updatedRun); !d.Equal(want) {
+								t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
+							}
+							return errors.New("after hook: should be ignored")
+						},
+					},
+					ToCompleting: hook.Func[api_runs.Detail, struct{}]{
+						BeforeFn: func(d api_runs.Detail) (struct{}, error) {
+							t.Error("before hook: should not be invoked")
+							return struct{}{}, nil
+						},
+						AfterFn: func(d api_runs.Detail) error {
+							toCompletingAfterHasBeenCalled = true
+							if want := bindruns.ComposeDetail(when.updatedRun); !d.Equal(want) {
+								t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
+							}
+							return errors.New("after hook: should be ignored")
+						},
+					},
+					ToAborting: hook.Func[api_runs.Detail, struct{}]{
+						BeforeFn: func(d api_runs.Detail) (struct{}, error) {
+							t.Error("before hook: should not be invoked")
+							return struct{}{}, nil
+						},
+						AfterFn: func(d api_runs.Detail) error {
+							toAbortingAfterHasBeenCalled = true
+							if want := bindruns.ComposeDetail(when.updatedRun); !d.Equal(want) {
+								t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
+							}
+							return errors.New("after hook: should be ignored")
+						},
+					},
 				},
-				AfterFn: func(d api_runs.Detail) error {
-					afterHasBeenCalled = true
-					if want := bindruns.ComposeDetail(when.updatedRun); !d.Equal(want) {
-						t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
-					}
-					return errors.New("after hook: should be ignored")
-				},
-			})
+			)
 
 			cursor, cont, err := testee(ctx, when.cursorToBePassed)
 
@@ -89,11 +137,37 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				t.Errorf("err: actual=%+v, expect=%+v", err, then.wantedErr)
 			}
 
-			if afterHasBeenCalled != then.wantedAfterHookInvoked {
-				t.Errorf(
-					"after: actual=%+v, expect=%+v",
-					afterHasBeenCalled, then.wantedAfterHookInvoked,
-				)
+			if then.wantedHookInvoked {
+				switch when.updatedRun.Status {
+				case kdb.Starting:
+					if !toStartinfAfterHasBeenCalled {
+						t.Error("toStartingAfter: should be invoked")
+					}
+					if toRunningAfterHasBeenCalled || toCompletingAfterHasBeenCalled || toAbortingAfterHasBeenCalled {
+						t.Error("toRunningAfter, toCompletingAfter, toAbortingAfter: should not be invoked")
+					}
+				case kdb.Running:
+					if !toRunningAfterHasBeenCalled {
+						t.Error("toRunningAfter: should be invoked")
+					}
+					if toStartinfAfterHasBeenCalled || toCompletingAfterHasBeenCalled || toAbortingAfterHasBeenCalled {
+						t.Error("toStartingAfter, toCompletingAfter, toAbortingAfter: should not be invoked")
+					}
+				case kdb.Completing:
+					if !toCompletingAfterHasBeenCalled {
+						t.Error("toCompletingAfter: should be invoked")
+					}
+					if toStartinfAfterHasBeenCalled || toRunningAfterHasBeenCalled || toAbortingAfterHasBeenCalled {
+						t.Error("toStartingAfter, toRunningAfter, toAbortingAfter: should not be invoked")
+					}
+				case kdb.Aborting:
+					if !toAbortingAfterHasBeenCalled {
+						t.Error("toAbortingAfter: should be invoked")
+					}
+					if toStartinfAfterHasBeenCalled || toRunningAfterHasBeenCalled || toCompletingAfterHasBeenCalled {
+						t.Error("toStartingAfter, toRunningAfter, toCompletingAfter: should not be invoked")
+					}
+				}
 			}
 		}
 	}
@@ -116,9 +190,9 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				returnErr:          expectedErr,
 			},
 			Then{
-				wantedContinue:         true,
-				wantedAfterHookInvoked: false,
-				wantedErr:              expectedErr,
+				wantedContinue:    true,
+				wantedHookInvoked: false,
+				wantedErr:         expectedErr,
 			},
 		))
 	}
@@ -140,8 +214,8 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				returnErr:          nil,
 			},
 			Then{
-				wantedAfterHookInvoked: true,
-				wantedContinue:         false,
+				wantedHookInvoked: true,
+				wantedContinue:    false,
 			},
 		))
 	}
@@ -163,8 +237,8 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				returnErr:          nil,
 			},
 			Then{
-				wantedAfterHookInvoked: true,
-				wantedContinue:         true,
+				wantedHookInvoked: true,
+				wantedContinue:    true,
 			},
 		))
 	}
@@ -187,8 +261,8 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				getRunReturnsNil:   true,
 			},
 			Then{
-				wantedAfterHookInvoked: false,
-				wantedContinue:         true,
+				wantedHookInvoked: false,
+				wantedContinue:    true,
 			},
 		))
 	}
@@ -210,8 +284,8 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				returnErr:          context.Canceled,
 			},
 			Then{
-				wantedAfterHookInvoked: false,
-				wantedContinue:         true,
+				wantedHookInvoked: false,
+				wantedContinue:    true,
 			},
 		))
 	}
@@ -233,8 +307,8 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				returnErr:          context.DeadlineExceeded,
 			},
 			Then{
-				wantedAfterHookInvoked: false,
-				wantedContinue:         true,
+				wantedHookInvoked: false,
+				wantedContinue:    true,
 			},
 		))
 	}
@@ -256,8 +330,8 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 				returnErr:          kdb.ErrInvalidRunStateChanging,
 			},
 			Then{
-				wantedAfterHookInvoked: false,
-				wantedContinue:         true,
+				wantedHookInvoked: false,
+				wantedContinue:    true,
 			},
 		))
 	}
@@ -311,33 +385,37 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 			imageManagerHasBeenInvoked := false
 			invokedPseudoManager := []kdb.PseudoPlanName{}
 
-			imageManager := func(_ context.Context, h hook.Hook[api_runs.Detail], _ kdb.Run) (kdb.KnitRunStatus, error) {
+			imageManager := func(_ context.Context, hooks runManagementHook.Hooks, _ kdb.Run) (kdb.KnitRunStatus, error) {
 				imageManagerHasBeenInvoked = true
 
-				h.Before(bindruns.ComposeDetail(when.pickedRun))
+				// this test interests whether "`hooks` should be passed from caller" or not.
+				// So, we don't need to check the new run status, and here ToRunning is hard coded.
+				hooks.ToRunning.Before(bindruns.ComposeDetail(when.pickedRun))
 				return when.newStatus, when.managerError
 			}
 			pseudoManagers := map[kdb.PseudoPlanName]manager.Manager{
-				planName1: func(_ context.Context, h hook.Hook[api_runs.Detail], _ kdb.Run) (kdb.KnitRunStatus, error) {
-					h.Before(bindruns.ComposeDetail(when.pickedRun))
+				planName1: func(_ context.Context, hooks runManagementHook.Hooks, _ kdb.Run) (kdb.KnitRunStatus, error) {
+					hooks.ToRunning.Before(bindruns.ComposeDetail(when.pickedRun))
 					invokedPseudoManager = append(invokedPseudoManager, planName1)
 					return when.newStatus, when.managerError
 				},
-				planName2: func(_ context.Context, h hook.Hook[api_runs.Detail], _ kdb.Run) (kdb.KnitRunStatus, error) {
-					h.Before(bindruns.ComposeDetail(when.pickedRun))
+				planName2: func(_ context.Context, hooks runManagementHook.Hooks, _ kdb.Run) (kdb.KnitRunStatus, error) {
+					hooks.ToRunning.Before(bindruns.ComposeDetail(when.pickedRun))
 					invokedPseudoManager = append(invokedPseudoManager, planName2)
 					return when.newStatus, when.managerError
 				},
 			}
 
 			beforeHookInvoked := false
-			testee := runManagement.Task(irun, imageManager, pseudoManagers, hook.Func[api_runs.Detail]{
-				BeforeFn: func(d api_runs.Detail) error {
-					beforeHookInvoked = true
-					if want := bindruns.ComposeDetail(when.pickedRun); !d.Equal(want) {
-						t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
-					}
-					return nil
+			testee := runManagement.Task(irun, imageManager, pseudoManagers, runManagementHook.Hooks{
+				ToRunning: hook.Func[api_runs.Detail, struct{}]{
+					BeforeFn: func(d api_runs.Detail) (struct{}, error) {
+						beforeHookInvoked = true
+						if want := bindruns.ComposeDetail(when.pickedRun); !d.Equal(want) {
+							t.Errorf("hookValue: actual=%+v, expect=%+v", d, want)
+						}
+						return struct{}{}, nil
+					},
 				},
 			})
 

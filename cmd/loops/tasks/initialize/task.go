@@ -38,14 +38,14 @@ func Seed() kdb.RunCursor {
 func Task(
 	irun kdb.RunInterface,
 	init func(context.Context, kdb.Run) error,
-	hook hook.Hook[apiruns.Detail],
+	hook hook.Hook[apiruns.Detail, struct{}],
 ) recurring.Task[kdb.RunCursor] {
 	return func(ctx context.Context, value kdb.RunCursor) (kdb.RunCursor, bool, error) {
 		nextCursor, statusChanged, err := irun.PickAndSetStatus(
 			ctx, value,
 			func(r kdb.Run) (kdb.KnitRunStatus, error) {
 				hookval := bindruns.ComposeDetail(r)
-				if err := hook.Before(hookval); err != nil {
+				if _, err := hook.Before(hookval); err != nil {
 					return r.Status, err
 				}
 

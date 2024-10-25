@@ -137,6 +137,72 @@ type PlanInterface interface {
 	//
 	// - error
 	Find(context.Context, logic.Ternary, ImageIdentifier, []Tag, []Tag) ([]string, error)
+
+	// UpdateAnnotations updates Annotations of a Plan.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string : Plan ID
+	//
+	// - AnnotationDelta : Annotations to be added and removed
+	//
+	// Returns
+	//
+	// - error
+	UpdateAnnotations(context.Context, string, AnnotationDelta) error
+
+	// SetServiceAccount sets the service account for a Plan.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string : Plan ID
+	//
+	// - string : Service Account name
+	//
+	// Returns
+	//
+	// - error
+	SetServiceAccount(ctx context.Context, planId, serviceAccount string) error
+
+	// UnsetServiceAccount unsets the service account for a Plan.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string : Plan ID
+	//
+	// Returns
+	//
+	// - error
+	UnsetServiceAccount(ctx context.Context, planId string) error
+}
+
+type Annotation struct {
+	Key   string
+	Value string
+}
+
+// AnnotationDelta is a struct that represents the changesets of annotations.
+//
+// Remove is applied first, and then Add is applied.
+type AnnotationDelta struct {
+	// Add is a list of annotations to be added.
+	//
+	// If Plan already has an annotation in Add, it will be ignored.
+	Add []Annotation
+
+	// Remove is a list of annotations to be removed.
+	//
+	// If Plan does not have an annotation in Remove, it will be ignored.
+	Remove []Annotation
+
+	// RemoveKey is a list of annotation keys to be removed.
+	RemoveKey []string
 }
 
 // Main body of plan, describes "what it is".
@@ -162,6 +228,12 @@ type PlanBody struct {
 	// If this property is not nil, this plan has image.
 	Image *ImageIdentifier
 
+	// Entrypoint is the entrypoint of container image
+	Entrypoint []string
+
+	// Args is the arguments for the entrypoints
+	Args []string
+
 	// If this property is not nil, this plan is pseudo.
 	Pseudo *PseudoPlanDetail
 
@@ -172,6 +244,12 @@ type PlanBody struct {
 	Resources map[string]resource.Quantity
 
 	OnNode []OnNode
+
+	// ServiceAccount is the name of the service agent that Workers of this Plan should use.
+	ServiceAccount string
+
+	// Annotations is a list of annotations for this Plan.
+	Annotations []Annotation
 }
 
 // true iff pb and other are equal, means they represent same entity
@@ -183,10 +261,14 @@ func (pb *PlanBody) Equal(other *PlanBody) bool {
 func (pb *PlanBody) Equiv(other *PlanBody) bool {
 	return pb.Active == other.Active &&
 		pb.Hash == other.Hash &&
+		cmp.SliceContentEq(pb.Entrypoint, other.Entrypoint) &&
+		cmp.SliceContentEq(pb.Args, other.Args) &&
 		pb.Image.Equal(other.Image) &&
 		pb.Pseudo.Equal(other.Pseudo) &&
 		cmp.SliceContentEq(pb.OnNode, other.OnNode) &&
-		cmp.MapEqWith(pb.Resources, other.Resources, resource.Quantity.Equal)
+		cmp.MapEqWith(pb.Resources, other.Resources, resource.Quantity.Equal) &&
+		pb.ServiceAccount == other.ServiceAccount &&
+		cmp.SliceContentEq(pb.Annotations, other.Annotations)
 }
 
 // how to schedule the run of this plan
@@ -374,14 +456,18 @@ func (m *MountPoint) Equiv(other *MountPoint) bool {
 }
 
 type PlanParam struct {
-	Image     string
-	Version   string
-	Active    bool
-	Inputs    []MountPointParam
-	Outputs   []MountPointParam
-	Log       *LogParam
-	OnNode    []OnNode
-	Resources map[string]resource.Quantity
+	Image          string
+	Entrypoint     []string
+	Args           []string
+	Version        string
+	Active         bool
+	Inputs         []MountPointParam
+	Outputs        []MountPointParam
+	Log            *LogParam
+	OnNode         []OnNode
+	Resources      map[string]resource.Quantity
+	ServiceAccount string
+	Annotations    []Annotation
 }
 
 // validate parameters and create PlanSpec.
@@ -392,12 +478,18 @@ type PlanParam struct {
 //
 // - error: validation error. if error is not nil, *PlanSpec is nil.
 func (pp PlanParam) Validate() (*PlanSpec, error) {
+	entrypoint := make([]string, len(pp.Entrypoint))
+	copy(entrypoint, pp.Entrypoint)
+	args := make([]string, len(pp.Args))
+	copy(args, pp.Args)
 	inputs := make([]MountPointParam, len(pp.Inputs))
 	copy(inputs, pp.Inputs)
 	outputs := make([]MountPointParam, len(pp.Outputs))
 	copy(outputs, pp.Outputs)
 	onNode := make([]OnNode, len(pp.OnNode))
 	copy(onNode, pp.OnNode)
+	annotations := make([]Annotation, len(pp.Annotations))
+	copy(annotations, pp.Annotations)
 	resources := make(map[string]resource.Quantity, len(pp.Resources))
 	for k, v := range pp.Resources {
 		resources[k] = v
@@ -406,14 +498,18 @@ func (pp PlanParam) Validate() (*PlanSpec, error) {
 	// take snapshot to guard from changing pp.mountpoint after return this method.
 
 	ret := &PlanSpec{
-		image:     pp.Image,
-		version:   pp.Version,
-		active:    pp.Active,
-		inputs:    inputs,
-		outputs:   outputs,
-		onNode:    onNode,
-		log:       pp.Log,
-		resources: resources,
+		image:          pp.Image,
+		entrypoint:     entrypoint,
+		args:           args,
+		version:        pp.Version,
+		active:         pp.Active,
+		inputs:         inputs,
+		outputs:        outputs,
+		onNode:         onNode,
+		log:            pp.Log,
+		resources:      resources,
+		serviceaccount: pp.ServiceAccount,
+		annotations:    annotations,
 	}
 	if err := ret.Validate(); err != nil {
 		return nil, err
@@ -431,6 +527,8 @@ func BypassValidation(hash string, err error, pp PlanParam) *PlanSpec {
 	copy(outputs, pp.Outputs)
 	onNode := make([]OnNode, len(pp.OnNode))
 	copy(onNode, pp.OnNode)
+	annotations := make([]Annotation, len(pp.Annotations))
+	copy(annotations, pp.Annotations)
 	resources := make(map[string]resource.Quantity, len(pp.Resources))
 	for k, v := range pp.Resources {
 		resources[k] = v
@@ -438,15 +536,20 @@ func BypassValidation(hash string, err error, pp PlanParam) *PlanSpec {
 	// take snapshot to guard from changing pp.mountpoint after return this method.
 
 	ps := &PlanSpec{
-		image:     pp.Image,
-		version:   pp.Version,
-		active:    pp.Active,
-		inputs:    inputs,
-		outputs:   outputs,
-		log:       pp.Log,
-		onNode:    onNode,
-		hash:      hash,
-		resources: resources,
+		image:      pp.Image,
+		entrypoint: pp.Entrypoint,
+		args:       pp.Args,
+		version:    pp.Version,
+		active:     pp.Active,
+		inputs:     inputs,
+		outputs:    outputs,
+		log:        pp.Log,
+		onNode:     onNode,
+		hash:       hash,
+		resources:  resources,
+
+		serviceaccount: pp.ServiceAccount,
+		annotations:    annotations,
 
 		validated: true,
 		vErr:      err,
@@ -461,14 +564,19 @@ func BypassValidation(hash string, err error, pp PlanParam) *PlanSpec {
 //
 // to instantiate this struct with validation, use the factory function `NewPlanSpec`.
 type PlanSpec struct {
-	image   string
-	version string
-	active  bool
-	inputs  []MountPointParam
-	outputs []MountPointParam
-	log     *LogParam
-	onNode  []OnNode
-	hash    string
+	image      string
+	version    string
+	active     bool
+	entrypoint []string
+	args       []string
+	inputs     []MountPointParam
+	outputs    []MountPointParam
+	log        *LogParam
+	onNode     []OnNode
+	hash       string
+
+	serviceaccount string
+	annotations    []Annotation
 
 	resources map[string]resource.Quantity
 
@@ -476,36 +584,16 @@ type PlanSpec struct {
 	vErr      error
 }
 
-func (ps *PlanSpec) Format(s fmt.State, r rune) {
-	fmt.Fprintf(
-		s,
-		"PlanSpec{image:%s version:%s active:%v hash:%s inputs:[",
-		ps.image, ps.version, ps.active, ps.hash,
-	)
-	if 0 < len(ps.inputs) {
-		fmt.Fprintf(s, "%+v", ps.inputs[0])
-		for _, m := range ps.inputs[1:] {
-			fmt.Fprintf(s, " %+v", m)
-		}
-	}
-	fmt.Fprintf(s, "] outputs:[")
-	if 0 < len(ps.outputs) {
-		fmt.Fprintf(s, "%+v", ps.outputs[0])
-		for _, m := range ps.inputs[1:] {
-			fmt.Fprintf(s, " %+v", m)
-		}
-	}
-	fmt.Fprintf(s, "] log:%+v", ps.log)
-	fmt.Fprintf(s, "validated:%v", ps.validated)
-	if ps.vErr != nil {
-		fmt.Fprintf(s, "vErr:%+v", ps.vErr)
-	}
-	fmt.Fprint(s, "}")
-
-}
-
 func (ps *PlanSpec) Image() string {
 	return ps.image
+}
+
+func (ps *PlanSpec) Entrypoint() []string {
+	return ps.entrypoint
+}
+
+func (ps *PlanSpec) Args() []string {
+	return ps.args
 }
 
 func (ps *PlanSpec) Version() string {
@@ -536,6 +624,14 @@ func (ps *PlanSpec) Resources() map[string]resource.Quantity {
 	return ps.resources
 }
 
+func (ps *PlanSpec) Annotations() []Annotation {
+	return ps.annotations
+}
+
+func (ps *PlanSpec) ServiceAccount() string {
+	return ps.serviceaccount
+}
+
 func (ps *PlanSpec) Equal(other *PlanSpec) bool {
 	return ps.image == other.image &&
 		ps.version == other.version &&
@@ -549,7 +645,9 @@ func (ps *PlanSpec) Equal(other *PlanSpec) bool {
 		ps.log.Equal(other.log) &&
 		cmp.SliceContentEq(ps.onNode, other.onNode) &&
 		cmp.MapEqWith(ps.resources, other.resources, resource.Quantity.Equal) &&
-		ps.Hash() == other.Hash()
+		ps.Hash() == other.Hash() &&
+		ps.serviceaccount == other.serviceaccount &&
+		cmp.SliceContentEq(ps.annotations, other.annotations)
 }
 
 // true, iff this PlanSpec is equiverent with `plan`. otherwise false.
@@ -567,14 +665,26 @@ func (ps *PlanSpec) EquivPlan(plan *Plan) bool {
 		return false
 	}
 
-	return cmp.SliceContentEqWith(
+	if !cmp.SliceContentEqWith(
 		ps.inputs, utils.RefOf(plan.Inputs), MountPointParam.EquivMountPoint,
-	) &&
-		cmp.SliceContentEqWith(
-			ps.outputs, utils.RefOf(plan.Outputs), MountPointParam.EquivMountPoint,
-		) &&
-		cmp.SliceContentEq(ps.onNode, plan.OnNode)
+	) {
+		return false
+	}
+	if !cmp.SliceContentEqWith(
+		ps.outputs, utils.RefOf(plan.Outputs), MountPointParam.EquivMountPoint,
+	) {
+		return false
+	}
 
+	if !cmp.SliceContentEq(ps.entrypoint, plan.Entrypoint) {
+		return false
+	}
+
+	if !cmp.SliceContentEq(ps.args, plan.Args) {
+		return false
+	}
+
+	return true
 }
 
 // run validation if not yet.
@@ -826,6 +936,18 @@ func (ps *PlanSpec) Hash() string {
 		shahash.Write([]byte("/log"))
 		for _, t := range ps.log.Tags.Slice() {
 			shahash.Write([]byte(t.String()))
+		}
+	}
+	if 0 < len(ps.entrypoint) {
+		shahash.Write([]byte("[entrypoint]"))
+		for _, epitem := range ps.entrypoint {
+			shahash.Write([]byte(epitem))
+		}
+	}
+	if 0 < len(ps.args) {
+		shahash.Write([]byte("[args]"))
+		for _, argitem := range ps.args {
+			shahash.Write([]byte(argitem))
 		}
 	}
 

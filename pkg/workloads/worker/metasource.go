@@ -91,11 +91,14 @@ type Mount struct {
 type Executable struct {
 	RunIdentifier
 
-	PlanId  string
-	Image   kdb.ImageIdentifier
-	Inputs  []kdb.Assignment
-	Outputs []kdb.Assignment
-	Log     *kdb.Assignment
+	EnvVars map[string]string
+
+	PlanId         string
+	Image          kdb.ImageIdentifier
+	Inputs         []kdb.Assignment
+	Outputs        []kdb.Assignment
+	Log            *kdb.Assignment
+	ServiceAccount string
 }
 
 type counter[T comparable] map[T]uint
@@ -127,7 +130,7 @@ func Count[R any, T comparable](seq []R, dim func(R) T) counter[T] {
 	return ctr
 }
 
-func New(ex *kdb.Run) (*Executable, error) {
+func New(ex *kdb.Run, envvars map[string]string) (*Executable, error) {
 
 	if !ex.Image.Fulfilled() {
 		return nil, fmt.Errorf(
@@ -212,12 +215,14 @@ func New(ex *kdb.Run) (*Executable, error) {
 	}
 
 	return &Executable{
-		RunIdentifier: RunIdentifier{RunBody: ex.RunBody},
-		PlanId:        ex.PlanId,
-		Image:         *ex.Image,
-		Inputs:        ex.Inputs,
-		Outputs:       ex.Outputs,
-		Log:           log,
+		RunIdentifier:  RunIdentifier{RunBody: ex.RunBody},
+		EnvVars:        envvars,
+		PlanId:         ex.PlanId,
+		Image:          *ex.Image,
+		Inputs:         ex.Inputs,
+		Outputs:        ex.Outputs,
+		Log:            log,
+		ServiceAccount: ex.ServiceAccount,
 	}, nil
 }
 
@@ -285,14 +290,34 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 
 	}
 
+	env := []kubecore.EnvVar{}
+	if r.EnvVars != nil {
+		for k, v := range r.EnvVars {
+			env = append(env, kubecore.EnvVar{Name: k, Value: v})
+		}
+	}
+
+	var command []string = nil
+	var args []string = nil
+
+	if 0 < len(r.Entrypoint) {
+		command = r.Entrypoint
+	}
+	if 0 < len(r.Args) {
+		args = r.Args
+	}
+
 	containers := []kubecore.Container{
 		{
 			Name:         "main",
 			Image:        fmt.Sprintf("%s:%s", r.Image.Image, r.Image.Version),
+			Command:      command,
+			Args:         args,
 			VolumeMounts: utils.Concat(readonly(inputsMount), writable(outputsMount)),
 			Resources: kubecore.ResourceRequirements{
 				Limits: resLimits,
 			},
+			Env: env,
 		},
 	}
 
@@ -321,38 +346,8 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 				{
 					Name: "serviceaccount",
 					VolumeSource: kubecore.VolumeSource{
-						Projected: &kubecore.ProjectedVolumeSource{
-							DefaultMode: ptr.Ref[int32](0644),
-							Sources: []kubecore.VolumeProjection{
-								{
-									ServiceAccountToken: &kubecore.ServiceAccountTokenProjection{
-										Path: "token",
-									},
-								},
-								{
-									ConfigMap: &kubecore.ConfigMapProjection{
-										LocalObjectReference: kubecore.LocalObjectReference{
-											Name: "kube-root-ca.crt",
-										},
-										Items: []kubecore.KeyToPath{
-											{Key: "ca.crt", Path: "ca.crt"},
-										},
-									},
-								},
-								{
-									DownwardAPI: &kubecore.DownwardAPIProjection{
-										Items: []kubecore.DownwardAPIVolumeFile{
-											{
-												Path: "namespace",
-												FieldRef: &kubecore.ObjectFieldSelector{
-													APIVersion: "v1",
-													FieldPath:  "metadata.namespace",
-												},
-											},
-										},
-									},
-								},
-							},
+						Secret: &kubecore.SecretVolumeSource{
+							SecretName: je.Nurse().ServiceAccountSecret(),
 						},
 					},
 				},
@@ -555,6 +550,11 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 		)
 	}
 
+	automount := false
+	if r.ServiceAccount != "" {
+		automount = true
+	}
+
 	// compose!
 	return &kubebatch.Job{
 		ObjectMeta: r.ObjectMeta(conf.Namespace()),
@@ -564,8 +564,8 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 			Template: kubecore.PodTemplateSpec{
 				Spec: kubecore.PodSpec{
 					RestartPolicy:                kubecore.RestartPolicyNever,
-					ServiceAccountName:           je.Nurse().ServiceAccount(),
-					AutomountServiceAccountToken: ptr.Ref(false), // do not expose SA for user content image.
+					ServiceAccountName:           r.ServiceAccount,
+					AutomountServiceAccountToken: &automount,
 					EnableServiceLinks:           ptr.Ref(false), // do not expose Service endpoints for user content image.
 					InitContainers:               rectify(init),
 					Containers:                   containers,

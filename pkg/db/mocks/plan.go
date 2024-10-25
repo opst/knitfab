@@ -30,20 +30,36 @@ func (s *PlanFindArgs) Equal(d *PlanFindArgs) bool {
 	return s.Active == d.Active && s.ImageVer == d.ImageVer
 }
 
+type UpdateAnnotationsArgs struct {
+	PlanId string
+	Delta  kdb.AnnotationDelta
+}
+
+type SetServiceAccountArgs struct {
+	PlanId         string
+	ServiceAccount string
+}
+
 type PlanInterface struct {
 	Impl struct {
-		Get                func(context.Context, []string) (map[string]*kdb.Plan, error)
-		Register           func(context.Context, *kdb.PlanSpec) (string, error)
-		Activate           func(context.Context, string, bool) error
-		SetResourceLimit   func(context.Context, string, map[string]resource.Quantity) error
-		UnsetResourceLimit func(context.Context, string, []string) error
-		Find               func(context.Context, logic.Ternary, kdb.ImageIdentifier, []kdb.Tag, []kdb.Tag) ([]string, error)
+		Get                 func(context.Context, []string) (map[string]*kdb.Plan, error)
+		Register            func(context.Context, *kdb.PlanSpec) (string, error)
+		Activate            func(context.Context, string, bool) error
+		SetResourceLimit    func(context.Context, string, map[string]resource.Quantity) error
+		UnsetResourceLimit  func(context.Context, string, []string) error
+		Find                func(context.Context, logic.Ternary, kdb.ImageIdentifier, []kdb.Tag, []kdb.Tag) ([]string, error)
+		UpdateAnnotations   func(context.Context, string, kdb.AnnotationDelta) error
+		SetServiceAccount   func(context.Context, string, string) error
+		UnsetServiceAccount func(context.Context, string) error
 	}
 	Calls struct {
-		Get      CallLog[[]string]
-		Register CallLog[*kdb.PlanSpec]
-		Activate CallLog[string]
-		Find     CallLog[PlanFindArgs]
+		Get                 CallLog[[]string]
+		Register            CallLog[*kdb.PlanSpec]
+		Activate            CallLog[string]
+		Find                CallLog[PlanFindArgs]
+		UpdateAnnotations   CallLog[UpdateAnnotationsArgs]
+		SetServiceAccount   CallLog[SetServiceAccountArgs]
+		UnsetServiceAccount CallLog[string]
 	}
 }
 
@@ -108,6 +124,39 @@ func (m *PlanInterface) Find(ctx context.Context, active logic.Ternary, imageVer
 	})
 	if m.Impl.Find != nil {
 		return m.Impl.Find(ctx, active, imageVer, inTag, outTag)
+	}
+
+	panic(errors.New("should not be called"))
+}
+
+func (m *PlanInterface) UpdateAnnotations(ctx context.Context, planId string, annotations kdb.AnnotationDelta) error {
+	m.Calls.UpdateAnnotations = append(m.Calls.UpdateAnnotations, UpdateAnnotationsArgs{
+		PlanId: planId,
+		Delta:  annotations,
+	})
+	if m.Impl.UpdateAnnotations != nil {
+		return m.Impl.UpdateAnnotations(ctx, planId, annotations)
+	}
+
+	panic(errors.New("should not be called"))
+}
+
+func (m *PlanInterface) SetServiceAccount(ctx context.Context, planId string, serviceAccount string) error {
+	m.Calls.SetServiceAccount = append(m.Calls.SetServiceAccount, SetServiceAccountArgs{
+		PlanId:         planId,
+		ServiceAccount: serviceAccount,
+	})
+	if m.Impl.SetServiceAccount != nil {
+		return m.Impl.SetServiceAccount(ctx, planId, serviceAccount)
+	}
+
+	panic(errors.New("should not be called"))
+}
+
+func (m *PlanInterface) UnsetServiceAccount(ctx context.Context, planId string) error {
+	m.Calls.UnsetServiceAccount = append(m.Calls.UnsetServiceAccount, planId)
+	if m.Impl.UnsetServiceAccount != nil {
+		return m.Impl.UnsetServiceAccount(ctx, planId)
 	}
 
 	panic(errors.New("should not be called"))

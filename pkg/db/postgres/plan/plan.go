@@ -2,6 +2,7 @@ package plan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -353,6 +354,70 @@ func registerPlan(ctx context.Context, tx kpool.Tx, plan *kdb.PlanSpec) (string,
 			return "", xe.Wrap(err)
 		}
 
+		if entrypoint := plan.Entrypoint(); 0 < len(entrypoint) {
+			_, err := tx.Exec(
+				ctx,
+				`
+				insert into "plan_entrypoint" ("plan_id", "entrypoint")
+				values ($1, $2)
+				`,
+				planId, entrypoint,
+			)
+
+			if err != nil {
+				return "", xe.Wrap(err)
+			}
+		}
+
+		if args := plan.Args(); 0 < len(args) {
+			_, err := tx.Exec(
+				ctx,
+				`
+				insert into "plan_args" ("plan_id", "args")
+				values ($1, $2)
+				`,
+				planId, args,
+			)
+
+			if err != nil {
+				return "", xe.Wrap(err)
+			}
+		}
+
+		if annotations := plan.Annotations(); 0 < len(annotations) {
+			annoKeys := make([]string, len(annotations))
+			annoValues := make([]string, len(annotations))
+
+			for i, anno := range plan.Annotations() {
+				annoKeys[i] = anno.Key
+				annoValues[i] = anno.Value
+			}
+
+			if _, err := tx.Exec(
+				ctx,
+				`
+				insert into "plan_annotation" ("plan_id", "key", "value")
+				select $1 as "plan_id", unnest($2::varchar[]) as "key", unnest($3::varchar[]) as "value"
+				on conflict do nothing
+				`,
+				planId, annoKeys, annoValues,
+			); err != nil {
+				return "", xe.Wrap(err)
+			}
+		}
+
+		if serviceAccount := plan.ServiceAccount(); serviceAccount != "" {
+			if _, err := tx.Exec(
+				ctx,
+				`
+				insert into "plan_service_account" ("plan_id", "service_account")
+				values ($1, $2)
+				`,
+				planId, serviceAccount,
+			); err != nil {
+				return "", xe.Wrap(err)
+			}
+		}
 		return
 	}
 
@@ -990,4 +1055,195 @@ func (m *planPG) find(
 	}
 
 	return planIds, nil
+}
+
+func (m *planPG) UpdateAnnotations(ctx context.Context, planId string, delta kdb.AnnotationDelta) error {
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	{ // check plan existence
+		found := 0
+		if err := tx.QueryRow(
+			ctx,
+			`
+with "plan" as (
+	select "plan_id" from "plan" where "plan_id" = $1 for key share
+)
+select count("plan_id") from "plan"
+`,
+			planId,
+		).Scan(&found); err != nil {
+			return err
+		}
+
+		if found <= 0 {
+			return kpgerr.Missing{
+				Table:    "plan",
+				Identity: fmt.Sprintf("plan_id='%s'", planId),
+			}
+		}
+	}
+
+	if removeKeys := delta.RemoveKey; 0 < len(removeKeys) {
+		if _, err := tx.Exec(
+			ctx,
+			`
+			delete from "plan_annotation"
+			where "plan_id" = $1 and "key" = any($2::varchar[])
+			`,
+			planId, removeKeys,
+		); err != nil {
+			return err
+		}
+	}
+
+	if remove := delta.Remove; 0 < len(remove) {
+		keys := make([]string, len(remove))
+		values := make([]string, len(remove))
+
+		for i, anno := range remove {
+			keys[i] = anno.Key
+			values[i] = anno.Value
+		}
+
+		if _, err := tx.Exec(
+			ctx,
+			`
+with "plan" as (
+	select "plan_id" from "plan" where "plan_id" = $1
+),
+"_rem" as (
+	select unnest($2::varchar[]) as "key", unnest($3::varchar[]) as "value"
+),
+"rem" as (
+	select "plan_id", "key", "value"
+	from "plan"
+	left join (table "_rem") as "t" on true
+)
+delete from "plan_annotation"
+where ("plan_id", "key", "value") = any(select "plan_id", "key", "value" from "rem")
+`,
+			planId, keys, values,
+		); err != nil {
+			return err
+		}
+	}
+
+	if add := delta.Add; 0 < len(add) {
+		keys := make([]string, len(add))
+		values := make([]string, len(add))
+
+		for i, anno := range add {
+			keys[i] = anno.Key
+			values[i] = anno.Value
+		}
+
+		if _, err := tx.Exec(
+			ctx,
+			`
+with "plan" as (
+	select "plan_id" from "plan" where "plan_id" = $1
+),
+"_add" as (
+	select unnest($2::varchar[]) as "key", unnest($3::varchar[]) as "value"
+),
+"add" as (
+	select "plan_id", "key", "value"
+	from "plan"
+	left join (table "_add") as "t" on true
+)
+insert into "plan_annotation" ("plan_id", "key", "value")
+select distinct "plan_id", "key", "value"
+from "add"
+on conflict do nothing
+`,
+			planId, keys, values,
+		); err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *planPG) SetServiceAccount(ctx context.Context, planId string, serviceAccount string) error {
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(
+		ctx,
+		`
+		with "plan" as (
+			select "plan_id" from "plan" where "plan_id" = $1 for key share
+		)
+		insert into "plan_service_account" ("plan_id", "service_account")
+		select "plan_id", $2 as "service_account" from "plan"
+		on conflict ("plan_id") do update set "service_account" = excluded."service_account"
+		returning "plan_id"
+		`,
+		planId, serviceAccount,
+	).Scan(nil)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return kpgerr.Missing{
+				Table:    "plan",
+				Identity: fmt.Sprintf("plan_id='%s'", planId),
+			}
+		}
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *planPG) UnsetServiceAccount(ctx context.Context, planId string) error {
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	{
+		if err := tx.QueryRow(
+			ctx,
+			`select "plan_id" from "plan" where "plan_id" = $1 for key share`,
+			planId,
+		).Scan(nil); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return kpgerr.Missing{
+					Table:    "plan",
+					Identity: fmt.Sprintf("plan_id='%s'", planId),
+				}
+			}
+			return err
+		}
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		`delete from "plan_service_account" where "plan_id" = $1`,
+		planId,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
 }

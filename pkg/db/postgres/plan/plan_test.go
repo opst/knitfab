@@ -145,6 +145,24 @@ func TestPlan_Register(t *testing.T) {
 						actual, then,
 					)
 				}
+
+				if !cmp.SliceContentEqWith(actual, then, func(a, b *kdb.Plan) bool {
+					return cmp.SliceContentEq(a.Annotations, b.Annotations)
+				}) {
+					t.Errorf(
+						"Annotations of Plans are not equal:\n===actual===\n%+v\n===expected===\n%+v",
+						actual, then,
+					)
+				}
+
+				if !cmp.SliceContentEqWith(actual, then, func(a, b *kdb.Plan) bool {
+					return a.ServiceAccount == b.ServiceAccount
+				}) {
+					t.Errorf(
+						"ServiceAccount of Plans are not equal:\n===actual===\n%+v\n===expected===\n%+v",
+						actual, then,
+					)
+				}
 			}
 
 			expectedNominatorCalls := [][]int{
@@ -172,6 +190,8 @@ func TestPlan_Register(t *testing.T) {
 				th.Padding64("test-hash"), nil,
 				kdb.PlanParam{
 					Image: "repo.invalid/test-image", Version: "v0.1", Active: true,
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					Inputs: []kdb.MountPointParam{
 						{
 							Path: "/in/1",
@@ -214,6 +234,13 @@ func TestPlan_Register(t *testing.T) {
 						{Mode: kdb.PreferOnNode, Key: "ram", Value: "xlarge"},
 						{Mode: kdb.MayOnNode, Key: "ram", Value: "x2large"},
 					},
+					ServiceAccount: "service-account",
+					Annotations: []kdb.Annotation{
+						{Key: "anno1", Value: "val1"},
+						{Key: "anno1", Value: "val1.2"},
+						{Key: "anno2", Value: "val2"},
+						{Key: "anno2", Value: "val2"}, // duplicate items shoud be ignored
+					},
 				},
 			),
 		},
@@ -224,6 +251,8 @@ func TestPlan_Register(t *testing.T) {
 					Image: &kdb.ImageIdentifier{
 						Image: "repo.invalid/test-image", Version: "v0.1",
 					},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					OnNode: []kdb.OnNode{
 						{Mode: kdb.MustOnNode, Key: "accelarator", Value: "gpu"},
 						{Mode: kdb.MustOnNode, Key: "ram", Value: "large"},
@@ -234,6 +263,12 @@ func TestPlan_Register(t *testing.T) {
 					Resources: map[string]resource.Quantity{
 						"cpu":    resource.MustParse("1"),
 						"memory": resource.MustParse("1Gi"),
+					},
+					ServiceAccount: "service-account",
+					Annotations: []kdb.Annotation{
+						{Key: "anno1", Value: "val1"},
+						{Key: "anno1", Value: "val1.2"},
+						{Key: "anno2", Value: "val2"},
 					},
 				},
 				Inputs: []kdb.MountPoint{
@@ -297,6 +332,8 @@ func TestPlan_Register(t *testing.T) {
 				kdb.PlanParam{
 					Active: true,
 					Image:  "repo.invalid/test-image-2", Version: "v0.2",
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					Inputs: []kdb.MountPointParam{
 						{
 							Path: "/in/data",
@@ -348,7 +385,9 @@ func TestPlan_Register(t *testing.T) {
 			{
 				PlanBody: kdb.PlanBody{
 					PlanId: th.Padding36("UNKNOWN"), Active: true, Hash: th.Padding64("example-hash"),
-					Image: &kdb.ImageIdentifier{Image: "repo.invalid/test-image-2", Version: "v0.2"},
+					Image:      &kdb.ImageIdentifier{Image: "repo.invalid/test-image-2", Version: "v0.2"},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
 				Inputs: []kdb.MountPoint{
 					{
@@ -418,7 +457,9 @@ func TestPlan_Register(t *testing.T) {
 				th.Padding64("hash:plan-x"), nil,
 				kdb.PlanParam{
 					Image: "repo.invalid/image-x", Version: "0.0.1",
-					Active: true,
+					Active:     true,
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					Inputs: []kdb.MountPointParam{
 						{
 							Path: "/in/x",
@@ -483,7 +524,9 @@ func TestPlan_Register(t *testing.T) {
 			{
 				PlanBody: kdb.PlanBody{
 					PlanId: th.Padding36("UNKNOWN"), Active: true, Hash: th.Padding64("hash:plan-x"),
-					Image: &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "0.0.1"},
+					Image:      &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "0.0.1"},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
 				Inputs: []kdb.MountPoint{
 					{
@@ -551,7 +594,9 @@ func TestPlan_Register(t *testing.T) {
 				th.Padding64("hash:plan-x"), nil,
 				kdb.PlanParam{
 					Image: "repo.invalid/image-x", Version: "0.0.1",
-					Active: true,
+					Active:     true,
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 					Inputs: []kdb.MountPointParam{
 						{
 							Path: "/in/x",
@@ -618,7 +663,9 @@ func TestPlan_Register(t *testing.T) {
 			{
 				PlanBody: kdb.PlanBody{
 					PlanId: th.Padding36("UNKNOWN"), Active: true, Hash: th.Padding64("hash:plan-x"),
-					Image: &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "0.0.1"},
+					Image:      &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "0.0.1"},
+					Entrypoint: []string{"python", "main.py"},
+					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
 				Inputs: []kdb.MountPoint{
 					{
@@ -2247,6 +2294,669 @@ func TestUnsetResourceLimit(t *testing.T) {
 				{PlanId: th.Padding36("plan-1"), Type: "memory", Value: marshal.ResourceQuantity(resource.MustParse("1Gi"))},
 				{PlanId: th.Padding36("plan-2"), Type: "cpu", Value: marshal.ResourceQuantity(resource.MustParse("2"))},
 				{PlanId: th.Padding36("plan-2"), Type: "memory", Value: marshal.ResourceQuantity(resource.MustParse("2Gi"))},
+			},
+			wantErr: kdb.ErrMissing,
+		},
+	))
+}
+
+func TestUpdateAnnotations(t *testing.T) {
+	given := tables.Operation{
+		Plan: []tables.Plan{
+			{
+				PlanId: th.Padding36("plan-1"),
+				Active: true,
+				Hash:   th.Padding64("xxx-hash-xxx"),
+			},
+			{
+				PlanId: th.Padding36("plan-2"),
+				Active: true,
+				Hash:   th.Padding64("yyy-hash-yyy"),
+			},
+			{
+				PlanId: th.Padding36("plan-3"),
+				Active: true,
+				Hash:   th.Padding64("zzz-hash-zzz"),
+			},
+		},
+		PlanAnnotations: []tables.Annotation{
+			{
+				PlanId: th.Padding36("plan-1"),
+				Key:    "key1",
+				Value:  "val1",
+			},
+			{
+				PlanId: th.Padding36("plan-1"),
+				Key:    "key2",
+				Value:  "val2",
+			},
+			{
+				PlanId: th.Padding36("plan-1"),
+				Key:    "key2",
+				Value:  "val2b",
+			},
+			{
+				PlanId: th.Padding36("plan-3"),
+				Key:    "key1",
+				Value:  "val1",
+			},
+		},
+	}
+
+	type When struct {
+		planId string
+		delta  kdb.AnnotationDelta
+	}
+
+	type Then struct {
+		want      []tables.Annotation
+		wantError error
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			poolBroaker := testenv.NewPoolBroaker(ctx, t)
+			pgpool := poolBroaker.GetPool(ctx, t)
+
+			if err := given.Apply(ctx, pgpool); err != nil {
+				t.Fatal(err)
+			}
+
+			testee := kpgplan.New(pgpool)
+
+			err := testee.UpdateAnnotations(ctx, when.planId, when.delta)
+			if err != nil {
+				if then.wantError == nil {
+					t.Fatal(err)
+				} else if !errors.Is(err, then.wantError) {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+
+			conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
+			defer conn.Release()
+			actual := try.To(
+				scanner.New[tables.Annotation]().QueryAll(
+					ctx, conn, `table "plan_annotation"`,
+				),
+			).OrFatal(t)
+
+			if !cmp.SliceContentEq(actual, then.want) {
+				t.Errorf(
+					"plan_annotation\n===actual===\n%+v\n===expected===\n%+v",
+					actual, then.want,
+				)
+			}
+		}
+	}
+
+	t.Run("when adding annotations to a plan, it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Add: []kdb.Annotation{
+					{Key: "key3", Value: "val3"},
+					{Key: "key4", Value: "val4"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key3",
+					Value:  "val3",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key4",
+					Value:  "val4",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when removing annotations from a plan, it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Remove: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when removing annotations by key from a plan, it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				RemoveKey: []string{"key2"},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when removing annotations , it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Remove: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+				},
+				RemoveKey: []string{"key2"},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when adding annotation to a non existing plan, it returns ErrMissing (add only)", theory(
+		When{
+			planId: th.Padding36("plan-9"),
+			delta: kdb.AnnotationDelta{
+				Add: []kdb.Annotation{
+					{Key: "key3", Value: "val3"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+			wantError: kdb.ErrMissing,
+		},
+	))
+
+	t.Run("when adding annotation to a non existing plan, it returns ErrMissing (remove only)", theory(
+		When{
+			planId: th.Padding36("plan-9"),
+			delta: kdb.AnnotationDelta{
+				Remove: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+			wantError: kdb.ErrMissing,
+		},
+	))
+
+	t.Run("when adding annotation as same as existing one, it should do nothing", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Add: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when removing annotation not existing, it should do nothing", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Remove: []kdb.Annotation{
+					{Key: "key3", Value: "val3"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+
+	t.Run("when adding and removing annotations to a plan, remove should be done first", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			delta: kdb.AnnotationDelta{
+				Add: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+					{Key: "key3", Value: "val3"},
+				},
+				Remove: []kdb.Annotation{
+					{Key: "key1", Value: "val1"},
+					{Key: "key2", Value: "val2"},
+				},
+			},
+		},
+		Then{
+			want: []tables.Annotation{
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key2",
+					Value:  "val2b",
+				},
+				{
+					PlanId: th.Padding36("plan-1"),
+					Key:    "key3",
+					Value:  "val3",
+				},
+				{
+					PlanId: th.Padding36("plan-3"),
+					Key:    "key1",
+					Value:  "val1",
+				},
+			},
+		},
+	))
+}
+
+func TestSetServiceAccount(t *testing.T) {
+	given := tables.Operation{
+		Plan: []tables.Plan{
+			{
+				PlanId: th.Padding36("plan-1"),
+				Active: true,
+				Hash:   th.Padding64("xxx-hash-xxx"),
+			},
+			{
+				PlanId: th.Padding36("plan-2"),
+				Active: true,
+				Hash:   th.Padding64("yyy-hash-yyy"),
+			},
+			{
+				PlanId: th.Padding36("plan-3"),
+				Active: true,
+				Hash:   th.Padding64("zzz-hash-zzz"),
+			},
+		},
+		PlanServiceAccount: []tables.ServiceAccount{
+			{
+				PlanId:         th.Padding36("plan-1"),
+				ServiceAccount: "sa1",
+			},
+			{
+				PlanId:         th.Padding36("plan-3"),
+				ServiceAccount: "sa2",
+			},
+		},
+	}
+
+	type When struct {
+		planId string
+		sa     string
+	}
+
+	type Then struct {
+		want    []tables.ServiceAccount
+		wantErr error
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			poolBroaker := testenv.NewPoolBroaker(ctx, t)
+			pgpool := poolBroaker.GetPool(ctx, t)
+
+			if err := given.Apply(ctx, pgpool); err != nil {
+				t.Fatal(err)
+			}
+
+			testee := kpgplan.New(pgpool)
+
+			err := testee.SetServiceAccount(ctx, when.planId, when.sa)
+			if err != nil {
+				if then.wantErr == nil {
+					t.Fatal(err)
+				} else if !errors.Is(err, then.wantErr) {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+
+			conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
+			defer conn.Release()
+			actual := try.To(
+				scanner.New[tables.ServiceAccount]().QueryAll(
+					ctx, conn, `table "plan_service_account"`,
+				),
+			).OrFatal(t)
+
+			if !cmp.SliceContentEq(actual, then.want) {
+				t.Errorf(
+					"plan_service_account\n===actual===\n%+v\n===expected===\n%+v",
+					actual, then.want,
+				)
+			}
+		}
+	}
+
+	t.Run("when setting a service account to a plan which have service account, it should be updated", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+			sa:     "sa3",
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa3",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+		},
+	))
+
+	t.Run("when setting a service account to a plan which have no service account, it should be inserted", theory(
+		When{
+			planId: th.Padding36("plan-2"),
+			sa:     "sa3",
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa1",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+				{
+					PlanId:         th.Padding36("plan-2"),
+					ServiceAccount: "sa3",
+				},
+			},
+		},
+	))
+
+	t.Run("when setting a service account to a non existing plan, it returns ErrMissing", theory(
+		When{
+			planId: th.Padding36("plan-9"),
+			sa:     "sa3",
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa1",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+			wantErr: kdb.ErrMissing,
+		},
+	))
+}
+
+func TestUnsetServiceAccount(t *testing.T) {
+	given := tables.Operation{
+		Plan: []tables.Plan{
+			{
+				PlanId: th.Padding36("plan-1"),
+				Active: true,
+				Hash:   th.Padding64("xxx-hash-xxx"),
+			},
+			{
+				PlanId: th.Padding36("plan-2"),
+				Active: true,
+				Hash:   th.Padding64("yyy-hash-yyy"),
+			},
+			{
+				PlanId: th.Padding36("plan-3"),
+				Active: true,
+				Hash:   th.Padding64("zzz-hash-zzz"),
+			},
+		},
+		PlanServiceAccount: []tables.ServiceAccount{
+			{
+				PlanId:         th.Padding36("plan-1"),
+				ServiceAccount: "sa1",
+			},
+			{
+				PlanId:         th.Padding36("plan-3"),
+				ServiceAccount: "sa2",
+			},
+		},
+	}
+
+	type When struct {
+		planId string
+	}
+
+	type Then struct {
+		want    []tables.ServiceAccount
+		wantErr error
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			ctx := context.Background()
+			poolBroaker := testenv.NewPoolBroaker(ctx, t)
+			pgpool := poolBroaker.GetPool(ctx, t)
+
+			if err := given.Apply(ctx, pgpool); err != nil {
+				t.Fatal(err)
+			}
+
+			testee := kpgplan.New(pgpool)
+
+			err := testee.UnsetServiceAccount(ctx, when.planId)
+			if err != nil {
+				if then.wantErr == nil {
+					t.Fatal(err)
+				} else if !errors.Is(err, then.wantErr) {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+
+			conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
+			defer conn.Release()
+			actual := try.To(
+				scanner.New[tables.ServiceAccount]().QueryAll(
+					ctx, conn, `table "plan_service_account"`,
+				),
+			).OrFatal(t)
+
+			if !cmp.SliceContentEq(actual, then.want) {
+				t.Errorf("plan_service_account\n===actual===\n%+v\n===expected===\n%+v", actual, then.want)
+			}
+		}
+	}
+
+	t.Run("when unsetting a service account to a plan which have service account, it should be removed", theory(
+		When{
+			planId: th.Padding36("plan-1"),
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+		},
+	))
+
+	t.Run("when unsetting a service account to a plan which have no service account, it should do nothing", theory(
+		When{
+			planId: th.Padding36("plan-2"),
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa1",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
+			},
+		},
+	))
+
+	t.Run("when unsetting a service account to a non existing plan, it returns ErrMissing", theory(
+		When{
+			planId: th.Padding36("plan-9"),
+		},
+		Then{
+			want: []tables.ServiceAccount{
+				{
+					PlanId:         th.Padding36("plan-1"),
+					ServiceAccount: "sa1",
+				},
+				{
+					PlanId:         th.Padding36("plan-3"),
+					ServiceAccount: "sa2",
+				},
 			},
 			wantErr: kdb.ErrMissing,
 		},

@@ -38,19 +38,22 @@ func ComposeDetail(plan kdb.Plan) apiplans.Detail {
 	}
 
 	return apiplans.Detail{
-		Summary:   ComposeSummary(plan.PlanBody),
-		Active:    plan.Active,
-		Inputs:    utils.Map(plan.Inputs, ComposeMountpoint),
-		Outputs:   utils.Map(plan.Outputs, ComposeMountpoint),
-		Resources: apiplans.Resources(plan.Resources),
-		Log:       log,
-		OnNode:    onNode,
+		Summary:        ComposeSummary(plan.PlanBody),
+		Active:         plan.Active,
+		Inputs:         utils.Map(plan.Inputs, ComposeMountpoint),
+		Outputs:        utils.Map(plan.Outputs, ComposeMountpoint),
+		Resources:      apiplans.Resources(plan.Resources),
+		Log:            log,
+		OnNode:         onNode,
+		ServiceAccount: plan.ServiceAccount,
 	}
 }
 
 func ComposeSummary(planBody kdb.PlanBody) apiplans.Summary {
 	rst := apiplans.Summary{
-		PlanId: planBody.PlanId,
+		PlanId:     planBody.PlanId,
+		Entrypoint: planBody.Entrypoint,
+		Args:       planBody.Args,
 	}
 	if i := planBody.Image; i != nil {
 		rst.Image = &apiplans.Image{Repository: i.Image, Tag: i.Version}
@@ -58,6 +61,10 @@ func ComposeSummary(planBody kdb.PlanBody) apiplans.Summary {
 	if p := planBody.Pseudo; p != nil {
 		rst.Name = p.Name.String()
 	}
+
+	rst.Annotations = utils.Map(planBody.Annotations, func(a kdb.Annotation) apiplans.Annotation {
+		return apiplans.Annotation{Key: a.Key, Value: a.Value}
+	})
 
 	return rst
 }

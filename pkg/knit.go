@@ -23,7 +23,7 @@ type KnitCluster interface {
 	Namespace() string
 	SpawnDataAgent(ctx context.Context, d kdb.DataAgent, pendingDeadline time.Time) (dataagt.Dataagt, error)
 
-	SpawnWorker(ctx context.Context, r kdb.Run) error
+	SpawnWorker(ctx context.Context, r kdb.Run, envvars map[string]string) error
 	GetWorker(ctx context.Context, r kdb.Run) (kw.Worker, error)
 }
 
@@ -75,8 +75,8 @@ func (k *knitCluster) SpawnDataAgent(ctx context.Context, d kdb.DataAgent, pendi
 	return dataagt.Spawn(ctx, k.Config(), k.BaseCluster(), d, pendingDeadline)
 }
 
-func (k *knitCluster) SpawnWorker(ctx context.Context, r kdb.Run) error {
-	ex, err := kw.New(&r)
+func (k *knitCluster) SpawnWorker(ctx context.Context, r kdb.Run, envvars map[string]string) error {
+	ex, err := kw.New(&r, envvars)
 	if err != nil {
 		return err
 	}

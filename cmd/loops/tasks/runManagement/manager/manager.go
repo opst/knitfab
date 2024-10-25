@@ -3,9 +3,15 @@ package manager
 import (
 	"context"
 
-	apiruns "github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab/cmd/loops/hook"
+	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	kdb "github.com/opst/knitfab/pkg/db"
 )
 
-type Manager func(context.Context, hook.Hook[apiruns.Detail], kdb.Run) (kdb.KnitRunStatus, error)
+type Manager func(
+	ctx context.Context,
+	hooks runManagementHook.Hooks,
+	run kdb.Run,
+) (
+	kdb.KnitRunStatus,
+	error,
+)

@@ -46,8 +46,19 @@ func WithHeadComment(comment string) Option {
 	}
 }
 
+func WithFootComment(comment string) Option {
+	return func(n *yaml.Node) *yaml.Node {
+		n.FootComment = comment
+		return n
+	}
+}
+
 func Seq(s ...*yaml.Node) *yaml.Node {
 	return &yaml.Node{Kind: yaml.SequenceNode, Content: s}
+}
+
+func CompactSeq(s ...*yaml.Node) *yaml.Node {
+	return &yaml.Node{Kind: yaml.SequenceNode, Style: yaml.FlowStyle, Content: s}
 }
 
 func Null() *yaml.Node {

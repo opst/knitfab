@@ -374,6 +374,48 @@ func (f *Tables) InsertPlanImage(pi *PlanImage) error {
 	return shouldEffect(ctag, 1)
 }
 
+func (f *Tables) InsertPlanEntrypoint(pent *PlanEntrypoint) error {
+	conn, err := f.acquire()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ctag, err := conn.Exec(
+		f.ctx,
+		`
+		insert into "plan_entrypoint" ("plan_id", "entrypoint")
+		values ($1, $2)
+		`,
+		pent.PlanId, pent.Entrypoint,
+	)
+	if err != nil {
+		return withCause(pent, err)
+	}
+	return shouldEffect(ctag, 1)
+}
+
+func (f *Tables) InsertPlanArgs(pargs *PlanArgs) error {
+	conn, err := f.acquire()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ctag, err := conn.Exec(
+		f.ctx,
+		`
+		insert into "plan_args" ("plan_id", "args")
+		values ($1, $2)
+		`,
+		pargs.PlanId, pargs.Args,
+	)
+	if err != nil {
+		return withCause(pargs, err)
+	}
+	return shouldEffect(ctag, 1)
+}
+
 func (f *Tables) InsertPlanPseudo(pp *PlanPseudo) error {
 	conn, err := f.acquire()
 	if err != nil {
@@ -425,6 +467,48 @@ func (f *Tables) InsertOutput(out *Output) error {
 	)
 	if err != nil {
 		return withCause(out, err)
+	}
+	return shouldEffect(ctag, 1)
+}
+
+func (f *Tables) InsertPlanAnnotations(an []Annotation) error {
+	conn, err := f.acquire()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	for _, a := range an {
+		ctag, err := conn.Exec(
+			f.ctx,
+			`insert into "plan_annotation" ("plan_id", "key", "value") values ($1, $2, $3)`,
+			a.PlanId, a.Key, a.Value,
+		)
+		if err != nil {
+			return withCause(a, err)
+		}
+		if err := shouldEffect(ctag, 1); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *Tables) InsertPlanServiceAccount(sa *ServiceAccount) error {
+	conn, err := f.acquire()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ctag, err := conn.Exec(
+		f.ctx,
+		`insert into "plan_service_account" ("plan_id", "service_account") values ($1, $2)`,
+		sa.PlanId, sa.ServiceAccount,
+	)
+	if err != nil {
+		return withCause(sa, err)
 	}
 	return shouldEffect(ctag, 1)
 }

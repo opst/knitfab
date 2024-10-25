@@ -42,7 +42,7 @@ func Task(
 		runBody kdb.RunBody,
 	) (worker.Worker, error),
 	cluster k8s.Cluster,
-	hook hook.Hook[apiruns.Detail],
+	hook hook.Hook[apiruns.Detail, struct{}],
 ) recurring.Task[kdb.RunCursor] {
 	return func(ctx context.Context, cursor kdb.RunCursor) (kdb.RunCursor, bool, error) {
 		nextCursor, statusChanged, err := iDbRun.PickAndSetStatus(
@@ -61,7 +61,7 @@ func Task(
 
 				hookValue := runs.ComposeDetail(targetRun)
 
-				if err := hook.Before(hookValue); err != nil {
+				if _, err := hook.Before(hookValue); err != nil {
 					return targetRun.Status, err
 				}
 

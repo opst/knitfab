@@ -26,7 +26,7 @@ cluster:
       image: knit-repo/init:v0.0.2
     nurse:
       image: knit-repo/nurse:v0.0.3
-      serviceAccount: fake-service-account
+      serviceAccountSecret: fake-service-account
   keychains:
     signKeyForImportToken:
       name: fake-sign-key-name
@@ -118,7 +118,7 @@ cluster:
 		})
 
 		t.Run(".cluster.worker.nurse.serviceAccount", func(t *testing.T) {
-			actual := result.Cluster().Worker().Nurse().ServiceAccount()
+			actual := result.Cluster().Worker().Nurse().ServiceAccountSecret()
 			expected := "fake-service-account"
 			if actual != expected {
 				t.Errorf("mismatch. (expected, actual) = (%v, %v)", expected, actual)

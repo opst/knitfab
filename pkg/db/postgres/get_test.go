@@ -299,10 +299,23 @@ func Test_Get(t *testing.T) {
 				PlanImage: []tables.PlanImage{
 					{PlanId: Padding36("plan/ch3#1:trainer"), Image: "repo.invalid/trainer", Version: "ch3#1"},
 				},
+				PlanEntrypoint: []tables.PlanEntrypoint{
+					{PlanId: Padding36("plan/ch3#1:trainer"), Entrypoint: []string{"python", "trainer.py"}},
+				},
+				PlanArgs: []tables.PlanArgs{
+					{PlanId: Padding36("plan/ch3#1:trainer"), Args: []string{"--input", "/in", "--output", "/out"}},
+				},
 				PlanResources: []tables.PlanResource{
 					{PlanId: Padding36("plan/ch3#1:trainer"), Type: "gpu", Value: marshal.ResourceQuantity(resource.MustParse("1"))},
 					{PlanId: Padding36("plan/ch3#1:trainer"), Type: "cpu", Value: marshal.ResourceQuantity(resource.MustParse("0.5"))},
 					{PlanId: Padding36("plan/ch3#1:trainer"), Type: "memory", Value: marshal.ResourceQuantity(resource.MustParse("1Gi"))},
+				},
+				PlanAnnotations: []tables.Annotation{
+					{PlanId: Padding36("plan/ch3#1:trainer"), Key: "model-version", Value: "1"},
+					{PlanId: Padding36("plan/ch3#1:trainer"), Key: "description", Value: "testing"},
+				},
+				PlanServiceAccount: []tables.ServiceAccount{
+					{PlanId: Padding36("plan/ch3#1:trainer"), ServiceAccount: "trainer"},
 				},
 				OnNode: []tables.PlanOnNode{
 					{
@@ -452,8 +465,10 @@ func Test_Get(t *testing.T) {
 					{
 						PlanBody: kdb.PlanBody{
 							PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
-							Hash:  Padding64("#plan/ch3#1:trainer"),
-							Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+							Hash:       Padding64("#plan/ch3#1:trainer"),
+							Image:      &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+							Entrypoint: []string{"python", "trainer.py"},
+							Args:       []string{"--input", "/in", "--output", "/out"},
 							OnNode: []kdb.OnNode{
 								{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
 								{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "high-power"},
@@ -463,6 +478,11 @@ func Test_Get(t *testing.T) {
 								"cpu":    resource.MustParse("0.5"),
 								"memory": resource.MustParse("1Gi"),
 							},
+							Annotations: []kdb.Annotation{
+								{Key: "model-version", Value: "1"},
+								{Key: "description", Value: "testing"},
+							},
+							ServiceAccount: "trainer",
 						},
 						Inputs: []kdb.MountPoint{
 							{
@@ -518,8 +538,10 @@ func Test_Get(t *testing.T) {
 							UpdatedAt: START_AT.Add(30*time.Second + 100*time.Millisecond),
 							PlanBody: kdb.PlanBody{
 								PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
-								Hash:  Padding64("#plan/ch3#1:trainer"),
-								Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+								Hash:       Padding64("#plan/ch3#1:trainer"),
+								Image:      &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+								Entrypoint: []string{"python", "trainer.py"},
+								Args:       []string{"--input", "/in", "--output", "/out"},
 								OnNode: []kdb.OnNode{
 									{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
 									{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "high-power"},
@@ -529,6 +551,11 @@ func Test_Get(t *testing.T) {
 									"cpu":    resource.MustParse("0.5"),
 									"memory": resource.MustParse("1Gi"),
 								},
+								Annotations: []kdb.Annotation{
+									{Key: "model-version", Value: "1"},
+									{Key: "description", Value: "testing"},
+								},
+								ServiceAccount: "trainer",
 							},
 						},
 						Inputs: []kdb.Assignment{
@@ -687,8 +714,10 @@ func Test_Get(t *testing.T) {
 									UpdatedAt: START_AT.Add(30*time.Second + 100*time.Millisecond),
 									PlanBody: kdb.PlanBody{
 										PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
-										Hash:  Padding64("#plan/ch3#1:trainer"),
-										Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+										Hash:       Padding64("#plan/ch3#1:trainer"),
+										Entrypoint: []string{"python", "trainer.py"},
+										Args:       []string{"--input", "/in", "--output", "/out"},
+										Image:      &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
 										OnNode: []kdb.OnNode{
 											{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
 											{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "high-power"},
@@ -713,8 +742,10 @@ func Test_Get(t *testing.T) {
 							{
 								PlanBody: kdb.PlanBody{
 									PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
-									Hash:  Padding64("#plan/ch3#1:trainer"),
-									Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Hash:       Padding64("#plan/ch3#1:trainer"),
+									Image:      &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Entrypoint: []string{"python", "trainer.py"},
+									Args:       []string{"--input", "/in", "--output", "/out"},
 									OnNode: []kdb.OnNode{
 										{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
 										{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "high-power"},
@@ -760,8 +791,10 @@ func Test_Get(t *testing.T) {
 								UpdatedAt: START_AT.Add(30*time.Second + 100*time.Millisecond),
 								PlanBody: kdb.PlanBody{
 									PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
-									Hash:  Padding64("#plan/ch3#1:trainer"),
-									Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Hash:       Padding64("#plan/ch3#1:trainer"),
+									Image:      &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Entrypoint: []string{"python", "trainer.py"},
+									Args:       []string{"--input", "/in", "--output", "/out"},
 									OnNode: []kdb.OnNode{
 										{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
 										{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "high-power"},
@@ -808,8 +841,10 @@ func Test_Get(t *testing.T) {
 								UpdatedAt: START_AT.Add(30*time.Second + 100*time.Millisecond),
 								PlanBody: kdb.PlanBody{
 									PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
-									Hash:  Padding64("#plan/ch3#1:trainer"),
-									Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Hash:       Padding64("#plan/ch3#1:trainer"),
+									Image:      &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Entrypoint: []string{"python", "trainer.py"},
+									Args:       []string{"--input", "/in", "--output", "/out"},
 									OnNode: []kdb.OnNode{
 										{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
 										{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "high-power"},
@@ -854,8 +889,10 @@ func Test_Get(t *testing.T) {
 								UpdatedAt: START_AT.Add(30*time.Second + 100*time.Millisecond),
 								PlanBody: kdb.PlanBody{
 									PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
-									Hash:  Padding64("#plan/ch3#1:trainer"),
-									Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Hash:       Padding64("#plan/ch3#1:trainer"),
+									Image:      &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Entrypoint: []string{"python", "trainer.py"},
+									Args:       []string{"--input", "/in", "--output", "/out"},
 									OnNode: []kdb.OnNode{
 										{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
 										{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "high-power"},
@@ -899,8 +936,10 @@ func Test_Get(t *testing.T) {
 								UpdatedAt: START_AT.Add(30*time.Second + 100*time.Millisecond),
 								PlanBody: kdb.PlanBody{
 									PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
-									Hash:  Padding64("#plan/ch3#1:trainer"),
-									Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Hash:       Padding64("#plan/ch3#1:trainer"),
+									Image:      &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+									Entrypoint: []string{"python", "trainer.py"},
+									Args:       []string{"--input", "/in", "--output", "/out"},
 									OnNode: []kdb.OnNode{
 										{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
 										{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "high-power"},

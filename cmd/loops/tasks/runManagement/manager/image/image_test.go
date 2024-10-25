@@ -9,7 +9,9 @@ import (
 	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/image"
+	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
+	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/workloads/k8s"
 	kw "github.com/opst/knitfab/pkg/workloads/worker"
@@ -51,7 +53,9 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 		errSetExit     error
 		errGetWorker   error
 		errStartWorker error
-		errBeforeHook  error
+
+		respBeforeToStartingHook runManagementHook.HookResponse
+		errBeforeHook            error
 	}
 
 	type Then struct {
@@ -72,8 +76,11 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				return nil, when.errGetWorker
 			}
 			startWorkerInvoked := false
-			startWorker := func(context.Context, kdb.Run) error {
+			startWorker := func(_ context.Context, _ kdb.Run, env map[string]string) error {
 				startWorkerInvoked = true
+				if !cmp.MapEq(env, when.respBeforeToStartingHook.KnitfabExtension.Env) {
+					t.Errorf("got env %v, want %v", env, when.respBeforeToStartingHook.KnitfabExtension.Env)
+				}
 				return when.errStartWorker
 			}
 
@@ -95,25 +102,88 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 
 			testee := image.New(getWorker, startWorker, setExit)
 
-			beforeHookInvoked := false
-			h := hook.Func[apiruns.Detail]{
-				BeforeFn: func(d apiruns.Detail) error {
-					beforeHookInvoked = true
-					want := bindruns.ComposeDetail(when.run)
-					if !d.Equal(want) {
-						t.Errorf("got detail %v, want %v", d, want)
-					}
-					return when.errBeforeHook
+			beforeToStartingHookInvoked := false
+			beforeToRunningHookInvoked := false
+			beforeToCompletingHookInvoked := false
+			beforeToAbortingHookInvoked := false
+			hooks := runManagementHook.Hooks{
+				ToStarting: hook.Func[apiruns.Detail, runManagementHook.HookResponse]{
+					BeforeFn: func(d apiruns.Detail) (runManagementHook.HookResponse, error) {
+						beforeToStartingHookInvoked = true
+						want := bindruns.ComposeDetail(when.run)
+						if !d.Equal(want) {
+							t.Errorf("got detail %v, want %v", d, want)
+						}
+						return when.respBeforeToStartingHook, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("after hook should not be invoked")
+						return nil
+					},
 				},
-				AfterFn: func(d apiruns.Detail) error {
-					t.Error("after hook should not be invoked")
-					return nil
+				ToRunning: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						beforeToRunningHookInvoked = true
+						want := bindruns.ComposeDetail(when.run)
+						if !d.Equal(want) {
+							t.Errorf("got detail %v, want %v", d, want)
+						}
+						return struct{}{}, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("after hook should not be invoked")
+						return nil
+					},
+				},
+				ToCompleting: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						beforeToCompletingHookInvoked = true
+						want := bindruns.ComposeDetail(when.run)
+						if !d.Equal(want) {
+							t.Errorf("got detail %v, want %v", d, want)
+						}
+						return struct{}{}, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("after hook should not be invoked")
+						return nil
+					},
+				},
+				ToAborting: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						beforeToAbortingHookInvoked = true
+						want := bindruns.ComposeDetail(when.run)
+						if !d.Equal(want) {
+							t.Errorf("got detail %v, want %v", d, want)
+						}
+						return struct{}{}, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("after hook should not be invoked")
+						return nil
+					},
 				},
 			}
-			gotStatus, gotError := testee(ctx, h, when.run)
 
-			if beforeHookInvoked != then.wantBeforeHookInvoked {
-				t.Errorf("got beforeHookInvoked %v, want %v", beforeHookInvoked, then.wantBeforeHookInvoked)
+			gotStatus, gotError := testee(ctx, hooks, when.run)
+
+			if then.wantBeforeHookInvoked {
+				switch when.run.Status {
+				case kdb.Ready:
+					if !beforeToStartingHookInvoked {
+						t.Errorf("ToStarting before hook should be invoked")
+					}
+					if beforeToRunningHookInvoked || beforeToCompletingHookInvoked || beforeToAbortingHookInvoked {
+						t.Errorf("before hooks except ToStarting should not be invoked")
+					}
+				case kdb.Starting, kdb.Running, kdb.Completing:
+					if !beforeToAbortingHookInvoked {
+						t.Errorf("ToAborting before hook should be invoked")
+					}
+					if beforeToStartingHookInvoked || beforeToRunningHookInvoked || beforeToCompletingHookInvoked {
+						t.Errorf("before hooks except ToAborting should not be invoked")
+					}
+				}
 			}
 
 			if setExitInvoked != then.wantSetExitInvoked {
@@ -187,6 +257,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				),
 				errStartWorker: nil,
 				errBeforeHook:  nil,
+				respBeforeToStartingHook: runManagementHook.HookResponse{
+					KnitfabExtension: runManagementHook.KnitfabExtension{
+						Env: map[string]string{
+							"foo": "bar",
+							"baz": "qux",
+						},
+					},
+				},
 			},
 			Then{
 				wantStatus:             kdb.Starting,
@@ -286,9 +364,9 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				errGetWorker: kubeerr.NewNotFound(
 					kubeshm.GroupResource{Resource: "job"}, "worker/starting",
 				),
-				errStartWorker: nil,
-				errSetExit:     nil,
 				errBeforeHook:  nil,
+				errSetExit:     nil,
+				errStartWorker: nil,
 			},
 			Then{
 				wantStatus:             kdb.Aborting,
@@ -428,31 +506,104 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 				return when.errSetExit
 			}
 
-			beforeHookInvoked := false
-			h := hook.Func[apiruns.Detail]{
-				BeforeFn: func(d apiruns.Detail) error {
-					beforeHookInvoked = true
-					want := bindruns.ComposeDetail(run)
-					if !d.Equal(want) {
-						t.Errorf("got detail %v, want %v", d, want)
-					}
-					return when.errBeforeHook
+			beforeToStartingHookInvoked := false
+			beforeToRunningHookInvoked := false
+			beforeToCompletingHookInvoked := false
+			beforeToAbortingHookInvoked := false
+			hooks := runManagementHook.Hooks{
+				ToStarting: hook.Func[apiruns.Detail, runManagementHook.HookResponse]{
+					BeforeFn: func(d apiruns.Detail) (runManagementHook.HookResponse, error) {
+						beforeToStartingHookInvoked = true
+						want := bindruns.ComposeDetail(run)
+						if !d.Equal(want) {
+							t.Errorf("got detail %v, want %v", d, want)
+						}
+						return runManagementHook.HookResponse{}, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("after hook should not be invoked")
+						return nil
+					},
 				},
-				AfterFn: func(d apiruns.Detail) error {
-					t.Error("after hook should not be invoked")
-					return nil
+				ToRunning: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						beforeToRunningHookInvoked = true
+						want := bindruns.ComposeDetail(run)
+						if !d.Equal(want) {
+							t.Errorf("got detail %v, want %v", d, want)
+						}
+						return struct{}{}, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("after hook should not be invoked")
+						return nil
+					},
+				},
+				ToCompleting: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						beforeToCompletingHookInvoked = true
+						want := bindruns.ComposeDetail(run)
+						if !d.Equal(want) {
+							t.Errorf("got detail %v, want %v", d, want)
+						}
+						return struct{}{}, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("after hook should not be invoked")
+						return nil
+					},
+				},
+				ToAborting: hook.Func[apiruns.Detail, struct{}]{
+					BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+						beforeToAbortingHookInvoked = true
+						want := bindruns.ComposeDetail(run)
+						if !d.Equal(want) {
+							t.Errorf("got detail %v, want %v", d, want)
+						}
+						return struct{}{}, when.errBeforeHook
+					},
+					AfterFn: func(d apiruns.Detail) error {
+						t.Error("after hook should not be invoked")
+						return nil
+					},
 				},
 			}
 
 			testee := image.New(getWorker, nil, setExit)
-			gotStatus, gotError := testee(ctx, h, run)
+			gotStatus, gotError := testee(ctx, hooks, run)
 
 			if setExitInvoked != then.wantSetExitInvoked {
 				t.Errorf("got setExitInvoked %v, want %v", setExitInvoked, then.wantSetExitInvoked)
 			}
 
-			if beforeHookInvoked != then.wantBeforeHookInvoked {
-				t.Errorf("got beforeHookInvoked %v, want %v", beforeHookInvoked, then.wantBeforeHookInvoked)
+			if then.wantBeforeHookInvoked {
+				switch when.jobStatus.Type {
+				case k8s.Pending:
+					if beforeToStartingHookInvoked || beforeToRunningHookInvoked || beforeToCompletingHookInvoked || beforeToAbortingHookInvoked {
+						t.Errorf("before hooks should not be invoked")
+					}
+				case k8s.Running:
+					if !beforeToRunningHookInvoked {
+						t.Errorf("ToRunning before hook should be invoked")
+					}
+					if beforeToStartingHookInvoked || beforeToCompletingHookInvoked || beforeToAbortingHookInvoked {
+						t.Errorf("before hooks except ToRunning should not be invoked")
+					}
+				case k8s.Succeeded:
+					if !beforeToCompletingHookInvoked {
+						t.Errorf("ToCompleting before hook should be invoked")
+					}
+					if beforeToStartingHookInvoked || beforeToRunningHookInvoked || beforeToAbortingHookInvoked {
+						t.Errorf("before hooks except ToCompleting should not be invoked")
+					}
+				case k8s.Failed, k8s.Stucking:
+					if !beforeToAbortingHookInvoked {
+						t.Errorf("ToAborting before hook should be invoked")
+					}
+					if beforeToStartingHookInvoked || beforeToRunningHookInvoked || beforeToCompletingHookInvoked {
+						t.Errorf("before hooks except ToAborting should not be invoked")
+					}
+				}
 			}
 
 			if gotStatus != then.wantStatus {

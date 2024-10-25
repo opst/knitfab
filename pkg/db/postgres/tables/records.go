@@ -3,6 +3,7 @@ package tables
 import (
 	"time"
 
+	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/db/postgres/marshal"
 )
@@ -77,6 +78,25 @@ type PlanImage struct {
 	Image   string
 	Version string
 }
+
+type PlanEntrypoint struct {
+	PlanId     string
+	Entrypoint []string
+}
+
+func (pent PlanEntrypoint) Equal(other PlanEntrypoint) bool {
+	return pent.PlanId == other.PlanId && cmp.SliceEq(pent.Entrypoint, other.Entrypoint)
+}
+
+type PlanArgs struct {
+	PlanId string
+	Args   []string
+}
+
+func (pargs PlanArgs) Equal(other PlanArgs) bool {
+	return pargs.PlanId == other.PlanId && cmp.SliceEq(pargs.Args, other.Args)
+}
+
 type PlanOnNode struct {
 	PlanId string
 	Mode   kdb.OnNodeMode
@@ -100,6 +120,15 @@ type Output struct {
 type Log struct {
 	OutputId int
 	PlanId   int
+}
+type Annotation struct {
+	PlanId string
+	Key    string
+	Value  string
+}
+type ServiceAccount struct {
+	PlanId         string
+	ServiceAccount string
 }
 
 type Run struct {

@@ -878,3 +878,459 @@ func TestUpdateResources(t *testing.T) {
 		}
 	})
 }
+
+func TestUpdateAnnotations(t *testing.T) {
+	t.Run("success case", func(t *testing.T) {
+		type When struct {
+			planId   string
+			change   plans.AnnotationChange
+			response plans.Detail
+		}
+
+		theory := func(when When) func(t *testing.T) {
+			return func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Header.Get("Content-Type") != "application/json" {
+						t.Errorf("request is not application/json. actual content-type = %s", r.Header.Get("Content-Type"))
+					}
+
+					got := new(plans.AnnotationChange)
+					if err := json.NewDecoder(r.Body).Decode(got); err != nil {
+						t.Fatal(err)
+					}
+
+					if !cmp.SliceContentEq(got.Add, when.change.Add) {
+						t.Errorf("add is wrong: actual = %v, expected = %v", got.Add, when.change.Add)
+					}
+
+					if !cmp.SliceContentEq(got.Remove, when.change.Remove) {
+						t.Errorf("remove is wrong: actual = %v, expected = %v", got.Remove, when.change.Remove)
+					}
+
+					w.Header().Add("Content-Type", "application/json")
+					w.WriteHeader(http.StatusOK)
+					body := try.To(json.Marshal(when.response)).OrFatal(t)
+					w.Write(body)
+				}))
+
+				defer server.Close()
+
+				profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+				ctx := context.Background()
+				actualResponse := try.To(testee.UpdateAnnotations(ctx, when.planId, when.change)).OrFatal(t)
+
+				if !actualResponse.Equal(when.response) {
+					t.Errorf("response is not equal (actual,expected): %v,%v", actualResponse, when.response)
+				}
+			}
+		}
+
+		t.Run("when server returns data, it returns that as is", theory(When{
+			planId: "test-Id",
+			change: plans.AnnotationChange{
+				Add:    plans.Annotations{{Key: "key-a", Value: "value-a"}},
+				Remove: plans.Annotations{{Key: "key-b", Value: "value-b"}},
+			},
+			response: plans.Detail{
+				Summary: plans.Summary{
+					PlanId: "test-Id",
+					Image: &plans.Image{
+						Repository: "test-image", Tag: "test-version",
+					},
+					Annotations: plans.Annotations{
+						{Key: "key-a", Value: "value-a"},
+						{Key: "key-c", Value: "value-c"},
+					},
+				},
+				Inputs: []plans.Mountpoint{
+					{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "raw data"},
+							{Key: "format", Value: "rgb image"},
+						},
+					},
+				},
+				Outputs: []plans.Mountpoint{
+					{
+						Path: "/out/2",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "training data"},
+							{Key: "format", Value: "mask"},
+						},
+					},
+				},
+				Log: &plans.LogPoint{
+					Tags: []tags.Tag{
+						{Key: "type", Value: "log"},
+						{Key: "format", Value: "jsonl"},
+					},
+				},
+				Active: true,
+			},
+		}))
+	})
+
+	t.Run("a server responding with error", func(t *testing.T) {
+		type When struct {
+			planId string
+			change plans.AnnotationChange
+
+			statusCode int
+		}
+
+		theory := func(when When) func(t *testing.T) {
+			return func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Header.Get("Content-Type") != "application/json" {
+						t.Errorf("request is not application/json. actual content-type = %s", r.Header.Get("Content-Type"))
+					}
+
+					got := new(plans.AnnotationChange)
+					if err := json.NewDecoder(r.Body).Decode(got); err != nil {
+						t.Fatal(err)
+					}
+
+					if !cmp.SliceContentEq(got.Add, when.change.Add) {
+						t.Errorf("add is wrong: actual = %v, expected = %v", got.Add, when.change.Add)
+					}
+
+					if !cmp.SliceContentEq(got.Remove, when.change.Remove) {
+						t.Errorf("remove is wrong: actual = %v, expected = %v", got.Remove, when.change.Remove)
+					}
+
+					w.Header().Add("Content-Type", "application/json")
+					w.WriteHeader(when.statusCode)
+				}))
+
+				defer server.Close()
+
+				profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+				testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+				ctx := context.Background()
+				_, err := testee.UpdateAnnotations(ctx, when.planId, when.change)
+
+				if err == nil {
+					t.Error("no error occured")
+				}
+			}
+		}
+
+		t.Run(": 4xx error", theory(When{
+			planId: "test-Id",
+			change: plans.AnnotationChange{
+				Add:    plans.Annotations{{Key: "key-a", Value: "value-a"}},
+				Remove: plans.Annotations{{Key: "key-b", Value: "value-b"}},
+			},
+			statusCode: http.StatusBadRequest,
+		}))
+
+		t.Run(": 5xx error", theory(When{
+			planId: "test-Id",
+			change: plans.AnnotationChange{
+				Add:    plans.Annotations{{Key: "key-a", Value: "value-a"}},
+				Remove: plans.Annotations{{Key: "key-b", Value: "value-b"}},
+			},
+			statusCode: http.StatusInternalServerError,
+		}))
+	})
+}
+
+func TestSetServiceAccount_success_case(t *testing.T) {
+	type When struct {
+		planId             string
+		sa                 plans.SetServiceAccount
+		requestContentType string
+
+		response plans.Detail
+	}
+
+	theory := func(when When) func(t *testing.T) {
+		return func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Content-Type") != when.requestContentType {
+					t.Errorf("request is not %s. actual content-type = %s", when.requestContentType, r.Header.Get("Content-Type"))
+				}
+
+				got := new(plans.SetServiceAccount)
+				if err := json.NewDecoder(r.Body).Decode(got); err != nil {
+					t.Fatal(err)
+				}
+
+				if *got != when.sa {
+					t.Errorf("request is wrong: actual = %v, expected = %v", got, when.sa)
+				}
+
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				body := try.To(json.Marshal(when.response)).OrFatal(t)
+				w.Write(body)
+			}))
+
+			defer server.Close()
+
+			profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+			ctx := context.Background()
+			actualResponse := try.To(testee.SetServiceAccount(ctx, when.planId, when.sa)).OrFatal(t)
+
+			if !actualResponse.Equal(when.response) {
+				t.Errorf("response is not equal (actual,expected): %+v\n%+v", actualResponse, when.response)
+			}
+		}
+	}
+
+	t.Run("when server returns data, it returns that as is", theory(When{
+		planId: "test-Id",
+		sa: plans.SetServiceAccount{
+			ServiceAccount: "test-service-account",
+		},
+		requestContentType: "application/json",
+		response: plans.Detail{
+			Summary: plans.Summary{
+				PlanId: "test-Id",
+				Image: &plans.Image{
+					Repository: "test-image", Tag: "test-version",
+				},
+				Name: "test-Name",
+			},
+			Inputs: []plans.Mountpoint{
+				{
+					Path: "/in/1",
+					Tags: []tags.Tag{
+						{Key: "type", Value: "raw data"},
+						{Key: "format", Value: "rgb image"},
+					},
+				},
+			},
+			Outputs: []plans.Mountpoint{
+				{
+					Path: "/out/2",
+					Tags: []tags.Tag{
+						{Key: "type", Value: "training data"},
+						{Key: "format", Value: "mask"},
+					},
+				},
+			},
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
+					{Key: "type", Value: "log"},
+					{Key: "format", Value: "jsonl"},
+				},
+			},
+			Active:         true,
+			ServiceAccount: "test-service-account",
+		},
+	}))
+}
+
+func TestSetServiceAccount_error_case(t *testing.T) {
+	type When struct {
+		planId string
+		sa     plans.SetServiceAccount
+
+		statusCode int
+	}
+
+	theory := func(when When) func(t *testing.T) {
+		return func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Content-Type") != "application/json" {
+					t.Errorf("request is not application/json. actual content-type = %s", r.Header.Get("Content-Type"))
+				}
+
+				got := new(plans.SetServiceAccount)
+				if err := json.NewDecoder(r.Body).Decode(got); err != nil {
+					t.Fatal(err)
+				}
+
+				if *got != when.sa {
+					t.Errorf("request is wrong: actual = %v, expected = %v", got, when.sa)
+				}
+
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(when.statusCode)
+			}))
+
+			defer server.Close()
+
+			profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+			ctx := context.Background()
+			_, err := testee.SetServiceAccount(ctx, when.planId, when.sa)
+
+			if err == nil {
+				t.Error("no error occured")
+			}
+		}
+	}
+
+	t.Run(": 4xx error", theory(When{
+		planId: "test-Id",
+		sa: plans.SetServiceAccount{
+			ServiceAccount: "test-service-account",
+		},
+		statusCode: http.StatusBadRequest,
+	}))
+
+	t.Run(": 5xx error", theory(When{
+		planId: "test-Id",
+		sa: plans.SetServiceAccount{
+			ServiceAccount: "test-service-account",
+		},
+		statusCode: http.StatusInternalServerError,
+	}))
+}
+
+func TestUnsetServiceAccount_success_case(t *testing.T) {
+	type When struct {
+		planId string
+
+		response plans.Detail
+	}
+
+	theory := func(when When) func(t *testing.T) {
+		return func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodDelete {
+					t.Errorf(
+						"request is not DELETE: actual method = %s",
+						r.Method,
+					)
+				}
+
+				if !strings.HasSuffix(r.URL.Path, "/plans/"+when.planId+"/serviceaccount") {
+					t.Errorf(
+						"request is not /plans/:planId/service_account. actual path = %s",
+						r.URL.Path,
+					)
+				}
+
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				body := try.To(json.Marshal(when.response)).OrFatal(t)
+				w.Write(body)
+			}))
+
+			defer server.Close()
+
+			profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+			ctx := context.Background()
+			got, err := testee.UnsetServiceAccount(ctx, when.planId)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !got.Equal(when.response) {
+				t.Errorf(
+					"response is not equal (actual,expected): %+v\n%+v",
+					got, when.response,
+				)
+			}
+		}
+	}
+
+	t.Run("when server returns data, it returns that as is", theory(When{
+		planId: "test-Id",
+		response: plans.Detail{
+			Summary: plans.Summary{
+				PlanId: "test-id",
+				Image: &plans.Image{
+					Repository: "test-image", Tag: "test-version",
+				},
+				Name: "test-Name",
+			},
+			Inputs: []plans.Mountpoint{
+				{
+					Path: "/in/1",
+					Tags: []tags.Tag{
+						{Key: "type", Value: "raw data"},
+						{Key: "format", Value: "rgb image"},
+					},
+				},
+			},
+			Outputs: []plans.Mountpoint{
+				{
+					Path: "/out/2",
+					Tags: []tags.Tag{
+						{Key: "type", Value: "training data"},
+						{Key: "format", Value: "mask"},
+					},
+				},
+			},
+			Log: &plans.LogPoint{
+				Tags: []tags.Tag{
+					{Key: "type", Value: "log"},
+					{Key: "format", Value: "jsonl"},
+				},
+			},
+			Active: true,
+		},
+	}))
+}
+
+func TestUnsetServiceAccount_error_case(t *testing.T) {
+	type When struct {
+		planId string
+
+		statusCode int
+	}
+
+	theory := func(when When) func(t *testing.T) {
+		return func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodDelete {
+					t.Errorf(
+						"request is not DELETE: actual method = %s",
+						r.Method,
+					)
+				}
+
+				if !strings.HasSuffix(r.URL.Path, "/plans/"+when.planId+"/serviceaccount") {
+					t.Errorf(
+						"request is not /plans/:planId/service_account. actual path = %s",
+						r.URL.Path,
+					)
+				}
+
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(when.statusCode)
+			}))
+
+			defer server.Close()
+
+			profile := kprof.KnitProfile{ApiRoot: server.URL}
+
+			testee := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+			ctx := context.Background()
+			_, err := testee.UnsetServiceAccount(ctx, when.planId)
+
+			if err == nil {
+				t.Error("no error occured")
+			}
+		}
+	}
+
+	t.Run(": 4xx error", theory(When{
+		planId:     "test-Id",
+		statusCode: http.StatusBadRequest,
+	}))
+
+	t.Run(": 5xx error", theory(When{
+		planId:     "test-Id",
+		statusCode: http.StatusInternalServerError,
+	}))
+}

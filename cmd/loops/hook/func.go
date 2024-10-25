@@ -3,11 +3,11 @@ package hook
 import "errors"
 
 // Func is a hook that calls functions before and after processing the value T.
-type Func[T any] struct {
+type Func[T any, R any] struct {
 	// BeforeFn is a function to call before processing the value T.
 	//
 	// If BeforeFn is nil, it is not called.
-	BeforeFn func(T) error
+	BeforeFn func(T) (R, error)
 
 	// AfterFn is a function to call after processing the value T.
 	//
@@ -15,18 +15,18 @@ type Func[T any] struct {
 	AfterFn func(T) error
 }
 
-func (f Func[T]) Before(value T) error {
+func (f Func[T, R]) Before(value T) (R, error) {
 	if f.BeforeFn == nil {
-		return nil
+		return *new(R), nil
 	}
-	err := f.BeforeFn(value)
+	ret, err := f.BeforeFn(value)
 	if err != nil {
-		return errors.Join(err, ErrHookFailed)
+		return ret, errors.Join(err, ErrHookFailed)
 	}
-	return nil
+	return ret, nil
 }
 
-func (f Func[T]) After(value T) error {
+func (f Func[T, R]) After(value T) error {
 	if f.AfterFn == nil {
 		return nil
 	}

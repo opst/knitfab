@@ -63,7 +63,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 			// Testee
 			hookAfterHasBeenCalled := false
-			testee := finishing.Task(iDbRun, nil, nil, hook.Func[apiruns.Detail]{
+			testee := finishing.Task(iDbRun, nil, nil, hook.Func[apiruns.Detail, struct{}]{
 				AfterFn: func(hookValue apiruns.Detail) error {
 					hookAfterHasBeenCalled = true
 					if want := bindruns.ComposeDetail(when.pickedRun); !want.Equal(hookValue) {
@@ -436,13 +436,13 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 			// Testee
 			beforeHasBeenCalled := false
-			testee := finishing.Task(iDbRun, fakeFind, nil, hook.Func[apiruns.Detail]{
-				BeforeFn: func(hookValue apiruns.Detail) error {
+			testee := finishing.Task(iDbRun, fakeFind, nil, hook.Func[apiruns.Detail, struct{}]{
+				BeforeFn: func(hookValue apiruns.Detail) (struct{}, error) {
 					beforeHasBeenCalled = true
 					if want := bindruns.ComposeDetail(when.runPassedToCallback); !want.Equal(hookValue) {
 						t.Errorf("hookValue: actual=%+v, expect=%+v", hookValue, want)
 					}
-					return when.errBefore
+					return struct{}{}, when.errBefore
 				},
 			})
 			testee(context.Background(), kdb.RunCursor{

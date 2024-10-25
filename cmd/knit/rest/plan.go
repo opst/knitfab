@@ -181,3 +181,90 @@ func (c *client) UpdateResources(ctx context.Context, planId string, res plans.R
 	}
 	return dataMetas, nil
 }
+
+func (c *client) UpdateAnnotations(ctx context.Context, planId string, change plans.AnnotationChange) (plans.Detail, error) {
+	b, err := json.Marshal(change)
+	if err != nil {
+		return plans.Detail{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, c.apipath("plans", planId, "annotations"), bytes.NewBuffer(b))
+	if err != nil {
+		return plans.Detail{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpclient.Do(req)
+	if err != nil {
+		return plans.Detail{}, err
+	}
+	defer resp.Body.Close()
+
+	var dataMetas plans.Detail
+	if err := unmarshalJsonResponse(
+		resp, &dataMetas,
+		MessageFor{
+			Status4xx: fmt.Sprintf("planId:%v cannot be updated", planId),
+			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
+		},
+	); err != nil {
+		return plans.Detail{}, err
+	}
+	return dataMetas, nil
+}
+
+func (c *client) SetServiceAccount(ctx context.Context, planId string, setServiceAccount plans.SetServiceAccount) (plans.Detail, error) {
+	b, err := json.Marshal(setServiceAccount)
+	if err != nil {
+		return plans.Detail{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, c.apipath("plans", planId, "serviceaccount"), bytes.NewBuffer(b))
+	if err != nil {
+		return plans.Detail{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpclient.Do(req)
+	if err != nil {
+		return plans.Detail{}, err
+	}
+	defer resp.Body.Close()
+
+	var dataMetas plans.Detail
+	if err := unmarshalJsonResponse(
+		resp, &dataMetas,
+		MessageFor{
+			Status4xx: fmt.Sprintf("planId:%v cannot be updated", planId),
+			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
+		},
+	); err != nil {
+		return plans.Detail{}, err
+	}
+	return dataMetas, nil
+}
+
+func (c *client) UnsetServiceAccount(ctx context.Context, planId string) (plans.Detail, error) {
+	req, err := http.NewRequest(http.MethodDelete, c.apipath("plans", planId, "serviceaccount"), nil)
+	if err != nil {
+		return plans.Detail{}, err
+	}
+
+	resp, err := c.httpclient.Do(req)
+	if err != nil {
+		return plans.Detail{}, err
+	}
+	defer resp.Body.Close()
+
+	var dataMetas plans.Detail
+	if err := unmarshalJsonResponse(
+		resp, &dataMetas,
+		MessageFor{
+			Status4xx: fmt.Sprintf("planId:%v cannot be updated", planId),
+			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
+		},
+	); err != nil {
+		return plans.Detail{}, err
+	}
+	return dataMetas, nil
+}

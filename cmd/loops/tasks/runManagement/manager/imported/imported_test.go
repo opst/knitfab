@@ -8,6 +8,7 @@ import (
 	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/imported"
+	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -24,10 +25,30 @@ func TestImportedManager(t *testing.T) {
 				}
 
 				hookIsCalled := false
-				hooks := hook.Func[apiruns.Detail]{
-					BeforeFn: func(d apiruns.Detail) error {
-						hookIsCalled = true
-						return nil
+				hooks := runManagementHook.Hooks{
+					ToStarting: hook.Func[apiruns.Detail, runManagementHook.HookResponse]{
+						BeforeFn: func(d apiruns.Detail) (runManagementHook.HookResponse, error) {
+							t.Errorf("Starting Before Hook should not be called")
+							return runManagementHook.HookResponse{}, nil
+						},
+					},
+					ToRunning: hook.Func[apiruns.Detail, struct{}]{
+						BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+							t.Errorf("Running Before Hook should not be called")
+							return struct{}{}, nil
+						},
+					},
+					ToCompleting: hook.Func[apiruns.Detail, struct{}]{
+						BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+							t.Errorf("Completeing Before Hook should not be called")
+							return struct{}{}, nil
+						},
+					},
+					ToAborting: hook.Func[apiruns.Detail, struct{}]{
+						BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+							hookIsCalled = true
+							return struct{}{}, nil
+						},
 					},
 				}
 
@@ -56,10 +77,30 @@ func TestImportedManager(t *testing.T) {
 		}
 
 		hookIsCalled := false
-		hooks := hook.Func[apiruns.Detail]{
-			BeforeFn: func(d apiruns.Detail) error {
-				hookIsCalled = true
-				return nil
+		hooks := runManagementHook.Hooks{
+			ToStarting: hook.Func[apiruns.Detail, runManagementHook.HookResponse]{
+				BeforeFn: func(d apiruns.Detail) (runManagementHook.HookResponse, error) {
+					t.Errorf("Starting Before Hook should not be called")
+					return runManagementHook.HookResponse{}, nil
+				},
+			},
+			ToRunning: hook.Func[apiruns.Detail, struct{}]{
+				BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+					t.Errorf("Running Before Hook should not be called")
+					return struct{}{}, nil
+				},
+			},
+			ToCompleting: hook.Func[apiruns.Detail, struct{}]{
+				BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+					t.Errorf("Completeing Before Hook should not be called")
+					return struct{}{}, nil
+				},
+			},
+			ToAborting: hook.Func[apiruns.Detail, struct{}]{
+				BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+					hookIsCalled = true
+					return struct{}{}, nil
+				},
 			},
 		}
 
@@ -83,9 +124,29 @@ func TestImportedManager(t *testing.T) {
 		}
 
 		expectedErr := errors.New("expected error")
-		hooks := hook.Func[apiruns.Detail]{
-			BeforeFn: func(d apiruns.Detail) error {
-				return expectedErr
+		hooks := runManagementHook.Hooks{
+			ToStarting: hook.Func[apiruns.Detail, runManagementHook.HookResponse]{
+				BeforeFn: func(d apiruns.Detail) (runManagementHook.HookResponse, error) {
+					t.Errorf("Starting Before Hook should not be called")
+					return runManagementHook.HookResponse{}, nil
+				},
+			},
+			ToRunning: hook.Func[apiruns.Detail, struct{}]{
+				BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+					t.Errorf("Running Before Hook should not be called")
+					return struct{}{}, nil
+				},
+			},
+			ToCompleting: hook.Func[apiruns.Detail, struct{}]{
+				BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+					t.Errorf("Completeing Before Hook should not be called")
+					return struct{}{}, nil
+				},
+			},
+			ToAborting: hook.Func[apiruns.Detail, struct{}]{
+				BeforeFn: func(d apiruns.Detail) (struct{}, error) {
+					return struct{}{}, expectedErr
+				},
 			},
 		}
 

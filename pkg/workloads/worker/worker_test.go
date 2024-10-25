@@ -104,8 +104,8 @@ func TestWorkerRunning(t *testing.T) {
 					Image: testenv.Images().Empty,
 				},
 				Nurse: &bconf.NurseContainerConfigMarshall{
-					Image:          testenv.Images().Nurse,
-					ServiceAccount: "fake-serviceAccount",
+					Image:                testenv.Images().Nurse,
+					ServiceAccountSecret: "fake-serviceAccount",
 				},
 			},
 			Keychains: &bconf.KeychainsConfigMarshall{
@@ -270,8 +270,8 @@ func TestWorkerStoppedInSuccess(t *testing.T) {
 					Image: testenv.Images().Empty,
 				},
 				Nurse: &bconf.NurseContainerConfigMarshall{
-					Image:          testenv.Images().Nurse,
-					ServiceAccount: "fake-serviceAccount",
+					Image:                testenv.Images().Nurse,
+					ServiceAccountSecret: "fake-serviceAccount",
 				},
 			},
 			Keychains: &bconf.KeychainsConfigMarshall{
@@ -418,8 +418,8 @@ func TestWorkerStoppedInFailure(t *testing.T) {
 					Image: testenv.Images().Empty,
 				},
 				Nurse: &bconf.NurseContainerConfigMarshall{
-					Image:          testenv.Images().Nurse,
-					ServiceAccount: "fake-serviceAccount",
+					Image:                testenv.Images().Nurse,
+					ServiceAccountSecret: "fake-serviceAccount",
 				},
 			},
 			Keychains: &bconf.KeychainsConfigMarshall{
