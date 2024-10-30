@@ -21,7 +21,7 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	run_find "github.com/opst/knitfab/cmd/knit/subcommands/run/find"
-	kflag "github.com/opst/knitfab/pkg/commandline/flag"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
@@ -180,10 +180,10 @@ func TestFindCommand(t *testing.T) {
 
 	{
 		timestamp := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
-		since := kflag.LooseRFC3339(timestamp)
+		since := kargs.LooseRFC3339(timestamp)
 
 		d := 2 * time.Hour
-		duration := new(kflag.OptionalDuration)
+		duration := new(kargs.OptionalDuration)
 		if err := duration.Set(d.String()); err != nil {
 			t.Fatal(err)
 		}
@@ -191,16 +191,16 @@ func TestFindCommand(t *testing.T) {
 		t.Run("when values for each flag are passed, it should call task with these values", theory(
 			When{
 				flag: run_find.Flag{
-					PlanId: &kflag.Argslice{
+					PlanId: &kargs.Argslice{
 						"plan1", "plan2",
 					},
-					KnitIdIn: &kflag.Argslice{
+					KnitIdIn: &kargs.Argslice{
 						"knit1", "knit2",
 					},
-					KnitIdOut: &kflag.Argslice{
+					KnitIdOut: &kargs.Argslice{
 						"knit3", "knit4",
 					},
-					Status: &kflag.Argslice{
+					Status: &kargs.Argslice{
 						"waiting", "running",
 					},
 					Since:    &since,
@@ -217,7 +217,7 @@ func TestFindCommand(t *testing.T) {
 	{
 
 		d := 2 * time.Hour
-		duration := new(kflag.OptionalDuration)
+		duration := new(kargs.OptionalDuration)
 		if err := duration.Set(d.String()); err != nil {
 			t.Fatal(err)
 		}

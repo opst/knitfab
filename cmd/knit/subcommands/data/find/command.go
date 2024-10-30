@@ -12,8 +12,8 @@ import (
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kflag "github.com/opst/knitfab/pkg/commandline/flag"
 	"github.com/opst/knitfab/pkg/utils"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/youta-t/flarc"
 )
 
@@ -32,10 +32,10 @@ func NewErrUnknwonTransientFlag(actualValue string) error {
 }
 
 type Flag struct {
-	Tags      *kflag.Tags                 `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Find Data with this Tag. Repeatable."`
+	Tags      *kargs.Tags                 `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Find Data with this Tag. Repeatable."`
 	Transient string                      `flag:"transient" metavar:"both|yes|true|no|false" help:"yes|true (transient Data only) / no|false (non transient Data only) / both"`
-	Since     *kflag.OptionalLooseRFC3339 `flag:"since" metavar:"YYYY-mm-dd[THH[:MM[:SS]]][TZ]" help:"Find Data only updated at this time or later."`
-	Duration  *kflag.OptionalDuration     `flag:"duration" metavar:"DURATION" help:"Find Data only updated at a time in --duration from --since."`
+	Since     *kargs.OptionalLooseRFC3339 `flag:"since" metavar:"YYYY-mm-dd[THH[:MM[:SS]]][TZ]" help:"Find Data only updated at this time or later."`
+	Duration  *kargs.OptionalDuration     `flag:"duration" metavar:"DURATION" help:"Find Data only updated at a time in --duration from --since."`
 }
 
 type Option struct {
@@ -72,10 +72,10 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 	return flarc.NewCommand(
 		"Find Data that satisfy all specified conditions.",
 		Flag{
-			Tags:      &kflag.Tags{},
+			Tags:      &kargs.Tags{},
 			Transient: "both",
-			Since:     &kflag.OptionalLooseRFC3339{},
-			Duration:  &kflag.OptionalDuration{},
+			Since:     &kargs.OptionalLooseRFC3339{},
+			Duration:  &kargs.OptionalDuration{},
 		},
 		flarc.Args{},
 		common.NewTask(Task(opt.findData)),

@@ -10,14 +10,14 @@ import (
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kflg "github.com/opst/knitfab/pkg/commandline/flag"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/youta-t/flarc"
 )
 
 type Flag struct {
-	AddTag    *kflg.Tags `flag:"add" metavar:"KEY:VALUE..." help:"add Tags to Data. Repeatable."`
-	RemoveTag *kflg.Tags `flag:"remove" metavar:"KEY:VALUE..." help:"remove Tags from Data. Repeatable."`
-	RemoveKey []string   `flag:"remove-key" metavar:"KEY..." help:"remove Tags by key. Repeatable"`
+	AddTag    *kargs.Tags `flag:"add" metavar:"KEY:VALUE..." help:"add Tags to Data. Repeatable."`
+	RemoveTag *kargs.Tags `flag:"remove" metavar:"KEY:VALUE..." help:"remove Tags from Data. Repeatable."`
+	RemoveKey []string    `flag:"remove-key" metavar:"KEY..." help:"remove Tags by key. Repeatable"`
 }
 
 var ARG_KNITID = "KNIT_ID"
@@ -26,8 +26,8 @@ func New() (flarc.Command, error) {
 	return flarc.NewCommand(
 		"Add and/or remove Tags on Data in knitfab.",
 		Flag{
-			AddTag:    &kflg.Tags{},
-			RemoveTag: &kflg.Tags{},
+			AddTag:    &kargs.Tags{},
+			RemoveTag: &kargs.Tags{},
 		},
 		flarc.Args{
 			{

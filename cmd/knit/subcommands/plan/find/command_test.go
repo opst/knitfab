@@ -18,8 +18,8 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_find "github.com/opst/knitfab/cmd/knit/subcommands/plan/find"
-	"github.com/opst/knitfab/pkg/commandline/flag"
 	kdb "github.com/opst/knitfab/pkg/db"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"github.com/opst/knitfab/pkg/utils/try"
@@ -283,11 +283,11 @@ func TestFindCommand(t *testing.T) {
 		When{
 			flag: plan_find.Flag{
 				Active: "both",
-				InTags: &flag.Tags{
+				InTags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "example", Value: "tag"},
 				},
-				OutTags: &flag.Tags{
+				OutTags: &kargs.Tags{
 					{Key: "knit#id", Value: "some-knit-id"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -307,10 +307,10 @@ func TestFindCommand(t *testing.T) {
 			When{
 				flag: plan_find.Flag{
 					Active: "both",
-					InTags: &flag.Tags{
+					InTags: &kargs.Tags{
 						{Key: "foo", Value: "bar"},
 					},
-					OutTags: &flag.Tags{
+					OutTags: &kargs.Tags{
 						{Key: "knit#id", Value: "some-knit-id"},
 					},
 				},

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	kflag "github.com/opst/knitfab/pkg/commandline/flag"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/youta-t/flarc"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
@@ -170,7 +170,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags are passed, it should call task with all tags", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -219,7 +219,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when '--transient no' is passed, it should call task with TransientExclude", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -253,7 +253,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags and --transient yes are passed, it should call task with all tags and TransientOnly", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -273,7 +273,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags and --transient true are passed, it should call task with all tags and TransientOnly", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -295,7 +295,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags and --transient no are passed, it should call task with all tags and TransientExclude", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "example", Value: "tag"},
 				},
@@ -315,7 +315,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags and --transient false are passed, it should call task with all tags and TransientExclude", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
 				},
@@ -336,11 +336,11 @@ func TestFindDataCommand(t *testing.T) {
 	{
 		timestamp := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
 		d := 2 * time.Hour
-		duration := new(kflag.OptionalDuration)
+		duration := new(kargs.OptionalDuration)
 		duration.Set(d.String())
 
-		s := kflag.LooseRFC3339(timestamp)
-		since := &kflag.OptionalLooseRFC3339{}
+		s := kargs.LooseRFC3339(timestamp)
+		since := &kargs.OptionalLooseRFC3339{}
 		since.Set(s.String())
 		t.Run("when since and duration are passed, it should call task with since and duration", theory(
 			when{
@@ -377,7 +377,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when task returns no data, it should be done", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
 				},
@@ -400,7 +400,7 @@ func TestFindDataCommand(t *testing.T) {
 		t.Run("when task returns error, it should return with error", theory(
 			when{
 				flag: data_find.Flag{
-					Tags: &kflag.Tags{
+					Tags: &kargs.Tags{
 						{Key: "foo", Value: "bar"},
 						{Key: kdb.KeyKnitId, Value: "some-knit-id"},
 					},

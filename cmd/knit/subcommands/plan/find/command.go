@@ -12,8 +12,8 @@ import (
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kflag "github.com/opst/knitfab/pkg/commandline/flag"
 	kdb "github.com/opst/knitfab/pkg/db"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"github.com/youta-t/flarc"
 )
@@ -21,8 +21,8 @@ import (
 type Flag struct {
 	Active  string      `flag:"active" metavar:"both|yes|true|no|false" help:"Activeness of Plans to be found. It can be yes(= true)|no(= false)|both."`
 	Image   string      `flag:"image" metavar:"image[:tag]" help:"image of Plans to be found."`
-	InTags  *kflag.Tags `flag:"in-tag" alias:"i" metavar:"KEY:VALUE..." help:"Tags in input of Plans to be found. Repeatable."`
-	OutTags *kflag.Tags `flag:"out-tag" alias:"o" metavar:"KEY:VALUE..." help:"Tags in output of Plan to be found. Repeatable."`
+	InTags  *kargs.Tags `flag:"in-tag" alias:"i" metavar:"KEY:VALUE..." help:"Tags in input of Plans to be found. Repeatable."`
+	OutTags *kargs.Tags `flag:"out-tag" alias:"o" metavar:"KEY:VALUE..." help:"Tags in output of Plan to be found. Repeatable."`
 }
 
 type Option struct {
@@ -67,8 +67,8 @@ func New(options ...func(*Option) *Option) (flarc.Command, error) {
 		Flag{
 			Active:  "both",
 			Image:   "",
-			InTags:  &kflag.Tags{},
-			OutTags: &kflag.Tags{},
+			InTags:  &kargs.Tags{},
+			OutTags: &kargs.Tags{},
 		},
 		flarc.Args{},
 		common.NewTask(Task(option.find)),

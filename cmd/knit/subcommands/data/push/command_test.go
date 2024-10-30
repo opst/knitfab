@@ -22,7 +22,7 @@ import (
 	data_push "github.com/opst/knitfab/cmd/knit/subcommands/data/push"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	kflg "github.com/opst/knitfab/pkg/commandline/flag"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -117,7 +117,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   stdout,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
@@ -275,7 +275,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   stdout,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
@@ -428,7 +428,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   stdout,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
@@ -585,7 +585,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   stdout,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
@@ -673,7 +673,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   io.Discard,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},

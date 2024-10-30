@@ -13,18 +13,18 @@ import (
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kflg "github.com/opst/knitfab/pkg/commandline/flag"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/youta-t/flarc"
 
 	pb "github.com/cheggaaa/pb/v3"
 )
 
 type Flags struct {
-	Tag         *kflg.Tags `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Tags to be put on Data. It can be specified multiple times."`
-	Name        bool       `flag:"name" alias:"n" help:"add tag name:<source>"`
-	Dereference bool       `flag:"dereference" short:"L" help:"Symlinks are followed and it stores target files of links. Otherwise symlinks are stored as such."`
+	Tag         *kargs.Tags `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Tags to be put on Data. It can be specified multiple times."`
+	Name        bool        `flag:"name" alias:"n" help:"add tag name:<source>"`
+	Dereference bool        `flag:"dereference" short:"L" help:"Symlinks are followed and it stores target files of links. Otherwise symlinks are stored as such."`
 }
 
 const ARG_SOURCE = "source"
@@ -33,7 +33,7 @@ func New() (flarc.Command, error) {
 	return flarc.NewCommand(
 		"Push (register) Data to Knitfab.",
 		Flags{
-			Tag:         &kflg.Tags{},
+			Tag:         &kargs.Tags{},
 			Name:        false,
 			Dereference: false,
 		},
@@ -84,7 +84,7 @@ func Task(
 	_ []any,
 ) error {
 	flags := cl.Flags()
-	rawtags := kflg.Tags{}
+	rawtags := kargs.Tags{}
 	if flags.Tag != nil {
 		rawtags = *flags.Tag
 	}
