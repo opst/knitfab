@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 )
 
 func TestParsePolicy(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	kdb "github.com/opst/knitfab/pkg/db"
 )
 

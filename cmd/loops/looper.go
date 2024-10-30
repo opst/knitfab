@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/finishing"
 	"github.com/opst/knitfab/cmd/loops/tasks/gc"
 	"github.com/opst/knitfab/cmd/loops/tasks/housekeeping"
@@ -21,7 +22,6 @@ import (
 	knit "github.com/opst/knitfab/pkg"
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
 	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/loop"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/workloads/data"
 	"github.com/opst/knitfab/pkg/workloads/k8s"

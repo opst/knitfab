@@ -7,7 +7,7 @@ import (
 
 	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	"github.com/opst/knitfab/pkg/api-types-binding/runs"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	kdb "github.com/opst/knitfab/pkg/db"

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"

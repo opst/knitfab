@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/pkg/loop"
+	"github.com/opst/knitfab/cmd/loops/loop"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

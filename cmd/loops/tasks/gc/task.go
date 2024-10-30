@@ -3,7 +3,7 @@ package gc
 import (
 	"context"
 
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/workloads/k8s"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"

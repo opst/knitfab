@@ -12,7 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	knit "github.com/opst/knitfab/pkg"
 	configs "github.com/opst/knitfab/pkg/configs/backend"
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
