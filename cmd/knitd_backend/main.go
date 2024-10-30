@@ -13,7 +13,7 @@ import (
 	"time"
 
 	configs "github.com/opst/knitfab/pkg/configs/backend"
-	"github.com/opst/knitfab/pkg/kubeutil"
+	"github.com/opst/knitfab/pkg/utils/kubeutil"
 
 	knit "github.com/opst/knitfab/pkg"
 	kpg "github.com/opst/knitfab/pkg/db/postgres"

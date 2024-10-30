@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/opst/knitfab/pkg/kubeutil"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/kubeutil"
 	kubecore "k8s.io/api/core/v1"
 	kubeapierr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"

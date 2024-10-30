@@ -18,9 +18,9 @@ import (
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpg "github.com/opst/knitfab/pkg/db/postgres"
-	"github.com/opst/knitfab/pkg/kubeutil"
 	"github.com/opst/knitfab/pkg/utils/args"
 	"github.com/opst/knitfab/pkg/utils/filewatch"
+	"github.com/opst/knitfab/pkg/utils/kubeutil"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/opst/knitfab/pkg/workloads/k8s"
 )
