@@ -2,6 +2,7 @@ package analyzer_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"testing"
 
@@ -20,24 +21,22 @@ func TestAnalyze(t *testing.T) {
 		Entrypooint []string
 		Cmd         []string
 		Volumes     map[string]struct{}
+		WorkingDir  string
 	}
 
 	type When struct {
-		image   map[gcrname.Reference]ConfigPatch
-		options []analyzer.Option
+		image map[gcrname.Reference]ConfigPatch
 	}
 
 	type Then struct {
-		tag          gcrname.Reference
-		entrypoint   []string
-		cmd          []string
-		volume       map[string]struct{}
+		want         []analyzer.TaggedConfig
 		err          error
 		wantAnyError bool
 	}
 
 	theory := func(when When, then Then) func(*testing.T) {
 		return func(t *testing.T) {
+			ctx := context.Background()
 
 			img := map[gcrname.Reference]gcr.Image{}
 			for name, patch := range when.image {
@@ -61,7 +60,7 @@ func TestAnalyze(t *testing.T) {
 					Tty:             c.Tty,
 					User:            c.User,
 					Volumes:         patch.Volumes,
-					WorkingDir:      c.WorkingDir,
+					WorkingDir:      patch.WorkingDir,
 					ExposedPorts:    c.ExposedPorts,
 					ArgsEscaped:     c.ArgsEscaped,
 					NetworkDisabled: c.NetworkDisabled,
@@ -77,7 +76,7 @@ func TestAnalyze(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			actual, err := analyzer.Analyze(stream, when.options...)
+			actual, err := analyzer.Analyze(ctx, stream)
 			if then.wantAnyError {
 				if err == nil {
 					t.Errorf("expected error, but no error")
@@ -89,17 +88,8 @@ func TestAnalyze(t *testing.T) {
 				return
 			}
 
-			if then.tag != actual.Tag {
-				t.Errorf("tag: expected: %v, actual: %v", then.tag, actual.Tag)
-			}
-			if !cmp.SliceEq(then.entrypoint, actual.Config.Entrypoint) {
-				t.Errorf("entrypoint: expected: %v, actual: %v", then.entrypoint, actual.Config.Entrypoint)
-			}
-			if !cmp.SliceEq(then.cmd, actual.Config.Cmd) {
-				t.Errorf("cmd: expected: %v, actual: %v", then.cmd, actual.Config.Cmd)
-			}
-			if !cmp.MapEq(then.volume, actual.Config.Volumes) {
-				t.Errorf("volume: expected: %v, actual: %v", then.volume, actual.Config.Volumes)
+			if !cmp.SliceContentEqWith(actual, then.want, analyzer.TaggedConfig.Equal) {
+				t.Errorf("expected: %v, actual: %v", then.want, actual)
 			}
 		}
 	}
@@ -114,43 +104,24 @@ func TestAnalyze(t *testing.T) {
 						"/in":  {},
 						"/out": {},
 					},
+					WorkingDir: "/work",
 				},
 			},
 		},
 		Then{
-			tag:        gcrname.MustParseReference("repo.invalid/image:tag"),
-			entrypoint: []string{"/entrypoint"},
-			cmd:        []string{"/cmd"},
-			volume: map[string]struct{}{
-				"/in":  {},
-				"/out": {},
-			},
-		},
-	))
-
-	t.Run("image with single tag, specifying name", theory(
-		When{
-			image: map[gcrname.Reference]ConfigPatch{
-				gcrname.MustParseReference("repo.invalid/image:tag"): {
-					Entrypooint: []string{"/entrypoint"},
-					Cmd:         []string{"/cmd"},
-					Volumes: map[string]struct{}{
-						"/in":  {},
-						"/out": {},
+			want: []analyzer.TaggedConfig{
+				{
+					Tags: []string{"repo.invalid/image:tag"},
+					Config: analyzer.Config{
+						Entrypoint: []string{"/entrypoint"},
+						Cmd:        []string{"/cmd"},
+						Volumes: map[string]struct{}{
+							"/in":  {},
+							"/out": {},
+						},
+						WorkingDir: "/work",
 					},
 				},
-			},
-			options: []analyzer.Option{
-				analyzer.WithTag("repo.invalid/image:tag"),
-			},
-		},
-		Then{
-			tag:        gcrname.MustParseReference("repo.invalid/image:tag"),
-			entrypoint: []string{"/entrypoint"},
-			cmd:        []string{"/cmd"},
-			volume: map[string]struct{}{
-				"/in":  {},
-				"/out": {},
 			},
 		},
 	))
@@ -165,6 +136,7 @@ func TestAnalyze(t *testing.T) {
 						"/in":  {},
 						"/out": {},
 					},
+					WorkingDir: "/work-1",
 				},
 				gcrname.MustParseReference("repo.invalid/image:tag2"): {
 					Entrypooint: []string{"/entrypoint2"},
@@ -173,75 +145,38 @@ func TestAnalyze(t *testing.T) {
 						"/in2":  {},
 						"/out2": {},
 					},
+					WorkingDir: "/work-2",
 				},
-			},
-			options: []analyzer.Option{
-				analyzer.WithTag("repo.invalid/image:tag2"),
 			},
 		},
 		Then{
-			tag:        gcrname.MustParseReference("repo.invalid/image:tag2"),
-			entrypoint: []string{"/entrypoint2"},
-			cmd:        []string{"/cmd2"},
-			volume: map[string]struct{}{
-				"/in2":  {},
-				"/out2": {},
+			want: []analyzer.TaggedConfig{
+				{
+					Tags: []string{"repo.invalid/image:tag"},
+					Config: analyzer.Config{
+						Entrypoint: []string{"/entrypoint"},
+						Cmd:        []string{"/cmd"},
+						Volumes: map[string]struct{}{
+							"/in":  {},
+							"/out": {},
+						},
+						WorkingDir: "/work-1",
+					},
+				},
+				{
+					Tags: []string{"repo.invalid/image:tag2"},
+					Config: analyzer.Config{
+						Entrypoint: []string{"/entrypoint2"},
+						Cmd:        []string{"/cmd2"},
+						Volumes: map[string]struct{}{
+							"/in2":  {},
+							"/out2": {},
+						},
+						WorkingDir: "/work-2",
+					},
+				},
 			},
 		},
 	))
 
-	t.Run("image with multiple tags, but not specifying name", theory(
-		When{
-			image: map[gcrname.Reference]ConfigPatch{
-				gcrname.MustParseReference("repo.invalid/image:tag"): {
-					Entrypooint: []string{"/entrypoint"},
-					Cmd:         []string{"/cmd"},
-					Volumes: map[string]struct{}{
-						"/in":  {},
-						"/out": {},
-					},
-				},
-				gcrname.MustParseReference("repo.invalid/image:tag2"): {
-					Entrypooint: []string{"/entrypoint2"},
-					Cmd:         []string{"/cmd2"},
-					Volumes: map[string]struct{}{
-						"/in2":  {},
-						"/out2": {},
-					},
-				},
-			},
-		},
-		Then{
-			err: analyzer.ErrAmbiguousTag,
-		},
-	))
-
-	t.Run("image with multiple tags, specifying wrong name", theory(
-		When{
-			image: map[gcrname.Reference]ConfigPatch{
-				gcrname.MustParseReference("repo.invalid/image:tag"): {
-					Entrypooint: []string{"/entrypoint"},
-					Cmd:         []string{"/cmd"},
-					Volumes: map[string]struct{}{
-						"/in":  {},
-						"/out": {},
-					},
-				},
-				gcrname.MustParseReference("repo.invalid/image:tag2"): {
-					Entrypooint: []string{"/entrypoint2"},
-					Cmd:         []string{"/cmd2"},
-					Volumes: map[string]struct{}{
-						"/in2":  {},
-						"/out2": {},
-					},
-				},
-			},
-			options: []analyzer.Option{
-				analyzer.WithTag("repo.invalid/image:tag3"),
-			},
-		},
-		Then{
-			wantAnyError: true,
-		},
-	))
 }
