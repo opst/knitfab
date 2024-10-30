@@ -10,7 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	apierr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	"github.com/opst/knitfab/pkg/archive"
+	"github.com/opst/knitfab/pkg/utils/archive"
 	kio "github.com/opst/knitfab/pkg/utils/io"
 )
 

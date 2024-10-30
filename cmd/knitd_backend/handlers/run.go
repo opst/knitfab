@@ -12,9 +12,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 	apierr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	"github.com/opst/knitfab/pkg/archive"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/echoutil"
+	"github.com/opst/knitfab/pkg/utils/archive"
 	"github.com/opst/knitfab/pkg/workloads"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"
 	"github.com/opst/knitfab/pkg/workloads/worker"

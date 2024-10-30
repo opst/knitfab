@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/archive"
-	"github.com/opst/knitfab/pkg/archive/internal"
+	"github.com/opst/knitfab/pkg/utils/archive"
+	"github.com/opst/knitfab/pkg/utils/archive/internal"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

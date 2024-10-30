@@ -16,7 +16,7 @@ import (
 	"github.com/opst/knitfab-api-types/data"
 	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/archive"
+	"github.com/opst/knitfab/pkg/utils/archive"
 	kio "github.com/opst/knitfab/pkg/utils/io"
 )
 

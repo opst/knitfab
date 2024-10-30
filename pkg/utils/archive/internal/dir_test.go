@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/archive/internal"
+	"github.com/opst/knitfab/pkg/utils/archive/internal"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
