@@ -1,151 +1,141 @@
 package analyzer
 
 import (
-	"bytes"
+	"archive/tar"
+	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	gcr "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/utils"
 )
 
-func opener(b []byte) tarball.Opener {
-	return func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(b)), nil
-	}
-}
-
-type analyzeOption struct {
-	explicitName bool
-	tag          string
-}
-
-type Option func(*analyzeOption) *analyzeOption
-
-func WithTag(name string) Option {
-	return func(o *analyzeOption) *analyzeOption {
-		o.tag = name
-		o.explicitName = true
-		return o
-	}
-}
-
 type TaggedConfig struct {
-	Tag    name.Tag
-	Config gcr.Config
+	Tags   []string
+	Config Config
 }
 
-func (tc *TaggedConfig) Equal(o *TaggedConfig) bool {
-	if (tc == nil) || (o == nil) {
-		return (tc == nil) && (o == nil)
-	}
+func (tc TaggedConfig) Equal(o TaggedConfig) bool {
+	return cmp.SliceEq(tc.Tags, o.Tags) && tc.Config.Equal(o.Config)
+}
 
-	healthChackEq := func(a, b *gcr.HealthConfig) bool {
-		if (a == nil) || (b == nil) {
-			return (a == nil) && (b == nil)
+type peekReader struct {
+	peeking bool
+	r       io.Reader
+	head    byte
+}
+
+func (pr *peekReader) Read(p []byte) (n int, err error) {
+	if pr.peeking {
+		p[0] = pr.head
+		pr.peeking = false
+		return 1, nil
+	}
+	return pr.r.Read(p)
+}
+
+func (pr *peekReader) Peek() (byte, error) {
+	if pr.peeking {
+		return pr.head, nil
+	}
+	var b [1]byte
+	n, err := pr.r.Read(b[:])
+	if err != nil {
+		return 0, err
+	}
+	if n == 0 {
+		return 0, io.EOF
+	}
+	pr.peeking = true
+	pr.head = b[0]
+	return pr.head, nil
+}
+
+// Analyze reads a tar stream of an OCI image and returns found configurations (with its tag, if any).
+func Analyze(ctx context.Context, stream io.Reader) ([]TaggedConfig, error) {
+	// Parse OCI Image tar stream IN ONE PASS.
+	//
+	// To do that, read blobs one by one and parse them into Config.
+
+	images := map[string]Image{}
+	manifests := []DockerManifest{}
+
+	tr := tar.NewReader(stream)
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
 		}
 
-		return cmp.SliceEq(a.Test, b.Test) &&
-			a.Interval == b.Interval &&
-			a.Timeout == b.Timeout &&
-			a.StartPeriod == b.StartPeriod &&
-			a.Retries == b.Retries
-	}
+		if hdr.Name == "manifest.json" {
+			if err := json.NewDecoder(tr).Decode(&manifests); err != nil {
+				return nil, err
+			}
 
-	configEq := func(a, b gcr.Config) bool {
-		return a.AttachStderr == b.AttachStderr &&
-			a.AttachStdin == b.AttachStdin &&
-			a.AttachStdout == b.AttachStdout &&
-			cmp.SliceEq(a.Cmd, b.Cmd) &&
-			healthChackEq(a.Healthcheck, b.Healthcheck) &&
-			a.Domainname == b.Domainname &&
-			cmp.SliceEq(a.Entrypoint, b.Entrypoint) &&
-			cmp.SliceEq(a.Env, b.Env) &&
-			a.Hostname == b.Hostname &&
-			a.Image == b.Image &&
-			cmp.MapEq(a.Labels, b.Labels) &&
-			cmp.SliceEq(a.OnBuild, b.OnBuild) &&
-			a.OpenStdin == b.OpenStdin &&
-			a.StdinOnce == b.StdinOnce &&
-			a.Tty == b.Tty &&
-			a.User == b.User &&
-			cmp.MapEq(a.Volumes, b.Volumes) &&
-			a.WorkingDir == b.WorkingDir &&
-			cmp.MapEq(a.ExposedPorts, b.ExposedPorts) &&
-			a.ArgsEscaped == b.ArgsEscaped &&
-			a.NetworkDisabled == b.NetworkDisabled &&
-			a.MacAddress == b.MacAddress &&
-			a.StopSignal == b.StopSignal &&
-			cmp.SliceEq(a.Shell, b.Shell)
-	}
+			continue
+		}
 
-	return tc.Tag == o.Tag && configEq(tc.Config, o.Config)
-}
-
-func Analyze(stream io.Reader, option ...Option) (*TaggedConfig, error) {
-
-	opt := &analyzeOption{}
-	for _, o := range option {
-		opt = o(opt)
-	}
-
-	b, err := io.ReadAll(stream)
-	if err != nil {
-		return nil, err
-	}
-
-	_opener := opener(b)
-	m, err := tarball.LoadManifest(_opener)
-	if err != nil {
-		return nil, err
-	}
-
-	tag := opt.tag
-	if !opt.explicitName {
-		set := false
-		for _, d := range m {
-			for _, t := range d.RepoTags {
-				if !set {
-					tag = t
-					set = true
-					continue
+		// Some tarballs DO NOT have `/blob` dir, so here, we analyze all files in the tarball.
+		// (for example, images made by go-containerregistry/pkg/v1/tarball .)
+		//
+		// To read image config file ( https://github.com/opencontainers/image-spec/blob/main/config.md ),
+		// we do file-sniffing by checking if the file is JSON and its format is known or not.
+		if !hdr.FileInfo().IsDir() {
+			var img Image
+			r := &peekReader{r: tr}
+			p, err := r.Peek()
+			if err != nil {
+				return nil, err
+			}
+			if p != '{' {
+				continue // sniffing; skip non-JSON file contains object
+			}
+			if err := json.NewDecoder(r).Decode(&img); err != nil {
+				if juterr := new(json.UnmarshalTypeError); errors.As(err, &juterr) {
+					continue // skip non-Image file
 				}
-				return nil, fmt.Errorf(
-					"%w: %s",
-					ErrAmbiguousTag,
-					utils.Concat(utils.Map(
-						m,
-						func(d tarball.Descriptor) []string { return d.RepoTags },
-					)),
-				)
+				if jsynerr := new(json.SyntaxError); errors.As(err, &jsynerr) {
+					continue // skip non-JSON file
+				}
+				return nil, err
+			}
+			if img.IsValid() {
+				images[hdr.Name] = img
 			}
 		}
-		if !set {
-			return nil, ErrTagNotDetected
+	}
+
+	imagesWithTag := map[string]*TaggedConfig{}
+	for name, img := range images {
+		imagesWithTag[name] = &TaggedConfig{
+			Tags:   []string{},
+			Config: img.Config,
 		}
 	}
 
-	ref, err := name.NewTag(tag)
-	if err != nil {
-		return nil, err
+	for _, manifest := range manifests {
+		name := manifest.Config
+		iwt, ok := imagesWithTag[name]
+		if !ok {
+			continue
+		}
+
+		iwt.Tags = append(iwt.Tags, manifest.RepoTags...)
+		imagesWithTag[name] = iwt
 	}
 
-	img, err := tarball.Image(_opener, &ref)
-	if err != nil {
-		return nil, err
+	var result []TaggedConfig
+	for _, iwt := range imagesWithTag {
+		result = append(result, *iwt)
 	}
 
-	cfg, err := img.ConfigFile()
-	if err != nil {
-		return nil, err
-	}
-
-	return &TaggedConfig{Tag: ref, Config: cfg.Config}, nil
+	return result, nil
 }
-
-var ErrAmbiguousTag = errors.New("ambiguous tag")
-var ErrTagNotDetected = errors.New("no tags detected")
