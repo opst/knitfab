@@ -29,8 +29,8 @@ import (
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/pkg/archive"
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/utils/try"
 )

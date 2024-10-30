@@ -14,10 +14,10 @@ import (
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
-	"github.com/opst/knitfab/pkg/cmp"
 	dbtestenv "github.com/opst/knitfab/pkg/db/postgres/pool/testenv"
 	"github.com/opst/knitfab/pkg/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/db/postgres/schema"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 	k8stestenv "github.com/opst/knitfab/pkg/workloads/k8s/testenv"

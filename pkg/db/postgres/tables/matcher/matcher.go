@@ -3,7 +3,7 @@ package matcher
 import (
 	"fmt"
 
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 type Matcher[T any] interface {

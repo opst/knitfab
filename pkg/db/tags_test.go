@@ -3,8 +3,8 @@ package db_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 func TestTagSet_New(t *testing.T) {

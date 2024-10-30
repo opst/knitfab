@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	kstr "github.com/opst/knitfab/pkg/utils/strings"
 	"k8s.io/apimachinery/pkg/api/resource"

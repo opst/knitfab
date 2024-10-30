@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	kpgnommock "github.com/opst/knitfab/pkg/db/postgres/nominator/mock"
 	"github.com/opst/knitfab/pkg/db/postgres/pool/testenv"
@@ -17,6 +16,7 @@ import (
 	"github.com/opst/knitfab/pkg/db/postgres/tables"
 	"github.com/opst/knitfab/pkg/db/postgres/tables/matcher"
 	th "github.com/opst/knitfab/pkg/db/postgres/testhelpers"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

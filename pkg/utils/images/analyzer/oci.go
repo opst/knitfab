@@ -1,7 +1,7 @@
 // Based on `config.config` in https://github.com/opencontainers/image-spec/blob/main/config.md .
 package analyzer
 
-import "github.com/opst/knitfab/pkg/cmp"
+import "github.com/opst/knitfab/pkg/utils/cmp"
 
 type RootFs struct {
 	Type    string   `json:"type"`

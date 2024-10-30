@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 var ErrUnknownDataAgentMode = errors.New("unknown data agent mode")

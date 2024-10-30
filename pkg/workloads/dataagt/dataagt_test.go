@@ -8,10 +8,10 @@ import (
 	"time"
 
 	testutilctx "github.com/opst/knitfab/internal/testutils/context"
-	"github.com/opst/knitfab/pkg/cmp"
 	bconf "github.com/opst/knitfab/pkg/configs/backend"
 	kdb "github.com/opst/knitfab/pkg/db"
 	utils "github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 	wl "github.com/opst/knitfab/pkg/workloads"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"

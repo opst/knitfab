@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	bconf "github.com/opst/knitfab/pkg/configs/backend"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/opst/knitfab/pkg/workloads/k8s"

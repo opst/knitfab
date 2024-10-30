@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"
 	"github.com/opst/knitfab/pkg/workloads/k8s"

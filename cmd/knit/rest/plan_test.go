@@ -17,8 +17,8 @@ import (
 	apierr "github.com/opst/knitfab-api-types/errors"
 	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"github.com/opst/knitfab/pkg/utils/try"
 )

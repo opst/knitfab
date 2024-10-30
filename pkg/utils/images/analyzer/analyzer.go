@@ -7,7 +7,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 type TaggedConfig struct {

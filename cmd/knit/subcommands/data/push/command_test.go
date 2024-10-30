@@ -22,8 +22,8 @@ import (
 	data_push "github.com/opst/knitfab/cmd/knit/subcommands/data/push"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/cmp"
 	kflg "github.com/opst/knitfab/pkg/commandline/flag"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

@@ -10,9 +10,9 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/db/mocks"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

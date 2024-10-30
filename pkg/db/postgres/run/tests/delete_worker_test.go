@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/db/postgres/pool/proxy"
 	"github.com/opst/knitfab/pkg/db/postgres/pool/testenv"
@@ -13,6 +12,7 @@ import (
 	"github.com/opst/knitfab/pkg/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/db/postgres/tables"
 	th "github.com/opst/knitfab/pkg/db/postgres/testhelpers"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

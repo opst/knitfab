@@ -3,7 +3,7 @@ package cmp_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 type p struct {

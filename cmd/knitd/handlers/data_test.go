@@ -17,10 +17,10 @@ import (
 	"github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab-api-types/tags"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	dbmock "github.com/opst/knitfab/pkg/db/mocks"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 
 	"github.com/opst/knitfab/cmd/knitd/handlers"

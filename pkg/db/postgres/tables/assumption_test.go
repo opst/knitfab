@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/db/postgres/marshal"
 	"github.com/opst/knitfab/pkg/db/postgres/pool/testenv"
@@ -14,6 +13,7 @@ import (
 	"github.com/opst/knitfab/pkg/db/postgres/tables"
 	th "github.com/opst/knitfab/pkg/db/postgres/testhelpers"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"k8s.io/apimachinery/pkg/api/resource"

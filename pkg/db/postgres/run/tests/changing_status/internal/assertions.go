@@ -15,10 +15,10 @@ import (
 	"github.com/opst/knitfab/pkg/db/postgres/tables/matcher"
 	th "github.com/opst/knitfab/pkg/db/postgres/testhelpers"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/db/postgres/tables"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

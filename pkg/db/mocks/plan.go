@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"k8s.io/apimachinery/pkg/api/resource"
 )

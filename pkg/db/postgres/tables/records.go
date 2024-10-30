@@ -3,9 +3,9 @@ package tables
 import (
 	"time"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
 	"github.com/opst/knitfab/pkg/db/postgres/marshal"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 // golang representation of record of PostgresSQL tables

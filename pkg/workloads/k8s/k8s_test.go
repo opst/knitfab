@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/retry"
 	"github.com/opst/knitfab/pkg/utils/try"
 	wl "github.com/opst/knitfab/pkg/workloads"

@@ -15,8 +15,8 @@ import (
 	"github.com/opst/knitfab-api-types/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/youta-t/flarc"
 
 	krst "github.com/opst/knitfab/cmd/knit/rest"

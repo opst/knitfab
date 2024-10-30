@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 type KnitRunStatus string

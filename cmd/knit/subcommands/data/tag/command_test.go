@@ -14,7 +14,7 @@ import (
 	rmock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	data_tag "github.com/opst/knitfab/cmd/knit/subcommands/data/tag"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

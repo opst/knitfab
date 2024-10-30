@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/db/postgres/pool/proxy"
 	"github.com/opst/knitfab/pkg/db/postgres/pool/testenv"
 	"github.com/opst/knitfab/pkg/db/postgres/scanner"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 
 	kpgkc "github.com/opst/knitfab/pkg/db/postgres/keychain"
