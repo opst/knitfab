@@ -18,7 +18,7 @@ import (
 	kcx "github.com/opst/knitfab/pkg/configs/extras"
 	kcf "github.com/opst/knitfab/pkg/configs/frontend"
 	kpg "github.com/opst/knitfab/pkg/db/postgres"
-	"github.com/opst/knitfab/pkg/echoutil"
+	"github.com/opst/knitfab/pkg/utils/echoutil"
 	"github.com/opst/knitfab/pkg/utils/filewatch"
 	kstrings "github.com/opst/knitfab/pkg/utils/strings"
 

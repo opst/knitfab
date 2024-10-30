@@ -15,7 +15,7 @@ import (
 	binddata "github.com/opst/knitfab/pkg/api-types-binding/data"
 	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/echoutil"
+	"github.com/opst/knitfab/pkg/utils/echoutil"
 	"github.com/opst/knitfab/pkg/utils/retry"
 	"github.com/opst/knitfab/pkg/workloads"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"
