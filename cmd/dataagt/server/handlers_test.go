@@ -16,7 +16,7 @@ import (
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
 	"github.com/opst/knitfab/pkg/archive"
 	"github.com/opst/knitfab/pkg/cmp"
-	kio "github.com/opst/knitfab/pkg/io"
+	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/utils/try"
 
 	"github.com/labstack/echo/v4"

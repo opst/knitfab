@@ -12,7 +12,7 @@ import (
 	"strconv"
 
 	"github.com/opst/knitfab/pkg/db/postgres"
-	kio "github.com/opst/knitfab/pkg/io"
+	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/youta-t/flarc"
 )

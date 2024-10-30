@@ -31,7 +31,7 @@ import (
 	"github.com/opst/knitfab/pkg/archive"
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
-	kio "github.com/opst/knitfab/pkg/io"
+	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

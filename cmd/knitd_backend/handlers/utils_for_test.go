@@ -17,8 +17,8 @@ import (
 
 	"github.com/opst/knitfab/pkg/cmp"
 	kdb "github.com/opst/knitfab/pkg/db"
-	kio "github.com/opst/knitfab/pkg/io"
 	"github.com/opst/knitfab/pkg/utils"
+	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/workloads/dataagt"
 	"github.com/opst/knitfab/pkg/workloads/k8s"
 	"github.com/opst/knitfab/pkg/workloads/worker"

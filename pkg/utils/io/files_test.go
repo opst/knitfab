@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"testing"
 
-	kio "github.com/opst/knitfab/pkg/io"
+	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

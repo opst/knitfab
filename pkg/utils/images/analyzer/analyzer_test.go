@@ -12,7 +12,7 @@ import (
 	gcrrand "github.com/google/go-containerregistry/pkg/v1/random"
 	gcrtarball "github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/opst/knitfab/pkg/cmp"
-	"github.com/opst/knitfab/pkg/images/analyzer"
+	"github.com/opst/knitfab/pkg/utils/images/analyzer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
