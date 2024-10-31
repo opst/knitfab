@@ -17,8 +17,8 @@ import (
 	"github.com/opst/knitfab/cmd/volume_expander/flagtype"
 	"github.com/opst/knitfab/cmd/volume_expander/metrics"
 	"github.com/opst/knitfab/cmd/volume_expander/pvcs"
+	connk8s "github.com/opst/knitfab/pkg/conn/k8s"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/kubeutil"
 	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 	dto "github.com/prometheus/client_model/go"
@@ -91,7 +91,7 @@ func Vex(ctx context.Context, logger *log.Logger, flags Flags, namespaces []stri
 		)
 	}
 
-	cs := kubeutil.ConnectToK8s()
+	cs := connk8s.ConnectToK8s()
 
 	pvcsOnNode, err := pvcs.ObserveOnNode(ctx, cs, flags.NodeName, utils.KeysOf(targetNamespaces)...)
 	if err != nil {

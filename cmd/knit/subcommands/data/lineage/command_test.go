@@ -21,7 +21,7 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/data/lineage"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -1384,8 +1384,8 @@ func dummyData(knitId string, fromRunId string, toRunIds ...string) data.Detail 
 		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
-			{Key: kdb.KeyKnitId, Value: knitId},
-			{Key: kdb.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
+			{Key: domain.KeyKnitId, Value: knitId},
+			{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
 		},
 		Upstream:    dummyAssignedTo(fromRunId),
 		Downstreams: dummySliceAssignedTo(toRunIds...),
@@ -1399,9 +1399,9 @@ func dummyDataForFailed(knitId string, fromRunId string, toRunIds ...string) dat
 		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
-			{Key: kdb.KeyKnitId, Value: knitId},
-			{Key: kdb.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
-			{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
+			{Key: domain.KeyKnitId, Value: knitId},
+			{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
+			{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientFailed},
 		},
 		Upstream:    dummyAssignedTo(fromRunId),
 		Downstreams: dummySliceAssignedTo(toRunIds...),

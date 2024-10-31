@@ -6,49 +6,49 @@ import (
 	apiplans "github.com/opst/knitfab-api-types/plans"
 	apitags "github.com/opst/knitfab-api-types/tags"
 	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 )
 
 func TestComposeDetail(t *testing.T) {
 
 	for name, testcase := range map[string]struct {
-		when kdb.Plan
+		when domain.Plan
 		then apiplans.Detail
 	}{
 		"When a plan with log is passed, it should compose a Detail corresponding to the plan.": {
-			when: kdb.Plan{
-				PlanBody: kdb.PlanBody{
+			when: domain.Plan{
+				PlanBody: domain.PlanBody{
 					PlanId: "plan-1", Active: true, Hash: "hash1",
-					Image:          &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-					Pseudo:         &kdb.PseudoPlanDetail{},
+					Image:          &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+					Pseudo:         &domain.PseudoPlanDetail{},
 					Entrypoint:     []string{"python", "main.py"},
 					Args:           []string{"--arg1", "val1", "--arg2", "val2"},
 					ServiceAccount: "service-account-name",
-					Annotations: []kdb.Annotation{
+					Annotations: []domain.Annotation{
 						{Key: "anno1", Value: "val1"},
 						{Key: "anno2", Value: "val2"},
 					},
 				},
-				Inputs: []kdb.MountPoint{
+				Inputs: []domain.MountPoint{
 					{
 						Id: 1, Path: "C:\\mp1",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "key1", Value: "val1"},
 						}),
 					},
 				},
-				Outputs: []kdb.MountPoint{
+				Outputs: []domain.MountPoint{
 					{
 						Id: 2, Path: "C:\\mp2",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "key2", Value: "val2"},
 							{Key: "key3", Value: "val3"},
 						}),
 					},
 				},
-				Log: &kdb.LogPoint{
+				Log: &domain.LogPoint{
 					Id: 3,
-					Tags: kdb.NewTagSet([]kdb.Tag{
+					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "logkey1", Value: "logval1"},
 						{Key: "logkey2", Value: "logval2"},
 					}),
@@ -97,31 +97,31 @@ func TestComposeDetail(t *testing.T) {
 			},
 		},
 		"When a plan without log is passed, it should compose a Detail corresponding to the plan.": {
-			when: kdb.Plan{
-				PlanBody: kdb.PlanBody{
+			when: domain.Plan{
+				PlanBody: domain.PlanBody{
 					PlanId: "plan-1", Active: true, Hash: "hash1",
-					Image:  &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-					Pseudo: &kdb.PseudoPlanDetail{},
+					Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+					Pseudo: &domain.PseudoPlanDetail{},
 				},
-				Inputs: []kdb.MountPoint{
+				Inputs: []domain.MountPoint{
 					{
 						Id: 1, Path: "C:\\mp1",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "key1", Value: "val1"},
 						}),
 					},
 				},
-				Outputs: []kdb.MountPoint{
+				Outputs: []domain.MountPoint{
 					{
 						Id: 2, Path: "C:\\mp2",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "key2", Value: "val2"},
 							{Key: "key3", Value: "val3"},
 						}),
 					},
 					{
 						Id: 3, Path: "C:\\mp3",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "key4", Value: "val4"},
 							{Key: "key5", Value: "val5"},
 						}),
@@ -172,15 +172,15 @@ func TestComposeDetail(t *testing.T) {
 func TestComposeSummary(t *testing.T) {
 
 	for name, testcase := range map[string]struct {
-		when kdb.PlanBody
+		when domain.PlanBody
 		then apiplans.Summary
 	}{
 		"When a non-pseudo plan is passed, it should compose a Summary corresponding to the plan.": {
-			when: kdb.PlanBody{
+			when: domain.PlanBody{
 				PlanId: "plan-1",
 				Hash:   "###plan-1###",
 				Active: true,
-				Image:  &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+				Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 			},
 			then: apiplans.Summary{
 				PlanId: "plan-1",
@@ -188,11 +188,11 @@ func TestComposeSummary(t *testing.T) {
 			},
 		},
 		"When a pseudo plan is passed, it should compose a Summary corresponding to the plan.": {
-			when: kdb.PlanBody{
+			when: domain.PlanBody{
 				PlanId: "plan-1",
 				Hash:   "###plan-1###",
 				Active: true,
-				Pseudo: &kdb.PseudoPlanDetail{Name: "pseudo-plan-name"},
+				Pseudo: &domain.PseudoPlanDetail{Name: "pseudo-plan-name"},
 			},
 			then: apiplans.Summary{
 				PlanId: "plan-1",

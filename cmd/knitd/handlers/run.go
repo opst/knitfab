@@ -10,29 +10,31 @@ import (
 	apiruns "github.com/opst/knitfab-api-types/runs"
 	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	bindrun "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
+	kerr "github.com/opst/knitfab/pkg/domain/errors"
+	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
 	kstrings "github.com/opst/knitfab/pkg/utils/strings"
 )
 
-func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
+func FindRunHandler(dbRun kdbrun.RunInterface) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
-		query, err := func(c echo.Context) (kdb.RunFindQuery, error) {
+		query, err := func(c echo.Context) (domain.RunFindQuery, error) {
 
-			result := kdb.RunFindQuery{
+			result := domain.RunFindQuery{
 				PlanId:       kstrings.SplitIfNotEmpty(c.QueryParam("plan"), ","),
 				InputKnitId:  kstrings.SplitIfNotEmpty(c.QueryParam("knitIdInput"), ","),
 				OutputKnitId: kstrings.SplitIfNotEmpty(c.QueryParam("knitIdOutput"), ","),
-				Status:       []kdb.KnitRunStatus{},
+				Status:       []domain.KnitRunStatus{},
 				UpdatedSince: nil,
 				UpdatedUntil: nil,
 			}
 
 			for _, p := range kstrings.SplitIfNotEmpty(c.QueryParam("status"), ",") {
-				s, err := kdb.AsKnitRunStatus(p)
-				if err != nil || s == kdb.Invalidated {
-					return kdb.RunFindQuery{}, binderr.BadRequest(
+				s, err := domain.AsKnitRunStatus(p)
+				if err != nil || s == domain.Invalidated {
+					return domain.RunFindQuery{}, binderr.BadRequest(
 						`"status" should be one of "waiting", "deactivated", "starting", "running", "done" or "failed"`,
 						nil,
 					)
@@ -44,7 +46,7 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 			if since != "" {
 				t, err := rfctime.ParseRFC3339DateTime(since)
 				if err != nil {
-					return kdb.RunFindQuery{}, binderr.BadRequest(
+					return domain.RunFindQuery{}, binderr.BadRequest(
 						`"since" should be a RFC3339 date-time format`,
 						err,
 					)
@@ -57,7 +59,7 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 			if duration != "" {
 				d, err := time.ParseDuration(duration)
 				if err != nil {
-					return kdb.RunFindQuery{}, binderr.BadRequest(
+					return domain.RunFindQuery{}, binderr.BadRequest(
 						`"duration" should be a Go duration format`,
 						err,
 					)
@@ -96,7 +98,7 @@ func FindRunHandler(dbRun kdb.RunInterface) echo.HandlerFunc {
 
 }
 
-func GetRunHandler(dbrun kdb.RunInterface) echo.HandlerFunc {
+func GetRunHandler(dbrun kdbrun.RunInterface) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
@@ -119,22 +121,22 @@ func GetRunHandler(dbrun kdb.RunInterface) echo.HandlerFunc {
 	}
 }
 
-func AbortRunHandler(dbrun kdb.RunInterface, paramnRunId string) echo.HandlerFunc {
+func AbortRunHandler(dbrun kdbrun.RunInterface, paramnRunId string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
 		runId := c.Param(paramnRunId)
 		ctx := c.Request().Context()
 
-		if err := dbrun.SetStatus(ctx, runId, kdb.Aborting); err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+		if err := dbrun.SetStatus(ctx, runId, domain.Aborting); err != nil {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
-			} else if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
+			} else if errors.Is(err, domain.ErrInvalidRunStateChanging) {
 				return binderr.Conflict("prohibited operation", binderr.WithError(err))
 			}
 			return binderr.InternalServerError(err)
 		}
 
-		if err := dbrun.SetExit(ctx, runId, kdb.RunExit{
+		if err := dbrun.SetExit(ctx, runId, domain.RunExit{
 			Code:    253,
 			Message: "aborted by user",
 		}); err != nil {
@@ -156,21 +158,21 @@ func AbortRunHandler(dbrun kdb.RunInterface, paramnRunId string) echo.HandlerFun
 	}
 }
 
-func TearoffRunHandler(dbrun kdb.RunInterface, paramnRunId string) echo.HandlerFunc {
+func TearoffRunHandler(dbrun kdbrun.RunInterface, paramnRunId string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
 		runId := c.Param(paramnRunId)
 		ctx := c.Request().Context()
 
-		if err := dbrun.SetStatus(ctx, runId, kdb.Completing); err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+		if err := dbrun.SetStatus(ctx, runId, domain.Completing); err != nil {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
-			} else if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
+			} else if errors.Is(err, domain.ErrInvalidRunStateChanging) {
 				return binderr.Conflict("prohibited operation", binderr.WithError(err))
 			}
 			return binderr.InternalServerError(err)
 		}
-		if err := dbrun.SetExit(ctx, runId, kdb.RunExit{
+		if err := dbrun.SetExit(ctx, runId, domain.RunExit{
 			Code:    0,
 			Message: "stopped by user",
 		}); err != nil {
@@ -192,7 +194,7 @@ func TearoffRunHandler(dbrun kdb.RunInterface, paramnRunId string) echo.HandlerF
 	}
 }
 
-func DeleteRunHandler(dbrun kdb.RunInterface) echo.HandlerFunc {
+func DeleteRunHandler(dbrun kdbrun.RunInterface) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
 		c.Response().Header().Add("Content-Type", "application/json")
@@ -201,9 +203,9 @@ func DeleteRunHandler(dbrun kdb.RunInterface) echo.HandlerFunc {
 		runId := c.Param("runId")
 
 		if err := dbrun.Delete(ctx, runId); err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
-			} else if errors.Is(err, kdb.ErrRunIsProtected) {
+			} else if errors.Is(err, domain.ErrRunIsProtected) {
 				return binderr.Conflict("output of the run is in use", binderr.WithError(err))
 			}
 			return binderr.InternalServerError(err)
@@ -215,32 +217,32 @@ func DeleteRunHandler(dbrun kdb.RunInterface) echo.HandlerFunc {
 	}
 }
 
-func RetryRunHandler(dbrun kdb.RunInterface, paramRunId string) echo.HandlerFunc {
+func RetryRunHandler(dbrun kdbrun.RunInterface, paramRunId string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		runId := c.Param(paramRunId)
 
 		err := dbrun.Retry(ctx, runId)
-		if errors.Is(err, kdb.ErrMissing) {
+		if errors.Is(err, kerr.ErrMissing) {
 			return binderr.NotFound()
 		}
-		if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
+		if errors.Is(err, domain.ErrInvalidRunStateChanging) {
 			return binderr.Conflict(
 				"the run have not finished yet",
 				binderr.WithError(err),
 				binderr.WithAdvice("Wait for the run to finish, or abort it"),
 			)
 		}
-		if errors.Is(err, kdb.ErrRunIsProtected) {
+		if errors.Is(err, domain.ErrRunIsProtected) {
 			message := "prohibited operation"
 			options := []binderr.ErrorMessageOption{binderr.WithError(err)}
-			if errors.Is(err, kdb.ErrRunHasDownstreams) {
+			if errors.Is(err, domain.ErrRunHasDownstreams) {
 				message = "output of the run is in use"
 				options = append(
 					options,
 					binderr.WithAdvice("Delete all downstreams of the run first"),
 				)
-			} else if errors.Is(err, kdb.ErrWorkerActive) {
+			} else if errors.Is(err, domain.ErrWorkerActive) {
 				message = "the run may not be finished"
 				options = append(
 					options,

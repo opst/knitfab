@@ -11,13 +11,15 @@ import (
 	apitags "github.com/opst/knitfab-api-types/tags"
 	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
+	kerr "github.com/opst/knitfab/pkg/domain/errors"
+	kdbplan "github.com/opst/knitfab/pkg/domain/plan/db"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
+func PlanRegisterHandler(dbplan kdbplan.PlanInterface) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		req := c.Request()
 		ctx := req.Context()
@@ -34,8 +36,8 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 			)
 		}
 
-		plan, err := func() (*kdb.Plan, error) {
-			params := kdb.PlanParam{
+		plan, err := func() (*domain.Plan, error) {
+			params := domain.PlanParam{
 				Image:      specInReq.Image.Repository,
 				Version:    specInReq.Image.Tag,
 				Active:     utils.Default(specInReq.Active, true),
@@ -43,12 +45,12 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 				Args:       specInReq.Args,
 				Inputs: utils.Map(
 					specInReq.Inputs,
-					func(mp apiplans.Mountpoint) kdb.MountPointParam {
-						return kdb.MountPointParam{
+					func(mp apiplans.Mountpoint) domain.MountPointParam {
+						return domain.MountPointParam{
 							Path: mp.Path,
-							Tags: kdb.NewTagSet(
-								utils.Map(mp.Tags, func(reqtag apitags.Tag) kdb.Tag {
-									return kdb.Tag{Key: reqtag.Key, Value: reqtag.Value}
+							Tags: domain.NewTagSet(
+								utils.Map(mp.Tags, func(reqtag apitags.Tag) domain.Tag {
+									return domain.Tag{Key: reqtag.Key, Value: reqtag.Value}
 								}),
 							),
 						}
@@ -57,20 +59,20 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 				Resources: specInReq.Resources,
 				Outputs: utils.Map(
 					specInReq.Outputs,
-					func(mp apiplans.Mountpoint) kdb.MountPointParam {
-						return kdb.MountPointParam{
+					func(mp apiplans.Mountpoint) domain.MountPointParam {
+						return domain.MountPointParam{
 							Path: mp.Path,
-							Tags: kdb.NewTagSet(
-								utils.Map(mp.Tags, func(reqtag apitags.Tag) kdb.Tag {
-									return kdb.Tag{Key: reqtag.Key, Value: reqtag.Value}
+							Tags: domain.NewTagSet(
+								utils.Map(mp.Tags, func(reqtag apitags.Tag) domain.Tag {
+									return domain.Tag{Key: reqtag.Key, Value: reqtag.Value}
 								}),
 							),
 						}
 					},
 				),
 				ServiceAccount: specInReq.ServiceAccount,
-				Annotations: utils.Map(specInReq.Annotations, func(a apiplans.Annotation) kdb.Annotation {
-					return kdb.Annotation{Key: a.Key, Value: a.Value}
+				Annotations: utils.Map(specInReq.Annotations, func(a apiplans.Annotation) domain.Annotation {
+					return domain.Annotation{Key: a.Key, Value: a.Value}
 				}),
 			}
 
@@ -85,33 +87,33 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 			}
 
 			if l := specInReq.Log; l != nil {
-				params.Log = &kdb.LogParam{
-					Tags: kdb.NewTagSet(
-						utils.Map(l.Tags, func(reqtag apitags.Tag) kdb.Tag {
-							return kdb.Tag{Key: reqtag.Key, Value: reqtag.Value}
+				params.Log = &domain.LogParam{
+					Tags: domain.NewTagSet(
+						utils.Map(l.Tags, func(reqtag apitags.Tag) domain.Tag {
+							return domain.Tag{Key: reqtag.Key, Value: reqtag.Value}
 						}),
 					),
 				}
 			}
 
 			if on := specInReq.OnNode; on != nil {
-				onNode := []kdb.OnNode{}
+				onNode := []domain.OnNode{}
 				for _, may := range on.May {
 					onNode = append(
 						onNode,
-						kdb.OnNode{Mode: kdb.MayOnNode, Key: may.Key, Value: may.Value},
+						domain.OnNode{Mode: domain.MayOnNode, Key: may.Key, Value: may.Value},
 					)
 				}
 				for _, prefer := range on.Prefer {
 					onNode = append(
 						onNode,
-						kdb.OnNode{Mode: kdb.PreferOnNode, Key: prefer.Key, Value: prefer.Value},
+						domain.OnNode{Mode: domain.PreferOnNode, Key: prefer.Key, Value: prefer.Value},
 					)
 				}
 				for _, must := range on.Must {
 					onNode = append(
 						onNode,
-						kdb.OnNode{Mode: kdb.MustOnNode, Key: must.Key, Value: must.Value},
+						domain.OnNode{Mode: domain.MustOnNode, Key: must.Key, Value: must.Value},
 					)
 				}
 				params.OnNode = onNode
@@ -135,15 +137,15 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 		}()
 
 		if err != nil {
-			if errors.Is(err, kdb.ErrConflictingPlan) {
-				if planEx := new(kdb.ErrEquivPlanExists); errors.As(err, &planEx) {
+			if errors.Is(err, domain.ErrConflictingPlan) {
+				if planEx := new(domain.ErrEquivPlanExists); errors.As(err, &planEx) {
 					return binderr.Conflict(
 						"there are equiverent plan", binderr.WithSee(planEx.PlanId),
 					)
 				}
 				return binderr.Conflict("plan spec conflics with others", binderr.WithError(err))
 			}
-			if errors.Is(err, kdb.ErrInvalidPlan) {
+			if errors.Is(err, domain.ErrInvalidPlan) {
 				return binderr.BadRequest(err.Error(), err)
 			}
 
@@ -160,13 +162,13 @@ func PlanRegisterHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 	}
 }
 
-func FindPlanHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
+func FindPlanHandler(dbplan kdbplan.PlanInterface) echo.HandlerFunc {
 
 	type FindArgs struct {
 		Active   logic.Ternary
-		ImageVer kdb.ImageIdentifier
-		InTag    []kdb.Tag
-		OutTag   []kdb.Tag
+		ImageVer domain.ImageIdentifier
+		InTag    []domain.Tag
+		OutTag   []domain.Tag
 	}
 
 	return func(c echo.Context) error {
@@ -240,7 +242,7 @@ func FindPlanHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
 	}
 }
 
-func GetPlanHandler(dbplan kdb.PlanInterface) echo.HandlerFunc {
+func GetPlanHandler(dbplan kdbplan.PlanInterface) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 
@@ -271,13 +273,13 @@ var (
 	errIncorrectQueryOutTag       = errors.New("incorrect query param out-tag")
 )
 
-func PutPlanForActivate(dbPlan kdb.PlanInterface, isActive bool) echo.HandlerFunc {
+func PutPlanForActivate(dbPlan kdbplan.PlanInterface, isActive bool) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		planId := c.Param("planId")
 
-		if err := dbPlan.Activate(ctx, planId, isActive); errors.Is(err, kdb.ErrMissing) {
+		if err := dbPlan.Activate(ctx, planId, isActive); errors.Is(err, kerr.ErrMissing) {
 			return binderr.NotFound()
 		} else if err != nil {
 			return binderr.InternalServerError(err)
@@ -302,7 +304,7 @@ func Deref[T any, R any](f func(T) R) func(*T) R {
 	}
 }
 
-func PutPlanResource(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerFunc {
+func PutPlanResource(dbPlan kdbplan.PlanInterface, planIdParam string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		planId := c.Param(planIdParam)
@@ -313,14 +315,14 @@ func PutPlanResource(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerF
 		}
 
 		if err := dbPlan.SetResourceLimit(ctx, planId, req.Set); err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
 			}
 			return binderr.InternalServerError(err)
 		}
 
 		if err := dbPlan.UnsetResourceLimit(ctx, planId, req.Unset); err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
 			}
 			return binderr.InternalServerError(err)
@@ -328,7 +330,7 @@ func PutPlanResource(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerF
 
 		plans, err := dbPlan.Get(ctx, []string{planId})
 		if err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
 			}
 			return binderr.InternalServerError(err)
@@ -342,7 +344,7 @@ func PutPlanResource(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerF
 	}
 }
 
-func PutPlanAnnotations(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerFunc {
+func PutPlanAnnotations(dbPlan kdbplan.PlanInterface, planIdParam string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		planId := c.Param(planIdParam)
@@ -352,18 +354,18 @@ func PutPlanAnnotations(dbPlan kdb.PlanInterface, planIdParam string) echo.Handl
 			return binderr.BadRequest("can not understand the request", err)
 		}
 
-		delta := kdb.AnnotationDelta{
-			Add: utils.Map(req.Add, func(a apiplans.Annotation) kdb.Annotation {
-				return kdb.Annotation{Key: a.Key, Value: a.Value}
+		delta := domain.AnnotationDelta{
+			Add: utils.Map(req.Add, func(a apiplans.Annotation) domain.Annotation {
+				return domain.Annotation{Key: a.Key, Value: a.Value}
 			}),
-			Remove: utils.Map(req.Remove, func(a apiplans.Annotation) kdb.Annotation {
-				return kdb.Annotation{Key: a.Key, Value: a.Value}
+			Remove: utils.Map(req.Remove, func(a apiplans.Annotation) domain.Annotation {
+				return domain.Annotation{Key: a.Key, Value: a.Value}
 			}),
 			RemoveKey: req.RemoveKey,
 		}
 
 		if err := dbPlan.UpdateAnnotations(ctx, planId, delta); err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
 			}
 			return binderr.InternalServerError(err)
@@ -382,7 +384,7 @@ func PutPlanAnnotations(dbPlan kdb.PlanInterface, planIdParam string) echo.Handl
 	}
 }
 
-func PutPlanServiceAccount(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerFunc {
+func PutPlanServiceAccount(dbPlan kdbplan.PlanInterface, planIdParam string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		planId := c.Param(planIdParam)
@@ -393,7 +395,7 @@ func PutPlanServiceAccount(dbPlan kdb.PlanInterface, planIdParam string) echo.Ha
 		}
 
 		if err := dbPlan.SetServiceAccount(ctx, planId, req.ServiceAccount); err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
 			}
 			return binderr.InternalServerError(err)
@@ -412,13 +414,13 @@ func PutPlanServiceAccount(dbPlan kdb.PlanInterface, planIdParam string) echo.Ha
 	}
 }
 
-func DeletePlanServiceAccount(dbPlan kdb.PlanInterface, planIdParam string) echo.HandlerFunc {
+func DeletePlanServiceAccount(dbPlan kdbplan.PlanInterface, planIdParam string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		planId := c.Param(planIdParam)
 
 		if err := dbPlan.UnsetServiceAccount(ctx, planId); err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
 			}
 			return binderr.InternalServerError(err)

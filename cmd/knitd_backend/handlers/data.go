@@ -14,19 +14,22 @@ import (
 	keyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider"
 	binddata "github.com/opst/knitfab/pkg/api-types-binding/data"
 	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
+	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
+	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
+	kerr "github.com/opst/knitfab/pkg/domain/errors"
+	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
+	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
 	"github.com/opst/knitfab/pkg/utils/echoutil"
 	"github.com/opst/knitfab/pkg/utils/retry"
-	"github.com/opst/knitfab/pkg/workloads"
-	"github.com/opst/knitfab/pkg/workloads/dataagt"
-	"github.com/opst/knitfab/pkg/workloads/k8s"
-	"github.com/opst/knitfab/pkg/workloads/keychain"
 )
 
 func PostDataHandler(
-	dbData kdb.DataInterface,
-	dbRun kdb.RunInterface,
-	spawnDataAgent func(context.Context, kdb.DataAgent, time.Time) (dataagt.Dataagt, error),
+	dbData kdbdata.DataInterface,
+	dbRun kdbrun.RunInterface,
+	spawnDataAgent func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error),
 ) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
@@ -34,7 +37,7 @@ func PostDataHandler(
 		finished := false
 		deadline := time.Now().Add(30 * time.Second)
 
-		runId, err := dbRun.NewPseudo(ctx, kdb.Uploaded, time.Until(deadline))
+		runId, err := dbRun.NewPseudo(ctx, domain.Uploaded, time.Until(deadline))
 		if err != nil {
 			return binderr.InternalServerError(err)
 		}
@@ -43,7 +46,7 @@ func PostDataHandler(
 				return
 			}
 			ctx := context.Background()
-			dbRun.SetStatus(ctx, runId, kdb.Aborting)
+			dbRun.SetStatus(ctx, runId, domain.Aborting)
 			dbRun.Finish(ctx, runId)
 		}()
 
@@ -60,12 +63,12 @@ func PostDataHandler(
 		out := run.Outputs
 		if len(out) != 1 {
 			return binderr.InternalServerError(
-				fmt.Errorf("plan %s requires %d data, not 1", kdb.Uploaded, len(out)),
+				fmt.Errorf("plan %s requires %d data, not 1", domain.Uploaded, len(out)),
 			)
 		}
 
 		daRecord, err := dbData.NewAgent(
-			ctx, out[0].KnitDataBody.KnitId, kdb.DataAgentWrite, time.Until(deadline),
+			ctx, out[0].KnitDataBody.KnitId, domain.DataAgentWrite, time.Until(deadline),
 		)
 		if err != nil {
 			return binderr.InternalServerError(err)
@@ -73,7 +76,7 @@ func PostDataHandler(
 
 		da, err := spawnDataAgent(ctx, daRecord, deadline)
 		if err != nil {
-			if workloads.AsConflict(err) || errors.Is(err, workloads.ErrDeadlineExceeded) {
+			if k8serrors.AsConflict(err) || errors.Is(err, k8serrors.ErrDeadlineExceeded) {
 				return binderr.ServiceUnavailable("please retry later", err)
 			}
 			return binderr.InternalServerError(err)
@@ -91,9 +94,9 @@ func PostDataHandler(
 		}
 		defer bresp.Body.Close()
 
-		newStatus := kdb.Aborting
+		newStatus := domain.Aborting
 		if 200 <= bresp.StatusCode && bresp.StatusCode < 300 {
-			newStatus = kdb.Completing
+			newStatus = domain.Completing
 		}
 		if err := dbRun.SetStatus(ctx, runId, newStatus); err != nil {
 			return binderr.InternalServerError(err)
@@ -103,7 +106,7 @@ func PostDataHandler(
 		}
 		finished = true
 
-		if newStatus != kdb.Completing {
+		if newStatus != domain.Completing {
 			// proxy dataagt response.  -- fixme: check & reword error message.
 			echoutil.CopyResponse(&c, bresp)
 			return nil
@@ -126,8 +129,8 @@ func PostDataHandler(
 }
 
 func GetDataHandler(
-	data kdb.DataInterface,
-	spawnDataAgent func(context.Context, kdb.DataAgent, time.Time) (dataagt.Dataagt, error),
+	data kdbdata.DataInterface,
+	spawnDataAgent func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error),
 	knitIdKey string,
 ) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -141,16 +144,16 @@ func GetDataHandler(
 		// There are no guarantee that clocks are syncronized betweebn knitd-backend and database.
 		// So, we should keep that deadline in database comes later than the deadline in knitd-backend.
 		// In order to do that, we should set the deadline in knitd-backend first.
-		daRecord, err := data.NewAgent(ctx, knitId, kdb.DataAgentRead, timeout)
+		daRecord, err := data.NewAgent(ctx, knitId, domain.DataAgentRead, timeout)
 		if err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
 			}
 			return binderr.InternalServerError(err)
 		}
 
 		dagt, err := spawnDataAgent(ctx, daRecord, deadline)
-		if errors.Is(err, workloads.ErrDeadlineExceeded) {
+		if errors.Is(err, k8serrors.ErrDeadlineExceeded) {
 			return binderr.ServiceUnavailable("please retry later", err)
 		} else if err != nil {
 			return binderr.InternalServerError(err)
@@ -173,14 +176,14 @@ func GetDataHandler(
 
 func ImportDataBeginHandler(
 	kp keyprovider.KeyProvider,
-	dbRun kdb.RunInterface,
+	dbRun kdbrun.RunInterface,
 ) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
 		deadline := time.Now().Add(30 * time.Minute)
 
-		runId, err := dbRun.NewPseudo(ctx, kdb.Imported, time.Until(deadline))
+		runId, err := dbRun.NewPseudo(ctx, domain.Imported, time.Until(deadline))
 		if err != nil {
 			return binderr.InternalServerError(err)
 		}
@@ -199,7 +202,7 @@ func ImportDataBeginHandler(
 		out := run.Outputs
 		if len(out) != 1 {
 			return binderr.InternalServerError(
-				fmt.Errorf("plan %s requires %d data, not 1", kdb.Imported, len(out)),
+				fmt.Errorf("plan %s requires %d data, not 1", domain.Imported, len(out)),
 			)
 		}
 		data := out[0]
@@ -238,10 +241,10 @@ func ImportDataBeginHandler(
 }
 
 func ImportDataEndHandler(
-	cluster k8s.Cluster,
+	kcluster cluster.Cluster,
 	kp keyprovider.KeyProvider,
-	dbRun kdb.RunInterface,
-	dbData kdb.DataInterface,
+	dbRun kdbrun.RunInterface,
+	dbData kdbdata.DataInterface,
 ) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		req := c.Request()
@@ -285,13 +288,13 @@ func ImportDataEndHandler(
 		if err := func() error {
 			_ctx, cancel := context.WithTimeout(ctx, 3*time.Second) // we expects that PVC has been bound.
 			defer cancel()
-			result := <-cluster.GetPVC(
+			result := <-kcluster.GetPVC(
 				_ctx, retry.StaticBackoff(1*time.Second), data[knitId].KnitDataBody.VolumeRef,
-				k8s.PVCIsBound,
+				cluster.PVCIsBound,
 			)
 			return result.Err
 		}(); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) || workloads.AsMissingError(err) {
+			if errors.Is(err, context.DeadlineExceeded) || k8serrors.AsMissingError(err) {
 				return binderr.BadRequest(
 					fmt.Sprintf("retry after that PVC %s is bound", data[knitId].KnitDataBody.VolumeRef),
 					err,
@@ -301,11 +304,11 @@ func ImportDataEndHandler(
 		}
 
 		runId := claims.RunId
-		if err := dbRun.SetStatus(ctx, runId, kdb.Completing); err != nil {
-			if errors.Is(err, kdb.ErrInvalidRunStateChanging) {
+		if err := dbRun.SetStatus(ctx, runId, domain.Completing); err != nil {
+			if errors.Is(err, domain.ErrInvalidRunStateChanging) {
 				return binderr.Conflict("", binderr.WithError(err))
 			}
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.Conflict("missing Run", binderr.WithError(err))
 			}
 			return binderr.InternalServerError(err)

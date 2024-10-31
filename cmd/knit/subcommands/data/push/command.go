@@ -13,7 +13,7 @@ import (
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils"
 	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/youta-t/flarc"
@@ -93,7 +93,7 @@ func Task(
 		if ut := new(apitag.UserTag); t.AsUserTag(ut) {
 			tags[*ut] = struct{}{}
 		} else {
-			return fmt.Errorf("%w: Tag starting %s is reserved", flarc.ErrUsage, kdb.SystemTagPrefix)
+			return fmt.Errorf("%w: Tag starting %s is reserved", flarc.ErrUsage, domain.SystemTagPrefix)
 		}
 	}
 
@@ -162,7 +162,7 @@ func Task(
 
 		l.Printf(
 			"registered: %s -> %s:%s",
-			s, kdb.KeyKnitId, knitData.KnitId,
+			s, domain.KeyKnitId, knitData.KnitId,
 		)
 
 		// tagging
@@ -177,7 +177,7 @@ func Task(
 
 			l.Printf(
 				"[[%d/%d]] [WARN] partially done: %s -> %s:%s (but not Tagged)",
-				n+1, total, s, kdb.KeyKnitId, res.KnitId,
+				n+1, total, s, domain.KeyKnitId, res.KnitId,
 			)
 			cl.Stdout().Write(buf)
 			return err
@@ -189,7 +189,7 @@ func Task(
 		}
 		l.Printf(
 			"[[%d/%d]] [OK] done: %s -> %s:%s",
-			n+1, total, s, kdb.KeyKnitId, res.KnitId,
+			n+1, total, s, domain.KeyKnitId, res.KnitId,
 		)
 		cl.Stdout().Write(buf)
 	}

@@ -5,18 +5,18 @@ import (
 
 	apiplans "github.com/opst/knitfab-api-types/plans"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils"
 )
 
-func ComposeMountpoint(mp kdb.MountPoint) apiplans.Mountpoint {
+func ComposeMountpoint(mp domain.MountPoint) apiplans.Mountpoint {
 	return apiplans.Mountpoint{
 		Path: mp.Path,
 		Tags: utils.Map(mp.Tags.Slice(), bindtags.Compose),
 	}
 }
 
-func ComposeDetail(plan kdb.Plan) apiplans.Detail {
+func ComposeDetail(plan domain.Plan) apiplans.Detail {
 	var log *apiplans.LogPoint
 	if plan.Log != nil {
 		log = &apiplans.LogPoint{Tags: utils.Map(plan.Log.Tags.Slice(), bindtags.Compose)}
@@ -27,11 +27,11 @@ func ComposeDetail(plan kdb.Plan) apiplans.Detail {
 		onNode = &apiplans.OnNode{}
 		for _, on := range plan.OnNode {
 			switch on.Mode {
-			case kdb.MayOnNode:
+			case domain.MayOnNode:
 				onNode.May = append(onNode.May, apiplans.OnSpecLabel{Key: on.Key, Value: on.Value})
-			case kdb.PreferOnNode:
+			case domain.PreferOnNode:
 				onNode.Prefer = append(onNode.Prefer, apiplans.OnSpecLabel{Key: on.Key, Value: on.Value})
-			case kdb.MustOnNode:
+			case domain.MustOnNode:
 				onNode.Must = append(onNode.Must, apiplans.OnSpecLabel{Key: on.Key, Value: on.Value})
 			}
 		}
@@ -49,7 +49,7 @@ func ComposeDetail(plan kdb.Plan) apiplans.Detail {
 	}
 }
 
-func ComposeSummary(planBody kdb.PlanBody) apiplans.Summary {
+func ComposeSummary(planBody domain.PlanBody) apiplans.Summary {
 	rst := apiplans.Summary{
 		PlanId:     planBody.PlanId,
 		Entrypoint: planBody.Entrypoint,
@@ -62,7 +62,7 @@ func ComposeSummary(planBody kdb.PlanBody) apiplans.Summary {
 		rst.Name = p.Name.String()
 	}
 
-	rst.Annotations = utils.Map(planBody.Annotations, func(a kdb.Annotation) apiplans.Annotation {
+	rst.Annotations = utils.Map(planBody.Annotations, func(a domain.Annotation) apiplans.Annotation {
 		return apiplans.Annotation{Key: a.Key, Value: a.Value}
 	})
 

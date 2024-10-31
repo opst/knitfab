@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	keyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider"
-	"github.com/opst/knitfab/pkg/workloads/keychain"
-	"github.com/opst/knitfab/pkg/workloads/keychain/key"
+	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
 )
 
 type MockKeyProvider struct {

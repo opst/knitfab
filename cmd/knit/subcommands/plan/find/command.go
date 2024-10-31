@@ -12,7 +12,7 @@ import (
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 	kargs "github.com/opst/knitfab/pkg/utils/args"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"github.com/youta-t/flarc"
@@ -31,7 +31,7 @@ type Option struct {
 		log *log.Logger,
 		client krst.KnitClient,
 		active logic.Ternary,
-		imageVer kdb.ImageIdentifier,
+		imageVer domain.ImageIdentifier,
 		inTags []tags.Tag,
 		outTags []tags.Tag,
 	) ([]plans.Detail, error)
@@ -43,7 +43,7 @@ func WithFind(
 		log *log.Logger,
 		client krst.KnitClient,
 		active logic.Ternary,
-		imageVer kdb.ImageIdentifier,
+		imageVer domain.ImageIdentifier,
 		inTags []tags.Tag,
 		outTags []tags.Tag,
 	) ([]plans.Detail, error),
@@ -113,7 +113,7 @@ func Task(
 		log *log.Logger,
 		client krst.KnitClient,
 		active logic.Ternary,
-		imageVer kdb.ImageIdentifier,
+		imageVer domain.ImageIdentifier,
 		inTags []tags.Tag,
 		outTags []tags.Tag,
 	) ([]plans.Detail, error),
@@ -147,7 +147,7 @@ func Task(
 		if ok && image == "" {
 			return fmt.Errorf("%w: --image: only tag is passed", flarc.ErrUsage)
 		}
-		imageVer := kdb.ImageIdentifier{
+		imageVer := domain.ImageIdentifier{
 			Image:   image,
 			Version: version,
 		}
@@ -182,7 +182,7 @@ func RunFindPlan(
 	log *log.Logger,
 	client krst.KnitClient,
 	active logic.Ternary,
-	imageVer kdb.ImageIdentifier,
+	imageVer domain.ImageIdentifier,
 	inTags []tags.Tag,
 	outTags []tags.Tag,
 ) ([]plans.Detail, error) {

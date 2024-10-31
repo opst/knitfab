@@ -10,17 +10,17 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/db/mocks"
+	types "github.com/opst/knitfab/pkg/domain"
+	mocks "github.com/opst/knitfab/pkg/domain/data/db/mock"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
 func TestManager_callGetAgentName(t *testing.T) {
 	type When struct {
-		inputs  []kdb.Assignment
-		outputs []kdb.Assignment
-		log     *kdb.Log
+		inputs  []types.Assignment
+		outputs []types.Assignment
+		log     *types.Log
 	}
 	type Then struct {
 		knitIds []string
@@ -28,12 +28,12 @@ func TestManager_callGetAgentName(t *testing.T) {
 
 	theory := func(when When, then Then) func(*testing.T) {
 		return func(t *testing.T) {
-			run := kdb.Run{
-				RunBody: kdb.RunBody{
+			run := types.Run{
+				RunBody: types.RunBody{
 					Id:     "runId",
-					Status: kdb.Running,
-					PlanBody: kdb.PlanBody{
-						Pseudo: &kdb.PseudoPlanDetail{Name: kdb.Uploaded},
+					Status: types.Running,
+					PlanBody: types.PlanBody{
+						Pseudo: &types.PseudoPlanDetail{Name: types.Uploaded},
 					},
 				},
 				Inputs:  when.inputs,
@@ -46,10 +46,10 @@ func TestManager_callGetAgentName(t *testing.T) {
 			knitIds := []string{}
 
 			dbdata.Impl.GetAgentName = func(
-				ctx context.Context, knitId string, modes []kdb.DataAgentMode,
+				ctx context.Context, knitId string, modes []types.DataAgentMode,
 			) ([]string, error) {
 				knitIds = append(knitIds, knitId)
-				if !cmp.SliceEq(modes, []kdb.DataAgentMode{kdb.DataAgentWrite}) {
+				if !cmp.SliceEq(modes, []types.DataAgentMode{types.DataAgentWrite}) {
 					t.Errorf(
 						"modes should be [kdb.DataAgentWrite]: actual = %+v",
 						modes,
@@ -115,14 +115,14 @@ func TestManager_callGetAgentName(t *testing.T) {
 
 	t.Run("when input assignments only, GetAgentName should not be called", theory(
 		When{
-			inputs: []kdb.Assignment{
+			inputs: []types.Assignment{
 				{
-					MountPoint:   kdb.MountPoint{Path: "/in/1", Id: 1},
-					KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-in-1"},
+					MountPoint:   types.MountPoint{Path: "/in/1", Id: 1},
+					KnitDataBody: types.KnitDataBody{KnitId: "knitId-in-1"},
 				},
 				{
-					MountPoint:   kdb.MountPoint{Path: "/in/2", Id: 2},
-					KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-in-2"},
+					MountPoint:   types.MountPoint{Path: "/in/2", Id: 2},
+					KnitDataBody: types.KnitDataBody{KnitId: "knitId-in-2"},
 				},
 			}},
 		Then{knitIds: []string{}},
@@ -130,47 +130,47 @@ func TestManager_callGetAgentName(t *testing.T) {
 
 	t.Run("when there are output assignments, GetAgentName should be called", theory(
 		When{
-			inputs: []kdb.Assignment{
+			inputs: []types.Assignment{
 				{
-					MountPoint:   kdb.MountPoint{Path: "/in/1", Id: 1},
-					KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-in-1"},
+					MountPoint:   types.MountPoint{Path: "/in/1", Id: 1},
+					KnitDataBody: types.KnitDataBody{KnitId: "knitId-in-1"},
 				},
 				{
-					MountPoint:   kdb.MountPoint{Path: "/in/2", Id: 2},
-					KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-in-2"},
+					MountPoint:   types.MountPoint{Path: "/in/2", Id: 2},
+					KnitDataBody: types.KnitDataBody{KnitId: "knitId-in-2"},
 				},
 			},
-			outputs: []kdb.Assignment{
+			outputs: []types.Assignment{
 				{
-					MountPoint:   kdb.MountPoint{Path: "/out/1", Id: 1},
-					KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-out-1"},
+					MountPoint:   types.MountPoint{Path: "/out/1", Id: 1},
+					KnitDataBody: types.KnitDataBody{KnitId: "knitId-out-1"},
 				},
 			}},
 		Then{knitIds: []string{"knitId-out-1"}},
 	))
 	t.Run("when there are log assignments, GetAgentName should be called", theory(
 		When{
-			log: &kdb.Log{
+			log: &types.Log{
 				Id:           1,
-				KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-log"},
+				KnitDataBody: types.KnitDataBody{KnitId: "knitId-log"},
 			}},
 		Then{knitIds: []string{"knitId-log"}},
 	))
 }
 
 func TestManager_after_calling_GetAgentName(t *testing.T) {
-	given := kdb.Run{
-		RunBody: kdb.RunBody{
+	given := types.Run{
+		RunBody: types.RunBody{
 			Id:     "runId",
-			Status: kdb.Running,
-			PlanBody: kdb.PlanBody{
-				Pseudo: &kdb.PseudoPlanDetail{Name: kdb.Uploaded},
+			Status: types.Running,
+			PlanBody: types.PlanBody{
+				Pseudo: &types.PseudoPlanDetail{Name: types.Uploaded},
 			},
 		},
-		Outputs: []kdb.Assignment{
+		Outputs: []types.Assignment{
 			{
-				MountPoint:   kdb.MountPoint{Path: "/out/1", Id: 1},
-				KnitDataBody: kdb.KnitDataBody{KnitId: "knitId-out-1"},
+				MountPoint:   types.MountPoint{Path: "/out/1", Id: 1},
+				KnitDataBody: types.KnitDataBody{KnitId: "knitId-out-1"},
 			},
 		},
 	}
@@ -183,7 +183,7 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 
 	type Then struct {
 		invokeBeforeHook bool
-		status           kdb.KnitRunStatus
+		status           types.KnitRunStatus
 		err              error
 	}
 
@@ -193,7 +193,7 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 			dbdata := mocks.NewDataInterface()
 
 			dbdata.Impl.GetAgentName = func(
-				ctx context.Context, knitId string, modes []kdb.DataAgentMode,
+				ctx context.Context, knitId string, modes []types.DataAgentMode,
 			) ([]string, error) {
 				return when.knitIds, when.errGetAgent
 			}
@@ -301,7 +301,7 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 				errBeforeHook: nil,
 			},
 			Then{
-				status:           kdb.Aborting,
+				status:           types.Aborting,
 				err:              nil,
 				invokeBeforeHook: true,
 			},
@@ -316,7 +316,7 @@ func TestManager_after_calling_GetAgentName(t *testing.T) {
 				errBeforeHook: expetedErr,
 			},
 			Then{
-				status:           kdb.Running,
+				status:           types.Running,
 				err:              expetedErr,
 				invokeBeforeHook: true,
 			},

@@ -6,24 +6,24 @@ import (
 	manager "github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/workloads/k8s"
-	kw "github.com/opst/knitfab/pkg/workloads/worker"
+	types "github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	kw "github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // Returns a manager for starting a worker for a run.
 func New(
-	getWorker func(context.Context, kdb.Run) (kw.Worker, error),
-	startWorker func(context.Context, kdb.Run, map[string]string) error,
-	setExit func(ctx context.Context, runId string, exit kdb.RunExit) error,
+	getWorker func(context.Context, types.Run) (kw.Worker, error),
+	startWorker func(context.Context, types.Run, map[string]string) error,
+	setExit func(ctx context.Context, runId string, exit types.RunExit) error,
 ) manager.Manager {
 	return func(
 		ctx context.Context,
 		hooks runManagementHook.Hooks,
-		r kdb.Run,
+		r types.Run,
 	) (
-		kdb.KnitRunStatus,
+		types.KnitRunStatus,
 		error,
 	) {
 		w, err := getWorker(ctx, r)
@@ -32,7 +32,7 @@ func New(
 				return r.Status, err
 			}
 
-			if r.Status == kdb.Ready {
+			if r.Status == types.Ready {
 				resp, err := hooks.ToStarting.Before(bindruns.ComposeDetail(r))
 				if err != nil {
 					return r.Status, err
@@ -40,34 +40,34 @@ func New(
 				if err := startWorker(ctx, r, resp.KnitfabExtension.Env); err != nil && !kubeerr.IsAlreadyExists(err) {
 					return r.Status, err
 				}
-				return kdb.Starting, nil
+				return types.Starting, nil
 			}
 
 			if _, err := hooks.ToAborting.Before(bindruns.ComposeDetail(r)); err != nil {
 				return r.Status, err
 			}
-			if err := setExit(ctx, r.Id, kdb.RunExit{
+			if err := setExit(ctx, r.Id, types.RunExit{
 				Code:    254,
 				Message: "worker for the run is not found",
 			}); err != nil {
 				return r.Status, err
 			}
-			return kdb.Aborting, nil
+			return types.Aborting, nil
 		}
 
-		var newStatus kdb.KnitRunStatus
+		var newStatus types.KnitRunStatus
 
 		s := w.JobStatus(ctx)
 
 		switch ty := s.Type; ty {
-		case k8s.Pending:
-			newStatus = kdb.Starting
-		case k8s.Running:
-			newStatus = kdb.Running
-		case k8s.Failed, k8s.Stucking:
-			newStatus = kdb.Aborting
-		case k8s.Succeeded:
-			newStatus = kdb.Completing
+		case cluster.Pending:
+			newStatus = types.Starting
+		case cluster.Running:
+			newStatus = types.Running
+		case cluster.Failed, cluster.Stucking:
+			newStatus = types.Aborting
+		case cluster.Succeeded:
+			newStatus = types.Completing
 		default:
 			return r.Status, nil
 		}
@@ -78,14 +78,14 @@ func New(
 		}
 
 		switch newStatus {
-		case kdb.Starting:
+		case types.Starting:
 			// ignore. Since worker is already started, it should not be started again.
-		case kdb.Running:
+		case types.Running:
 			if _, err := hooks.ToRunning.Before(bindruns.ComposeDetail(r)); err != nil {
 				return r.Status, err
 			}
-		case kdb.Aborting, kdb.Completing:
-			if newStatus == kdb.Completing {
+		case types.Aborting, types.Completing:
+			if newStatus == types.Completing {
 				if _, err := hooks.ToCompleting.Before(bindruns.ComposeDetail(r)); err != nil {
 					return r.Status, err
 				}
@@ -95,7 +95,7 @@ func New(
 				}
 			}
 
-			exit := kdb.RunExit{
+			exit := types.RunExit{
 				Code:    s.Code,
 				Message: s.Message,
 			}

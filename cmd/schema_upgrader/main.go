@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"strconv"
 
-	"github.com/opst/knitfab/pkg/db/postgres"
+	"github.com/opst/knitfab/pkg/domain/knitfab/db/postgres"
 	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/youta-t/flarc"

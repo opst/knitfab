@@ -6,11 +6,11 @@ import (
 	"github.com/opst/knitfab-api-types/runs"
 	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils"
 )
 
-func ComposeSummary(r kdb.RunBody) runs.Summary {
+func ComposeSummary(r domain.RunBody) runs.Summary {
 	var exit *runs.Exit
 	if ex := r.Exit; ex != nil {
 		exit = &runs.Exit{
@@ -27,7 +27,7 @@ func ComposeSummary(r kdb.RunBody) runs.Summary {
 	}
 }
 
-func ComposeDetail(r kdb.Run) runs.Detail {
+func ComposeDetail(r domain.Run) runs.Detail {
 	var logSummary *runs.LogSummary
 	if r.Log != nil {
 		logSummary = &runs.LogSummary{
@@ -41,7 +41,7 @@ func ComposeDetail(r kdb.Run) runs.Detail {
 	return runs.Detail{
 		Summary: ComposeSummary(r.RunBody),
 		Inputs: utils.Map(
-			r.Inputs, func(a kdb.Assignment) runs.Assignment {
+			r.Inputs, func(a domain.Assignment) runs.Assignment {
 				return runs.Assignment{
 					KnitId:     a.KnitDataBody.KnitId,
 					Mountpoint: bindplan.ComposeMountpoint(a.MountPoint),
@@ -49,7 +49,7 @@ func ComposeDetail(r kdb.Run) runs.Detail {
 			},
 		),
 		Outputs: utils.Map(
-			r.Outputs, func(a kdb.Assignment) runs.Assignment {
+			r.Outputs, func(a domain.Assignment) runs.Assignment {
 				return runs.Assignment{
 					KnitId:     a.KnitDataBody.KnitId,
 					Mountpoint: bindplan.ComposeMountpoint(a.MountPoint),

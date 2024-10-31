@@ -2,10 +2,13 @@ package gc
 
 import (
 	"context"
+	"time"
 
 	"github.com/opst/knitfab/cmd/loops/loop/recurring"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/workloads/k8s"
+	types "github.com/opst/knitfab/pkg/domain"
+	kdb "github.com/opst/knitfab/pkg/domain/garbage/db"
+	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/pkg/utils/retry"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -17,10 +20,11 @@ func Seed() any {
 // return:
 //
 // - task: remove PVC in garbage
-func Task(kclient k8s.K8sClient, namespace string, dbg kdb.GarbageInterface) recurring.Task[any] {
+func Task(kclient cluster.Cluster, dbg kdb.GarbageInterface) recurring.Task[any] {
 	return func(ctx context.Context, value any) (any, bool, error) {
-		pop, err := dbg.Pop(ctx, func(g kdb.Garbage) error {
-			if err := kclient.DeletePVC(ctx, namespace, g.VolumeRef); err != nil {
+		pop, err := dbg.Pop(ctx, func(g types.Garbage) error {
+			ret := <-kclient.DeletePVC(ctx, retry.StaticBackoff(50*time.Millisecond), g.VolumeRef)
+			if err := ret.Err; err != nil {
 				if kubeerr.IsNotFound(err) { // it is okay if the PVC is already deleted
 					return nil
 				}

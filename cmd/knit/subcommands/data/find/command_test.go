@@ -25,7 +25,7 @@ import (
 	data_find "github.com/opst/knitfab/cmd/knit/subcommands/data/find"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/pointer"
@@ -57,7 +57,7 @@ func TestFindDataCommand(t *testing.T) {
 			},
 			Upstream: data.AssignedTo{
 				Run: runs.Summary{
-					RunId: "sample-run-id", Status: string(kdb.Running),
+					RunId: "sample-run-id", Status: string(domain.Running),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 						"2022-01-08T00:12:34+00:00",
 					)).OrFatal(t),
@@ -317,7 +317,7 @@ func TestFindDataCommand(t *testing.T) {
 			flag: data_find.Flag{
 				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
-					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+					{Key: domain.KeyKnitId, Value: "some-knit-id"},
 				},
 				Transient: "false",
 			},
@@ -327,7 +327,7 @@ func TestFindDataCommand(t *testing.T) {
 			err: nil,
 			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
-				{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+				{Key: domain.KeyKnitId, Value: "some-knit-id"},
 			},
 			transient: data_find.TransientExclude,
 		},
@@ -379,7 +379,7 @@ func TestFindDataCommand(t *testing.T) {
 			flag: data_find.Flag{
 				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
-					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+					{Key: domain.KeyKnitId, Value: "some-knit-id"},
 				},
 				Transient: "both",
 			},
@@ -389,7 +389,7 @@ func TestFindDataCommand(t *testing.T) {
 			err: nil,
 			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
-				{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+				{Key: domain.KeyKnitId, Value: "some-knit-id"},
 			},
 			transient: data_find.TransientAny,
 		},
@@ -402,7 +402,7 @@ func TestFindDataCommand(t *testing.T) {
 				flag: data_find.Flag{
 					Tags: &kargs.Tags{
 						{Key: "foo", Value: "bar"},
-						{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+						{Key: domain.KeyKnitId, Value: "some-knit-id"},
 					},
 					Transient: "both",
 				},
@@ -412,7 +412,7 @@ func TestFindDataCommand(t *testing.T) {
 				err: err,
 				tags: []tags.Tag{
 					{Key: "foo", Value: "bar"},
-					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+					{Key: domain.KeyKnitId, Value: "some-knit-id"},
 				},
 				transient: data_find.TransientAny,
 			},
@@ -444,7 +444,7 @@ func TestFindData(t *testing.T) {
 		},
 		Upstream: data.AssignedTo{
 			Run: runs.Summary{
-				RunId: "run-1", Status: string(kdb.Done),
+				RunId: "run-1", Status: string(domain.Done),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),
@@ -471,7 +471,7 @@ func TestFindData(t *testing.T) {
 		},
 		Upstream: data.AssignedTo{
 			Run: runs.Summary{
-				RunId: "run-2", Status: string(kdb.Done),
+				RunId: "run-2", Status: string(domain.Done),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),
@@ -485,7 +485,7 @@ func TestFindData(t *testing.T) {
 		Downstreams: []data.AssignedTo{
 			{
 				Run: runs.Summary{
-					RunId: "run-3", Status: string(kdb.Running),
+					RunId: "run-3", Status: string(domain.Running),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 						"2022-08-01T12:34:56+00:00",
 					)).OrFatal(t),
@@ -513,12 +513,12 @@ func TestFindData(t *testing.T) {
 		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
-			{Key: kdb.KeyKnitId, Value: "item-1"},
-			{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
+			{Key: domain.KeyKnitId, Value: "item-1"},
+			{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
 		},
 		Upstream: data.AssignedTo{
 			Run: runs.Summary{
-				RunId: "run-3", Status: string(kdb.Running),
+				RunId: "run-3", Status: string(domain.Running),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:43:56+00:00",
 				)).OrFatal(t),
@@ -534,12 +534,12 @@ func TestFindData(t *testing.T) {
 		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
-			{Key: kdb.KeyKnitId, Value: "item-4"},
-			{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
+			{Key: domain.KeyKnitId, Value: "item-4"},
+			{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientFailed},
 		},
 		Upstream: data.AssignedTo{
 			Run: runs.Summary{
-				RunId: "run-4", Status: string(kdb.Failed),
+				RunId: "run-4", Status: string(domain.Failed),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),

@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	connk8s "github.com/opst/knitfab/pkg/conn/k8s"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/utils/kubeutil"
 	kubecore "k8s.io/api/core/v1"
 	kubeapierr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -108,7 +108,7 @@ func main() {
 	)
 	defer cancel()
 
-	k8sclient := kubeutil.ConnectToK8s()
+	k8sclient := connk8s.ConnectToK8s()
 
 	// wait for target container getting up...
 	lastWaitingMessage := time.Now()

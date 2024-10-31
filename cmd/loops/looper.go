@@ -19,13 +19,11 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/imported"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/uploaded"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	knit "github.com/opst/knitfab/pkg"
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/domain/knitfab"
+	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/workloads/data"
-	"github.com/opst/knitfab/pkg/workloads/k8s"
-	"github.com/opst/knitfab/pkg/workloads/worker"
 )
 
 type LoggerOptions func(*log.Logger) *log.Logger
@@ -111,7 +109,7 @@ func mergeEmptyStruct(a, b struct{}) struct{} {
 func StartProjectionLoop(
 	ctx context.Context,
 	logger *log.Logger,
-	kcluster knit.KnitCluster,
+	knit knitfab.Knitfab,
 	manifest LoopManifest,
 ) error {
 	l := byLogger(logger, Copied(), WithPrefix("[projection loop]"))
@@ -120,7 +118,7 @@ func StartProjectionLoop(
 		monitor(
 			l,
 			projection.Task(
-				l, kcluster.Database().Runs(),
+				l, knit.Run().Database(),
 			).Applied(manifest.Policy),
 		),
 	)
@@ -130,25 +128,16 @@ func StartProjectionLoop(
 func StartInitializeLoop(
 	ctx context.Context,
 	logger *log.Logger,
-	kcluster knit.KnitCluster,
+	knit knitfab.Knitfab,
 	manifest LoopManifest,
 ) error {
-	volumeConfig := kcluster.Config().DataAgent().Volume()
-
 	_, err := loop.Start(
 		ctx, initialize.Seed(),
 		monitor(
 			byLogger(logger, Copied(), WithPrefix("[initialize loop]")),
 			initialize.Task(
-				kcluster.Database().Runs(),
-				initialize.PVCInitializer(
-					kcluster.BaseCluster(),
-					data.VolumeTemplate{
-						Namespece:    kcluster.Namespace(),
-						StorageClass: volumeConfig.StorageClassName(),
-						Capacity:     volumeConfig.InitialCapacity(),
-					},
-				),
+				knit.Run().Database(),
+				knit.Run().K8s(),
 				hook.Build(manifest.Hooks.Lifecycle, mergeEmptyStruct),
 			).Applied(manifest.Policy),
 		),
@@ -160,15 +149,15 @@ func StartInitializeLoop(
 func StartRunManagementLoop(
 	ctx context.Context,
 	logger *log.Logger,
-	kcluster knit.KnitCluster,
+	knit knitfab.Knitfab,
 	manifest LoopManifest,
 ) error {
 	// A map psuedo plan name to the psuedo plan manager
-	pseudoPlanManagers := map[kdb.PseudoPlanName]manager.Manager{
-		kdb.Uploaded: uploaded.New(
-			kcluster.Database().Data(),
+	pseudoPlanManagers := map[domain.PseudoPlanName]manager.Manager{
+		domain.Uploaded: uploaded.New(
+			knit.Data().Database(),
 		),
-		kdb.Imported: imported.New(),
+		domain.Imported: imported.New(),
 	}
 	_, err := loop.Start(
 		ctx,
@@ -179,12 +168,17 @@ func StartRunManagementLoop(
 			// loop body
 			runManagement.Task(
 				// Runs from DB
-				kcluster.Database().Runs(),
+				knit.Run().Database(),
 				// A manager for starting a worker for a run.
 				image.New(
-					kcluster.GetWorker,
-					kcluster.SpawnWorker,
-					kcluster.Database().Runs().SetExit,
+					func(ctx context.Context, r domain.Run) (worker.Worker, error) {
+						return knit.Run().K8s().FindWorker(ctx, r.RunBody)
+					},
+					func(ctx context.Context, r domain.Run, m map[string]string) error {
+						_, err := knit.Run().K8s().SpawnWorker(ctx, r, m)
+						return err
+					},
+					knit.Run().Database().SetExit,
 				),
 				// A map of psuedo plan name to the psuedo plan manager
 				pseudoPlanManagers,
@@ -205,12 +199,12 @@ func StartRunManagementLoop(
 func StartFinishingLoop(
 	ctx context.Context,
 	logger *log.Logger,
-	kcluster knit.KnitCluster,
+	knit knitfab.Knitfab,
 	manifest LoopManifest,
 ) error {
-	pseudoPlanNames := []kdb.PseudoPlanName{
-		kdb.Uploaded,
-		kdb.Imported,
+	pseudoPlanNames := []domain.PseudoPlanName{
+		domain.Uploaded,
+		domain.Imported,
 	}
 	// Initial RunCursor
 	runCursor := finishing.Seed(pseudoPlanNames)
@@ -222,11 +216,13 @@ func StartFinishingLoop(
 			// loop body
 			finishing.Task(
 				// Runs from DB
-				kcluster.Database().Runs(),
+				knit.Run().Database(),
 				// A worker finder function
-				worker.Find,
+				func(ctx context.Context, runBody domain.RunBody) (worker.Worker, error) {
+					return knit.Run().K8s().FindWorker(ctx, runBody)
+				},
 				// A k8s cluster
-				kcluster.BaseCluster(),
+				knit.Cluster(),
 				hook.Build(manifest.Hooks.Lifecycle, mergeEmptyStruct),
 			).Applied(manifest.Policy),
 		),
@@ -237,8 +233,7 @@ func StartFinishingLoop(
 func StartGarbageCollectionLoop(
 	ctx context.Context,
 	logger *log.Logger,
-	kcluster knit.KnitCluster,
-	kclient k8s.K8sClient,
+	knit knitfab.Knitfab,
 	manifest LoopManifest,
 ) error {
 	_, err := loop.Start(
@@ -246,7 +241,8 @@ func StartGarbageCollectionLoop(
 		monitor(
 			byLogger(logger, Copied(), WithPrefix("[gc loop]")),
 			gc.Task(
-				kclient, kcluster.Namespace(), kcluster.Database().Garbage(),
+				knit.Cluster(),
+				knit.Garbage().Database(),
 			).Applied(manifest.Policy),
 		),
 	)
@@ -256,7 +252,7 @@ func StartGarbageCollectionLoop(
 func StartHousekeepingLoop(
 	ctx context.Context,
 	logger *log.Logger,
-	kcluster knit.KnitCluster,
+	knit knitfab.Knitfab,
 	manifest LoopManifest,
 ) error {
 	_, err := loop.Start(
@@ -264,8 +260,8 @@ func StartHousekeepingLoop(
 		monitor(
 			byLogger(logger, Copied(), WithPrefix("[housekeepoing loop]")),
 			housekeeping.Task(
-				kcluster.Database().Data(),
-				kcluster.BaseCluster(),
+				knit.Data().Database(),
+				knit.Cluster(),
 			).Applied(manifest.Policy),
 		),
 	)

@@ -16,7 +16,7 @@ import (
 	"github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
 )
@@ -159,7 +159,7 @@ type KnitClient interface {
 	//
 	// - error
 	FindPlan(
-		ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier,
+		ctx context.Context, active logic.Ternary, imageVer domain.ImageIdentifier,
 		inTags []tags.Tag, outTags []tags.Tag,
 	) ([]plans.Detail, error)
 

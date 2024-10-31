@@ -17,7 +17,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	kcx "github.com/opst/knitfab/pkg/configs/extras"
 	kcf "github.com/opst/knitfab/pkg/configs/frontend"
-	kpg "github.com/opst/knitfab/pkg/db/postgres"
+	kpg "github.com/opst/knitfab/pkg/domain/knitfab/db/postgres"
 	"github.com/opst/knitfab/pkg/utils/echoutil"
 	"github.com/opst/knitfab/pkg/utils/filewatch"
 	kstrings "github.com/opst/knitfab/pkg/utils/strings"
@@ -149,13 +149,13 @@ func main() {
 
 	{
 		runId := "runid"
-		e.GET(api("runs"), handlers.FindRunHandler(db.Runs()))
-		e.GET(api("runs/:runId/"), handlers.GetRunHandler(db.Runs()))
-		e.PUT(api("runs/:runId/abort"), handlers.AbortRunHandler(db.Runs(), "runId"))
-		e.PUT(api("runs/:runId/tearoff"), handlers.TearoffRunHandler(db.Runs(), "runId"))
-		e.PUT(api("runs/:runId/retry"), handlers.RetryRunHandler(db.Runs(), "runId"))
+		e.GET(api("runs"), handlers.FindRunHandler(db.Run()))
+		e.GET(api("runs/:runId/"), handlers.GetRunHandler(db.Run()))
+		e.PUT(api("runs/:runId/abort"), handlers.AbortRunHandler(db.Run(), "runId"))
+		e.PUT(api("runs/:runId/tearoff"), handlers.TearoffRunHandler(db.Run(), "runId"))
+		e.PUT(api("runs/:runId/retry"), handlers.RetryRunHandler(db.Run(), "runId"))
 
-		e.DELETE(api("runs/:runId/"), handlers.DeleteRunHandler(db.Runs()))
+		e.DELETE(api("runs/:runId/"), handlers.DeleteRunHandler(db.Run()))
 
 		e.GET(api("runs/:runid/log"), func(c echo.Context) error {
 			url := backendApi("runs", c.Param(runId), "log")

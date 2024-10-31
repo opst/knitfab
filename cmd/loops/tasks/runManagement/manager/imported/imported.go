@@ -6,27 +6,27 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 )
 
-const PLAN_NAME = kdb.Imported
+const PLAN_NAME = domain.Imported
 
 func New() manager.Manager {
 	return func(
 		ctx context.Context,
 		hooks runManagementHook.Hooks,
-		r kdb.Run,
+		r domain.Run,
 	) (
-		kdb.KnitRunStatus,
+		domain.KnitRunStatus,
 		error,
 	) {
 		// Imported Runs comes here are expired its `"lifecycle_suspend_until"`.
 		// They should be aborted.
-		if r.Status == kdb.Running {
+		if r.Status == domain.Running {
 			if _, err := hooks.ToAborting.Before(bindruns.ComposeDetail(r)); err != nil {
 				return r.Status, err
 			}
-			return kdb.Aborting, nil
+			return domain.Aborting, nil
 		}
 		return r.Status, nil
 	}
