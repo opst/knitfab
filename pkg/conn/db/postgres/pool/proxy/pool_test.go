@@ -12,8 +12,8 @@ import (
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/proxy"
 	intr "github.com/opst/knitfab/pkg/conn/db/postgres/pool/proxy/internal"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 // capture value to channel.
@@ -189,7 +189,7 @@ func TestPoolProxy_AcquireAllIdle(t *testing.T) {
 		idleConnections := []*intr.FakeConn{{}, {}, {}}
 
 		innerPool := &intr.FakePool{}
-		innerPool.NextAcquireAllIdle = utils.Map(
+		innerPool.NextAcquireAllIdle = slices.Map(
 			idleConnections,
 			func(c *intr.FakeConn) kpool.Conn { return c },
 		)

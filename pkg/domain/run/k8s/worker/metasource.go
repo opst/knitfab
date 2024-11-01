@@ -8,8 +8,9 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/data/k8s/data"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/metasource"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/nils"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/tuple"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"
@@ -260,11 +261,11 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 
 	je := conf.Worker()
 
-	inputs, inputsMount := tuple.UnzipPair(utils.Map(r.Inputs, toVolumeMount))
-	outputs, outputsMount := tuple.UnzipPair(utils.Map(r.Outputs, toVolumeMount))
-	logs, logsMount := tuple.UnzipPair(utils.Map(
-		utils.Default(
-			utils.IfNotNil(r.Log, func(log *domain.Assignment) *[]domain.Assignment {
+	inputs, inputsMount := tuple.UnzipPair(slices.Map(r.Inputs, toVolumeMount))
+	outputs, outputsMount := tuple.UnzipPair(slices.Map(r.Outputs, toVolumeMount))
+	logs, logsMount := tuple.UnzipPair(slices.Map(
+		nils.Default(
+			nils.IfNotNil(r.Log, func(log *domain.Assignment) *[]domain.Assignment {
 				return &[]domain.Assignment{*log}
 			}),
 			[]domain.Assignment{},
@@ -273,7 +274,7 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 	))
 
 	// setup minimal components
-	volumes := utils.Concat(inputs, outputs, logs)
+	volumes := slices.Concat(inputs, outputs, logs)
 
 	init := []kubecore.Container{}
 
@@ -313,7 +314,7 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 			Image:        fmt.Sprintf("%s:%s", r.Image.Image, r.Image.Version),
 			Command:      command,
 			Args:         args,
-			VolumeMounts: utils.Concat(readonly(inputsMount), writable(outputsMount)),
+			VolumeMounts: slices.Concat(readonly(inputsMount), writable(outputsMount)),
 			Resources: kubecore.ResourceRequirements{
 				Limits: resLimits,
 			},
@@ -327,7 +328,7 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 			Name:         "init-main",
 			Image:        je.Init().Image(),
 			VolumeMounts: readonly(outputsMount),
-			Args: utils.Map(outputsMount, func(m kubecore.VolumeMount) string {
+			Args: slices.Map(outputsMount, func(m kubecore.VolumeMount) string {
 				return m.MountPath
 			}),
 			Resources: kubecore.ResourceRequirements{
@@ -341,7 +342,7 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 
 	// log-related requirements
 	if 0 < len(logs) {
-		volumes = utils.Concat(
+		volumes = slices.Concat(
 			[]kubecore.Volume{
 				{
 					Name: "serviceaccount",
@@ -362,7 +363,7 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 				Name:         "init-log",
 				Image:        je.Init().Image(),
 				VolumeMounts: readonly(logsMount),
-				Args: utils.Map(logsMount, func(m kubecore.VolumeMount) string {
+				Args: slices.Map(logsMount, func(m kubecore.VolumeMount) string {
 					return m.MountPath
 				}),
 				Resources: kubecore.ResourceRequirements{
@@ -379,13 +380,13 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 			kubecore.Container{
 				Name:  "nurse",
 				Image: je.Nurse().Image(),
-				Args: utils.Concat(
+				Args: slices.Concat(
 					[]string{"main"},
-					utils.Map(logsMount, func(v kubecore.VolumeMount) string {
+					slices.Map(logsMount, func(v kubecore.VolumeMount) string {
 						return filepath.Join(v.MountPath, "log")
 					}),
 				),
-				VolumeMounts: utils.Concat(
+				VolumeMounts: slices.Concat(
 					writable(logsMount),
 					[]kubecore.VolumeMount{
 						{
@@ -519,14 +520,14 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 			nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &kubecore.NodeSelector{}
 			nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = []kubecore.NodeSelectorTerm{
 				{
-					MatchExpressions: utils.Map(
-						utils.KeysOf(aggregateAffinity.required),
+					MatchExpressions: slices.Map(
+						slices.KeysOf(aggregateAffinity.required),
 						func(key string) kubecore.NodeSelectorRequirement {
 							values := aggregateAffinity.required[key]
 							return kubecore.NodeSelectorRequirement{
 								Key:      key,
 								Operator: kubecore.NodeSelectorOpIn,
-								Values:   utils.KeysOf(values),
+								Values:   slices.KeysOf(values),
 							}
 						},
 					),
@@ -537,8 +538,8 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 
 	var tolerations []kubecore.Toleration
 	if len(tolerationSet) != 0 {
-		tolerations = utils.Map(
-			utils.KeysOf(tolerationSet),
+		tolerations = slices.Map(
+			slices.KeysOf(tolerationSet),
 			func(t simpleTorelation) kubecore.Toleration {
 				return kubecore.Toleration{
 					Key:      t.Key,
@@ -605,7 +606,7 @@ func toVolumeMount(a domain.Assignment) tuple.Pair[kubecore.Volume, kubecore.Vol
 }
 
 func readonly(vms []kubecore.VolumeMount) []kubecore.VolumeMount {
-	return utils.Map(vms, func(vm kubecore.VolumeMount) kubecore.VolumeMount {
+	return slices.Map(vms, func(vm kubecore.VolumeMount) kubecore.VolumeMount {
 		new := vm // copy!
 		new.ReadOnly = true
 		return new
@@ -613,7 +614,7 @@ func readonly(vms []kubecore.VolumeMount) []kubecore.VolumeMount {
 }
 
 func writable(vms []kubecore.VolumeMount) []kubecore.VolumeMount {
-	return utils.Map(vms, func(vm kubecore.VolumeMount) kubecore.VolumeMount {
+	return slices.Map(vms, func(vm kubecore.VolumeMount) kubecore.VolumeMount {
 		new := vm // copy!
 		new.ReadOnly = false
 		return new

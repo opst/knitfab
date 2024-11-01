@@ -20,8 +20,8 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	dbmock "github.com/opst/knitfab/pkg/domain/data/db/mock"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 
 	"github.com/opst/knitfab/cmd/knitd/handlers"
@@ -189,7 +189,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 					Since *time.Time
 					Until *time.Time
 				}) bool {
-				return cmp.SliceContentEqWith(utils.RefOf(a.Tags), utils.RefOf(b.Tags), (*domain.Tag).Equal) &&
+				return cmp.SliceContentEqWith(slices.RefOf(a.Tags), slices.RefOf(b.Tags), (*domain.Tag).Equal) &&
 					a.Since.Equal(*b.Since) && a.Until.Equal(*b.Until)
 			},
 		) {

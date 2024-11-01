@@ -1,4 +1,4 @@
-package utils
+package slices
 
 import (
 	"sort"
@@ -7,11 +7,13 @@ import (
 // map each element in sli.
 //
 // args:
-//     - sli : slice of `T`s
-//     - mapper : mapping function from T to R
+//   - sli : slice of `T`s
+//   - mapper : mapping function from T to R
+//
 // return:
-//     slice of `R`s.
-//     each element indexed `N` is given with `mapper(sli[N])` .
+//
+//	slice of `R`s.
+//	each element indexed `N` is given with `mapper(sli[N])` .
 func Map[T any, R any](sli []T, mapper func(v T) R) []R {
 	ret := make([]R, len(sli))
 	for nth, v := range sli {
@@ -52,16 +54,16 @@ func MapUntilError[T any, R any](sli []T, mapper func(v T) (R, error)) ([]R, err
 // If keys given with getkey collides, a value coming latter takes over previous.
 //
 // args:
-//     - sli: source slice
-//     - getkey: get key from an element of sli
+//   - sli: source slice
+//   - getkey: get key from an element of sli
+//
 // returns:
-//     map{
-//         genkey(sli[0]): sli[0], ...
-//         genkey(sli[n]): sli[n], ...
-//         genkey(sli[len(sli-1)]): sli[len(sli)-1],
-//     }
 //
-//
+//	map{
+//	    genkey(sli[0]): sli[0], ...
+//	    genkey(sli[n]): sli[n], ...
+//	    genkey(sli[len(sli-1)]): sli[len(sli)-1],
+//	}
 func ToMap[T any, K comparable](sli []T, getkey func(v T) K) map[K]T {
 	m := map[K]T{}
 
@@ -85,8 +87,10 @@ func ToMultiMap[T any, K comparable, R any](sli []T, pair func(v T) (K, R)) map[
 //
 // args:
 //   - m: map to be flatten
+//
 // returns:
-//   slice which contains keys of `m`
+//
+//	slice which contains keys of `m`
 func KeysOf[T any, K comparable](m map[K]T) []K {
 	sli := make([]K, 0, len(m))
 	for k := range m {
@@ -99,8 +103,10 @@ func KeysOf[T any, K comparable](m map[K]T) []K {
 //
 // args:
 //   - m: map to be flatten
+//
 // returns:
-//   slice which contains values of `m`
+//
+//	slice which contains values of `m`
 func ValuesOf[T any, K comparable](m map[K]T) []T {
 	sli := make([]T, 0, len(m))
 	for _, value := range m {
@@ -137,10 +143,12 @@ func Filter[T any](vs []T, predicator func(T) bool) []T {
 // find first element match with predicator.
 //
 // args:
-//     - sli: slice to be scannd
-//     - predicator: function return true iff given value is your searching one.
+//   - sli: slice to be scannd
+//   - predicator: function return true iff given value is your searching one.
+//
 // retruns:
-//     (T, true) if found. otherwise, (zero value of T, false)
+//
+//	(T, true) if found. otherwise, (zero value of T, false)
 func First[T any](sli []T, predicator func(T) bool) (T, bool) {
 	for _, v := range sli {
 		if predicator(v) {
@@ -155,10 +163,12 @@ func First[T any](sli []T, predicator func(T) bool) (T, bool) {
 // apply all modifier operator
 //
 // args:
-//     - value : modification subject
-//     - modifier : modifier operator, which takes `*T` value and update it.
+//   - value : modification subject
+//   - modifier : modifier operator, which takes `*T` value and update it.
+//
 // returns:
-//     value after modifier applied
+//
+//	value after modifier applied
 func ApplyAll[T any](value *T, modifier ...func(*T) *T) *T {
 	for _, mod := range modifier {
 		value = mod(value)
@@ -169,8 +179,8 @@ func ApplyAll[T any](value *T, modifier ...func(*T) *T) *T {
 // sort slice. this does non-stable sort.
 //
 // args:
-//     - []T : slice to be sorted
-//     - less :  ordering function. see: `sort.Interface.Less`
+//   - []T : slice to be sorted
+//   - less :  ordering function. see: `sort.Interface.Less`
 func Sorted[T any](sli []T, less func(a, b T) bool) []T {
 	sorted := make([]T, len(sli))
 	copy(sorted, sli)
@@ -184,14 +194,17 @@ func Sorted[T any](sli []T, less func(a, b T) bool) []T {
 // search index for `item` to be inserted keeping `sli` is sorted.
 //
 // Note: this function ASSUMES AND RELYS ON `sli` IS SORTED.
-//       If you pass not-sorted `sli`, you may get unexpected result.
+//
+//	If you pass not-sorted `sli`, you may get unexpected result.
 //
 // args:
-//     - sli : sorted slice. containing duplicated value is ok.
-//     - item : new item to be inserted
-//     - less : ordering function. see: `sort.Interface.Less`
+//   - sli : sorted slice. containing duplicated value is ok.
+//   - item : new item to be inserted
+//   - less : ordering function. see: `sort.Interface.Less`
+//
 // return:
-//     index before the equal or next grater value of `item`.
+//
+//	index before the equal or next grater value of `item`.
 func BinarySearch[T any](sli []T, item T, less func(a, b T) bool) int {
 	length := len(sli)
 	if length == 0 {
@@ -226,8 +239,7 @@ func Concat[T any](sli ...[]T) []T {
 //
 // Example
 //
-// 	Flatten([][]int{{1, 2, 3}, {4, 5, 6}}) // -> []int{1, 2, 3, 4, 5, 6}
-//
+//	Flatten([][]int{{1, 2, 3}, {4, 5, 6}}) // -> []int{1, 2, 3, 4, 5, 6}
 func Flatten[T any](complex [][]T) []T {
 	if l := len(complex); l == 0 {
 		return []T{}

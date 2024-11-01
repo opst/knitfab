@@ -14,9 +14,9 @@ import (
 	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
 	k8smock "github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster/mock"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/retry"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
@@ -137,7 +137,7 @@ func TestK8SCluster_Service(t *testing.T) {
 			)
 		}
 
-		actualPortA, ok := utils.First(svc.Spec.Ports, func(p kubecore.ServicePort) bool { return p.Name == "port-a" })
+		actualPortA, ok := slices.First(svc.Spec.Ports, func(p kubecore.ServicePort) bool { return p.Name == "port-a" })
 		if !ok {
 			t.Errorf("[k8s] port-a is not found in service.")
 		} else if actualPortA.Port != int32(expectedPortA) {
@@ -154,7 +154,7 @@ func TestK8SCluster_Service(t *testing.T) {
 			)
 		}
 
-		actualPortB, ok := utils.First(svc.Spec.Ports, func(p kubecore.ServicePort) bool { return p.Name == "port-b" })
+		actualPortB, ok := slices.First(svc.Spec.Ports, func(p kubecore.ServicePort) bool { return p.Name == "port-b" })
 		if !ok {
 			t.Error("[k8s] port-b is not found in service.")
 		} else if actualPortB.Port != int32(expectedPortB) {

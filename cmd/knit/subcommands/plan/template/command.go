@@ -15,8 +15,8 @@ import (
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/images/analyzer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	y "github.com/opst/knitfab/pkg/utils/yamler"
 	"github.com/youta-t/flarc"
 	"gopkg.in/yaml.v3"
@@ -159,8 +159,8 @@ func Task(
 			Image:      image(plan.Image),
 			Entrypoint: plan.Entrypoint,
 			Args:       plan.Args,
-			Inputs:     utils.Map(plan.Inputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
-			Outputs:    utils.Map(plan.Outputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Inputs:     slices.Map(plan.Inputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Outputs:    slices.Map(plan.Outputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
 			Log:        (*logpoint)(plan.Log),
 			Resource:   res,
 			Active:     active,
@@ -362,11 +362,11 @@ func FromImage(
 			},
 			Entrypoint: cfg.Config.Entrypoint,
 			Args:       cfg.Config.Cmd,
-			Inputs: utils.Map(
-				utils.KeysOf(inputs), mountpointBuilder("in", env.Tags()),
+			Inputs: slices.Map(
+				slices.KeysOf(inputs), mountpointBuilder("in", env.Tags()),
 			),
-			Outputs: utils.Map(
-				utils.KeysOf(outputs), mountpointBuilder("out", env.Tags()),
+			Outputs: slices.Map(
+				slices.KeysOf(outputs), mountpointBuilder("out", env.Tags()),
 			),
 			Resources: ress,
 			Log: &plans.LogPoint{
@@ -453,7 +453,7 @@ func (m mountpoint) yamlNode() *yaml.Node {
 	return y.Map(
 		y.Entry(y.Text("path"), y.Text(m.Path, y.WithStyle(yaml.DoubleQuotedStyle))),
 		y.Entry(y.Text("tags"), y.Seq(
-			utils.Map(
+			slices.Map(
 				base.Tags, func(t tags.Tag) *yaml.Node {
 					return y.Text(t.String(), y.WithStyle(yaml.DoubleQuotedStyle))
 				},
@@ -473,7 +473,7 @@ func (l *logpoint) yamlNode() *yaml.Node {
 
 	return y.Map(
 		y.Entry(y.Text("tags"), y.Seq(
-			utils.Map(
+			slices.Map(
 				base.Tags,
 				func(t tags.Tag) *yaml.Node { return y.Text(t.String(), y.WithStyle(yaml.DoubleQuotedStyle)) },
 			)...,
@@ -536,7 +536,7 @@ entrypoint:
   Command to be executed as this Plan image.
   This array overrides the ENTRYPOINT of the image.
 `)),
-			y.CompactSeq(utils.Map(p.Entrypoint, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
+			y.CompactSeq(slices.Map(p.Entrypoint, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
 		),
 		y.Entry(
 			y.Text("args", y.WithHeadComment(`
@@ -544,7 +544,7 @@ args:
   Arguments to be passed to this Plan image.
   This array overrides the CMD of the image.
 `)),
-			y.CompactSeq(utils.Map(p.Args, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
+			y.CompactSeq(slices.Map(p.Args, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
 		),
 		y.Entry(
 			y.Text("inputs", y.WithHeadComment(`
@@ -554,7 +554,7 @@ inputs:
   Each filepath should be absolute. Tags should be formatted in "key:value"-style.
 `)),
 			y.Seq(
-				utils.Map(p.Inputs, mountpoint.yamlNode)...,
+				slices.Map(p.Inputs, mountpoint.yamlNode)...,
 			),
 		),
 		y.Entry(
@@ -564,7 +564,7 @@ outputs:
   See "inputs" for detail.
 `)),
 			y.Seq(
-				utils.Map(p.Outputs, mountpoint.yamlNode)...,
+				slices.Map(p.Outputs, mountpoint.yamlNode)...,
 			),
 		),
 		y.Entry(

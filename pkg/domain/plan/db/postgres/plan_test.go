@@ -22,10 +22,10 @@ import (
 	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	kpgnommock "github.com/opst/knitfab/pkg/domain/nomination/db/mock"
 	kpgplan "github.com/opst/knitfab/pkg/domain/plan/db/postgres"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	fn "github.com/opst/knitfab/pkg/utils/function"
 	"github.com/opst/knitfab/pkg/utils/logic"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -130,7 +130,7 @@ func TestPlan_Register(t *testing.T) {
 
 			{
 
-				actual := utils.ValuesOf(plans)
+				actual := slices.ValuesOf(plans)
 				if !cmp.SliceContentEqWith(actual, then, (*domain.Plan).Equiv) {
 					t.Errorf(
 						"All Plans:\n===actual===\n%+v\n===expected===\n%+v",
@@ -167,7 +167,7 @@ func TestPlan_Register(t *testing.T) {
 			}
 
 			expectedNominatorCalls := [][]int{
-				utils.Map(
+				slices.Map(
 					registeredPlan.Inputs,
 					func(mp domain.MountPoint) int { return mp.Id },
 				),
@@ -780,10 +780,10 @@ func TestPlan_Register(t *testing.T) {
 				query := `table "input"`
 				actual := try.To(scanner.New[tables.Input]().QueryAll(ctx, conn, query)).OrFatal(t)
 				expected := given.Inputs
-				if !cmp.SliceContentEq(actual, utils.KeysOf(expected)) {
+				if !cmp.SliceContentEq(actual, slices.KeysOf(expected)) {
 					t.Errorf(
 						"changed unexpectedly: %s, (after, before) = (%v. %v)",
-						query, actual, utils.KeysOf(expected),
+						query, actual, slices.KeysOf(expected),
 					)
 				}
 			}
@@ -791,10 +791,10 @@ func TestPlan_Register(t *testing.T) {
 				query := `table "output"`
 				actual := try.To(scanner.New[tables.Output]().QueryAll(ctx, conn, query)).OrFatal(t)
 				expected := given.Outputs
-				if !cmp.SliceContentEq(actual, utils.KeysOf(expected)) {
+				if !cmp.SliceContentEq(actual, slices.KeysOf(expected)) {
 					t.Errorf(
 						"changed unexpectedly: %s, (after, before) = (%v. %v)",
-						query, actual, utils.KeysOf(expected),
+						query, actual, slices.KeysOf(expected),
 					)
 				}
 			}
@@ -874,7 +874,7 @@ func TestPlan_Register(t *testing.T) {
 
 				expected := []record{}
 				for input, attr := range given.Inputs {
-					expected = append(expected, utils.Map(
+					expected = append(expected, slices.Map(
 						attr.UserTag, func(tag domain.Tag) record {
 							return record{
 								InputId: input.InputId, Key: tag.Key, Value: tag.Value,
@@ -921,7 +921,7 @@ func TestPlan_Register(t *testing.T) {
 
 				expected := []record{}
 				for output, attr := range given.Outputs {
-					expected = append(expected, utils.Map(
+					expected = append(expected, slices.Map(
 						attr.UserTag, func(tag domain.Tag) record {
 							return record{
 								OutputId: output.OutputId, Key: tag.Key, Value: tag.Value,

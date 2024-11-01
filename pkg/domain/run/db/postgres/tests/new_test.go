@@ -14,9 +14,9 @@ import (
 	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	kpgnommock "github.com/opst/knitfab/pkg/domain/nomination/db/mock"
 	kpgrun "github.com/opst/knitfab/pkg/domain/run/db/postgres"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"github.com/opst/knitfab/pkg/utils/tuple"
 )
@@ -99,7 +99,7 @@ func TestRun_New(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		runIds := utils.Map(runs, func(r tables.Run) string { return r.RunId })
+		runIds := slices.Map(runs, func(r tables.Run) string { return r.RunId })
 
 		_workers, err := scanner.New[tuple.Pair[string, string]]().QueryAll(
 			ctx, conn,
@@ -148,21 +148,21 @@ func TestRun_New(t *testing.T) {
 			select "knit_id", "value", "key" from "tag_key"
 			inner join "t2" using("id")
 			`,
-			utils.Map(data, func(d tables.Data) string { return d.KnitId }),
+			slices.Map(data, func(d tables.Data) string { return d.KnitId }),
 		)
 		if err != nil {
 			return nil, err
 		}
-		tags := utils.ToMultiMap(_tags, func(tag Tagging) (string, domain.Tag) {
+		tags := slices.ToMultiMap(_tags, func(tag Tagging) (string, domain.Tag) {
 			return tag.KnitId, domain.Tag{Key: tag.Key, Value: tag.Value}
 		})
 
 		var actualRuns []runComponent
 		{
-			_assigns := utils.ToMultiMap(assigns, func(a tables.Assign) (string, tables.Assign) {
+			_assigns := slices.ToMultiMap(assigns, func(a tables.Assign) (string, tables.Assign) {
 				return a.RunId, a
 			})
-			_data := utils.ToMultiMap(data, func(d tables.Data) (string, tuple.Pair[tables.Data, []domain.Tag]) {
+			_data := slices.ToMultiMap(data, func(d tables.Data) (string, tuple.Pair[tables.Data, []domain.Tag]) {
 				return d.RunId, tuple.PairOf(d, tags[d.KnitId])
 			})
 
@@ -172,13 +172,13 @@ func TestRun_New(t *testing.T) {
 					body:   ar,
 					worker: workres[ar.RunId],
 					assign: _assigns[ar.RunId],
-					data: utils.ToMap(
+					data: slices.ToMap(
 						_data[ar.RunId],
 						func(d tuple.Pair[tables.Data, []domain.Tag]) int { return d.First.OutputId },
 					),
 				}
 			}
-			actualRuns = utils.ValuesOf(_actualRuns)
+			actualRuns = slices.ValuesOf(_actualRuns)
 		}
 		return actualRuns, nil
 	}
@@ -1970,7 +1970,7 @@ func TestRun_New(t *testing.T) {
 							)
 						}
 					}
-					if _, ok := utils.First(testcase.then.newRuns, func(x runComponent) bool {
+					if _, ok := slices.First(testcase.then.newRuns, func(x runComponent) bool {
 						return equivRunComponent(x, r)
 					}); !ok {
 						t.Errorf("created run is not in expected runs %+v", r)
@@ -1986,17 +1986,17 @@ func TestRun_New(t *testing.T) {
 					runIdsAlreadyExist[runId] = struct{}{}
 				}
 
-				if !cmp.SliceContentEq(utils.KeysOf(runIdsAlreadyExist), utils.KeysOf(actualRunIds)) {
+				if !cmp.SliceContentEq(slices.KeysOf(runIdsAlreadyExist), slices.KeysOf(actualRunIds)) {
 					t.Errorf(
 						"unmatch runId: found in db v.s. total of returned by testee\n found in db: %v\n total of returned by testee: %v",
-						utils.KeysOf(actualRunIds), utils.KeysOf(runIdsAlreadyExist),
+						slices.KeysOf(actualRunIds), slices.KeysOf(runIdsAlreadyExist),
 					)
 				}
 			}
 
 			{
 				actualRuns := try.To(getRunEntity(ctx, conn)).OrFatal(t)
-				actualNewRuns, _ := utils.Group(actualRuns, func(ar runComponent) bool {
+				actualNewRuns, _ := slices.Group(actualRuns, func(ar runComponent) bool {
 					for _, s := range testcase.given.Steps {
 						if ar.body.RunId == s.Run.RunId {
 							return false

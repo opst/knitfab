@@ -10,6 +10,7 @@ import (
 	"time"
 
 	kargs "github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/youta-t/flarc"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
@@ -26,7 +27,6 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
@@ -761,16 +761,16 @@ func TestFindData(t *testing.T) {
 			)).OrFatal(t)
 
 			{
-				given := utils.ToMap(testcase.given, func(d data.Detail) string { return d.KnitId })
-				actual := utils.ToMap(actual, func(d data.Detail) string { return d.KnitId })
+				given := slices.ToMap(testcase.given, func(d data.Detail) string { return d.KnitId })
+				actual := slices.ToMap(actual, func(d data.Detail) string { return d.KnitId })
 
 				// are requied ids satisfied?
 				if !cmp.SliceContentEq(
-					utils.KeysOf(actual), testcase.then,
+					slices.KeysOf(actual), testcase.then,
 				) {
 					t.Errorf(
 						"unmatch: unexpected knit ids are remained: (actual, expeted) = (%+v, %+v)",
-						utils.KeysOf(actual), testcase.then,
+						slices.KeysOf(actual), testcase.then,
 					)
 				}
 

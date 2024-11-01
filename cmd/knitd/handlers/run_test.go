@@ -20,8 +20,8 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	mockdb "github.com/opst/knitfab/pkg/domain/run/db/mock"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -539,11 +539,11 @@ func TestRunFindHandler(t *testing.T) {
 				mockRun := mockdb.NewRunInterface()
 
 				mockRun.Impl.Find = func(ctx context.Context, q domain.RunFindQuery) ([]string, error) {
-					runIds := utils.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })
+					runIds := slices.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })
 					return runIds, nil
 				}
 				mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
-					runs := utils.ToMap(testcase.when.Runs, func(r domain.Run) string { return r.Id })
+					runs := slices.ToMap(testcase.when.Runs, func(r domain.Run) string { return r.Id })
 					return runs, nil
 				}
 
@@ -568,13 +568,13 @@ func TestRunFindHandler(t *testing.T) {
 
 				if !cmp.SliceEqWith(
 					mockRun.Calls.Get,
-					[][]string{utils.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })},
+					[][]string{slices.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })},
 					cmp.SliceContentEq[string],
 				) {
 					t.Errorf(
 						"unmatch: params for RunInterface.Get\n- actual:\n%+v\n\n- expected:%+v",
 						mockRun.Calls.Get,
-						[][]string{utils.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })},
+						[][]string{slices.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })},
 					)
 				}
 

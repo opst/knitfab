@@ -18,9 +18,9 @@ import (
 	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	kpgnommock "github.com/opst/knitfab/pkg/domain/nomination/db/mock"
 	kpgrun "github.com/opst/knitfab/pkg/domain/run/db/postgres"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/function"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -664,7 +664,7 @@ func TestRun_Finish(t *testing.T) {
 						`select * from "run" where "run_id" = $1`,
 						testcase.runId,
 					)).OrFatal(t)
-					if _, ng := utils.First(
+					if _, ng := slices.First(
 						actual,
 						func(a tables.Run) bool {
 							return a.Status != testcase.expected.status ||
@@ -683,7 +683,7 @@ func TestRun_Finish(t *testing.T) {
 				// Is nominator.NominateData called?
 				{
 					if !cmp.SliceContentEq(
-						utils.Concat(nom.Calls.NominateData...),
+						slices.Concat(nom.Calls.NominateData...),
 						testcase.expected.nominatedKnitIds,
 					) {
 						t.Errorf(
@@ -819,7 +819,7 @@ func TestRun_Finish(t *testing.T) {
 				// Is nominator.NominateData called?
 				{
 					if !cmp.SliceContentEq(
-						utils.Concat(nom.Calls.NominateData...),
+						slices.Concat(nom.Calls.NominateData...),
 						[]string{},
 					) {
 						t.Errorf(

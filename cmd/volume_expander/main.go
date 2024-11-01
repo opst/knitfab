@@ -18,8 +18,8 @@ import (
 	"github.com/opst/knitfab/cmd/volume_expander/metrics"
 	"github.com/opst/knitfab/cmd/volume_expander/pvcs"
 	connk8s "github.com/opst/knitfab/pkg/conn/k8s"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/youta-t/flarc"
@@ -93,7 +93,7 @@ func Vex(ctx context.Context, logger *log.Logger, flags Flags, namespaces []stri
 
 	cs := connk8s.ConnectToK8s()
 
-	pvcsOnNode, err := pvcs.ObserveOnNode(ctx, cs, flags.NodeName, utils.KeysOf(targetNamespaces)...)
+	pvcsOnNode, err := pvcs.ObserveOnNode(ctx, cs, flags.NodeName, slices.KeysOf(targetNamespaces)...)
 	if err != nil {
 		return fmt.Errorf("failed to start observing PVCs: %w", err)
 	}

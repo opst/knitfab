@@ -13,7 +13,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 func is[T comparable](a T) func(b T) bool {
@@ -70,7 +70,7 @@ func TestProxy(t *testing.T) {
 			t.Error("status code 200 !=", response.StatusCode)
 		}
 
-		if _, ok := utils.First(response.Header.Values("Transfer-Encoding"), is("chunked")); !ok {
+		if _, ok := slices.First(response.Header.Values("Transfer-Encoding"), is("chunked")); !ok {
 			t.Error("response is not `Transfer-Encoding: chunked`")
 		}
 
@@ -139,7 +139,7 @@ func TestProxy(t *testing.T) {
 			t.Error("status code 200 !=", response.StatusCode)
 		}
 
-		if _, ok := utils.First(response.Header.Values("Transfer-Encoding"), is("chunked")); ok {
+		if _, ok := slices.First(response.Header.Values("Transfer-Encoding"), is("chunked")); ok {
 			t.Error("response is `Transfer-Encoding: chunked`, but it should be with `Content-Length:` header")
 		}
 
@@ -241,7 +241,7 @@ func TestProxy(t *testing.T) {
 			t.Error("status code 200 !=", response.StatusCode)
 		}
 
-		if _, ok := utils.First(response.Header.Values("Transfer-Encoding"), is("chunked")); !ok {
+		if _, ok := slices.First(response.Header.Values("Transfer-Encoding"), is("chunked")); !ok {
 			t.Error("response is not `Transfer-Encoding: chunked`")
 		}
 
@@ -322,7 +322,7 @@ func TestProxy(t *testing.T) {
 			t.Error("status code 200 !=", response.StatusCode)
 		}
 
-		if _, ok := utils.First(response.Header.Values("Transfer-Encoding"), is("chunked")); ok {
+		if _, ok := slices.First(response.Header.Values("Transfer-Encoding"), is("chunked")); ok {
 			t.Error("response is `Transfer-Encoding: chunked`, but it should be with `Content-Length:` header")
 		}
 

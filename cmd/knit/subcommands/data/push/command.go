@@ -14,8 +14,8 @@ import (
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
 	kargs "github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/youta-t/flarc"
 
 	pb "github.com/cheggaaa/pb/v3"
@@ -113,7 +113,7 @@ func Task(
 			continue
 		}
 
-		t := utils.KeysOf(tags)
+		t := slices.KeysOf(tags)
 		if toBeNamed {
 			t = append(t, apitag.UserTag{Key: "name", Value: filepath.Base(s)})
 		}

@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	kstr "github.com/opst/knitfab/pkg/utils/strings"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -185,8 +185,8 @@ type Plan struct {
 
 func (p *Plan) String() string {
 
-	inputs := utils.Map(p.Inputs, func(mp MountPoint) string { return mp.String() })
-	outputs := utils.Map(p.Outputs, func(mp MountPoint) string { return mp.String() })
+	inputs := slices.Map(p.Inputs, func(mp MountPoint) string { return mp.String() })
+	outputs := slices.Map(p.Outputs, func(mp MountPoint) string { return mp.String() })
 
 	return fmt.Sprintf(
 		"Plan{PlanBody:%+v Inputs:{%+v} Outputs:{%+v} Log:%+v}",
@@ -201,13 +201,13 @@ func (p *Plan) String() string {
 func (p *Plan) Equal(other *Plan) bool {
 	return p.PlanBody.Equal(&other.PlanBody) &&
 		cmp.SliceContentEqWith(
-			utils.RefOf(p.Inputs),
-			utils.RefOf(other.Inputs),
+			slices.RefOf(p.Inputs),
+			slices.RefOf(other.Inputs),
 			(*MountPoint).Equal,
 		) &&
 		cmp.SliceContentEqWith(
-			utils.RefOf(p.Outputs),
-			utils.RefOf(other.Outputs),
+			slices.RefOf(p.Outputs),
+			slices.RefOf(other.Outputs),
 			(*MountPoint).Equal,
 		) &&
 		p.Log.Equal(other.Log)
@@ -216,13 +216,13 @@ func (p *Plan) Equal(other *Plan) bool {
 // true iff p and other are equivarent, means they represent same except PlanId.
 func (p *Plan) Equiv(other *Plan) bool {
 	eqInputs := cmp.SliceContentEqWith(
-		utils.RefOf(p.Inputs),
-		utils.RefOf(other.Inputs),
+		slices.RefOf(p.Inputs),
+		slices.RefOf(other.Inputs),
 		(*MountPoint).Equiv,
 	)
 	eqOutputs := cmp.SliceContentEqWith(
-		utils.RefOf(p.Outputs),
-		utils.RefOf(other.Outputs),
+		slices.RefOf(p.Outputs),
+		slices.RefOf(other.Outputs),
 		(*MountPoint).Equiv,
 	)
 	return p.PlanBody.Equiv(&other.PlanBody) &&
@@ -295,8 +295,8 @@ func (m *MountPoint) Equal(other *MountPoint) bool {
 func (m *MountPoint) Equiv(other *MountPoint) bool {
 	return m.Path == other.Path &&
 		cmp.SliceContentEqWith(
-			utils.RefOf(m.Tags.Slice()),
-			utils.RefOf(other.Tags.Slice()),
+			slices.RefOf(m.Tags.Slice()),
+			slices.RefOf(other.Tags.Slice()),
 			(*Tag).Equal,
 		)
 }
@@ -512,12 +512,12 @@ func (ps *PlanSpec) EquivPlan(plan *Plan) bool {
 	}
 
 	if !cmp.SliceContentEqWith(
-		ps.inputs, utils.RefOf(plan.Inputs), MountPointParam.EquivMountPoint,
+		ps.inputs, slices.RefOf(plan.Inputs), MountPointParam.EquivMountPoint,
 	) {
 		return false
 	}
 	if !cmp.SliceContentEqWith(
-		ps.outputs, utils.RefOf(plan.Outputs), MountPointParam.EquivMountPoint,
+		ps.outputs, slices.RefOf(plan.Outputs), MountPointParam.EquivMountPoint,
 	) {
 		return false
 	}
@@ -581,7 +581,7 @@ func (ps *PlanSpec) validate() error {
 		return err
 	}
 
-	ps.onNode = utils.Sorted(
+	ps.onNode = slices.Sorted(
 		ps.onNode,
 		func(a, b OnNode) bool {
 			if a.Mode != b.Mode {
@@ -625,11 +625,11 @@ func (ps *PlanSpec) validate() error {
 		return record(NewErrPlanNamelessImage(ps.image + ":" + ps.version))
 	}
 
-	inputs := utils.Sorted(
+	inputs := slices.Sorted(
 		ps.inputs,
 		func(a, b MountPointParam) bool { return a.Path < b.Path },
 	)
-	outputs := utils.Sorted(
+	outputs := slices.Sorted(
 		ps.outputs,
 		func(a, b MountPointParam) bool { return a.Path < b.Path },
 	)
@@ -813,7 +813,7 @@ type MountPointParam struct {
 func (mps MountPointParam) Equal(other MountPointParam) bool {
 	return mps.Path == other.Path &&
 		cmp.SliceContentEqWith(
-			utils.RefOf(mps.Tags.Slice()), utils.RefOf(other.Tags.Slice()),
+			slices.RefOf(mps.Tags.Slice()), slices.RefOf(other.Tags.Slice()),
 			(*Tag).Equal,
 		)
 }
@@ -821,7 +821,7 @@ func (mps MountPointParam) Equal(other MountPointParam) bool {
 func (mps MountPointParam) EquivMountPoint(mp *MountPoint) bool {
 	return mps.Path == mp.Path &&
 		cmp.SliceContentEqWith(
-			utils.RefOf(mps.Tags.Slice()), utils.RefOf(mp.Tags.Slice()),
+			slices.RefOf(mps.Tags.Slice()), slices.RefOf(mp.Tags.Slice()),
 			(*Tag).Equal,
 		)
 }
@@ -836,7 +836,7 @@ func (lp *LogParam) Equal(other *LogParam) bool {
 		return (lp == nil) && (other == nil)
 	}
 	return cmp.SliceContentEqWith(
-		utils.RefOf(lp.Tags.Slice()), utils.RefOf(other.Tags.Slice()),
+		slices.RefOf(lp.Tags.Slice()), slices.RefOf(other.Tags.Slice()),
 		(*Tag).Equal,
 	)
 }
@@ -875,7 +875,7 @@ func (lp *LogPoint) Equiv(other *LogPoint) bool {
 		return (lp == nil) && (other == nil)
 	}
 	return cmp.SliceContentEqWith(
-		utils.RefOf(lp.Tags.Slice()), utils.RefOf(other.Tags.Slice()),
+		slices.RefOf(lp.Tags.Slice()), slices.RefOf(other.Tags.Slice()),
 		(*Tag).Equal,
 	)
 }

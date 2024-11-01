@@ -7,7 +7,7 @@ import (
 
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/tuple"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -191,7 +191,7 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 		}
 
 		for planId, mps := range _ins {
-			ins[planId] = utils.ValuesOf(mps)
+			ins[planId] = slices.ValuesOf(mps)
 		}
 	}
 
@@ -516,7 +516,7 @@ func GetInputsForPlan(
 		}
 		return ret, nil
 	}
-	inputIds := utils.KeysOf(bodies)
+	inputIds := slices.KeysOf(bodies)
 
 	var tags map[int]*domain.TagSet
 	{
@@ -576,7 +576,7 @@ func GetOutputsForPlan(
 
 	outputs, err := GetOutputs(
 		ctx, conn,
-		utils.Concat(utils.ValuesOf(planToOutputs)...),
+		slices.Concat(slices.ValuesOf(planToOutputs)...),
 	)
 	if err != nil {
 		return nil, err

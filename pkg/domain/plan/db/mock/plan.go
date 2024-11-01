@@ -7,9 +7,9 @@ import (
 	types "github.com/opst/knitfab/pkg/domain"
 	kdbmock "github.com/opst/knitfab/pkg/domain/internal/db/mock"
 	kdb "github.com/opst/knitfab/pkg/domain/plan/db"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/logic"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -22,10 +22,10 @@ type PlanFindArgs struct {
 
 func (s *PlanFindArgs) Equal(d *PlanFindArgs) bool {
 
-	if !cmp.SliceContentEqWith(utils.RefOf(s.InTag), utils.RefOf(d.InTag), (*types.Tag).Equal) {
+	if !cmp.SliceContentEqWith(slices.RefOf(s.InTag), slices.RefOf(d.InTag), (*types.Tag).Equal) {
 		return false
 	}
-	if !cmp.SliceContentEqWith(utils.RefOf(s.OutTag), utils.RefOf(d.OutTag), (*types.Tag).Equal) {
+	if !cmp.SliceContentEqWith(slices.RefOf(s.OutTag), slices.RefOf(d.OutTag), (*types.Tag).Equal) {
 		return false
 	}
 

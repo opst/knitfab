@@ -15,10 +15,10 @@ import (
 	. "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	kpgplan "github.com/opst/knitfab/pkg/domain/plan/db/postgres"
 	kpgrun "github.com/opst/knitfab/pkg/domain/run/db/postgres"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/maps"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -1485,10 +1485,10 @@ func Test_Get(t *testing.T) {
 			}
 
 			t.Run("test: KnitData", func(t *testing.T) {
-				expected := utils.ToMap(chap.expectation.data, func(d domain.KnitData) string { return d.KnitId })
+				expected := slices.ToMap(chap.expectation.data, func(d domain.KnitData) string { return d.KnitId })
 				for name, query := range map[string][]string{
-					"get existing items":                      utils.KeysOf(expected),
-					"get existing items + non-existing items": utils.Concat([]string{"data/missing"}, utils.KeysOf(expected)),
+					"get existing items":                      slices.KeysOf(expected),
+					"get existing items + non-existing items": slices.Concat([]string{"data/missing"}, slices.KeysOf(expected)),
 				} {
 					t.Run(name, func(t *testing.T) {
 						testee := kpgdata.New(pgpool)
@@ -1505,10 +1505,10 @@ func Test_Get(t *testing.T) {
 			})
 
 			t.Run("test: Run", func(t *testing.T) {
-				expected := utils.ToMap(chap.expectation.run, func(d domain.Run) string { return d.Id })
+				expected := slices.ToMap(chap.expectation.run, func(d domain.Run) string { return d.Id })
 				for name, query := range map[string][]string{
-					"get existing items":                      utils.KeysOf(expected),
-					"get existing items + non-existing items": utils.Concat([]string{"data/missing"}, utils.KeysOf(expected)),
+					"get existing items":                      slices.KeysOf(expected),
+					"get existing items + non-existing items": slices.Concat([]string{"data/missing"}, slices.KeysOf(expected)),
 				} {
 					t.Run(name, func(t *testing.T) {
 						testee := kpgrun.New(pgpool) // mocks are not used in this testcase
@@ -1525,10 +1525,10 @@ func Test_Get(t *testing.T) {
 			})
 
 			t.Run("test: Plan", func(t *testing.T) {
-				expected := utils.ToMap(chap.expectation.plan, func(d domain.Plan) string { return d.PlanId })
+				expected := slices.ToMap(chap.expectation.plan, func(d domain.Plan) string { return d.PlanId })
 				for name, query := range map[string][]string{
-					"get existing items":                      utils.KeysOf(expected),
-					"get existing items + non-existing items": utils.Concat([]string{"data/missing"}, utils.KeysOf(expected)),
+					"get existing items":                      slices.KeysOf(expected),
+					"get existing items + non-existing items": slices.Concat([]string{"data/missing"}, slices.KeysOf(expected)),
 				} {
 					t.Run(name, func(t *testing.T) {
 						testee := kpgplan.New(pgpool) // mocks are not used in this testcase

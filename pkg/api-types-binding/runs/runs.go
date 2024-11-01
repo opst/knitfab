@@ -7,7 +7,7 @@ import (
 	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 func ComposeSummary(r domain.RunBody) runs.Summary {
@@ -33,14 +33,14 @@ func ComposeDetail(r domain.Run) runs.Detail {
 		logSummary = &runs.LogSummary{
 			KnitId: r.Log.KnitDataBody.KnitId,
 			LogPoint: plans.LogPoint{
-				Tags: utils.Map(r.Log.Tags.Slice(), bindtags.Compose),
+				Tags: slices.Map(r.Log.Tags.Slice(), bindtags.Compose),
 			},
 		}
 	}
 
 	return runs.Detail{
 		Summary: ComposeSummary(r.RunBody),
-		Inputs: utils.Map(
+		Inputs: slices.Map(
 			r.Inputs, func(a domain.Assignment) runs.Assignment {
 				return runs.Assignment{
 					KnitId:     a.KnitDataBody.KnitId,
@@ -48,7 +48,7 @@ func ComposeDetail(r domain.Run) runs.Detail {
 				}
 			},
 		),
-		Outputs: utils.Map(
+		Outputs: slices.Map(
 			r.Outputs, func(a domain.Assignment) runs.Assignment {
 				return runs.Assignment{
 					KnitId:     a.KnitDataBody.KnitId,

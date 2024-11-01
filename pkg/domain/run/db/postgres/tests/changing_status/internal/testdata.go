@@ -8,8 +8,8 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
 	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -2708,8 +2708,8 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 	return Given{
 		Plans: plans,
 		Runs:  runs,
-		ExpectedRun: utils.ToMap(
-			utils.Concat(expectedRunsForPseudoPlans, expectedRunsBasedOnImage),
+		ExpectedRun: slices.ToMap(
+			slices.Concat(expectedRunsForPseudoPlans, expectedRunsBasedOnImage),
 			func(r domain.Run) string { return r.Id },
 		),
 	}

@@ -7,7 +7,7 @@ import (
 
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type KnitRunStatus domain.KnitRunStatus
@@ -103,7 +103,7 @@ func GetRunBody(ctx context.Context, conn kpool.Queryer, runIds []string) (map[s
 		for _, rd := range runDescriptors {
 			pids[rd.PlanId] = struct{}{}
 		}
-		planIds = utils.KeysOf(pids)
+		planIds = slices.KeysOf(pids)
 	}
 	planBodies, err := GetPlanBody(ctx, conn, planIds)
 	if err != nil {
@@ -163,7 +163,7 @@ func GetRun(ctx context.Context, conn kpool.Queryer, runIds []string) (map[strin
 		planIds[rd.PlanId] = struct{}{}
 	}
 
-	plans, err := GetPlan(ctx, conn, utils.KeysOf(planIds))
+	plans, err := GetPlan(ctx, conn, slices.KeysOf(planIds))
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func GetRun(ctx context.Context, conn kpool.Queryer, runIds []string) (map[strin
 			}
 		}
 
-		b, err := GetDataBody(ctx, conn, utils.KeysOf(knitIds))
+		b, err := GetDataBody(ctx, conn, slices.KeysOf(knitIds))
 		if err != nil {
 			return nil, err
 		}

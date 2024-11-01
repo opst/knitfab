@@ -22,7 +22,7 @@ import (
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/knitfab"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type LoggerOptions func(*log.Logger) *log.Logger
@@ -161,7 +161,7 @@ func StartRunManagementLoop(
 	_, err := loop.Start(
 		ctx,
 		// Initial RunCursor
-		runManagement.Seed(utils.KeysOf(pseudoPlanManagers)),
+		runManagement.Seed(slices.KeysOf(pseudoPlanManagers)),
 		monitor(
 			byLogger(logger, Copied(), WithPrefix("[run management loop]")),
 			// loop body

@@ -12,9 +12,9 @@ import (
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres"
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
 	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -497,7 +497,7 @@ func TestOperation(t *testing.T) {
 			ctx, conn, `table "output"`,
 		)).OrFatal(t)
 
-		expected := utils.KeysOf(testee.Outputs)
+		expected := slices.KeysOf(testee.Outputs)
 
 		if !cmp.SliceContentEq(actual, expected) {
 			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)
@@ -577,7 +577,7 @@ func TestOperation(t *testing.T) {
 			ctx, conn, `table "input"`,
 		)).OrFatal(t)
 
-		expected := utils.KeysOf(testee.Inputs)
+		expected := slices.KeysOf(testee.Inputs)
 
 		if !cmp.SliceContentEq(actual, expected) {
 			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)
@@ -727,7 +727,7 @@ func TestOperation(t *testing.T) {
 			ctx, conn, `table "run"`,
 		)).OrFatal(t)
 
-		expected := utils.Map(testee.Steps, func(s tables.Step) tables.Run {
+		expected := slices.Map(testee.Steps, func(s tables.Step) tables.Run {
 			return s.Run
 		})
 
@@ -747,8 +747,8 @@ func TestOperation(t *testing.T) {
 			ctx, conn, `table "assign"`,
 		)).OrFatal(t)
 
-		expected := utils.Concat(
-			utils.Map(
+		expected := slices.Concat(
+			slices.Map(
 				testee.Steps,
 				func(s tables.Step) []tables.Assign { return s.Assign },
 			)...,
@@ -788,10 +788,10 @@ func TestOperation(t *testing.T) {
 			ctx, conn, `table "data"`,
 		)).OrFatal(t)
 
-		expected := utils.Concat(
-			utils.Map(
+		expected := slices.Concat(
+			slices.Map(
 				testee.Steps,
-				func(s tables.Step) []tables.Data { return utils.KeysOf(s.Outcomes) },
+				func(s tables.Step) []tables.Data { return slices.KeysOf(s.Outcomes) },
 			)...,
 		)
 
@@ -823,8 +823,8 @@ func TestOperation(t *testing.T) {
 			`,
 		)).OrFatal(t)
 
-		expected := utils.Concat(
-			utils.Map(
+		expected := slices.Concat(
+			slices.Map(
 				testee.Steps,
 				func(s tables.Step) []tagData {
 					ret := []tagData{}
@@ -857,8 +857,8 @@ func TestOperation(t *testing.T) {
 			ctx, conn, `table "knit_timestamp"`,
 		)).OrFatal(t)
 
-		expected := utils.Concat(
-			utils.Map(
+		expected := slices.Concat(
+			slices.Map(
 				testee.Steps,
 				func(s tables.Step) []tagTimestamp {
 					ret := []tagTimestamp{}
@@ -893,11 +893,11 @@ func TestOperation(t *testing.T) {
 			ctx, conn, `table "data_agent"`,
 		)).OrFatal(t)
 
-		expected := utils.Concat(utils.Map( // concat * map = flatmap
+		expected := slices.Concat(slices.Map( // concat * map = flatmap
 			testee.Steps,
 			func(s tables.Step) []tables.DataAgent {
-				return utils.Concat(utils.Map(
-					utils.ValuesOf(s.Outcomes),
+				return slices.Concat(slices.Map(
+					slices.ValuesOf(s.Outcomes),
 					func(a tables.DataAttibutes) []tables.DataAgent {
 						if a.Agent == nil {
 							return []tables.DataAgent{}

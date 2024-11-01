@@ -12,8 +12,8 @@ import (
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	"github.com/opst/knitfab/pkg/utils"
 	kargs "github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/youta-t/flarc"
 )
 
@@ -259,7 +259,7 @@ func FindData(
 	}
 
 	isTransient := func(d data.Detail) bool {
-		_, ok := utils.First(d.Tags, func(t apitag.Tag) bool {
+		_, ok := slices.First(d.Tags, func(t apitag.Tag) bool {
 			return t.Key == "knit#transient"
 		})
 		return ok
@@ -275,7 +275,7 @@ func FindData(
 		filter = func(d data.Detail) bool { return !isTransient(d) }
 	}
 
-	satisfied, _ := utils.Group(result, filter)
+	satisfied, _ := slices.Group(result, filter)
 
 	if satisfied == nil {
 		return []data.Detail{}, nil

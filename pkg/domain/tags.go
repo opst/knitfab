@@ -9,8 +9,8 @@ import (
 
 	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 const (
@@ -186,7 +186,7 @@ func NewTagSet(tags []Tag) *TagSet {
 
 func (ts *TagSet) String() string {
 	ts.normalize()
-	tags := utils.Map(
+	tags := slices.Map(
 		ts.tags,
 		func(t Tag) string { return t.String() },
 	)
@@ -282,7 +282,7 @@ func (ts *TagSet) normalize() *TagSet {
 		// mark t as known
 		known[t] = struct{}{}
 
-		pos := utils.BinarySearch(normalized, t, Tag.less)
+		pos := slices.BinarySearch(normalized, t, Tag.less)
 		// insert item into slice at pos.
 		//
 		// before append:

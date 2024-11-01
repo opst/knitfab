@@ -16,7 +16,7 @@ import (
 	kpgerr "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
 	kpgintr "github.com/opst/knitfab/pkg/domain/internal/db/postgres"
 	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/tuple"
 )
 
@@ -85,7 +85,7 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 			from "data"
 			where "knit_id" = any($1::varchar[])
 			`,
-			utils.KeysOf(bodies),
+			slices.KeysOf(bodies),
 		)
 		if err != nil {
 			return nil, err
@@ -138,17 +138,17 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 		}
 	}
 
-	upstreams, err := kpgintr.GetOutputs(ctx, conn, utils.KeysOf(outputIds))
+	upstreams, err := kpgintr.GetOutputs(ctx, conn, slices.KeysOf(outputIds))
 	if err != nil {
 		return nil, err
 	}
 
-	downstreams, err := kpgintr.GetInputs(ctx, conn, utils.KeysOf(inputIds))
+	downstreams, err := kpgintr.GetInputs(ctx, conn, slices.KeysOf(inputIds))
 	if err != nil {
 		return nil, err
 	}
 
-	runBodies, err := kpgintr.GetRunBody(ctx, conn, utils.KeysOf(runIds))
+	runBodies, err := kpgintr.GetRunBody(ctx, conn, slices.KeysOf(runIds))
 	if err != nil {
 		return nil, err
 	}
@@ -204,12 +204,12 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 
 	processingStatus := []string{}
 	if query.sysKnitTransientProcessing != nil && *query.sysKnitTransientProcessing {
-		processingStatus = utils.Map(domain.ProcessingStatuses(), domain.KnitRunStatus.String)
+		processingStatus = slices.Map(domain.ProcessingStatuses(), domain.KnitRunStatus.String)
 	}
 
 	failedStatus := []string{}
 	if query.sysKnitTransientFailed != nil && *query.sysKnitTransientFailed {
-		failedStatus = utils.Map(domain.FailedStatuses(), domain.KnitRunStatus.String)
+		failedStatus = slices.Map(domain.FailedStatuses(), domain.KnitRunStatus.String)
 	}
 
 	rows, err := conn.Query(
@@ -270,7 +270,7 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 		order by "raw_timestamp" ASC NULLS LAST, "knit_id"
 		`,
 		query.sysKnitId, processingStatus, failedStatus, timestamp, query.updatedSince, query.updatedUntil,
-		utils.Map(query.userTag, func(t domain.Tag) [2]string { return [2]string{t.Key, t.Value} }),
+		slices.Map(query.userTag, func(t domain.Tag) [2]string { return [2]string{t.Key, t.Value} }),
 	)
 	if err != nil {
 		return nil, err
@@ -733,7 +733,7 @@ func (m *dataPG) GetAgentName(ctx context.Context, knitId string, modes []domain
 		select 'a' as "type", "name" from "data_agent"
 		where "knit_id" = $1 and "mode" = any($2::dataAgentMode[])
 		`,
-		knitId, utils.Map(modes, domain.DataAgentMode.String),
+		knitId, slices.Map(modes, domain.DataAgentMode.String),
 	)
 	if err != nil {
 		return nil, err

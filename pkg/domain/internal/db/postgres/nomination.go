@@ -5,7 +5,7 @@ import (
 
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/tuple"
 )
 
@@ -60,12 +60,12 @@ func GetNominationByKnitId(
 		index[knitId] = tuple.PairOf(planId, mpid)
 	}
 
-	plans, err := GetPlanBody(ctx, conn, utils.KeysOf(planIds))
+	plans, err := GetPlanBody(ctx, conn, slices.KeysOf(planIds))
 	if err != nil {
 		return nil, err
 	}
 
-	mps, err := GetInputs(ctx, conn, utils.KeysOf(mountpointIds))
+	mps, err := GetInputs(ctx, conn, slices.KeysOf(mountpointIds))
 	if err != nil {
 		return nil, err
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/opst/knitfab/pkg/domain/data/k8s/data"
 	clustermock "github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster/mock"
 	k8srun "github.com/opst/knitfab/pkg/domain/run/k8s/run"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	kubecore "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -102,13 +102,13 @@ func TestRun_Initlialize(t *testing.T) {
 			},
 		}
 		defer func() {
-			volumeref := utils.Map(
+			volumeref := slices.Map(
 				run.Inputs,
 				func(a domain.Assignment) string { return a.KnitDataBody.VolumeRef },
 			)
 			volumeref = append(
 				volumeref,
-				utils.Map(
+				slices.Map(
 					run.Outputs,
 					func(a domain.Assignment) string { return a.KnitDataBody.VolumeRef },
 				)...,
@@ -236,13 +236,13 @@ func TestRun_Initlialize(t *testing.T) {
 			},
 		}
 		defer func() {
-			volumeRefs := utils.Map(
+			volumeRefs := slices.Map(
 				run.Inputs,
 				func(a domain.Assignment) string { return a.KnitDataBody.VolumeRef },
 			)
 			volumeRefs = append(
 				volumeRefs,
-				utils.Map(
+				slices.Map(
 					run.Outputs,
 					func(a domain.Assignment) string { return a.KnitDataBody.VolumeRef },
 				)...,

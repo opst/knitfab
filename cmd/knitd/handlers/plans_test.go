@@ -20,15 +20,15 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	mockdb "github.com/opst/knitfab/pkg/domain/plan/db/mock"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/logic"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func allValidated[T any, V interface{ Validate() (T, error) }](t *testing.T, vs []V) []T {
-	return utils.Map(
+	return slices.Map(
 		vs, func(v V) T { return try.To(v.Validate()).OrFatal(t) },
 	)
 }
@@ -903,7 +903,7 @@ func TestRegisterPlan(t *testing.T) {
 				if !cmp.SliceEqWith(then.Query, mockPlan.Calls.Register, (*domain.PlanSpec).Equal) {
 					t.Errorf(
 						"unmatch:\n- actual   : %+v\n- expected : %+v",
-						utils.DerefOf(mockPlan.Calls.Register), then.Query,
+						slices.DerefOf(mockPlan.Calls.Register), then.Query,
 					)
 				}
 
@@ -1390,12 +1390,12 @@ func TestFind(t *testing.T) {
 
 			mockPlan := mockdb.NewPlanInteraface()
 			mockPlan.Impl.Find = func(ctx context.Context, active logic.Ternary, imageVer domain.ImageIdentifier, inTag []domain.Tag, outTag []domain.Tag) ([]string, error) {
-				planIds := utils.Map(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
+				planIds := slices.Map(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
 				return planIds, testcase.when.err
 			}
 
 			mockPlan.Impl.Get = func(ctx context.Context, s []string) (map[string]*domain.Plan, error) {
-				expectedPlanIds := utils.Map(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
+				expectedPlanIds := slices.Map(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
 				if !cmp.SliceContentEq(s, expectedPlanIds) {
 					t.Errorf("unmatch: planIds: (actual, expected) = (%v, %v)", s, expectedPlanIds)
 				}
@@ -1555,7 +1555,7 @@ func TestGetPlanHandler(t *testing.T) {
 
 			mockPlan := mockdb.NewPlanInteraface()
 			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
-				return utils.ToMap(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId }), testcase.when.err
+				return slices.ToMap(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId }), testcase.when.err
 			}
 
 			e := echo.New()
@@ -1792,7 +1792,7 @@ func TestActivatePlan(t *testing.T) {
 				return testcase.when.err
 			}
 			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
-				plans := utils.ToMap(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
+				plans := slices.ToMap(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
 				return plans, testcase.when.err
 			}
 
@@ -1892,7 +1892,7 @@ func TestPutPlanResource(t *testing.T) {
 		return func(t *testing.T) {
 			mockPlan := mockdb.NewPlanInteraface()
 			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
-				plans := utils.ToMap(when.queryResult, func(p *domain.Plan) string { return p.PlanId })
+				plans := slices.ToMap(when.queryResult, func(p *domain.Plan) string { return p.PlanId })
 				return plans, when.getError
 			}
 			mockPlan.Impl.SetResourceLimit = func(ctx context.Context, planId string, resources map[string]resource.Quantity) error {

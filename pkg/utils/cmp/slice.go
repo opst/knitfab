@@ -1,6 +1,6 @@
 package cmp
 
-import "github.com/opst/knitfab/pkg/utils"
+import "github.com/opst/knitfab/pkg/utils/slices"
 
 func SliceEq[T comparable](a []T, b []T) bool {
 	if len(a) != len(b) {
@@ -150,7 +150,7 @@ func SliceSubsetWith[A, B any](a []A, b []B, pred func(A, B) bool) bool {
 		return false
 	}
 
-	rest := utils.RefOf(a)
+	rest := slices.RefOf(a)
 
 NEXT_B:
 	for _, be := range b {

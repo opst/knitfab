@@ -18,9 +18,9 @@ import (
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
 	. "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	fn "github.com/opst/knitfab/pkg/utils/function"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	kstr "github.com/opst/knitfab/pkg/utils/strings"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -128,7 +128,7 @@ func TestNominator_NominateData(t *testing.T) {
 			{InputId: 2_00_00_00, PlanId: Padding36("plan-no-tags-in-inputs"), Path: "/in/00/00/00"}: {},
 
 			{InputId: 3_00_00_12, PlanId: Padding36("plan-impossible-inputs"), Path: "/in/00/00/12"}: {
-				UserTag: utils.Concat(TAGSET_1, TAGSET_2),
+				UserTag: slices.Concat(TAGSET_1, TAGSET_2),
 			},
 		},
 		Outputs: map[tables.Output]tables.OutputAttr{
@@ -208,7 +208,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: Padding36("knit-target"),
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: Padding36("knit-target"), InputId: 1_00_00_01, Updated: true},
 				},
@@ -241,7 +241,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: Padding36("knit-target"),
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: Padding36("knit-target"), InputId: 1_00_00_01, Updated: false},
 				},
@@ -269,7 +269,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: Padding36("knit-target"),
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: Padding36("knit-target"), InputId: 1_00_00_01, Updated: true},
 					{KnitId: Padding36("knit-target"), InputId: 1_00_02_00, Updated: true},
@@ -303,7 +303,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: Padding36("knit-target"),
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: Padding36("knit-target"), InputId: 1_00_00_01, Updated: false},
 					{KnitId: Padding36("knit-target"), InputId: 1_00_02_00, Updated: true},
@@ -332,7 +332,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: Padding36("knit-target"),
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: Padding36("knit-target"), InputId: 1_00_00_01, Updated: true},
 					{KnitId: Padding36("knit-target"), InputId: 1_00_01_00, Updated: true},
@@ -367,7 +367,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: Padding36("knit-target"),
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: Padding36("knit-target"), InputId: 1_00_00_01, Updated: true},
 					{KnitId: Padding36("knit-target"), InputId: 1_00_01_00, Updated: false},
@@ -397,7 +397,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_2,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_2, InputId: 1_00_00_01, Updated: true},
 					{KnitId: KNITID_2, InputId: 1_00_01_00, Updated: true},
@@ -433,7 +433,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_2,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_2, InputId: 1_00_00_01, Updated: false},
 					{KnitId: KNITID_2, InputId: 1_00_01_00, Updated: true},
@@ -464,7 +464,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_1,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_1, InputId: 1_00_00_01, Updated: true},
 					{KnitId: KNITID_1, InputId: 1_00_01_00, Updated: true},
@@ -506,7 +506,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_1,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_1, InputId: 1_00_00_01, Updated: true},
 					{KnitId: KNITID_1, InputId: 1_00_01_00, Updated: false},
@@ -544,7 +544,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_1,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_1, InputId: 1_01_00_00, Updated: true},
 					{KnitId: KNITID_1, InputId: 1_00_01_00, Updated: true},
@@ -574,7 +574,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_1,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_1, InputId: 1_01_00_00, Updated: true},
 					{KnitId: KNITID_1, InputId: 1_00_01_00, Updated: true},
@@ -609,7 +609,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_1,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_1, InputId: 1_01_00_00, Updated: true},
 					{KnitId: KNITID_1, InputId: 1_00_01_00, Updated: false},
@@ -639,7 +639,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_1,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_1, InputId: 1_01_00_00, Updated: true},
 					{KnitId: KNITID_1, InputId: 1_00_00_01, Updated: true},
@@ -673,7 +673,7 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 			},
 			when: KNITID_1,
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{KnitId: KNITID_1, InputId: 1_01_00_00, Updated: true},
 					{KnitId: KNITID_1, InputId: 1_00_00_01, Updated: false},
@@ -1624,8 +1624,8 @@ func TestNominator_NominateInput(t *testing.T) {
 				},
 			},
 			when: []int{1_00_00_00},
-			then: utils.Concat(
-				utils.Map(
+			then: slices.Concat(
+				slices.Map(
 					kstr.SprintMany(
 						"knit_a-and-b_%s_done",
 						[]any{"old", "new", "no-time"},
@@ -1652,8 +1652,8 @@ func TestNominator_NominateInput(t *testing.T) {
 				},
 			},
 			when: []int{1_00_00_00},
-			then: utils.Concat(
-				utils.Map(
+			then: slices.Concat(
+				slices.Map(
 					kstr.SprintMany(
 						"knit_%s_new_done",
 						[]any{"a-and-b", "b-and-c", "no-tags"},
@@ -1680,7 +1680,7 @@ func TestNominator_NominateInput(t *testing.T) {
 				},
 			},
 			when: []int{1_00_00_00},
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{InputId: 1_00_00_00, KnitId: Padding36("knit_a-and-b_no-time_done"), Updated: true},
 				},
@@ -1703,7 +1703,7 @@ func TestNominator_NominateInput(t *testing.T) {
 				},
 			},
 			when: []int{1_00_00_00},
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{{InputId: 1_00_00_00, KnitId: Padding36("knit_b-and-c_new_done"), Updated: true}},
 				plan.Nomination,
 			),
@@ -1724,7 +1724,7 @@ func TestNominator_NominateInput(t *testing.T) {
 				},
 			},
 			when: []int{1_00_00_00},
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{{InputId: 1_00_00_00, KnitId: Padding36("knit_b-and-c_new_done"), Updated: true}},
 				plan.Nomination,
 			),
@@ -1745,8 +1745,8 @@ func TestNominator_NominateInput(t *testing.T) {
 				},
 			},
 			when: []int{1_00_00_00},
-			then: utils.Concat(
-				utils.Map(
+			then: slices.Concat(
+				slices.Map(
 					kstr.SprintMany(
 						"knit_%s_new_done",
 						[]any{"a-and-b", "b-and-c"},
@@ -1781,7 +1781,7 @@ func TestNominator_NominateInput(t *testing.T) {
 				},
 			},
 			when: []int{1_00_00_00, 1_01_00_00}, // not nominating 1_02_00_00
-			then: utils.Concat(
+			then: slices.Concat(
 				[]tables.Nomination{
 					{InputId: 1_00_00_00, KnitId: Padding36("knit_a-and-b_new_done"), Updated: true},
 					{InputId: 1_01_00_00, KnitId: Padding36("knit_b-and-c_old_done"), Updated: true},

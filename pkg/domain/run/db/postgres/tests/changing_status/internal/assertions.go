@@ -16,8 +16,8 @@ import (
 	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	kpgnommock "github.com/opst/knitfab/pkg/domain/nomination/db/mock"
 	kpgrun "github.com/opst/knitfab/pkg/domain/run/db/postgres"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -158,7 +158,7 @@ func CanBeChanged(
 			}
 		}
 
-		outputData := utils.Map(
+		outputData := slices.Map(
 			when.Target.Outputs,
 			func(a domain.Assignment) string { return a.KnitDataBody.KnitId },
 		)
@@ -176,12 +176,12 @@ func CanBeChanged(
 			toBeTimestamped = outputData
 		}
 		if !cmp.SliceContentEq(
-			utils.Concat(nomi.Calls.NominateData...),
+			slices.Concat(nomi.Calls.NominateData...),
 			toBeNominated,
 		) {
 			t.Errorf(
 				"nominated data:\n===actual===\n%+v\n===expected===\n%+v",
-				utils.Concat(nomi.Calls.NominateData...),
+				slices.Concat(nomi.Calls.NominateData...),
 				toBeNominated,
 			)
 		}
@@ -199,7 +199,7 @@ func CanBeChanged(
 			),
 		).OrFatal(t)
 
-		knitIdsWhichHaveTimestamp := utils.Map(
+		knitIdsWhichHaveTimestamp := slices.Map(
 			ret,
 			func(r tables.DataTimeStamp) string { return r.KnitId },
 		)
@@ -209,7 +209,7 @@ func CanBeChanged(
 				knitIdsWhichHaveTimestamp, toBeTimestamped,
 			)
 		}
-		_, ng := utils.Group(
+		_, ng := slices.Group(
 			ret,
 			func(r tables.DataTimeStamp) bool {
 				return !r.Timestamp.Before(before) && !r.Timestamp.After(after)
@@ -329,7 +329,7 @@ func CanBeChanged(
 			}
 		})
 
-		outputData := utils.Map(
+		outputData := slices.Map(
 			when.Target.Outputs,
 			func(a domain.Assignment) string { return a.KnitDataBody.KnitId },
 		)
@@ -345,12 +345,12 @@ func CanBeChanged(
 			toBeTimestamped = outputData
 		}
 		if !cmp.SliceContentEq(
-			utils.Concat(nomi.Calls.NominateData...),
+			slices.Concat(nomi.Calls.NominateData...),
 			toBeNominated,
 		) {
 			t.Errorf(
 				"nominated data:\n===actual===\n%+v\n===expected===\n%+v",
-				utils.Concat(nomi.Calls.NominateData...),
+				slices.Concat(nomi.Calls.NominateData...),
 				toBeNominated,
 			)
 		}
@@ -368,7 +368,7 @@ func CanBeChanged(
 			),
 		).OrFatal(t)
 
-		knitIdsWhichHaveTimestamp := utils.Map(
+		knitIdsWhichHaveTimestamp := slices.Map(
 			ret,
 			func(r tables.DataTimeStamp) string { return r.KnitId },
 		)
@@ -378,7 +378,7 @@ func CanBeChanged(
 				knitIdsWhichHaveTimestamp, toBeTimestamped,
 			)
 		}
-		_, ng := utils.Group(
+		_, ng := slices.Group(
 			ret,
 			func(r tables.DataTimeStamp) bool {
 				return !r.Timestamp.Before(before) && !r.Timestamp.After(after)
@@ -407,7 +407,7 @@ func CanBeChanged(
 
 		conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
 		defer conn.Release()
-		allRuns := utils.ToMap(
+		allRuns := slices.ToMap(
 			try.To(scanner.New[tables.Run]().QueryAll(
 				ctx, conn, `table "run"`,
 			)).OrFatal(t),
@@ -477,21 +477,21 @@ func CanBeChanged(
 		var outputData []string
 		var outputDataWithTimestamp []string
 		{
-			_outputData := utils.Map(
+			_outputData := slices.Map(
 				when.Target.Outputs,
 				func(a domain.Assignment) domain.KnitDataBody { return a.KnitDataBody },
 			)
 			if when.Target.Log != nil && when.Target.Log.KnitDataBody.KnitId != "" {
 				_outputData = append(_outputData, when.Target.Log.KnitDataBody)
 			}
-			outputData = utils.Map(
+			outputData = slices.Map(
 				_outputData, func(a domain.KnitDataBody) string { return a.KnitId },
 			)
 
-			_outWithTimestamp, _ := utils.Group(
+			_outWithTimestamp, _ := slices.Group(
 				_outputData,
 				func(a domain.KnitDataBody) bool {
-					_, ok := utils.First(
+					_, ok := slices.First(
 						a.Tags.SystemTag(),
 						func(tag domain.Tag) bool { return tag.Key == domain.KeyKnitTimestamp },
 					)
@@ -499,7 +499,7 @@ func CanBeChanged(
 				},
 			)
 
-			outputDataWithTimestamp = utils.Map(
+			outputDataWithTimestamp = slices.Map(
 				_outWithTimestamp,
 				func(a domain.KnitDataBody) string { return a.KnitId },
 			)
@@ -507,12 +507,12 @@ func CanBeChanged(
 
 		toBeNominated := []string{}
 		if !cmp.SliceContentEq(
-			utils.Concat(nomi.Calls.NominateData...),
+			slices.Concat(nomi.Calls.NominateData...),
 			toBeNominated,
 		) {
 			t.Errorf(
 				"nominated data:\n===actual===\n%+v\n===expected===\n%+v",
-				utils.Concat(nomi.Calls.NominateData...),
+				slices.Concat(nomi.Calls.NominateData...),
 				toBeNominated,
 			)
 		}
@@ -530,7 +530,7 @@ func CanBeChanged(
 			),
 		).OrFatal(t)
 
-		knitIdsWhichHaveTimestamp := utils.Map(
+		knitIdsWhichHaveTimestamp := slices.Map(
 			ret,
 			func(r tables.DataTimeStamp) string { return r.KnitId },
 		)
@@ -587,29 +587,29 @@ func ShouldNotBeChanged(
 		var outputData []string
 		var outputDataWithTimestamp []string
 		{
-			_out := utils.Map(
+			_out := slices.Map(
 				when.Target.Outputs,
 				func(a domain.Assignment) domain.KnitDataBody { return a.KnitDataBody },
 			)
 			if when.Target.Log != nil && when.Target.Log.KnitDataBody.KnitId != "" {
 				_out = append(_out, when.Target.Log.KnitDataBody)
 			}
-			outputData = utils.Map(
+			outputData = slices.Map(
 				_out,
 				func(a domain.KnitDataBody) string { return a.KnitId },
 			)
 
-			_outWithTimestamp, _ := utils.Group(
+			_outWithTimestamp, _ := slices.Group(
 				_out,
 				func(a domain.KnitDataBody) bool {
-					_, ok := utils.First(
+					_, ok := slices.First(
 						a.Tags.SystemTag(),
 						func(tag domain.Tag) bool { return tag.Key == domain.KeyKnitTimestamp },
 					)
 					return ok
 				},
 			)
-			outputDataWithTimestamp = utils.Map(
+			outputDataWithTimestamp = slices.Map(
 				_outWithTimestamp,
 				func(a domain.KnitDataBody) string { return a.KnitId },
 			)
@@ -617,12 +617,12 @@ func ShouldNotBeChanged(
 
 		toBeNominated := []string{}
 		if !cmp.SliceContentEq(
-			utils.Concat(nomi.Calls.NominateData...),
+			slices.Concat(nomi.Calls.NominateData...),
 			toBeNominated,
 		) {
 			t.Errorf(
 				"nominated data:\n===actual===\n%+v\n===expected===\n%+v",
-				utils.Concat(nomi.Calls.NominateData...),
+				slices.Concat(nomi.Calls.NominateData...),
 				toBeNominated,
 			)
 		}
@@ -640,7 +640,7 @@ func ShouldNotBeChanged(
 			),
 		).OrFatal(t)
 
-		knitIdsWhichHaveTimestamp := utils.Map(
+		knitIdsWhichHaveTimestamp := slices.Map(
 			ret,
 			func(r tables.DataTimeStamp) string { return r.KnitId },
 		)
@@ -713,28 +713,28 @@ func ShouldNotBeChanged(
 		var outputData []string
 		var outputDataWithTimestamp []string
 		{
-			_out := utils.Map(
+			_out := slices.Map(
 				when.Target.Outputs,
 				func(a domain.Assignment) domain.KnitDataBody { return a.KnitDataBody },
 			)
 			if when.Target.Log != nil && when.Target.Log.KnitDataBody.KnitId != "" {
 				_out = append(_out, when.Target.Log.KnitDataBody)
 			}
-			_outWithTimestamp, _ := utils.Group(
+			_outWithTimestamp, _ := slices.Group(
 				_out,
 				func(a domain.KnitDataBody) bool {
-					_, ok := utils.First(
+					_, ok := slices.First(
 						a.Tags.SystemTag(),
 						func(tag domain.Tag) bool { return tag.Key == domain.KeyKnitTimestamp },
 					)
 					return ok
 				},
 			)
-			outputData = utils.Map(
+			outputData = slices.Map(
 				_out,
 				func(a domain.KnitDataBody) string { return a.KnitId },
 			)
-			outputDataWithTimestamp = utils.Map(
+			outputDataWithTimestamp = slices.Map(
 				_outWithTimestamp,
 				func(a domain.KnitDataBody) string { return a.KnitId },
 			)
@@ -742,12 +742,12 @@ func ShouldNotBeChanged(
 
 		toBeNominated := []string{}
 		if !cmp.SliceContentEq(
-			utils.Concat(nomi.Calls.NominateData...),
+			slices.Concat(nomi.Calls.NominateData...),
 			toBeNominated,
 		) {
 			t.Errorf(
 				"nominated data:\n===actual===\n%+v\n===expected===\n%+v",
-				utils.Concat(nomi.Calls.NominateData...),
+				slices.Concat(nomi.Calls.NominateData...),
 				toBeNominated,
 			)
 		}
@@ -765,7 +765,7 @@ func ShouldNotBeChanged(
 			),
 		).OrFatal(t)
 
-		knitIdsWhichHaveTimestamp := utils.Map(
+		knitIdsWhichHaveTimestamp := slices.Map(
 			ret,
 			func(r tables.DataTimeStamp) string { return r.KnitId },
 		)
@@ -839,28 +839,28 @@ func ShouldNotBeChanged(
 		var outputData []string
 		var outputDataWithTimestamp []string
 		{
-			_out := utils.Map(
+			_out := slices.Map(
 				when.Target.Outputs,
 				func(a domain.Assignment) domain.KnitDataBody { return a.KnitDataBody },
 			)
 			if when.Target.Log != nil && when.Target.Log.KnitDataBody.KnitId != "" {
 				_out = append(_out, when.Target.Log.KnitDataBody)
 			}
-			_outWithTimestamp, _ := utils.Group(
+			_outWithTimestamp, _ := slices.Group(
 				_out,
 				func(a domain.KnitDataBody) bool {
-					_, ok := utils.First(
+					_, ok := slices.First(
 						a.Tags.SystemTag(),
 						func(tag domain.Tag) bool { return tag.Key == domain.KeyKnitTimestamp },
 					)
 					return ok
 				},
 			)
-			outputData = utils.Map(
+			outputData = slices.Map(
 				_out,
 				func(a domain.KnitDataBody) string { return a.KnitId },
 			)
-			outputDataWithTimestamp = utils.Map(
+			outputDataWithTimestamp = slices.Map(
 				_outWithTimestamp,
 				func(a domain.KnitDataBody) string { return a.KnitId },
 			)
@@ -868,12 +868,12 @@ func ShouldNotBeChanged(
 
 		toBeNominated := []string{}
 		if !cmp.SliceContentEq(
-			utils.Concat(nomi.Calls.NominateData...),
+			slices.Concat(nomi.Calls.NominateData...),
 			toBeNominated,
 		) {
 			t.Errorf(
 				"nominated data:\n===actual===\n%+v\n===expected===\n%+v",
-				utils.Concat(nomi.Calls.NominateData...),
+				slices.Concat(nomi.Calls.NominateData...),
 				toBeNominated,
 			)
 		}
@@ -891,7 +891,7 @@ func ShouldNotBeChanged(
 			),
 		).OrFatal(t)
 
-		knitIdsWhichHaveTimestamp := utils.Map(
+		knitIdsWhichHaveTimestamp := slices.Map(
 			ret,
 			func(r tables.DataTimeStamp) string { return r.KnitId },
 		)

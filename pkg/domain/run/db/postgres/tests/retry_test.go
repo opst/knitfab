@@ -16,9 +16,9 @@ import (
 	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	kpgnommock "github.com/opst/knitfab/pkg/domain/nomination/db/mock"
 	kpgrun "github.com/opst/knitfab/pkg/domain/run/db/postgres"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -668,7 +668,7 @@ func TestRetry(t *testing.T) {
 				conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
 				defer conn.Release()
 
-				runIdsTobeLocked := utils.Concat([]string{}, then.RemovedRunIds)
+				runIdsTobeLocked := slices.Concat([]string{}, then.RemovedRunIds)
 				if !when.DoNotLockTheRun {
 					runIdsTobeLocked = append(runIdsTobeLocked, when.RunId)
 				}
@@ -819,7 +819,7 @@ func TestRetry(t *testing.T) {
 				}
 			}
 			{
-				unnominatedKnitIds := utils.Concat(nomi.Calls.DropData...)
+				unnominatedKnitIds := slices.Concat(nomi.Calls.DropData...)
 				if !cmp.SliceContentEq(unnominatedKnitIds, outputDataFromTheRun) {
 					t.Errorf(
 						"expected knit ids to be unnominated %v, got %v",

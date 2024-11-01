@@ -1,4 +1,4 @@
-package utils
+package nils
 
 func IfNotNil[T any, U any](t *T, mapper func(*T) *U) *U {
 	if t == nil {

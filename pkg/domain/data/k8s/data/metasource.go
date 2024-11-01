@@ -7,7 +7,7 @@ import (
 	bconf "github.com/opst/knitfab/pkg/configs/backend"
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/metasource"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	kubecore "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +44,7 @@ func Of(d domain.KnitDataBody) (Builder, error) {
 
 func OfOutputs(r domain.Run) ([]Builder, error) {
 	var datas []Builder
-	outputs := utils.Map(
+	outputs := slices.Map(
 		r.Outputs,
 		func(o domain.Assignment) domain.KnitDataBody { return o.KnitDataBody },
 	)

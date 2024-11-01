@@ -15,9 +15,9 @@ import (
 	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
 	k8smock "github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster/mock"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/metasource"
-	utils "github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	kubecore "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -356,7 +356,7 @@ func TestSpawn(t *testing.T) {
 							t.Fatal("failed to get pod")
 						}
 
-						container, ok := utils.First(
+						container, ok := slices.First(
 							pod.Spec.Containers,
 							func(c kubecore.Container) bool {
 								return c.Image == configs.DataAgent().Image()
@@ -372,7 +372,7 @@ func TestSpawn(t *testing.T) {
 						if !cmp.SliceContains(container.Args, []string{"--port", fmt.Sprintf("%d", configs.DataAgent().Port())}) {
 							t.Errorf("dataagt container is not expose port as configure. %v", container.Args)
 						}
-						if _, ok := utils.First(container.Ports, func(p kubecore.ContainerPort) bool {
+						if _, ok := slices.First(container.Ports, func(p kubecore.ContainerPort) bool {
 							return p.ContainerPort == configs.DataAgent().Port()
 						}); !ok {
 							t.Errorf("dataagt container is not expose port as configure. %v", container.Ports)

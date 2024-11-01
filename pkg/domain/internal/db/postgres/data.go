@@ -6,7 +6,7 @@ import (
 
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 func GetDataBody(ctx context.Context, conn kpool.Queryer, knitIds []string) (map[string]domain.KnitDataBody, error) {
@@ -36,8 +36,8 @@ func GetDataBody(ctx context.Context, conn kpool.Queryer, knitIds []string) (map
 		inner join "run" using ("run_id")
 		`,
 		knitIds,
-		utils.Map(domain.ProcessingStatuses(), domain.KnitRunStatus.String),
-		utils.Map(domain.FailedStatuses(), domain.KnitRunStatus.String),
+		slices.Map(domain.ProcessingStatuses(), domain.KnitRunStatus.String),
+		slices.Map(domain.FailedStatuses(), domain.KnitRunStatus.String),
 	)
 	if err != nil {
 		return nil, err

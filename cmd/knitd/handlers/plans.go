@@ -14,8 +14,9 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	kdbplan "github.com/opst/knitfab/pkg/domain/plan/db"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
+	"github.com/opst/knitfab/pkg/utils/nils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -40,16 +41,16 @@ func PlanRegisterHandler(dbplan kdbplan.PlanInterface) echo.HandlerFunc {
 			params := domain.PlanParam{
 				Image:      specInReq.Image.Repository,
 				Version:    specInReq.Image.Tag,
-				Active:     utils.Default(specInReq.Active, true),
+				Active:     nils.Default(specInReq.Active, true),
 				Entrypoint: specInReq.Entrypoint,
 				Args:       specInReq.Args,
-				Inputs: utils.Map(
+				Inputs: slices.Map(
 					specInReq.Inputs,
 					func(mp apiplans.Mountpoint) domain.MountPointParam {
 						return domain.MountPointParam{
 							Path: mp.Path,
 							Tags: domain.NewTagSet(
-								utils.Map(mp.Tags, func(reqtag apitags.Tag) domain.Tag {
+								slices.Map(mp.Tags, func(reqtag apitags.Tag) domain.Tag {
 									return domain.Tag{Key: reqtag.Key, Value: reqtag.Value}
 								}),
 							),
@@ -57,13 +58,13 @@ func PlanRegisterHandler(dbplan kdbplan.PlanInterface) echo.HandlerFunc {
 					},
 				),
 				Resources: specInReq.Resources,
-				Outputs: utils.Map(
+				Outputs: slices.Map(
 					specInReq.Outputs,
 					func(mp apiplans.Mountpoint) domain.MountPointParam {
 						return domain.MountPointParam{
 							Path: mp.Path,
 							Tags: domain.NewTagSet(
-								utils.Map(mp.Tags, func(reqtag apitags.Tag) domain.Tag {
+								slices.Map(mp.Tags, func(reqtag apitags.Tag) domain.Tag {
 									return domain.Tag{Key: reqtag.Key, Value: reqtag.Value}
 								}),
 							),
@@ -71,7 +72,7 @@ func PlanRegisterHandler(dbplan kdbplan.PlanInterface) echo.HandlerFunc {
 					},
 				),
 				ServiceAccount: specInReq.ServiceAccount,
-				Annotations: utils.Map(specInReq.Annotations, func(a apiplans.Annotation) domain.Annotation {
+				Annotations: slices.Map(specInReq.Annotations, func(a apiplans.Annotation) domain.Annotation {
 					return domain.Annotation{Key: a.Key, Value: a.Value}
 				}),
 			}
@@ -89,7 +90,7 @@ func PlanRegisterHandler(dbplan kdbplan.PlanInterface) echo.HandlerFunc {
 			if l := specInReq.Log; l != nil {
 				params.Log = &domain.LogParam{
 					Tags: domain.NewTagSet(
-						utils.Map(l.Tags, func(reqtag apitags.Tag) domain.Tag {
+						slices.Map(l.Tags, func(reqtag apitags.Tag) domain.Tag {
 							return domain.Tag{Key: reqtag.Key, Value: reqtag.Value}
 						}),
 					),
@@ -355,10 +356,10 @@ func PutPlanAnnotations(dbPlan kdbplan.PlanInterface, planIdParam string) echo.H
 		}
 
 		delta := domain.AnnotationDelta{
-			Add: utils.Map(req.Add, func(a apiplans.Annotation) domain.Annotation {
+			Add: slices.Map(req.Add, func(a apiplans.Annotation) domain.Annotation {
 				return domain.Annotation{Key: a.Key, Value: a.Value}
 			}),
-			Remove: utils.Map(req.Remove, func(a apiplans.Annotation) domain.Annotation {
+			Remove: slices.Map(req.Remove, func(a apiplans.Annotation) domain.Annotation {
 				return domain.Annotation{Key: a.Key, Value: a.Value}
 			}),
 			RemoveKey: req.RemoveKey,

@@ -7,7 +7,7 @@ import (
 
 	"github.com/opst/knitfab-api-types/misc/rfctime"
 	apitags "github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type Adapter[T interface{ String() string }] struct {
@@ -68,7 +68,7 @@ func (t *Tags) String() string {
 		return ""
 	}
 
-	return strings.Join(utils.Map(*t, apitags.Tag.String), " ")
+	return strings.Join(slices.Map(*t, apitags.Tag.String), " ")
 }
 
 func (t *Tags) Set(v string) error {

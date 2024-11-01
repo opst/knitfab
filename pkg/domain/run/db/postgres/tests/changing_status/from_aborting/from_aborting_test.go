@@ -11,7 +11,7 @@ import (
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
 	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	. "github.com/opst/knitfab/pkg/domain/run/db/postgres/tests/changing_status/internal"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -93,9 +93,9 @@ func Test_ChangingStatus_FromAborting(t *testing.T) {
 		for _, target := range testcase.when {
 			for _, change := range testcase.change {
 				for _, status := range change.Statuses {
-					knitIds, _ := utils.Group(
-						utils.Map(
-							utils.Concat(target.Target.Inputs, target.Target.Outputs),
+					knitIds, _ := slices.Group(
+						slices.Map(
+							slices.Concat(target.Target.Inputs, target.Target.Outputs),
 							func(a domain.Assignment) string { return a.KnitDataBody.KnitId },
 						),
 						func(s string) bool { return len(s) != 0 },

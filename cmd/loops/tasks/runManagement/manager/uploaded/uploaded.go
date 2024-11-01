@@ -8,7 +8,7 @@ import (
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	"github.com/opst/knitfab/pkg/domain"
 	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 const PLAN_NAME = domain.Uploaded
@@ -26,7 +26,7 @@ func New(dbdata kdbdata.DataInterface) manager.Manager {
 			return r.Status, nil
 		}
 
-		outputs := utils.Map(
+		outputs := slices.Map(
 			r.Outputs, func(o domain.Assignment) domain.KnitDataBody { return o.KnitDataBody },
 		)
 		if r.Log != nil {

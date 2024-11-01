@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type RequestOption func(req *http.Request) *http.Request
@@ -41,7 +41,7 @@ func Chunked() RequestOption {
 // add Trailer header and trailer itself.
 func WithTrailer(key string, value string, values ...string) RequestOption {
 	return func(req *http.Request) *http.Request {
-		if _, ok := utils.First(
+		if _, ok := slices.First(
 			req.Header["Trailer"],
 			func(t string) bool { return t == key },
 		); ok {

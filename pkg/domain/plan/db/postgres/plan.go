@@ -16,8 +16,8 @@ import (
 	kpgintr "github.com/opst/knitfab/pkg/domain/internal/db/postgres"
 	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
 	xe "github.com/opst/knitfab/pkg/errors"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type planPG struct { // implements kdb.PlanInterface
@@ -83,7 +83,7 @@ func (m *planPG) Register(ctx context.Context, plan *types.PlanSpec) (string, er
 		return "", xe.Wrap(err)
 	}
 
-	if found, ok := utils.First(
+	if found, ok := slices.First(
 		planHashConflicted,
 		func(p types.Plan) bool { return plan.EquivPlan(&p) },
 	); ok {
@@ -248,7 +248,7 @@ func (m *planPG) getPlansByHash(ctx context.Context, conn kpool.Queryer, hash st
 	if err != nil {
 		return nil, err
 	}
-	return utils.DerefOf(utils.ValuesOf(plans)), nil
+	return slices.DerefOf(slices.ValuesOf(plans)), nil
 }
 
 type mountpointIds struct {
@@ -886,12 +886,12 @@ func (m *planPG) makeTagQuery(inTag []types.Tag, outTag []types.Tag) *findTagQue
 		}
 	}
 
-	outTagset := types.NewTagSet(utils.Map(outTag, trimSpace))
+	outTagset := types.NewTagSet(slices.Map(outTag, trimSpace))
 	if 0 < len(outTagset.SystemTag()) {
 		return nil
 	}
 
-	inTagset := types.NewTagSet(utils.Map(inTag, trimSpace))
+	inTagset := types.NewTagSet(slices.Map(inTag, trimSpace))
 
 	result := findTagQuery{
 		inUserTag:  inTagset.UserTag(),
@@ -1033,8 +1033,8 @@ func (m *planPG) find(
 		select "plan_id" from "input_match_system_tag"
 		order by "plan_id"
 		`,
-		utils.Map(tagQuery.outUserTag, func(v types.Tag) [2]string { return [2]string{v.Key, v.Value} }),
-		utils.Map(tagQuery.inUserTag, func(v types.Tag) [2]string { return [2]string{v.Key, v.Value} }),
+		slices.Map(tagQuery.outUserTag, func(v types.Tag) [2]string { return [2]string{v.Key, v.Value} }),
+		slices.Map(tagQuery.inUserTag, func(v types.Tag) [2]string { return [2]string{v.Key, v.Value} }),
 		imageVer.Image, imageVer.Version,
 		(active == logic.Indeterminate), (active == logic.True),
 		tagQuery.inSysKnitId, tagQuery.inSysTimestamp,

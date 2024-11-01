@@ -19,9 +19,9 @@ import (
 	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
 	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	kio "github.com/opst/knitfab/pkg/utils/io"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type responseDescriptor struct {
@@ -114,7 +114,7 @@ func Read(req *http.Request) (*requestSnapshot, error) {
 	}
 
 	var chunked bool
-	if _, ok := utils.First(req.TransferEncoding, func(s string) bool { return s == "chunked" }); ok {
+	if _, ok := slices.First(req.TransferEncoding, func(s string) bool { return s == "chunked" }); ok {
 		chunked = true
 	}
 

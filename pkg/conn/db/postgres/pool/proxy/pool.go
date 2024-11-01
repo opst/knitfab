@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type Callback func()
@@ -163,7 +163,7 @@ func (p *Pool) Acquire(ctx context.Context) (kpool.Conn, error) {
 	return nil, err
 }
 func (p *Pool) AcquireAllIdle(ctx context.Context) []kpool.Conn {
-	return utils.Map(
+	return slices.Map(
 		p.Base.AcquireAllIdle(ctx),
 		func(c kpool.Conn) kpool.Conn { return WrapConn(c, p) },
 	)

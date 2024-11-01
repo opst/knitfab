@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 // something begins SQL Transaction
@@ -238,7 +238,7 @@ func (p *pgxPool) AcquireFunc(ctx context.Context, f func(Conn) error) error {
 	return p.base.AcquireFunc(ctx, wf)
 }
 func (p *pgxPool) AcquireAllIdle(ctx context.Context) []Conn {
-	return utils.Map(
+	return slices.Map(
 		p.base.AcquireAllIdle(ctx),
 		func(c *pgxpool.Conn) Conn { return &pgxPoolConn{c} },
 	)

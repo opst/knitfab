@@ -14,8 +14,8 @@ import (
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
 	. "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
 	kpgnommock "github.com/opst/knitfab/pkg/domain/nomination/db/mock"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -319,7 +319,7 @@ func TestData_Find(t *testing.T) {
 						{Key: types.KeyKnitId, Value: Padding36("knit-a-and-b-new-done")},
 					},
 				},
-				then{knitId: utils.Map([]string{
+				then{knitId: slices.Map([]string{
 					"knit-a-and-b-new-done",
 				}, Padding36[string])},
 			},

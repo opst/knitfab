@@ -14,8 +14,8 @@ import (
 	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
 	krun "github.com/opst/knitfab/pkg/domain/run/db"
 	xe "github.com/opst/knitfab/pkg/errors"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/combination"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type NamingConvention interface {
@@ -552,7 +552,7 @@ func (m *runPG) find(ctx context.Context, conn kpool.Conn, query domain.RunFindQ
 		order by "updated_at", "run_id"
 		`,
 		len(query.PlanId) == 0, query.PlanId,
-		len(query.Status) == 0, utils.Map(
+		len(query.Status) == 0, slices.Map(
 			query.Status, func(s domain.KnitRunStatus) string { return string(s) },
 		),
 		len(query.InputKnitId) == 0, query.InputKnitId,
@@ -1044,8 +1044,8 @@ func (m *runPG) PickAndSetStatus(
 			from
 				"target_run", (select count(*) as "c" from "data") as "d"
 			`,
-			utils.Map(cursor.Status, domain.KnitRunStatus.String),
-			utils.Map(cursor.Pseudo, domain.PseudoPlanName.String),
+			slices.Map(cursor.Status, domain.KnitRunStatus.String),
+			slices.Map(cursor.Pseudo, domain.PseudoPlanName.String),
 			cursor.PseudoOnly,
 			cursor.Head,
 		).Scan(&runId, nil); err != nil {

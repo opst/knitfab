@@ -1,9 +1,9 @@
-package utils_test
+package nils_test
 
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/nils"
 )
 
 func TestIfNotNil(t *testing.T) {
@@ -42,7 +42,7 @@ func TestIfNotNil(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			when, then := testcase.when, testcase.then
-			actual := utils.IfNotNil(when.v, when.mapper)
+			actual := nils.IfNotNil(when.v, when.mapper)
 
 			if then == nil {
 				if actual != nil {
@@ -88,7 +88,7 @@ func TestDefault(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			when := testcase.when
-			actual := utils.Default(when.v, when.d)
+			actual := nils.Default(when.v, when.d)
 
 			if actual != testcase.then {
 				t.Errorf("not match:\n- actual   : %v\n- expected : %v", actual, testcase.then)

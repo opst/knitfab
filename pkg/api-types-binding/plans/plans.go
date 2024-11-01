@@ -6,20 +6,20 @@ import (
 	apiplans "github.com/opst/knitfab-api-types/plans"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 func ComposeMountpoint(mp domain.MountPoint) apiplans.Mountpoint {
 	return apiplans.Mountpoint{
 		Path: mp.Path,
-		Tags: utils.Map(mp.Tags.Slice(), bindtags.Compose),
+		Tags: slices.Map(mp.Tags.Slice(), bindtags.Compose),
 	}
 }
 
 func ComposeDetail(plan domain.Plan) apiplans.Detail {
 	var log *apiplans.LogPoint
 	if plan.Log != nil {
-		log = &apiplans.LogPoint{Tags: utils.Map(plan.Log.Tags.Slice(), bindtags.Compose)}
+		log = &apiplans.LogPoint{Tags: slices.Map(plan.Log.Tags.Slice(), bindtags.Compose)}
 	}
 
 	var onNode *apiplans.OnNode
@@ -40,8 +40,8 @@ func ComposeDetail(plan domain.Plan) apiplans.Detail {
 	return apiplans.Detail{
 		Summary:        ComposeSummary(plan.PlanBody),
 		Active:         plan.Active,
-		Inputs:         utils.Map(plan.Inputs, ComposeMountpoint),
-		Outputs:        utils.Map(plan.Outputs, ComposeMountpoint),
+		Inputs:         slices.Map(plan.Inputs, ComposeMountpoint),
+		Outputs:        slices.Map(plan.Outputs, ComposeMountpoint),
 		Resources:      apiplans.Resources(plan.Resources),
 		Log:            log,
 		OnNode:         onNode,
@@ -62,7 +62,7 @@ func ComposeSummary(planBody domain.PlanBody) apiplans.Summary {
 		rst.Name = p.Name.String()
 	}
 
-	rst.Annotations = utils.Map(planBody.Annotations, func(a domain.Annotation) apiplans.Annotation {
+	rst.Annotations = slices.Map(planBody.Annotations, func(a domain.Annotation) apiplans.Annotation {
 		return apiplans.Annotation{Key: a.Key, Value: a.Value}
 	})
 

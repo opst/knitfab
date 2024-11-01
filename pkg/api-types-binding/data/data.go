@@ -7,13 +7,13 @@ import (
 	bindrun "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 func ComposeSummary(body domain.KnitDataBody) data.Summary {
 	return data.Summary{
 		KnitId: body.KnitId,
-		Tags: utils.Map(
+		Tags: slices.Map(
 			body.Tags.Slice(),
 			func(dt domain.Tag) apitags.Tag { return apitags.Tag{Key: dt.Key, Value: dt.Value} },
 		),
@@ -35,15 +35,15 @@ func composeNominatedBy(n domain.Nomination) data.NominatedBy {
 }
 
 func ComposeDetail(d domain.KnitData) data.Detail {
-	downstreams, _ := utils.Group(d.Downstreams, func(d domain.Dependency) bool {
+	downstreams, _ := slices.Group(d.Downstreams, func(d domain.Dependency) bool {
 		return d.Status != domain.Invalidated
 	})
 
 	return data.Detail{
 		KnitId:      d.KnitId,
-		Tags:        utils.Map(d.Tags.Slice(), bindtags.Compose),
+		Tags:        slices.Map(d.Tags.Slice(), bindtags.Compose),
 		Upstream:    composeAssignTo(d.Upsteram),
-		Downstreams: utils.Map(downstreams, composeAssignTo),
-		Nomination:  utils.Map(d.NominatedBy, composeNominatedBy),
+		Downstreams: slices.Map(downstreams, composeAssignTo),
+		Nomination:  slices.Map(d.NominatedBy, composeNominatedBy),
 	}
 }

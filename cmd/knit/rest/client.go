@@ -17,8 +17,8 @@ import (
 	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/logic"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 // meaningless value
@@ -409,7 +409,7 @@ func NewClient(prof *kprof.KnitProfile) (KnitClient, error) {
 
 // build URL with path
 func (c *client) apipath(path ...string) string {
-	path = utils.Map(path, func(p string) string {
+	path = slices.Map(path, func(p string) string {
 		return strings.TrimPrefix(strings.TrimSuffix(p, "/"), "/")
 	})
 

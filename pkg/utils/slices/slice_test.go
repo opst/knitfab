@@ -1,11 +1,11 @@
-package utils_test
+package slices_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 func TestSliceUtils(t *testing.T) {
@@ -16,7 +16,7 @@ func TestSliceUtils(t *testing.T) {
 			called += 1
 			return v * 2
 		}
-		output := utils.Map(input, mapper)
+		output := slices.Map(input, mapper)
 
 		if called != len(input) {
 			t.Errorf("mapper has not been called enough. (actual, expected) = (%d, %d)", called, len(input))
@@ -40,7 +40,7 @@ func TestSliceUtils(t *testing.T) {
 			{key: "d", value: 2},
 		}
 
-		result := utils.ToMap(values, func(v T) string { return v.key })
+		result := slices.ToMap(values, func(v T) string { return v.key })
 
 		expected := map[string]T{
 			"a": {key: "a", value: 3},
@@ -64,7 +64,7 @@ func TestSliceUtils(t *testing.T) {
 			3: "baz",
 		}
 		{
-			actual := utils.ValuesOf(input)
+			actual := slices.ValuesOf(input)
 			expected := []string{"foo", "bar", "baz"}
 
 			if !cmp.SliceContentEq(actual, expected) {
@@ -75,7 +75,7 @@ func TestSliceUtils(t *testing.T) {
 			}
 		}
 		{
-			actual := utils.KeysOf(input)
+			actual := slices.KeysOf(input)
 			expected := []int{1, 2, 3}
 			if !cmp.SliceContentEq(actual, expected) {
 				t.Errorf(
@@ -88,7 +88,7 @@ func TestSliceUtils(t *testing.T) {
 
 	t.Run("First finds the first element which predicator matches", func(t *testing.T) {
 		haystack := []string{"our", "needle", "is", "nice"}
-		ret, ok := utils.First(haystack, func(s string) bool { return s[0] == 'n' })
+		ret, ok := slices.First(haystack, func(s string) bool { return s[0] == 'n' })
 		if !ok {
 			t.Error("First could not find target.")
 		}
@@ -99,7 +99,7 @@ func TestSliceUtils(t *testing.T) {
 
 	t.Run("First returns (zerovalue, false) if predicator does never match.", func(t *testing.T) {
 		haystack := []string{"this", "haystack", "is", "pure", "and", "dust-free!"}
-		ret, ok := utils.First(haystack, func(s string) bool { return s[0] == 'n' })
+		ret, ok := slices.First(haystack, func(s string) bool { return s[0] == 'n' })
 		if ok {
 			t.Errorf("First finds wrong target. %v", ret)
 		}
@@ -111,7 +111,7 @@ func TestSliceUtils(t *testing.T) {
 	t.Run("ApplyAll applies all modifiers to target", func(t *testing.T) {
 		type container struct{ value string }
 		input := &container{value: "ab"}
-		actual := utils.ApplyAll(
+		actual := slices.ApplyAll(
 			input,
 			func(c *container) *container {
 				c.value += "cd"
@@ -145,7 +145,7 @@ func TestSorted(t *testing.T) {
 
 	t.Run("when empty slice is given, it returns empty", func(t *testing.T) {
 		input := []Elem{}
-		result := utils.Sorted(input, sortByFoo)
+		result := slices.Sorted(input, sortByFoo)
 		if len(result) != 0 {
 			t.Errorf("result has length %d != 0", len(result))
 		}
@@ -165,10 +165,10 @@ func TestSorted(t *testing.T) {
 			{foo: 6, bar: 6},
 		}
 
-		result := utils.Sorted(input, sortByFoo)
+		result := slices.Sorted(input, sortByFoo)
 
 		expectedFoos := []int{2, 3, 3, 5, 5, 6}
-		actualFoos := utils.Map(result, func(el Elem) int { return el.foo })
+		actualFoos := slices.Map(result, func(el Elem) int { return el.foo })
 
 		if !cmp.SliceEq(actualFoos, expectedFoos) {
 			t.Errorf("it is not sorted by foo: %#v", result)
@@ -189,10 +189,10 @@ func TestSorted(t *testing.T) {
 			{foo: 6, bar: 6},
 		}
 
-		result := utils.Sorted(input, sortByBar)
+		result := slices.Sorted(input, sortByBar)
 
 		expectedBars := []int{1, 2, 3, 4, 5, 6}
-		actualBars := utils.Map(result, func(el Elem) int { return el.bar })
+		actualBars := slices.Map(result, func(el Elem) int { return el.bar })
 
 		if !cmp.SliceEq(actualBars, expectedBars) {
 			t.Errorf("it is not sorted by bar: %#v", result)
@@ -220,7 +220,7 @@ func TestBinarySearch(t *testing.T) {
 
 	t.Run("when empty slice is given, it returns 0", func(t *testing.T) {
 		sli := []Elem{}
-		index := utils.BinarySearch(sli, Elem{foo: 100, bar: 10}, fooOrdering)
+		index := slices.BinarySearch(sli, Elem{foo: 100, bar: 10}, fooOrdering)
 		if index != 0 {
 			t.Errorf("returned index is %d != 0", index)
 		}
@@ -267,7 +267,7 @@ func TestBinarySearch(t *testing.T) {
 				fmt.Sprintf("when it searches index for bar=%d, it should return %d", testcase.item.bar, testcase.expectedIndex),
 				func(t *testing.T) {
 					s := sli()
-					actual := utils.BinarySearch(s, testcase.item, barOrdering)
+					actual := slices.BinarySearch(s, testcase.item, barOrdering)
 					if actual != testcase.expectedIndex {
 						t.Errorf("returned index is wrong: (actual)%d != (expected)%d", actual, testcase.expectedIndex)
 					}
@@ -315,7 +315,7 @@ func TestBinarySearch(t *testing.T) {
 				fmt.Sprintf("when it searches index for bar=%d, it should return %d", testcase.item.bar, testcase.expectedIndex),
 				func(t *testing.T) {
 					s := sli()
-					actual := utils.BinarySearch(s, testcase.item, fooOrdering)
+					actual := slices.BinarySearch(s, testcase.item, fooOrdering)
 					if actual != testcase.expectedIndex {
 						t.Errorf("returned index is wrong: (actual)%d != (expected)%d", actual, testcase.expectedIndex)
 					}
@@ -333,7 +333,7 @@ func TestBinarySearch(t *testing.T) {
 func TestConcat(t *testing.T) {
 	t.Run("it concatenates slices which have items", func(t *testing.T) {
 		original := []int{1, 2, 3, 4, 5, 6, 7}
-		actual := utils.Concat(original[:2], original[2:5], original[5:])
+		actual := slices.Concat(original[:2], original[2:5], original[5:])
 
 		if !cmp.SliceEq(original, actual) {
 			t.Errorf("unexpected result: (actual, expected) = (%+v, %+v)", actual, original)
@@ -342,7 +342,7 @@ func TestConcat(t *testing.T) {
 
 	t.Run("it concatenates slices ignoreing empty slices", func(t *testing.T) {
 		original := []int{1, 2, 3, 4, 5, 6, 7}
-		actual := utils.Concat(
+		actual := slices.Concat(
 			[]int{}, original[:2],
 			[]int{}, original[2:5], []int{},
 			[]int{}, original[5:],
@@ -357,7 +357,7 @@ func TestConcat(t *testing.T) {
 	t.Run("it does not change passed slices", func(t *testing.T) {
 		a := []int{1, 2, 3}
 		b := []int{4, 5, 6}
-		utils.Concat(a, b)
+		slices.Concat(a, b)
 
 		if !cmp.SliceEq(a, []int{1, 2, 3}) {
 			t.Errorf("unexpected result: (actual, expected) = (%+v, %+v)", a, []int{1, 2, 3})
@@ -391,7 +391,7 @@ func TestFilter(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			actual := utils.Filter(testcase.values, testcase.pred)
+			actual := slices.Filter(testcase.values, testcase.pred)
 
 			if !cmp.SliceContentEq(actual, testcase.expected) {
 				t.Errorf(
@@ -432,7 +432,7 @@ func TestFlatten(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			when, then := testcase.when, testcase.then
-			actual := utils.Flatten(when)
+			actual := slices.Flatten(when)
 
 			if !cmp.SliceEq(actual, then) {
 				t.Errorf("unmatch: (actual, expected) = (%v, %v)", actual, then)
@@ -445,7 +445,7 @@ func TestGroup(t *testing.T) {
 	t.Run("it splits slice into groups along predicator", func(t *testing.T) {
 		values := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-		even, odd := utils.Group(values, func(v int) bool { return v%2 == 0 })
+		even, odd := slices.Group(values, func(v int) bool { return v%2 == 0 })
 
 		{
 			expected := []int{2, 4, 6, 8, 10}
@@ -464,7 +464,7 @@ func TestGroup(t *testing.T) {
 	t.Run("when all items are match, notmatch group is empty", func(t *testing.T) {
 		values := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-		small, large := utils.Group(values, func(v int) bool { return v < 100 })
+		small, large := slices.Group(values, func(v int) bool { return v < 100 })
 
 		{
 			if !cmp.SliceContentEq(small, values) {
@@ -481,7 +481,7 @@ func TestGroup(t *testing.T) {
 	t.Run("when no items are match, match group is empty", func(t *testing.T) {
 		values := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-		small, large := utils.Group(values, func(v int) bool { return v < -1 })
+		small, large := slices.Group(values, func(v int) bool { return v < -1 })
 
 		{
 			if len(small) != 0 {

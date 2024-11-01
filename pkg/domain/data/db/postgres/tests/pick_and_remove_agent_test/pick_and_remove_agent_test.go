@@ -15,9 +15,9 @@ import (
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables/matcher"
 	. "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	"github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -198,7 +198,7 @@ func TestPickAndRemoveAgent(t *testing.T) {
 				)
 			}
 
-			expectedRecords := utils.Map(
+			expectedRecords := slices.Map(
 				then.Records,
 				func(r RecordSpec) matcher.DataAgentMatcher {
 					return matcher.DataAgentMatcher{
