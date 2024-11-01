@@ -8,15 +8,15 @@ import (
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	types "github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	kw "github.com/opst/knitfab/pkg/domain/run/k8s/worker"
+	"github.com/opst/knitfab/pkg/domain/run/db"
+	"github.com/opst/knitfab/pkg/domain/run/k8s"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // Returns a manager for starting a worker for a run.
 func New(
-	getWorker func(context.Context, types.Run) (kw.Worker, error),
-	startWorker func(context.Context, types.Run, map[string]string) error,
-	setExit func(ctx context.Context, runId string, exit types.RunExit) error,
+	iK8sRun k8s.Interface,
+	iDBRun db.Interface,
 ) manager.Manager {
 	return func(
 		ctx context.Context,
@@ -26,7 +26,7 @@ func New(
 		types.KnitRunStatus,
 		error,
 	) {
-		w, err := getWorker(ctx, r)
+		w, err := iK8sRun.FindWorker(ctx, r.RunBody)
 		if err != nil {
 			if !kubeerr.IsNotFound(err) {
 				return r.Status, err
@@ -37,7 +37,7 @@ func New(
 				if err != nil {
 					return r.Status, err
 				}
-				if err := startWorker(ctx, r, resp.KnitfabExtension.Env); err != nil && !kubeerr.IsAlreadyExists(err) {
+				if _, err := iK8sRun.SpawnWorker(ctx, r, resp.KnitfabExtension.Env); err != nil && !kubeerr.IsAlreadyExists(err) {
 					return r.Status, err
 				}
 				return types.Starting, nil
@@ -46,7 +46,7 @@ func New(
 			if _, err := hooks.ToAborting.Before(bindruns.ComposeDetail(r)); err != nil {
 				return r.Status, err
 			}
-			if err := setExit(ctx, r.Id, types.RunExit{
+			if err := iDBRun.SetExit(ctx, r.Id, types.RunExit{
 				Code:    254,
 				Message: "worker for the run is not found",
 			}); err != nil {
@@ -99,7 +99,7 @@ func New(
 				Code:    s.Code,
 				Message: s.Message,
 			}
-			if err := setExit(ctx, r.Id, exit); err != nil {
+			if err := iDBRun.SetExit(ctx, r.Id, exit); err != nil {
 				return r.Status, err
 			}
 		}

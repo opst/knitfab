@@ -13,6 +13,8 @@ import (
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/pkg/domain/run/db/mock"
+	k8sRunMocks "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
 	kw "github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -72,20 +74,25 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 		return func(t *testing.T) {
 			ctx := context.Background()
 
-			getWorker := func(context.Context, domain.Run) (kw.Worker, error) {
+			iK8sRunMock := k8sRunMocks.New(t)
+
+			iK8sRunMock.Impl.FindWorker = func(context.Context, domain.RunBody) (kw.Worker, error) {
 				return nil, when.errGetWorker
 			}
+
 			startWorkerInvoked := false
-			startWorker := func(_ context.Context, _ domain.Run, env map[string]string) error {
+			iK8sRunMock.Impl.SpawnWorker = func(ctx context.Context, r domain.Run, env map[string]string) (kw.Worker, error) {
 				startWorkerInvoked = true
 				if !cmp.MapEq(env, when.respBeforeToStartingHook.KnitfabExtension.Env) {
 					t.Errorf("got env %v, want %v", env, when.respBeforeToStartingHook.KnitfabExtension.Env)
 				}
-				return when.errStartWorker
+				// first return value is not interested
+				return nil, when.errStartWorker
 			}
 
+			iDBRunMock := mock.NewRunInterface()
 			setExitInvoked := false
-			setExit := func(_ context.Context, runId string, exit domain.RunExit) error {
+			iDBRunMock.Impl.SetExit = func(_ context.Context, runId string, exit domain.RunExit) error {
 				setExitInvoked = true
 				if runId != when.run.Id {
 					t.Errorf("got runId %v, want %v", runId, when.run.Id)
@@ -100,7 +107,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				return when.errSetExit
 			}
 
-			testee := image.New(getWorker, startWorker, setExit)
+			testee := image.New(iK8sRunMock, iDBRunMock)
 
 			beforeToStartingHookInvoked := false
 			beforeToRunningHookInvoked := false
@@ -483,15 +490,18 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 				},
 			}
 
-			getWorker := func(context.Context, domain.Run) (kw.Worker, error) {
+			iK8sRunMock := k8sRunMocks.New(t)
+
+			iK8sRunMock.Impl.FindWorker = func(context.Context, domain.RunBody) (kw.Worker, error) {
 				return &FakeWorker{
 					runId:     run.Id,
 					jobStatus: when.jobStatus,
 				}, nil
 			}
 
+			iDBRunMock := mock.NewRunInterface()
 			setExitInvoked := false
-			setExit := func(_ context.Context, runId string, exit domain.RunExit) error {
+			iDBRunMock.Impl.SetExit = func(_ context.Context, runId string, exit domain.RunExit) error {
 				setExitInvoked = true
 				if runId != run.Id {
 					t.Errorf("got runId %v, want %v", runId, run.Id)
@@ -569,7 +579,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 				},
 			}
 
-			testee := image.New(getWorker, nil, setExit)
+			testee := image.New(iK8sRunMock, iDBRunMock)
 			gotStatus, gotError := testee(ctx, hooks, run)
 
 			if setExitInvoked != then.wantSetExitInvoked {

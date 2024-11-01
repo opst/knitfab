@@ -11,9 +11,9 @@ import (
 
 type KnitDatabase interface {
 	Data() kdata.DataInterface
-	Run() krun.RunInterface
+	Run() krun.Interface
 	Plan() kplan.PlanInterface
-	Garbage() kgarbage.GarbageInterface
+	Garbage() kgarbage.Interface
 	Schema() kschema.SchemaInterface
 	Keychain() kkeychain.KeychainInterface
 	Close() error

@@ -12,7 +12,7 @@ type pgGarbage struct {
 	pool kpool.Pool
 }
 
-func New(pool kpool.Pool) kgarbage.GarbageInterface {
+func New(pool kpool.Pool) kgarbage.Interface {
 	return &pgGarbage{pool: pool}
 }
 

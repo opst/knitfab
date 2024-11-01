@@ -27,13 +27,13 @@ type dataagt struct {
 	mux sync.Mutex
 }
 
-type Dataagt interface {
+type DataAgent interface {
 	Name() string
 
 	// API Listening port
 	APIPort() int32
 
-	// URL pointing to data agent api
+	// URL pointing to DataAgent api
 	URL() string
 
 	// Read or Write ?
@@ -42,8 +42,10 @@ type Dataagt interface {
 	// KnitID
 	KnitID() string
 
-	// PVC Name bound with this Datadgt
+	// PVC Name bound with this DataAgent
 	VolumeRef() string
+
+	PodPhase() cluster.PodPhase
 
 	// convert to string describing this object
 	String() string
@@ -78,6 +80,10 @@ func (agt *dataagt) Mode() domain.DataAgentMode {
 
 func (agt *dataagt) KnitID() string {
 	return agt.knitId
+}
+
+func (agt *dataagt) PodPhase() cluster.PodPhase {
+	return agt.pod.Status()
 }
 
 func (agt *dataagt) VolumeRef() string {
@@ -142,7 +148,7 @@ func Spawn(
 	kcluster cluster.Cluster,
 	da domain.DataAgent,
 	pendingDeadline time.Time,
-) (Dataagt, error) {
+) (DataAgent, error) {
 	podbuilder, err := Of(da)
 	if err != nil {
 		return nil, err
@@ -251,4 +257,44 @@ func Spawn(
 	}
 
 	return &dagt, nil
+}
+
+func Find(
+	ctx context.Context,
+	kcluster cluster.Cluster,
+	da domain.DataAgent,
+) (DataAgent, error) {
+	pvcspec, err := data.Of(da.KnitDataBody)
+	if err != nil {
+		return nil, err
+	}
+
+	podret := kcluster.GetPod(
+		ctx, retry.StaticBackoff(50*time.Millisecond), da.Name,
+		func(cluster.WithEvents[*kubecore.Pod]) error { return nil }, // everything is fine
+	)
+
+	pvcret := kcluster.GetPVC(
+		ctx, retry.StaticBackoff(50*time.Millisecond), pvcspec.Instance(),
+	)
+
+	ppod := <-podret
+	if err := ppod.Err; err != nil {
+		return nil, err
+	}
+	pod := ppod.Value
+
+	ppvc := <-pvcret
+	if err := ppvc.Err; err != nil {
+		return nil, err
+	}
+	pvc := ppvc.Value
+
+	return &dataagt{
+		namespace: kcluster.Namespace(),
+		knitId:    da.KnitDataBody.KnitId,
+		mode:      da.Mode,
+		pod:       pod,
+		pvc:       pvc,
+	}, nil
 }

@@ -19,7 +19,6 @@ import (
 
 type Knitfab interface {
 	Config() *bconf.KnitClusterConfig
-	Cluster() cluster.Cluster
 
 	Data() data.Interface
 	Run() run.Interface
@@ -81,7 +80,7 @@ func New(
 		run:  run.New(pg.Run(), k8sifs.Worker()),
 		plan: plan.New(pg.Plan()),
 
-		garbage:  garbage.New(pg.Garbage()),
+		garbage:  garbage.New(pg.Garbage(), k8sifs.Garbage()),
 		schema:   schema.New(pg.Schema()),
 		keychain: keychain.New(pg.Keychain(), k8sifs.KeyChain()),
 	}, nil

@@ -17,6 +17,7 @@ import (
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/metasource"
 	utils "github.com/opst/knitfab/pkg/utils"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 	kubecore "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -119,7 +120,7 @@ func TestSpawn(t *testing.T) {
 									Name: pvcname,
 								},
 								Spec: kubecore.PersistentVolumeClaimSpec{
-									StorageClassName: ref("knit-test-workloads-k8s-sc"),
+									StorageClassName: pointer.Ref("knit-test-workloads-k8s-sc"),
 									AccessModes:      []kubecore.PersistentVolumeAccessMode{kubecore.ReadOnlyMany},
 									Resources: kubecore.VolumeResourceRequirements{
 										Requests: kubecore.ResourceList{
@@ -137,8 +138,8 @@ func TestSpawn(t *testing.T) {
 							Delete(
 								ctx, pvcname,
 								kubeapimeta.DeleteOptions{
-									GracePeriodSeconds: ref[int64](0),
-									PropagationPolicy:  ref(kubeapimeta.DeletePropagationForeground),
+									GracePeriodSeconds: pointer.Ref[int64](0),
+									PropagationPolicy:  pointer.Ref(kubeapimeta.DeletePropagationForeground),
 								},
 							)
 						for {
@@ -195,8 +196,8 @@ func TestSpawn(t *testing.T) {
 							Pods(namespace).
 							Delete(
 								ctx, dbDataAgent.Name, kubeapimeta.DeleteOptions{
-									GracePeriodSeconds: ref[int64](0),
-									PropagationPolicy:  ref(kubeapimeta.DeletePropagationForeground),
+									GracePeriodSeconds: pointer.Ref[int64](0),
+									PropagationPolicy:  pointer.Ref(kubeapimeta.DeletePropagationForeground),
 								},
 							)
 					}()
@@ -259,7 +260,7 @@ func TestSpawn(t *testing.T) {
 									Name: pvcname,
 								},
 								Spec: kubecore.PersistentVolumeClaimSpec{
-									StorageClassName: ref("knit-test-workloads-k8s-sc"),
+									StorageClassName: pointer.Ref("knit-test-workloads-k8s-sc"),
 									AccessModes:      []kubecore.PersistentVolumeAccessMode{kubecore.ReadOnlyMany},
 									Resources: kubecore.VolumeResourceRequirements{
 										Requests: kubecore.ResourceList{
@@ -277,8 +278,8 @@ func TestSpawn(t *testing.T) {
 							Delete(
 								ctx, pvcname,
 								kubeapimeta.DeleteOptions{
-									GracePeriodSeconds: ref[int64](0),
-									PropagationPolicy:  ref(kubeapimeta.DeletePropagationForeground),
+									GracePeriodSeconds: pointer.Ref[int64](0),
+									PropagationPolicy:  pointer.Ref(kubeapimeta.DeletePropagationForeground),
 								},
 							)
 						for {
@@ -455,7 +456,7 @@ func TestSpawn(t *testing.T) {
 						Name: pvcname,
 					},
 					Spec: kubecore.PersistentVolumeClaimSpec{
-						StorageClassName: ref("knit-test-workloads-k8s-sc"),
+						StorageClassName: pointer.Ref("knit-test-workloads-k8s-sc"),
 						AccessModes:      []kubecore.PersistentVolumeAccessMode{kubecore.ReadOnlyMany},
 						Resources: kubecore.VolumeResourceRequirements{
 							Requests: kubecore.ResourceList{
@@ -472,8 +473,8 @@ func TestSpawn(t *testing.T) {
 					Delete(
 						ctx, pvcname,
 						kubeapimeta.DeleteOptions{
-							GracePeriodSeconds: ref[int64](0),
-							PropagationPolicy:  ref(kubeapimeta.DeletePropagationForeground),
+							GracePeriodSeconds: pointer.Ref[int64](0),
+							PropagationPolicy:  pointer.Ref(kubeapimeta.DeletePropagationForeground),
 						},
 					)
 				for {
@@ -679,6 +680,170 @@ func TestSpawn(t *testing.T) {
 	})
 }
 
-func ref[T any](v T) *T {
-	return &v
+func TestFind(t *testing.T) {
+	{
+		theory := func(mode domain.DataAgentMode) func(t *testing.T) {
+			return func(t *testing.T) {
+				t.Run("When Dataagt is exists, it should be found", func(t *testing.T) {
+					ctx, cancel := testutilctx.WithTest(context.Background(), t)
+					defer cancel()
+
+					cluster, clientset := testenv.NewCluster(t)
+					namespace := cluster.Namespace()
+					configs := (&bconf.KnitClusterConfigMarshall{
+						Namespace: namespace,
+						Database:  "postgres://do-not-care",
+						DataAgent: &bconf.DataAgentConfigMarshall{
+							Image: testenv.Images().Dataagt,
+							Port:  8080,
+							Volume: &bconf.VolumeConfigMarshall{
+								StorageClassName: testenv.STORAGE_CLASS_NAME,
+								InitialCapacity:  "1Ki",
+							},
+						},
+						Worker: &bconf.WorkerConfigMarshall{
+							Priority: "fake-priority",
+							Init: &bconf.InitContainerConfigMarshall{
+								Image: "repo.invalid/init-image:latest",
+							},
+							Nurse: &bconf.NurseContainerConfigMarshall{
+								Image:                "repo.invalid/nurse-image:latest",
+								ServiceAccountSecret: "fake-sa",
+							},
+						},
+						Keychains: &bconf.KeychainsConfigMarshall{
+							SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+								Name: "signe-for-import-token",
+							},
+						},
+					}).TrySeal()
+
+					pvcname := "knit-test-spawning-k8s-get-pvc"
+					if mode == domain.DataAgentRead {
+						try.To(clientset.CoreV1().PersistentVolumeClaims(namespace).Create(
+							ctx,
+							&kubecore.PersistentVolumeClaim{
+								ObjectMeta: kubeapimeta.ObjectMeta{
+									Name: pvcname,
+								},
+								Spec: kubecore.PersistentVolumeClaimSpec{
+									StorageClassName: pointer.Ref("knit-test-workloads-k8s-sc"),
+									AccessModes:      []kubecore.PersistentVolumeAccessMode{kubecore.ReadOnlyMany},
+									Resources: kubecore.VolumeResourceRequirements{
+										Requests: kubecore.ResourceList{
+											kubecore.ResourceStorage: configs.DataAgent().Volume().InitialCapacity(),
+										},
+									},
+								},
+							},
+							kubeapimeta.CreateOptions{},
+						)).OrFatal(t)
+					}
+					defer func() {
+						clientset.CoreV1().
+							PersistentVolumeClaims(namespace).
+							Delete(
+								ctx, pvcname,
+								kubeapimeta.DeleteOptions{
+									GracePeriodSeconds: pointer.Ref[int64](0),
+									PropagationPolicy:  pointer.Ref(kubeapimeta.DeletePropagationForeground),
+								},
+							)
+						for {
+							_, err := clientset.CoreV1().
+								PersistentVolumeClaims(namespace).
+								Get(ctx, pvcname, kubeapimeta.GetOptions{})
+							if kubeerr.IsNotFound(err) {
+								return
+							}
+							time.Sleep(50 * time.Millisecond)
+						}
+					}()
+
+					targetData := domain.KnitDataBody{
+						KnitId:    k8smock.LabelValue(t, lenUUID),
+						VolumeRef: pvcname,
+					}
+
+					dbDataAgent := domain.DataAgent{
+						Name:         fmt.Sprintf("test-dataagt-%s-%s", mode, targetData.KnitId),
+						Mode:         mode,
+						KnitDataBody: targetData,
+					}
+					try.To(dataagt.Spawn(ctx, configs, cluster, dbDataAgent, time.Now().Add(1*time.Hour))).OrFatal(t)
+
+					testee := try.To(dataagt.Find(ctx, cluster, dbDataAgent)).OrFatal(t)
+
+					// ------ assert testee props. -------
+					if testee.APIPort() != configs.DataAgent().Port() {
+						t.Errorf(
+							"APIPort unmatch (actual, expected) = (%d, %d)",
+							testee.APIPort(), configs.DataAgent().Port(),
+						)
+					}
+
+					if testee.Name() != dbDataAgent.Name {
+						t.Errorf(
+							"dataagt name should be its service name. (acutal, expected) = (%s, %s)",
+							testee.Name(), dbDataAgent.Name,
+						)
+					}
+
+					if testee.Mode() != mode {
+						t.Errorf("Dataagt should be %s mode, but %s", mode, testee.Mode())
+					}
+
+					if testee.VolumeRef() != targetData.VolumeRef {
+						t.Errorf("Dataagt should have volume ref. %s", testee.VolumeRef())
+					}
+
+					// --- close test ---
+					t.Run("closeablitity", func(t *testing.T) {
+						if err := testee.Close(); err != nil {
+							t.Errorf("close caused error. %#v", err)
+						}
+
+						if _, err := clientset.CoreV1().
+							PersistentVolumeClaims(cluster.Namespace()).
+							Get(ctx, targetData.VolumeRef, kubeapimeta.GetOptions{}); err != nil {
+							t.Errorf("PVC should not be removed if Dataagt is closed. %#v", err)
+						}
+
+						if _, err := clientset.CoreV1().
+							Pods(cluster.Namespace()).
+							Get(ctx, dbDataAgent.Name, kubeapimeta.GetOptions{}); !kubeerr.IsNotFound(err) {
+							t.Errorf("pod is found after closed. error = %#v", err)
+						}
+					})
+				})
+			}
+		}
+		t.Run("[Read]", theory(domain.DataAgentRead))
+		t.Run("[Write]", theory(domain.DataAgentWrite))
+	}
+
+	t.Run("When Dataagt is not exists, it should return error", func(t *testing.T) {
+		ctx, cancel := testutilctx.WithTest(context.Background(), t)
+		defer cancel()
+
+		cluster, _ := testenv.NewCluster(t)
+
+		pvcname := "knit-test-spawning-k8s-get-pvc"
+
+		targetData := domain.KnitDataBody{
+			KnitId:    k8smock.LabelValue(t, lenUUID),
+			VolumeRef: pvcname,
+		}
+
+		dbDataAgent := domain.DataAgent{
+			Name:         fmt.Sprintf("test-dataagt-read-%s", targetData.KnitId),
+			Mode:         domain.DataAgentRead,
+			KnitDataBody: targetData,
+		}
+
+		_, err := dataagt.Find(ctx, cluster, dbDataAgent)
+		if !kubeerr.IsNotFound(err) {
+			t.Errorf("expected error is not returned. %#v", err)
+		}
+	})
 }

@@ -7,62 +7,60 @@ import (
 
 	"github.com/opst/knitfab/cmd/loops/tasks/housekeeping"
 	"github.com/opst/knitfab/pkg/domain"
-	mocks "github.com/opst/knitfab/pkg/domain/data/db/mock"
+	dbdatamocks "github.com/opst/knitfab/pkg/domain/data/db/mock"
+	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
+	k8sdatamocks "github.com/opst/knitfab/pkg/domain/data/k8s/mock"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/utils/retry"
-	kubecore "k8s.io/api/core/v1"
-	kubeevents "k8s.io/api/events/v1"
 )
 
-type MockedGetPodder struct {
-	ImplGetPod func(
-		ctx context.Context, backoff retry.Backoff, name string,
-		requirements ...cluster.Requirement[cluster.WithEvents[*kubecore.Pod]],
-	) retry.Promise[cluster.Pod]
+type MockDataAgent struct {
+	name       string
+	aPIPort    int32
+	url        string
+	mode       domain.DataAgentMode
+	knitID     string
+	volumeRef  string
+	podPhase   cluster.PodPhase
+	stringExpr string
+	closeError error
+	closed     bool
 }
 
-func (m *MockedGetPodder) GetPod(
-	ctx context.Context, backoff retry.Backoff, name string,
-	requirements ...cluster.Requirement[cluster.WithEvents[*kubecore.Pod]],
-) retry.Promise[cluster.Pod] {
-	return m.ImplGetPod(ctx, backoff, name, requirements...)
+func (m *MockDataAgent) Name() string {
+	return m.name
 }
 
-type MockPod struct {
-	MockedStatus cluster.PodPhase
-	IsClosed     bool
-	CloseResult  error
+func (m *MockDataAgent) APIPort() int32 {
+	return m.aPIPort
 }
 
-var _ cluster.Pod = &MockPod{}
-
-func (m *MockPod) Name() string {
-	return "fake name"
+func (m *MockDataAgent) URL() string {
+	return m.url
 }
 
-func (m *MockPod) Host() string {
-	return "test.invalid"
+func (m *MockDataAgent) Mode() domain.DataAgentMode {
+	return m.mode
 }
 
-func (m *MockPod) Ports() map[string]int32 {
-	return map[string]int32{"http": 8080}
+func (m *MockDataAgent) KnitID() string {
+	return m.knitID
 }
 
-func (m *MockPod) Namespace() string {
-	return "example"
+func (m *MockDataAgent) VolumeRef() string {
+	return m.volumeRef
 }
 
-func (m *MockPod) Status() cluster.PodPhase {
-	return m.MockedStatus
+func (m *MockDataAgent) PodPhase() cluster.PodPhase {
+	return m.podPhase
 }
 
-func (m *MockPod) Close() error {
-	m.IsClosed = true
-	return m.CloseResult
+func (m *MockDataAgent) String() string {
+	return m.stringExpr
 }
 
-func (m *MockPod) Events() []kubeevents.Event {
-	return nil
+func (m *MockDataAgent) Close() error {
+	m.closed = true
+	return m.closeError
 }
 
 type CallbackReturns struct {
@@ -99,7 +97,7 @@ func TestTask(t *testing.T) {
 		theory := func(when When, then Then) func(t *testing.T) {
 			return func(t *testing.T) {
 
-				mDataInterface := mocks.NewDataInterface()
+				mDataInterface := dbdatamocks.NewDataInterface()
 				mDataInterface.Impl.PickAndRemoveAgent = func(
 					_ context.Context, cursor domain.DataAgentCursor,
 					_ func(domain.DataAgent) (bool, error),
@@ -187,7 +185,7 @@ func TestTask(t *testing.T) {
 		}
 		theory := func(when When) func(t *testing.T) {
 			return func(t *testing.T) {
-				mDataInterface := mocks.NewDataInterface()
+				mDataInterface := dbdatamocks.NewDataInterface()
 				mDataInterface.Impl.PickAndRemoveAgent = func(
 					_ context.Context, _ domain.DataAgentCursor,
 					f func(domain.DataAgent) (bool, error),
@@ -196,26 +194,20 @@ func TestTask(t *testing.T) {
 					return domain.DataAgentCursor{}, nil
 				}
 
-				mGetPodder := &MockedGetPodder{
-					ImplGetPod: func(
-						ctx context.Context, backoff retry.Backoff, name string,
-						_ ...cluster.Requirement[cluster.WithEvents[*kubecore.Pod]],
-					) retry.Promise[cluster.Pod] {
+				mockIData := k8sdatamocks.New(t)
+				mockIData.Impl.FindDataAgent = func(
+					ctx context.Context, da domain.DataAgent,
+				) (dataagt.DataAgent, error) {
+					if da.Name != when.InvokeCallbackWith.Name {
+						t.Errorf("expected name %v, got %v", when.InvokeCallbackWith.Name, da.Name)
+					}
 
-						if name != when.InvokeCallbackWith.Name {
-							t.Errorf("expected name %v, got %v", when.InvokeCallbackWith.Name, name)
-						}
-
-						ch := make(chan retry.Result[cluster.Pod], 1)
-						ch <- retry.Result[cluster.Pod]{
-							Value: &MockPod{MockedStatus: cluster.PodSucceeded},
-						}
-						close(ch)
-						return ch
-					},
+					return &MockDataAgent{
+						podPhase: cluster.PodSucceeded,
+					}, nil
 				}
 
-				testee := housekeeping.Task(mDataInterface, mGetPodder)
+				testee := housekeeping.Task(mDataInterface, mockIData)
 
 				ctx := context.Background()
 				testee(ctx, domain.DataAgentCursor{})
@@ -242,7 +234,7 @@ func TestTask(t *testing.T) {
 		}
 		theory := func(when When, then Then) func(t *testing.T) {
 			return func(t *testing.T) {
-				mDataInterface := mocks.NewDataInterface()
+				mDataInterface := dbdatamocks.NewDataInterface()
 				mDataInterface.Impl.PickAndRemoveAgent = func(
 					_ context.Context, _ domain.DataAgentCursor,
 					f func(domain.DataAgent) (bool, error),
@@ -263,23 +255,16 @@ func TestTask(t *testing.T) {
 					return domain.DataAgentCursor{}, nil
 				}
 
-				pod := &MockPod{
-					MockedStatus: when.PodStatus,
-					CloseResult:  when.PodCloseResult,
+				mockDataAgent := &MockDataAgent{
+					podPhase:   when.PodStatus,
+					closeError: when.PodCloseResult,
 				}
 
-				mGetPodder := &MockedGetPodder{
-					ImplGetPod: func(
-						ctx context.Context, backoff retry.Backoff, name string,
-						_ ...cluster.Requirement[cluster.WithEvents[*kubecore.Pod]],
-					) retry.Promise[cluster.Pod] {
-						ch := make(chan retry.Result[cluster.Pod], 1)
-						ch <- retry.Result[cluster.Pod]{
-							Value: pod, Err: when.PodError,
-						}
-						close(ch)
-						return ch
-					},
+				mGetPodder := k8sdatamocks.New(t)
+				mGetPodder.Impl.FindDataAgent = func(
+					ctx context.Context, da domain.DataAgent,
+				) (dataagt.DataAgent, error) {
+					return mockDataAgent, when.PodError
 				}
 
 				testee := housekeeping.Task(mDataInterface, mGetPodder)
@@ -287,10 +272,10 @@ func TestTask(t *testing.T) {
 				ctx := context.Background()
 				testee(ctx, domain.DataAgentCursor{})
 
-				if pod.IsClosed != then.WantClose {
+				if mockDataAgent.closed != then.WantClose {
 					t.Errorf(
 						"pod is closed?: actual = %v , expected = %v",
-						pod.IsClosed, then.WantClose,
+						mockDataAgent.closed, then.WantClose,
 					)
 				}
 			}

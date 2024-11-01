@@ -7,7 +7,7 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 )
 
-type RunInterface interface {
+type Interface interface {
 	// create new run based a pseudo plan
 	//
 	// Along with this, data & mountpoint for output will be created.

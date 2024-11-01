@@ -16,7 +16,7 @@ import (
 	kstrings "github.com/opst/knitfab/pkg/utils/strings"
 )
 
-func FindRunHandler(dbRun kdbrun.RunInterface) echo.HandlerFunc {
+func FindRunHandler(dbRun kdbrun.Interface) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
@@ -98,7 +98,7 @@ func FindRunHandler(dbRun kdbrun.RunInterface) echo.HandlerFunc {
 
 }
 
-func GetRunHandler(dbrun kdbrun.RunInterface) echo.HandlerFunc {
+func GetRunHandler(dbrun kdbrun.Interface) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
@@ -121,7 +121,7 @@ func GetRunHandler(dbrun kdbrun.RunInterface) echo.HandlerFunc {
 	}
 }
 
-func AbortRunHandler(dbrun kdbrun.RunInterface, paramnRunId string) echo.HandlerFunc {
+func AbortRunHandler(dbrun kdbrun.Interface, paramnRunId string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
 		runId := c.Param(paramnRunId)
@@ -158,7 +158,7 @@ func AbortRunHandler(dbrun kdbrun.RunInterface, paramnRunId string) echo.Handler
 	}
 }
 
-func TearoffRunHandler(dbrun kdbrun.RunInterface, paramnRunId string) echo.HandlerFunc {
+func TearoffRunHandler(dbrun kdbrun.Interface, paramnRunId string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Response().Header().Add("Content-Type", "application/json")
 		runId := c.Param(paramnRunId)
@@ -194,7 +194,7 @@ func TearoffRunHandler(dbrun kdbrun.RunInterface, paramnRunId string) echo.Handl
 	}
 }
 
-func DeleteRunHandler(dbrun kdbrun.RunInterface) echo.HandlerFunc {
+func DeleteRunHandler(dbrun kdbrun.Interface) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
 		c.Response().Header().Add("Content-Type", "application/json")
@@ -217,7 +217,7 @@ func DeleteRunHandler(dbrun kdbrun.RunInterface) echo.HandlerFunc {
 	}
 }
 
-func RetryRunHandler(dbrun kdbrun.RunInterface, paramRunId string) echo.HandlerFunc {
+func RetryRunHandler(dbrun kdbrun.Interface, paramRunId string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		runId := c.Param(paramRunId)

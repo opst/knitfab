@@ -6,20 +6,20 @@ import (
 )
 
 type Interface interface {
-	Database() db.RunInterface
+	Database() db.Interface
 	K8s() k8s.Interface
 }
 
 type impl struct {
-	db     db.RunInterface
+	db     db.Interface
 	worker k8s.Interface
 }
 
-func New(db db.RunInterface, worker k8s.Interface) Interface {
+func New(db db.Interface, worker k8s.Interface) Interface {
 	return &impl{db: db, worker: worker}
 }
 
-func (i *impl) Database() db.RunInterface {
+func (i *impl) Database() db.Interface {
 	return i.db
 }
 

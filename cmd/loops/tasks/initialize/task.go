@@ -33,7 +33,7 @@ func Seed() domain.RunCursor {
 //
 // - task : promote waiting run to ready.
 func Task(
-	irun kdbrun.RunInterface,
+	irun kdbrun.Interface,
 	init k8srun.Interface,
 	hook hook.Hook[apiruns.Detail, struct{}],
 ) recurring.Task[domain.RunCursor] {

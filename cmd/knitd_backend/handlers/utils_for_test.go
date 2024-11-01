@@ -201,6 +201,7 @@ type MockedDataagt struct {
 		Mode      func() types.DataAgentMode
 		KnitID    func() string
 		VolumeRef func() string
+		PodPhase  func() cluster.PodPhase
 		String    func() string
 	}
 	Calls struct {
@@ -215,6 +216,7 @@ type MockedDataagt struct {
 		Mode      CallLog[any]
 		KnitID    CallLog[any]
 		VolumeRef CallLog[any]
+		PodPhase  CallLog[any]
 		String    CallLog[any]
 	}
 }
@@ -245,7 +247,7 @@ func NewBrokenDataagt() *MockedDataagt {
 	return da
 }
 
-var _ dataagt.Dataagt = &MockedDataagt{}
+var _ dataagt.DataAgent = &MockedDataagt{}
 
 func (m *MockedDataagt) Namespace() string {
 	m.Calls.Namespace.Args = append(m.Calls.Namespace.Args, nil)
@@ -339,6 +341,14 @@ func (m *MockedDataagt) String() string {
 	m.Calls.String.Args = append(m.Calls.String.Args, nil)
 	if m.Impl.String != nil {
 		return m.Impl.String()
+	}
+	panic(errors.New("it should not be called"))
+}
+
+func (m *MockedDataagt) PodPhase() cluster.PodPhase {
+	m.Calls.PodPhase.Args = append(m.Calls.PodPhase.Args, nil)
+	if m.Impl.PodPhase != nil {
+		return m.Impl.PodPhase()
 	}
 	panic(errors.New("it should not be called"))
 }

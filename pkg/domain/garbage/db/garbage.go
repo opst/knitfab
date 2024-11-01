@@ -6,7 +6,7 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 )
 
-type GarbageInterface interface {
+type Interface interface {
 	// pop garbage item.
 	//
 	// Args

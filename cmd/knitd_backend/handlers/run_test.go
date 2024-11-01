@@ -18,8 +18,10 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	dbdatamock "github.com/opst/knitfab/pkg/domain/data/db/mock"
 	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
+	dataK8sMock "github.com/opst/knitfab/pkg/domain/data/k8s/mock"
 	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
 	dbrunmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
+	runK8sMock "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
 	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
@@ -174,8 +176,8 @@ func TestGetRunLogHandler(t *testing.T) {
 				},
 			}
 
-			mRunInterface := dbrunmock.NewRunInterface()
-			mRunInterface.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
+			mRunDB := dbrunmock.NewRunInterface()
+			mRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 				expected := []string{"test-run-id"}
 				if !cmp.SliceContentEq(runId, expected) {
 					t.Errorf("unexpected query: runid: (actual, expected) = (%v, %v)", runId, expected)
@@ -190,8 +192,8 @@ func TestGetRunLogHandler(t *testing.T) {
 				KnitDataBody: targetData,
 			}
 
-			mDataInterface := dbdatamock.NewDataInterface()
-			mDataInterface.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
+			mDataDB := dbdatamock.NewDataInterface()
+			mDataDB.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
 				if s != targetData.KnitId {
 					t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, targetData.KnitId)
 				}
@@ -201,7 +203,7 @@ func TestGetRunLogHandler(t *testing.T) {
 
 				return newDataAgent, nil
 			}
-			mDataInterface.Impl.RemoveAgent = func(ctx context.Context, s string) error {
+			mDataDB.Impl.RemoveAgent = func(ctx context.Context, s string) error {
 				if s != newDataAgent.Name {
 					t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, newDataAgent.Name)
 				}
@@ -221,27 +223,29 @@ func TestGetRunLogHandler(t *testing.T) {
 			ectx.SetParamNames("runid")
 			ectx.SetParamValues("test-run-id")
 
+			mDataK8s := dataK8sMock.New(t)
 			spawnDataagtCalled := 0
+			mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadlint time.Time) (dataagt.DataAgent, error) {
+				spawnDataagtCalled += 1
+
+				if !newDataAgent.Equal(&d) {
+					t.Errorf(
+						"DataAgent\nactual:   %+v\nexpected: %+v",
+						d, targetData,
+					)
+				}
+
+				return dagt, nil
+			}
+
+			mRunK8s := runK8sMock.New(t)
+			mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
+				t.Error("FindWorker: should not be called")
+				return nil, nil
+			}
+
 			testee := handlers.GetRunLogHandler(
-				mRunInterface,
-				mDataInterface,
-				func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
-					spawnDataagtCalled += 1
-
-					if !newDataAgent.Equal(&d) {
-						t.Errorf(
-							"DataAgent\nactual:   %+v\nexpected: %+v",
-							d, targetData,
-						)
-					}
-
-					return dagt, nil
-				},
-				func(ctx context.Context, r domain.Run) (worker.Worker, error) {
-					t.Error("getWorker: should not be called")
-					return nil, nil
-				},
-				"runid",
+				mRunDB, mDataDB, mDataK8s, mRunK8s, "runid",
 			)
 			if err := testee(ectx); err != nil {
 				t.Fatalf("testee returns error unexpectedly. %v", err)
@@ -274,15 +278,15 @@ func TestGetRunLogHandler(t *testing.T) {
 				t.Errorf("dataagt.Close has not been called.")
 			}
 
-			if mRunInterface.Calls.Get.Times() < 1 {
+			if mRunDB.Calls.Get.Times() < 1 {
 				t.Errorf("RunInterface.Get has not been called.")
 			}
 
-			if mDataInterface.Calls.NewAgent.Times() < 1 {
+			if mDataDB.Calls.NewAgent.Times() < 1 {
 				t.Errorf("DataInterface.NewAgent has not been called.")
 			}
 
-			if mDataInterface.Calls.RemoveAgent.Times() < 1 {
+			if mDataDB.Calls.RemoveAgent.Times() < 1 {
 				t.Errorf("DataInterface.RemoveAgent has not been called.")
 			}
 
@@ -583,8 +587,8 @@ func TestGetRunLogHandler(t *testing.T) {
 		},
 	} {
 		t.Run("When tring to read run log "+name, func(t *testing.T) {
-			mRunInterface := dbrunmock.NewRunInterface()
-			mRunInterface.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
+			mRunDB := dbrunmock.NewRunInterface()
+			mRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 				if testcase.errorFromRunGet != nil {
 					return nil, testcase.errorFromRunGet
 				} else if testcase.run != nil {
@@ -593,8 +597,8 @@ func TestGetRunLogHandler(t *testing.T) {
 				return map[string]domain.Run{}, nil
 			}
 
-			mDataInterface := dbdatamock.NewDataInterface()
-			mDataInterface.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
+			mDataDB := dbdatamock.NewDataInterface()
+			mDataDB.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
 				da := domain.DataAgent{
 					Name:         "test-log-knit-id",
 					Mode:         domain.DataAgentRead,
@@ -607,34 +611,36 @@ func TestGetRunLogHandler(t *testing.T) {
 				return da, nil
 			}
 
-			mDataInterface.Impl.RemoveAgent = func(ctx context.Context, s string) error {
+			mDataDB.Impl.RemoveAgent = func(ctx context.Context, s string) error {
 				return nil
 			}
 
-			testee := handlers.GetRunLogHandler(
-				mRunInterface,
-				mDataInterface,
-				func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-					if testcase.errorFromSpawner != nil {
-						return nil, testcase.errorFromSpawner
-					}
+			mDataK8s := dataK8sMock.New(t)
+			mDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+				if testcase.errorFromSpawner != nil {
+					return nil, testcase.errorFromSpawner
+				}
 
-					serv := httptest.NewServer(
-						// No handlers are need for mock dataagt.
-						// This API should not access DataAgent because of the caused error.
-						nil,
-					)
-					t.Cleanup(serv.Close)
-					dagt := NewMockedDataagt(serv)
-					dagt.Impl.Close = func() error { return nil }
-					t.Cleanup(func() { dagt.Close() })
-					return dagt, nil
-				},
-				func(ctx context.Context, r domain.Run) (worker.Worker, error) {
-					t.Error("getWorker: should not be called")
-					return nil, nil
-				},
-				"runid",
+				serv := httptest.NewServer(
+					// No handlers are need for mock dataagt.
+					// This API should not access DataAgent because of the caused error.
+					nil,
+				)
+				t.Cleanup(serv.Close)
+				dagt := NewMockedDataagt(serv)
+				dagt.Impl.Close = func() error { return nil }
+				t.Cleanup(func() { dagt.Close() })
+				return dagt, nil
+			}
+
+			mRunK8s := runK8sMock.New(t)
+			mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
+				t.Error("FindWorker: should not be called")
+				return nil, nil
+			}
+
+			testee := handlers.GetRunLogHandler(
+				mRunDB, mDataDB, mDataK8s, mRunK8s, "runid",
 			)
 
 			runId := "test-run-id"
@@ -649,7 +655,7 @@ func TestGetRunLogHandler(t *testing.T) {
 				if err != nil {
 					t.Errorf("response is error, unexpectedly: %+v", err)
 				}
-				if mDataInterface.Calls.RemoveAgent.Times() < 1 {
+				if mDataDB.Calls.RemoveAgent.Times() < 1 {
 					t.Errorf("DataInterface.RemoveAgent should be called.")
 				}
 				return
@@ -662,7 +668,7 @@ func TestGetRunLogHandler(t *testing.T) {
 					t.Errorf("error code is not %d. actual = %d", testcase.expectedStatusCode, httperr.Code)
 				}
 			}
-			if 0 < mDataInterface.Calls.RemoveAgent.Times() {
+			if 0 < mDataDB.Calls.RemoveAgent.Times() {
 				t.Errorf("DataInterface.RemoveAgent should not be called.")
 			}
 		})
@@ -698,20 +704,20 @@ func TestGetRunLogHandler(t *testing.T) {
 			},
 		}
 
-		mRunInterface := dbrunmock.NewRunInterface()
-		mRunInterface.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
+		mRunDB := dbrunmock.NewRunInterface()
+		mRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 			return run, nil
 		}
 
-		mDataInterface := dbdatamock.NewDataInterface()
-		mDataInterface.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
+		mDataDB := dbdatamock.NewDataInterface()
+		mDataDB.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
 			return domain.DataAgent{
 				Name:         "test-log-knit-id",
 				Mode:         domain.DataAgentRead,
 				KnitDataBody: databody,
 			}, nil
 		}
-		mDataInterface.Impl.RemoveAgent = func(ctx context.Context, s string) error {
+		mDataDB.Impl.RemoveAgent = func(ctx context.Context, s string) error {
 			if s != "test-log-knit-id" {
 				t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, "test-log-knit-id")
 			}
@@ -721,16 +727,19 @@ func TestGetRunLogHandler(t *testing.T) {
 		dagt := NewBrokenDataagt()
 		dagt.Impl.Close = func() error { return nil }
 
+		mDataK8s := dataK8sMock.New(t)
+		mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+
+		mRunK8s := runK8sMock.New(t)
+		mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
+			t.Error("FindWorker: should not be called")
+			return nil, nil
+		}
+
 		testee := handlers.GetRunLogHandler(
-			mRunInterface, mDataInterface,
-			func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-			func(ctx context.Context, r domain.Run) (worker.Worker, error) {
-				t.Error("getWorker: should not be called")
-				return nil, nil
-			},
-			"runid",
+			mRunDB, mDataDB, mDataK8s, mRunK8s, "runid",
 		)
 
 		runId := "test-run-id"
@@ -753,7 +762,7 @@ func TestGetRunLogHandler(t *testing.T) {
 			t.Errorf("dataagt.Close has not been called.")
 		}
 
-		if mDataInterface.Calls.RemoveAgent.Times() < 1 {
+		if mDataDB.Calls.RemoveAgent.Times() < 1 {
 			t.Errorf("DataInterface.RemoveAgent has not been called.")
 		}
 
@@ -819,8 +828,8 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 				},
 			}
 
-			mRunInterface := dbrunmock.NewRunInterface()
-			mRunInterface.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
+			mRunDB := dbrunmock.NewRunInterface()
+			mRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 				wantRunId := []string{"test-run-id"}
 				if !cmp.SliceContentEq(runId, wantRunId) {
 					t.Errorf("unexpected query: runid: (actual, expected) = (%v, %v)", runId, wantRunId)
@@ -832,27 +841,29 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 				return targetRun, nil
 			}
 
-			mDataInterface := dbdatamock.NewDataInterface()
-			spawnDataAgent := func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
+			mDataDB := dbdatamock.NewDataInterface()
+			mDataK8s := dataK8sMock.New(t)
+			mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
 				t.Errorf("spawnDataAgent: should not be called")
 				return nil, nil
 			}
 
-			getWorker := func(ctx context.Context, r domain.Run) (worker.Worker, error) {
-				t.Error("getWorker: should not be called")
+			mRunK8s := runK8sMock.New(t)
+			mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
+				t.Error("FindWorker: should not be called")
 				return nil, when.errorFromWorker
 			}
 
 			switch when.runStatus {
 			case domain.Running, domain.Starting:
-				getWorker = func(ctx context.Context, r domain.Run) (worker.Worker, error) {
+				mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
 					if when.worker != nil {
 						return when.worker, nil
 					}
 					return nil, when.errorFromWorker
 				}
 			default:
-				mDataInterface.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
+				mDataDB.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
 					if s != targetData.KnitId {
 						t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, targetData.KnitId)
 					}
@@ -865,13 +876,13 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 						KnitDataBody: targetData,
 					}, nil
 				}
-				mDataInterface.Impl.RemoveAgent = func(ctx context.Context, s string) error {
+				mDataDB.Impl.RemoveAgent = func(ctx context.Context, s string) error {
 					if s != targetData.KnitId {
 						t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, targetData.KnitId)
 					}
 					return nil
 				}
-				spawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
+				mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
 					hdr := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						when.respFromDataAgt.WriteAsTarGzContainsSingleFile("/log/log", w)
 					})
@@ -886,11 +897,7 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 			}
 
 			testee := handlers.GetRunLogHandler(
-				mRunInterface,
-				mDataInterface,
-				spawnDataAgent,
-				getWorker,
-				"runid",
+				mRunDB, mDataDB, mDataK8s, mRunK8s, "runid",
 			)
 
 			runId := "test-run-id"
@@ -909,7 +916,7 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 				}
 			}
 
-			if mRunInterface.Calls.Get.Times() < 1 {
+			if mRunDB.Calls.Get.Times() < 1 {
 				t.Errorf("RunInterface.Get has not been called.")
 			}
 

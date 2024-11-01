@@ -1,4 +1,4 @@
-package mocks
+package mock
 
 import (
 	"context"
@@ -52,7 +52,7 @@ func NewRunInterface() *RunInterface {
 	return &RunInterface{}
 }
 
-var _ kdb.RunInterface = &RunInterface{}
+var _ kdb.Interface = &RunInterface{}
 
 func (m *RunInterface) NewPseudo(ctx context.Context, planName domain.PseudoPlanName, lifecycleSuspend time.Duration) (string, error) {
 	m.Calls.NewPseudo = append(m.Calls.NewPseudo, struct {

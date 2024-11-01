@@ -14,6 +14,7 @@ import (
 	workloads "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
 	kdbmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
+	mockK8sRun "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
 	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 )
 
@@ -63,7 +64,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 			// Testee
 			hookAfterHasBeenCalled := false
-			testee := finishing.Task(iDbRun, nil, nil, hook.Func[apiruns.Detail, struct{}]{
+			testee := finishing.Task(iDbRun, nil, hook.Func[apiruns.Detail, struct{}]{
 				AfterFn: func(hookValue apiruns.Detail) error {
 					hookAfterHasBeenCalled = true
 					if want := bindruns.ComposeDetail(when.pickedRun); !want.Equal(hookValue) {
@@ -426,7 +427,8 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			}
 
 			findHasBeenCalled := false
-			fakeFind := func(ctx context.Context, runBody domain.RunBody) (worker.Worker, error) {
+			fakeRunInterfafce := mockK8sRun.New(t)
+			fakeRunInterfafce.Impl.FindWorker = func(ctx context.Context, runBody domain.RunBody) (worker.Worker, error) {
 				findHasBeenCalled = true
 				if !runBody.Equal(&when.runPassedToCallback.RunBody) {
 					t.Errorf("find: runBody: actual=%+v, expect=%+v", runBody, when.runPassedToCallback.RunBody)
@@ -436,7 +438,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 			// Testee
 			beforeHasBeenCalled := false
-			testee := finishing.Task(iDbRun, fakeFind, nil, hook.Func[apiruns.Detail, struct{}]{
+			testee := finishing.Task(iDbRun, fakeRunInterfafce, hook.Func[apiruns.Detail, struct{}]{
 				BeforeFn: func(hookValue apiruns.Detail) (struct{}, error) {
 					beforeHasBeenCalled = true
 					if want := bindruns.ComposeDetail(when.runPassedToCallback); !want.Equal(hookValue) {

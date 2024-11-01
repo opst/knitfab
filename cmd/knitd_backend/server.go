@@ -11,11 +11,9 @@ import (
 	"github.com/labstack/gommon/log"
 	handlers "github.com/opst/knitfab/cmd/knitd_backend/handlers"
 	keyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider"
-	"github.com/opst/knitfab/pkg/domain"
 	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
 	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
 	knit "github.com/opst/knitfab/pkg/domain/knitfab"
-	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 )
 
 var API_ROOT = "/api/backend"
@@ -83,12 +81,12 @@ func BuildServer(knit knit.Knitfab, loglevel string) *echo.Echo {
 	e.POST(api("data"), handlers.PostDataHandler(
 		knit.Data().Database(),
 		knit.Run().Database(),
-		knit.Data().K8s().SpawnDatAgent,
+		knit.Data().K8s(),
 	))
 
 	e.GET(api("data/:knitId"), handlers.GetDataHandler(
 		knit.Data().Database(),
-		knit.Data().K8s().SpawnDatAgent,
+		knit.Data().K8s(),
 		"knitId",
 	))
 
@@ -108,7 +106,7 @@ func BuildServer(knit knit.Knitfab, loglevel string) *echo.Echo {
 	))
 
 	e.POST(api("data/import/end"), handlers.ImportDataEndHandler(
-		knit.Cluster(),
+		knit.Data().K8s(),
 		keyProviderForImportToken,
 		knit.Run().Database(),
 		knit.Data().Database(),
@@ -117,10 +115,8 @@ func BuildServer(knit knit.Knitfab, loglevel string) *echo.Echo {
 	e.GET(api("runs/:runid/log"), handlers.GetRunLogHandler(
 		knit.Run().Database(),
 		knit.Data().Database(),
-		knit.Data().K8s().SpawnDatAgent,
-		func(ctx context.Context, r domain.Run) (worker.Worker, error) {
-			return knit.Run().K8s().FindWorker(ctx, r.RunBody)
-		},
+		knit.Data().K8s(),
+		knit.Run().K8s(),
 		"runid",
 	))
 

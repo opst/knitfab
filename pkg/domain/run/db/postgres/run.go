@@ -84,7 +84,7 @@ func New(pool kpool.Pool, options ...func(*runPG) *runPG) *runPG {
 }
 
 // &runPG implements RunInterface
-var _ krun.RunInterface = &runPG{}
+var _ krun.Interface = &runPG{}
 
 func (m *runPG) NewPseudo(
 	ctx context.Context, planName domain.PseudoPlanName, lifecycleSuspend time.Duration,

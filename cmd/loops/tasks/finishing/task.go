@@ -12,9 +12,8 @@ import (
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	"github.com/opst/knitfab/pkg/domain"
 	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
 	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
-	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
+	k8srun "github.com/opst/knitfab/pkg/domain/run/k8s"
 )
 
 // initial value for task
@@ -36,12 +35,8 @@ func Seed(pseudoPlans []domain.PseudoPlanName) domain.RunCursor {
 // - task: let the Run finished (completing -> done, aborting -> failed) and
 // update run status.
 func Task(
-	iDbRun kdbrun.RunInterface,
-	find func(
-		ctx context.Context,
-		runBody domain.RunBody,
-	) (worker.Worker, error),
-	cluster cluster.Cluster,
+	iDbRun kdbrun.Interface,
+	iK8sRun k8srun.Interface,
 	hook hook.Hook[apiruns.Detail, struct{}],
 ) recurring.Task[domain.RunCursor] {
 	return func(ctx context.Context, cursor domain.RunCursor) (domain.RunCursor, bool, error) {
@@ -73,7 +68,7 @@ func Task(
 					//
 
 					// find the worker corresponding to targetRun
-					worker, err := find(ctx, targetRun.RunBody)
+					worker, err := iK8sRun.FindWorker(ctx, targetRun.RunBody)
 					// is err ErrMissing?
 					if k8serrors.AsMissingError(err) {
 						// NOP: no worker exists.

@@ -23,7 +23,7 @@ var ErrNoKeyFound error = errors.New("no key found")
 // ErrInvalidToken is an error when the token is invalid (format error, wrong signature, expired, etc.)
 var ErrInvalidToken error = errors.New("invalid token")
 
-type KeyChainInterface interface {
+type Interface interface {
 	Get(ctx context.Context, name string) (Keychain, error)
 }
 
@@ -31,7 +31,7 @@ type impl struct {
 	cluster cluster.Cluster
 }
 
-func New(cluster cluster.Cluster) KeyChainInterface {
+func New(cluster cluster.Cluster) Interface {
 	return &impl{cluster: cluster}
 }
 

@@ -28,7 +28,7 @@ func Seed(pseudoPlans []domain.PseudoPlanName) domain.RunCursor {
 // - task: detect status changes of runs (starting -> running -> completing/aborting) and
 // update run status.
 func Task(
-	irun kdbrun.RunInterface,
+	irun kdbrun.Interface,
 	imageManager manager.Manager,
 	pseudoManagers map[domain.PseudoPlanName]manager.Manager,
 	hooks runManagementHook.Hooks,

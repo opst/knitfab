@@ -22,7 +22,6 @@ import (
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/knitfab"
-	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 	"github.com/opst/knitfab/pkg/utils"
 )
 
@@ -171,14 +170,8 @@ func StartRunManagementLoop(
 				knit.Run().Database(),
 				// A manager for starting a worker for a run.
 				image.New(
-					func(ctx context.Context, r domain.Run) (worker.Worker, error) {
-						return knit.Run().K8s().FindWorker(ctx, r.RunBody)
-					},
-					func(ctx context.Context, r domain.Run, m map[string]string) error {
-						_, err := knit.Run().K8s().SpawnWorker(ctx, r, m)
-						return err
-					},
-					knit.Run().Database().SetExit,
+					knit.Run().K8s(),
+					knit.Run().Database(),
 				),
 				// A map of psuedo plan name to the psuedo plan manager
 				pseudoPlanManagers,
@@ -215,14 +208,8 @@ func StartFinishingLoop(
 			byLogger(logger, Copied(), WithPrefix("[finishing loop]")),
 			// loop body
 			finishing.Task(
-				// Runs from DB
 				knit.Run().Database(),
-				// A worker finder function
-				func(ctx context.Context, runBody domain.RunBody) (worker.Worker, error) {
-					return knit.Run().K8s().FindWorker(ctx, runBody)
-				},
-				// A k8s cluster
-				knit.Cluster(),
+				knit.Run().K8s(),
 				hook.Build(manifest.Hooks.Lifecycle, mergeEmptyStruct),
 			).Applied(manifest.Policy),
 		),
@@ -241,7 +228,7 @@ func StartGarbageCollectionLoop(
 		monitor(
 			byLogger(logger, Copied(), WithPrefix("[gc loop]")),
 			gc.Task(
-				knit.Cluster(),
+				knit.Garbage().K8s(),
 				knit.Garbage().Database(),
 			).Applied(manifest.Policy),
 		),
@@ -261,7 +248,7 @@ func StartHousekeepingLoop(
 			byLogger(logger, Copied(), WithPrefix("[housekeepoing loop]")),
 			housekeeping.Task(
 				knit.Data().Database(),
-				knit.Cluster(),
+				knit.Data().K8s(),
 			).Applied(manifest.Policy),
 		),
 	)

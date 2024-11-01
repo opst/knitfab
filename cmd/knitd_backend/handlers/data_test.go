@@ -27,17 +27,16 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	dbdatamock "github.com/opst/knitfab/pkg/domain/data/db/mock"
 	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
+	k8sdatamocks "github.com/opst/knitfab/pkg/domain/data/k8s/mock"
+	mockDataK8s "github.com/opst/knitfab/pkg/domain/data/k8s/mock"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
 	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
 	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
 	mockkeychain "github.com/opst/knitfab/pkg/domain/keychain/k8s/mock"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster/mock"
 	dbrunmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
-	kubecore "k8s.io/api/core/v1"
-	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGetDataHandler(t *testing.T) {
@@ -156,8 +155,9 @@ func TestGetDataHandler(t *testing.T) {
 			dagt := NewMockedDataagt(svr)
 			dagt.Impl.Close = func() error { return nil }
 
+			mDataK8s := mockDataK8s.New(t)
 			spawnDataagtCalled := 0
-			mockSpawnDataAgent := func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
+			mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
 				spawnDataagtCalled += 1
 
 				if !d.Equal(&dbDataAgent) {
@@ -180,9 +180,7 @@ func TestGetDataHandler(t *testing.T) {
 			ectx.SetParamNames("knitId")
 			ectx.SetParamValues("test-knit-id")
 
-			testee := handlers.GetDataHandler(
-				mDataInterface, mockSpawnDataAgent, "knitId",
-			)
+			testee := handlers.GetDataHandler(mDataInterface, mDataK8s, "knitId")
 			err := testee(ectx)
 			if err != nil {
 				t.Fatalf("testee returns error unexpectedly. %v", err)
@@ -268,16 +266,15 @@ func TestGetDataHandler(t *testing.T) {
 				}, nil
 			}
 
-			testee := handlers.GetDataHandler(
-				mDataInterface,
-				func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-					// No mock dataagts are need.
-					// This API should not access DataAgent because of the caused error.
-					// If SEGV, that is bug.
-					return nil, testcase.errorFromSpawner
-				},
-				"knitId",
-			)
+			mDataK8s := k8sdatamocks.New(t)
+			mDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+				// No mock dataagts are need.
+				// This API should not access DataAgent because of the caused error.
+				// If SEGV, that is bug.
+				return nil, testcase.errorFromSpawner
+			}
+
+			testee := handlers.GetDataHandler(mDataInterface, mDataK8s, "knitId")
 
 			e := echo.New()
 			ectx, resprec := httptestutil.Get(e, "/api/backends/data/"+knitId)
@@ -351,13 +348,12 @@ func TestGetDataHandler(t *testing.T) {
 		dagt := NewBrokenDataagt()
 		dagt.Impl.Close = func() error { return nil }
 
-		testee := handlers.GetDataHandler(
-			mDataInterface,
-			func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-			"knitId",
-		)
+		mDataK8s := mockDataK8s.New(t)
+		mDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+
+		testee := handlers.GetDataHandler(mDataInterface, mDataK8s, "knitId")
 
 		e := echo.New()
 		ectx, resprec := httptestutil.Get(e, "/api/backends/data/"+knitId)
@@ -493,23 +489,23 @@ func TestPostDataHandler(t *testing.T) {
 					},
 				},
 			}
-			dbRun := dbrunmock.NewRunInterface()
-			dbRun.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
+			iRunDB := dbrunmock.NewRunInterface()
+			iRunDB.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
 				if planName != domain.Uploaded {
 					t.Errorf("unexpected plan name. actual = %s, expected = %s", planName, domain.Uploaded)
 				}
 				return runId, nil
 			}
-			dbRun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
+			iRunDB.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
 				return map[string]domain.Run{runId: createdRun}, nil
 			}
-			dbRun.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
+			iRunDB.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
 				return nil
 			}
-			dbRun.Impl.Finish = func(context.Context, string) error { return nil }
+			iRunDB.Impl.Finish = func(context.Context, string) error { return nil }
 
-			dbData := dbdatamock.NewDataInterface()
-			dbData.Impl.Get = func(context.Context, []string) (map[string]domain.KnitData, error) {
+			iDataDB := dbdatamock.NewDataInterface()
+			iDataDB.Impl.Get = func(context.Context, []string) (map[string]domain.KnitData, error) {
 				return map[string]domain.KnitData{knitId: createdData}, nil
 			}
 			dbDataAgent := domain.DataAgent{
@@ -517,15 +513,16 @@ func TestPostDataHandler(t *testing.T) {
 				Mode:         domain.DataAgentWrite,
 				KnitDataBody: createdData.KnitDataBody,
 			}
-			dbData.Impl.NewAgent = func(context.Context, string, domain.DataAgentMode, time.Duration) (domain.DataAgent, error) {
+			iDataDB.Impl.NewAgent = func(context.Context, string, domain.DataAgentMode, time.Duration) (domain.DataAgent, error) {
 				return dbDataAgent, nil
 			}
-			dbData.Impl.RemoveAgent = func(context.Context, string) error {
+			iDataDB.Impl.RemoveAgent = func(context.Context, string) error {
 				return nil
 			}
 
+			iDataK8s := k8sdatamocks.New(t)
 			spawnDataagtCalled := 0
-			mockSpawnDataAgent := func(ctx context.Context, da domain.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
+			iDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, da domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
 				spawnDataagtCalled += 1
 				if !dbDataAgent.Equal(&da) {
 					t.Errorf(
@@ -535,7 +532,7 @@ func TestPostDataHandler(t *testing.T) {
 				}
 
 				if !cmp.SliceContentEqWith(
-					dbData.Calls.NewAgent,
+					iDataDB.Calls.NewAgent,
 					[]struct {
 						KnitId string
 						Mode   domain.DataAgentMode
@@ -553,7 +550,7 @@ func TestPostDataHandler(t *testing.T) {
 				) {
 					t.Errorf(
 						"DataInterface.NewAgent should be called before spawning DataAgent:\n===actual calls===\n%+v\n===DataAgent is spawned as===\n%+v\ndeadline: %s",
-						dbData.Calls.NewAgent, da, deadline,
+						iDataDB.Calls.NewAgent, da, deadline,
 					)
 				}
 
@@ -571,9 +568,7 @@ func TestPostDataHandler(t *testing.T) {
 			)
 			ectx.SetPath("/api/backends/data/")
 
-			testee := handlers.PostDataHandler(
-				dbData, dbRun, mockSpawnDataAgent,
-			)
+			testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 			if err := testee(ectx); err != nil {
 				t.Fatalf("testee returns error unexpectedly. %v", err)
 			}
@@ -629,7 +624,7 @@ func TestPostDataHandler(t *testing.T) {
 
 			// --- about data access ---
 			{
-				if dbRun.Calls.NewPseudo.Times() < 1 {
+				if iRunDB.Calls.NewPseudo.Times() < 1 {
 					t.Errorf("RunInterface.NewPseudo has not been called.")
 				}
 			}
@@ -640,7 +635,7 @@ func TestPostDataHandler(t *testing.T) {
 				}{
 					{RunId: runId, NewStatus: domain.Completing},
 				}
-				actual := dbRun.Calls.SetStatus
+				actual := iRunDB.Calls.SetStatus
 				if !cmp.SliceContentEq(expected, actual) {
 					t.Errorf(
 						"RunInterface.SetStatus\n===actual===\n%+v\n===expected\n%+v",
@@ -650,15 +645,15 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			{
 				expected := []string{runId}
-				if !cmp.SliceEq(dbRun.Calls.Finish, expected) {
+				if !cmp.SliceEq(iRunDB.Calls.Finish, expected) {
 					t.Errorf(
 						"unmatch: invoke RunInterface.Finish:\n===actual===\n%+v\n===expected===\n%+v",
-						dbRun.Calls.Finish, expected,
+						iRunDB.Calls.Finish, expected,
 					)
 				}
 			}
 			if !cmp.SliceEqWith(
-				dbData.Calls.Get,
+				iDataDB.Calls.Get,
 				[]struct{ KnitId []string }{{KnitId: []string{knitId}}},
 				func(a, b struct{ KnitId []string }) bool {
 					return cmp.SliceContentEq(a.KnitId, b.KnitId)
@@ -667,7 +662,7 @@ func TestPostDataHandler(t *testing.T) {
 				t.Error("DataInterface.Get has not been called.")
 			}
 
-			if dbData.Calls.RemoveAgent.Times() < 1 {
+			if iDataDB.Calls.RemoveAgent.Times() < 1 {
 				t.Errorf("DataInterface.RemoveAgent has not been called")
 			}
 
@@ -788,36 +783,37 @@ func TestPostDataHandler(t *testing.T) {
 					},
 				},
 			}
-			iRun := dbrunmock.NewRunInterface()
-			iRun.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
+			iRunDB := dbrunmock.NewRunInterface()
+			iRunDB.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
 				if planName != domain.Uploaded {
 					t.Errorf("unexpected plan name. actual = %s, expected = %s", planName, domain.Uploaded)
 				}
 				return runId, nil
 			}
-			iRun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
+			iRunDB.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
 				return map[string]domain.Run{createdRun.RunBody.Id: createdRun}, nil
 			}
-			iRun.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
+			iRunDB.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
 				return nil
 			}
-			iRun.Impl.Finish = func(context.Context, string) error { return nil }
+			iRunDB.Impl.Finish = func(context.Context, string) error { return nil }
 
 			dbDataAgent := domain.DataAgent{
 				Name:         "fake-data-agent",
 				Mode:         domain.DataAgentWrite,
 				KnitDataBody: createdRun.Outputs[0].KnitDataBody,
 			}
-			iData := dbdatamock.NewDataInterface()
-			iData.Impl.NewAgent = func(context.Context, string, domain.DataAgentMode, time.Duration) (domain.DataAgent, error) {
+			iDataDB := dbdatamock.NewDataInterface()
+			iDataDB.Impl.NewAgent = func(context.Context, string, domain.DataAgentMode, time.Duration) (domain.DataAgent, error) {
 				return dbDataAgent, nil
 			}
-			iData.Impl.RemoveAgent = func(context.Context, string) error {
+			iDataDB.Impl.RemoveAgent = func(context.Context, string) error {
 				return nil
 			}
 
 			spawnDataagtCalled := 0
-			mockSpawnDataAgent := func(ctx context.Context, da domain.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
+			iDataK8s := k8sdatamocks.New(t)
+			iDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, da domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
 				spawnDataagtCalled += 1
 				if !dbDataAgent.Equal(&da) {
 					t.Errorf(
@@ -840,7 +836,7 @@ func TestPostDataHandler(t *testing.T) {
 			)
 			ectx.SetPath("/api/backends/data/")
 
-			testee := handlers.PostDataHandler(iData, iRun, mockSpawnDataAgent)
+			testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 			if err := testee(ectx); err != nil {
 				t.Fatalf("testee returns error unexpectedly. %v", err)
 			}
@@ -858,7 +854,7 @@ func TestPostDataHandler(t *testing.T) {
 
 			// --- about data access ---
 			{
-				if iRun.Calls.NewPseudo.Times() < 1 {
+				if iRunDB.Calls.NewPseudo.Times() < 1 {
 					t.Errorf("RunInterface.NewPseudo has not been called.")
 				}
 			}
@@ -870,7 +866,7 @@ func TestPostDataHandler(t *testing.T) {
 				}{
 					{RunId: runId, NewStatus: domain.Aborting},
 				}
-				actual := iRun.Calls.SetStatus
+				actual := iRunDB.Calls.SetStatus
 				if !cmp.SliceContentEq(expected, actual) {
 					t.Errorf(
 						"RunInterface.SetStatus\n===actual===\n%+v\n===expected===\n%+v",
@@ -889,13 +885,13 @@ func TestPostDataHandler(t *testing.T) {
 						NewStatus: domain.Aborting,
 					},
 				}
-				if !cmp.SliceEq(iRun.Calls.SetStatus, expected) {
+				if !cmp.SliceEq(iRunDB.Calls.SetStatus, expected) {
 					t.Errorf(
 						"DataInterface.SetStatus:\n===actual===\n%+v\n===expected===\n%+v",
-						iRun.Calls.SetStatus, expected,
+						iRunDB.Calls.SetStatus, expected,
 					)
 				}
-				if !cmp.SliceEq(iRun.Calls.Finish, []string{runId}) {
+				if !cmp.SliceEq(iRunDB.Calls.Finish, []string{runId}) {
 					t.Errorf("DataInterface.Finalize should be called.")
 				}
 			}
@@ -936,11 +932,11 @@ func TestPostDataHandler(t *testing.T) {
 				VolumeRef: "volume-ref",
 			}
 
-			irun := dbrunmock.NewRunInterface()
-			irun.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
+			iRunDB := dbrunmock.NewRunInterface()
+			iRunDB.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
 				return runId, nil
 			}
-			irun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
+			iRunDB.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
 				run := domain.Run{
 					RunBody: domain.RunBody{
 						Id: runId,
@@ -949,15 +945,15 @@ func TestPostDataHandler(t *testing.T) {
 				}
 				return map[string]domain.Run{run.RunBody.Id: run}, nil
 			}
-			irun.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
+			iRunDB.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
 				return nil
 			}
-			irun.Impl.Finish = func(ctx context.Context, runId string) error {
+			iRunDB.Impl.Finish = func(ctx context.Context, runId string) error {
 				return nil
 			}
 
-			idata := dbdatamock.NewDataInterface()
-			idata.Impl.NewAgent = func(context.Context, string, domain.DataAgentMode, time.Duration) (domain.DataAgent, error) {
+			iDataDB := dbdatamock.NewDataInterface()
+			iDataDB.Impl.NewAgent = func(context.Context, string, domain.DataAgentMode, time.Duration) (domain.DataAgent, error) {
 				return domain.DataAgent{
 					Name:         "fake-data-agent",
 					Mode:         domain.DataAgentWrite,
@@ -965,12 +961,11 @@ func TestPostDataHandler(t *testing.T) {
 				}, nil
 			}
 
-			testee := handlers.PostDataHandler(
-				idata, irun,
-				func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-					return nil, testcase.errorValue
-				},
-			)
+			iDataK8s := k8sdatamocks.New(t)
+			iDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+				return nil, testcase.errorValue
+			}
+			testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 
 			e := echo.New()
 			ectx, resprec := httptestutil.Post(e, "/api/backends/data/", bytes.NewBuffer([]byte("n/a")))
@@ -996,7 +991,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 
 			{
-				actual := irun.Calls.SetStatus
+				actual := iRunDB.Calls.SetStatus
 				expected := []struct {
 					RunId     string
 					NewStatus domain.KnitRunStatus
@@ -1011,7 +1006,7 @@ func TestPostDataHandler(t *testing.T) {
 				}
 			}
 			{
-				actual := irun.Calls.Finish
+				actual := iRunDB.Calls.Finish
 				expected := []string{runId}
 				if !cmp.SliceContentEq(actual, expected) {
 					t.Errorf(
@@ -1037,11 +1032,11 @@ func TestPostDataHandler(t *testing.T) {
 			KnitId:    knitId,
 			VolumeRef: pvcname,
 		}
-		irun := dbrunmock.NewRunInterface()
-		irun.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
+		iRunDB := dbrunmock.NewRunInterface()
+		iRunDB.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
 			return runId, nil
 		}
-		irun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
+		iRunDB.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
 			run := domain.Run{
 				RunBody: domain.RunBody{
 					Id: runId,
@@ -1050,10 +1045,10 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return map[string]domain.Run{runId: run}, nil
 		}
-		irun.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
+		iRunDB.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
 			return nil
 		}
-		irun.Impl.Finish = func(context.Context, string) error {
+		iRunDB.Impl.Finish = func(context.Context, string) error {
 			return nil
 		}
 
@@ -1063,8 +1058,8 @@ func TestPostDataHandler(t *testing.T) {
 			KnitDataBody: databody,
 		}
 
-		idata := dbdatamock.NewDataInterface()
-		idata.Impl.NewAgent = func(_ context.Context, knitId string, mode domain.DataAgentMode, deadline time.Duration) (domain.DataAgent, error) {
+		iDataDB := dbdatamock.NewDataInterface()
+		iDataDB.Impl.NewAgent = func(_ context.Context, knitId string, mode domain.DataAgentMode, deadline time.Duration) (domain.DataAgent, error) {
 			if mode != domain.DataAgentWrite {
 				t.Errorf("DataAgentMode is not DataAgentWrite. actual = %s", mode)
 			}
@@ -1073,19 +1068,18 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return dataAgentRecord, nil
 		}
-		idata.Impl.RemoveAgent = func(_ context.Context, name string) error {
+		iDataDB.Impl.RemoveAgent = func(_ context.Context, name string) error {
 			if name != dataAgentRecord.Name {
 				t.Errorf("DataAgent.Name is not expected. actual = %s, expected = %s", name, dataAgentRecord.Name)
 			}
 			return nil
 		}
 
-		testee := handlers.PostDataHandler(
-			idata, irun,
-			func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-		)
+		iDataK8s := k8sdatamocks.New(t)
+		iDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+		testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 
 		e := echo.New()
 		ectx, resprec := httptestutil.Post(e, "/api/backends/data/", bytes.NewBuffer([]byte("n/a")))
@@ -1103,7 +1097,7 @@ func TestPostDataHandler(t *testing.T) {
 			t.Errorf("Close of dataagt has not been called")
 		}
 
-		if irun.Calls.NewPseudo.Times() < 1 {
+		if iRunDB.Calls.NewPseudo.Times() < 1 {
 			// arguments are not interested; tested other testcases.
 			t.Errorf("RunInterface.NewPseudo has not been called, but should")
 		}
@@ -1115,7 +1109,7 @@ func TestPostDataHandler(t *testing.T) {
 			}{
 				{RunId: runId, NewStatus: domain.Aborting},
 			}
-			actual := irun.Calls.SetStatus
+			actual := iRunDB.Calls.SetStatus
 			if !cmp.SliceContentEq(expected, actual) {
 				t.Errorf(
 					"RunInterface.SetStatus\n===actual===\n%+v\n===expected===\n%+v",
@@ -1125,7 +1119,7 @@ func TestPostDataHandler(t *testing.T) {
 		}
 		{
 			expected := []string{runId}
-			actual := irun.Calls.Finish
+			actual := iRunDB.Calls.Finish
 			if !cmp.SliceContentEq(expected, actual) {
 				t.Errorf(
 					"RunInterface.Finish\n===actual===\n%+v\n===expected===\n%+v",
@@ -1134,10 +1128,10 @@ func TestPostDataHandler(t *testing.T) {
 			}
 		}
 
-		if idata.Calls.NewAgent.Times() < 1 {
+		if iDataDB.Calls.NewAgent.Times() < 1 {
 			t.Errorf("DataInterface.NewAgent has not been called, but should")
 		}
-		if idata.Calls.RemoveAgent.Times() < 1 {
+		if iDataDB.Calls.RemoveAgent.Times() < 1 {
 			t.Errorf("DataInterface.RemoveAgent has not been called, but should")
 		}
 
@@ -1147,10 +1141,10 @@ func TestPostDataHandler(t *testing.T) {
 
 		fakeError := errors.New("fake error")
 
-		idata := dbdatamock.NewDataInterface()
+		iDataDB := dbdatamock.NewDataInterface()
 
-		irun := dbrunmock.NewRunInterface()
-		irun.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
+		iRunDB := dbrunmock.NewRunInterface()
+		iRunDB.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
 			if planName != domain.Uploaded {
 				t.Errorf(
 					"RunInterface.NewPseudo\n===actual===\n%+v\n===expected===\n%+v",
@@ -1162,12 +1156,12 @@ func TestPostDataHandler(t *testing.T) {
 		// other methods should not be called
 
 		dagt := NewBrokenDataagt()
-		testee := handlers.PostDataHandler(
-			idata, irun,
-			func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-		)
+
+		iDataK8s := k8sdatamocks.New(t)
+		iDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+		testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 
 		e := echo.New()
 		ectx, resprec := httptestutil.Post(e, "/api/backends/data/", bytes.NewBuffer([]byte("n/a")))
@@ -1194,7 +1188,7 @@ func TestPostDataHandler(t *testing.T) {
 		}
 
 		{
-			if irun.Calls.NewPseudo.Times() < 1 {
+			if iRunDB.Calls.NewPseudo.Times() < 1 {
 				t.Errorf("RunInterface.NewPseudo has not been called, but should")
 			}
 		}
@@ -1204,11 +1198,11 @@ func TestPostDataHandler(t *testing.T) {
 
 		fakeError := errors.New("fake error")
 
-		idata := dbdatamock.NewDataInterface()
+		iDataDB := dbdatamock.NewDataInterface()
 
 		runId := "run_id"
-		irun := dbrunmock.NewRunInterface()
-		irun.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
+		iRunDB := dbrunmock.NewRunInterface()
+		iRunDB.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
 			if planName != domain.Uploaded {
 				t.Errorf(
 					"RunInterface.NewPseudo\n===actual===\n%+v\n===expected===\n%+v",
@@ -1217,23 +1211,23 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return runId, nil
 		}
-		irun.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
+		iRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 			return nil, fakeError
 		}
-		irun.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
+		iRunDB.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
 			return nil
 		}
-		irun.Impl.Finish = func(context.Context, string) error {
+		iRunDB.Impl.Finish = func(context.Context, string) error {
 			return nil
 		}
 
 		dagt := NewBrokenDataagt()
-		testee := handlers.PostDataHandler(
-			idata, irun,
-			func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-		)
+
+		iDataK8s := k8sdatamocks.New(t)
+		iDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+		testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 
 		e := echo.New()
 		ectx, resprec := httptestutil.Post(e, "/api/backends/data/", bytes.NewBuffer([]byte("n/a")))
@@ -1260,12 +1254,12 @@ func TestPostDataHandler(t *testing.T) {
 		}
 
 		{
-			if irun.Calls.NewPseudo.Times() < 1 {
+			if iRunDB.Calls.NewPseudo.Times() < 1 {
 				t.Errorf("RunInterface.NewPseudo has not been called, but should")
 			}
 		}
 		{
-			actual := irun.Calls.Get
+			actual := iRunDB.Calls.Get
 			expected := [][]string{{runId}}
 			if !cmp.SliceContentEqWith(actual, expected, cmp.SliceContentEq[string]) {
 				t.Errorf(
@@ -1275,7 +1269,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 		}
 		{
-			actual := irun.Calls.SetStatus
+			actual := iRunDB.Calls.SetStatus
 			expected := []struct {
 				RunId     string
 				NewStatus domain.KnitRunStatus
@@ -1290,7 +1284,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 		}
 		{
-			actual := irun.Calls.Finish
+			actual := iRunDB.Calls.Finish
 			expected := []string{runId}
 			if !cmp.SliceContentEq(actual, expected) {
 				t.Errorf(
@@ -1311,8 +1305,8 @@ func TestPostDataHandler(t *testing.T) {
 		}
 
 		runId := "run-id"
-		irun := dbrunmock.NewRunInterface()
-		irun.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
+		iRunDB := dbrunmock.NewRunInterface()
+		iRunDB.Impl.NewPseudo = func(_ context.Context, planName domain.PseudoPlanName, _ time.Duration) (string, error) {
 			if planName != domain.Uploaded {
 				t.Errorf(
 					"RunInterface.NewPseudo\n===actual===\n%+v\n===expected===\n%+v",
@@ -1321,7 +1315,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return runId, nil
 		}
-		irun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
+		iRunDB.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
 			run := domain.Run{
 				RunBody: domain.RunBody{
 					Id: runId,
@@ -1335,10 +1329,10 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return map[string]domain.Run{runId: run}, nil
 		}
-		irun.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
+		iRunDB.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
 			return fakeError
 		}
-		irun.Impl.Finish = func(context.Context, string) error {
+		iRunDB.Impl.Finish = func(context.Context, string) error {
 			return nil
 		}
 		// other methods should not be called
@@ -1348,8 +1342,8 @@ func TestPostDataHandler(t *testing.T) {
 			Mode:         domain.DataAgentWrite,
 			KnitDataBody: databody,
 		}
-		idata := dbdatamock.NewDataInterface()
-		idata.Impl.NewAgent = func(_ context.Context, knitId string, mode domain.DataAgentMode, _ time.Duration) (domain.DataAgent, error) {
+		iDataDB := dbdatamock.NewDataInterface()
+		iDataDB.Impl.NewAgent = func(_ context.Context, knitId string, mode domain.DataAgentMode, _ time.Duration) (domain.DataAgent, error) {
 			if mode != domain.DataAgentWrite {
 				t.Errorf("DataAgentMode is not DataAgentWrite. actual = %s", mode)
 			}
@@ -1358,7 +1352,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return dataagent, nil
 		}
-		idata.Impl.RemoveAgent = func(_ context.Context, name string) error {
+		iDataDB.Impl.RemoveAgent = func(_ context.Context, name string) error {
 			if name != dataagent.Name {
 				t.Errorf("DataAgent.Name is not expected. actual = %s, expected = %s", name, dataagent.Name)
 			}
@@ -1376,12 +1370,11 @@ func TestPostDataHandler(t *testing.T) {
 		dagt.Impl.VolumeRef = func() string { return databody.VolumeRef }
 		defer dagt.Close()
 
-		testee := handlers.PostDataHandler(
-			idata, irun,
-			func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-		)
+		iDataK8s := k8sdatamocks.New(t)
+		iDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+		testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 
 		e := echo.New()
 		ectx, resprec := httptestutil.Post(e, "/api/backends/data/", bytes.NewBuffer([]byte("n/a")))
@@ -1401,12 +1394,12 @@ func TestPostDataHandler(t *testing.T) {
 			t.Errorf("dataagt is not closed")
 		}
 
-		if irun.Calls.NewPseudo.Times() < 1 {
+		if iRunDB.Calls.NewPseudo.Times() < 1 {
 			t.Error("RunInterface.NewPseudo has not been called")
 		}
 
 		{
-			actual := irun.Calls.Get
+			actual := iRunDB.Calls.Get
 			expected := [][]string{{runId}}
 			if !cmp.SliceContentEqWith(actual, expected, cmp.SliceContentEq[string]) {
 				t.Errorf(
@@ -1416,7 +1409,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 		}
 		{
-			actual := irun.Calls.SetStatus
+			actual := iRunDB.Calls.SetStatus
 			expected := []struct {
 				RunId     string
 				NewStatus domain.KnitRunStatus
@@ -1432,7 +1425,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 		}
 		{
-			actual := irun.Calls.Finish
+			actual := iRunDB.Calls.Finish
 			expected := []string{runId}
 			if !cmp.SliceContentEq(actual, expected) {
 				t.Errorf(
@@ -1463,11 +1456,11 @@ func TestPostDataHandler(t *testing.T) {
 		dagt.Impl.Close = func() error { return nil }
 		dagt.Impl.VolumeRef = func() string { return databody.VolumeRef }
 
-		irun := dbrunmock.NewRunInterface()
-		irun.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
+		iRunDB := dbrunmock.NewRunInterface()
+		iRunDB.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
 			return runId, nil
 		}
-		irun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
+		iRunDB.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
 			run := domain.Run{
 				RunBody: domain.RunBody{
 					Id: runId,
@@ -1476,12 +1469,12 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return map[string]domain.Run{runId: run}, nil
 		}
-		irun.Impl.SetStatus = func(ctx context.Context, runId string, newStatus domain.KnitRunStatus) error {
+		iRunDB.Impl.SetStatus = func(ctx context.Context, runId string, newStatus domain.KnitRunStatus) error {
 			return nil
 		}
 
 		fakeError := errors.New("fake error")
-		irun.Impl.Finish = func(context.Context, string) error {
+		iRunDB.Impl.Finish = func(context.Context, string) error {
 			return fakeError
 		}
 
@@ -1490,8 +1483,8 @@ func TestPostDataHandler(t *testing.T) {
 			Mode:         domain.DataAgentWrite,
 			KnitDataBody: databody,
 		}
-		idata := dbdatamock.NewDataInterface()
-		idata.Impl.NewAgent = func(_ context.Context, knitId string, mode domain.DataAgentMode, _ time.Duration) (domain.DataAgent, error) {
+		iDataDB := dbdatamock.NewDataInterface()
+		iDataDB.Impl.NewAgent = func(_ context.Context, knitId string, mode domain.DataAgentMode, _ time.Duration) (domain.DataAgent, error) {
 			if mode != domain.DataAgentWrite {
 				t.Errorf("DataAgentMode is not DataAgentWrite. actual = %s", mode)
 			}
@@ -1500,7 +1493,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return dataagent, nil
 		}
-		idata.Impl.RemoveAgent = func(_ context.Context, name string) error {
+		iDataDB.Impl.RemoveAgent = func(_ context.Context, name string) error {
 			if name != dataagent.Name {
 				t.Errorf("DataAgent.Name is not expected. actual = %s, expected = %s", name, dataagent.Name)
 			}
@@ -1514,12 +1507,11 @@ func TestPostDataHandler(t *testing.T) {
 		)
 		ectx.SetPath("/api/backends/data/")
 
-		testee := handlers.PostDataHandler(
-			idata, irun,
-			func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-		)
+		iDataK8s := k8sdatamocks.New(t)
+		iDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+		testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 
 		err := testee(ectx)
 		if err == nil {
@@ -1534,11 +1526,11 @@ func TestPostDataHandler(t *testing.T) {
 			t.Errorf("dataagt Calls should be called")
 		}
 
-		if irun.Calls.NewPseudo.Times() < 1 {
+		if iRunDB.Calls.NewPseudo.Times() < 1 {
 			t.Errorf("DataInterface.Initialize has not been called.")
 		}
 		{
-			actual := irun.Calls.SetStatus
+			actual := iRunDB.Calls.SetStatus
 			expected := []struct {
 				RunId     string
 				NewStatus domain.KnitRunStatus
@@ -1554,7 +1546,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 		}
 		{
-			actual := irun.Calls.Finish
+			actual := iRunDB.Calls.Finish
 			expected := []string{runId, runId}
 			if !cmp.SliceContentEq(actual, expected) {
 				t.Errorf(
@@ -1581,11 +1573,11 @@ func TestPostDataHandler(t *testing.T) {
 			KnitId: "test-knit-id", VolumeRef: "test-pvc-name",
 		}
 
-		irun := dbrunmock.NewRunInterface()
-		irun.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
+		iRunDB := dbrunmock.NewRunInterface()
+		iRunDB.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
 			return runId, nil
 		}
-		irun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
+		iRunDB.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
 			run := domain.Run{
 				RunBody: domain.RunBody{
 					Id: runId,
@@ -1594,18 +1586,18 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return map[string]domain.Run{runId: run}, nil
 		}
-		irun.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
+		iRunDB.Impl.SetStatus = func(context.Context, string, domain.KnitRunStatus) error {
 			return nil
 		}
-		irun.Impl.Finish = func(context.Context, string) error { return nil }
+		iRunDB.Impl.Finish = func(context.Context, string) error { return nil }
 
-		idata := dbdatamock.NewDataInterface()
+		iDataDB := dbdatamock.NewDataInterface()
 		dataagent := domain.DataAgent{
 			Name:         "fake-data-agent",
 			Mode:         domain.DataAgentWrite,
 			KnitDataBody: databody,
 		}
-		idata.Impl.NewAgent = func(_ context.Context, knitId string, mode domain.DataAgentMode, _ time.Duration) (domain.DataAgent, error) {
+		iDataDB.Impl.NewAgent = func(_ context.Context, knitId string, mode domain.DataAgentMode, _ time.Duration) (domain.DataAgent, error) {
 			if mode != domain.DataAgentWrite {
 				t.Errorf("DataAgentMode is not DataAgentWrite. actual = %s", mode)
 			}
@@ -1614,7 +1606,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 			return dataagent, nil
 		}
-		idata.Impl.RemoveAgent = func(_ context.Context, name string) error {
+		iDataDB.Impl.RemoveAgent = func(_ context.Context, name string) error {
 			if name != "fake-data-agent" {
 				t.Errorf("DataAgent.Name is not expected. actual = %s, expected = %s", name, "fake-data-agent")
 			}
@@ -1642,12 +1634,12 @@ func TestPostDataHandler(t *testing.T) {
 		dagt.Impl.KnitID = func() string { return databody.KnitId }
 		dagt.Impl.Close = func() error { return nil }
 		dagt.Impl.VolumeRef = func() string { return databody.VolumeRef }
-		testee := handlers.PostDataHandler(
-			idata, irun,
-			func(context.Context, domain.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-		)
+
+		iDataK8s := k8sdatamocks.New(t)
+		iDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+		testee := handlers.PostDataHandler(iDataDB, iRunDB, iDataK8s)
 
 		ectx, _ := httptestutil.Post(
 			e, "/api/backends/data/", pr,
@@ -1672,7 +1664,7 @@ func TestPostDataHandler(t *testing.T) {
 			t.Errorf("PostDataHandler should be closed")
 		}
 		{
-			actual := irun.Calls.SetStatus
+			actual := iRunDB.Calls.SetStatus
 			expected := []struct {
 				RunId     string
 				NewStatus domain.KnitRunStatus
@@ -1687,7 +1679,7 @@ func TestPostDataHandler(t *testing.T) {
 			}
 		}
 		{
-			actual := irun.Calls.Finish
+			actual := iRunDB.Calls.Finish
 			expected := []string{runId}
 			if !cmp.SliceContentEq(actual, expected) {
 				t.Errorf(
@@ -1982,22 +1974,6 @@ func TestImportDataBeginHandler(t *testing.T) {
 
 func TestImpoerDataEndHandler(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		cluster, client := mock.NewCluster()
-		client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
-			return &kubecore.PersistentVolumeClaim{
-				ObjectMeta: kubeapimeta.ObjectMeta{
-					Name:      "test-volume-ref",
-					Namespace: "test-namespace",
-				},
-				Spec: kubecore.PersistentVolumeClaimSpec{
-					VolumeName: "test-volume",
-				},
-				Status: kubecore.PersistentVolumeClaimStatus{
-					Phase: kubecore.ClaimBound,
-				},
-			}, nil
-		}
-
 		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
@@ -2056,7 +2032,12 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return map[string]domain.KnitData{claim.KnitId: data}, nil
 		}
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		k8sData := k8sdatamocks.New(t)
+		k8sData.Impl.ChechDataisBound = func(ctx context.Context, da domain.KnitDataBody) (bool, error) {
+			return true, nil
+		}
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, resprec := httptestutil.Post(
 			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2104,22 +2085,6 @@ func TestImpoerDataEndHandler(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("when dbRun.SetStatus cause error %s, it responses 409", name), func(t *testing.T) {
-			cluster, client := mock.NewCluster()
-			client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
-				return &kubecore.PersistentVolumeClaim{
-					ObjectMeta: kubeapimeta.ObjectMeta{
-						Name:      "test-volume-ref",
-						Namespace: "test-namespace",
-					},
-					Spec: kubecore.PersistentVolumeClaimSpec{
-						VolumeName: "test-volume",
-					},
-					Status: kubecore.PersistentVolumeClaimStatus{
-						Phase: kubecore.ClaimBound,
-					},
-				}, nil
-			}
-
 			claim := &handlers.DataImportClaim{
 				RegisteredClaims: jwt.RegisteredClaims{
 					ID:      "nonce",
@@ -2174,7 +2139,12 @@ func TestImpoerDataEndHandler(t *testing.T) {
 				return map[string]domain.KnitData{claim.KnitId: data}, nil
 			}
 
-			testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+			k8sData := k8sdatamocks.New(t)
+			k8sData.Impl.ChechDataisBound = func(ctx context.Context, da domain.KnitDataBody) (bool, error) {
+				return true, nil
+			}
+
+			testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 			e := echo.New()
 			ectx, _ := httptestutil.Post(
 				e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2195,11 +2165,6 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	}
 
 	t.Run("when PVC is not bound, it responses 400", func(t *testing.T) {
-		cluster, client := mock.NewCluster()
-		client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
-			return nil, context.DeadlineExceeded
-		}
-
 		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
@@ -2231,7 +2196,12 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return map[string]domain.KnitData{claim.KnitId: {}}, nil
 		}
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		k8sData := k8sdatamocks.New(t)
+		k8sData.Impl.ChechDataisBound = func(ctx context.Context, da domain.KnitDataBody) (bool, error) {
+			return false, nil
+		}
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(
 			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2248,11 +2218,6 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	})
 
 	t.Run("when PVC is missing, it responses 400", func(t *testing.T) {
-		cluster, client := mock.NewCluster()
-		client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
-			return nil, &k8serrors.ErrMissing{}
-		}
-
 		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
@@ -2284,7 +2249,12 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return map[string]domain.KnitData{claim.KnitId: {}}, nil
 		}
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		k8sData := k8sdatamocks.New(t)
+		k8sData.Impl.ChechDataisBound = func(ctx context.Context, da domain.KnitDataBody) (bool, error) {
+			return false, &k8serrors.ErrMissing{}
+		}
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(
 			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2301,12 +2271,6 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	})
 
 	t.Run("when GetPVC cause error, it responses 500", func(t *testing.T) {
-		cluster, client := mock.NewCluster()
-		expectedError := errors.New("fake error")
-		client.Impl.GetPVC = func(ctx context.Context, namespace, name string) (*kubecore.PersistentVolumeClaim, error) {
-			return nil, expectedError
-		}
-
 		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
@@ -2338,7 +2302,13 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return map[string]domain.KnitData{claim.KnitId: {}}, nil
 		}
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		expectedError := errors.New("fake error")
+		k8sData := k8sdatamocks.New(t)
+		k8sData.Impl.ChechDataisBound = func(ctx context.Context, da domain.KnitDataBody) (bool, error) {
+			return false, expectedError
+		}
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(
 			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2358,8 +2328,6 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	})
 
 	t.Run("when dbData.Get does not return Data in token, it responses 500", func(t *testing.T) {
-		cluster, _ := mock.NewCluster()
-
 		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
@@ -2392,7 +2360,9 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return map[string]domain.KnitData{}, nil
 		}
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		k8sData := k8sdatamocks.New(t)
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(
 			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2409,8 +2379,6 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	})
 
 	t.Run("when dbData.Get cause error, it responses 500", func(t *testing.T) {
-		cluster, _ := mock.NewCluster()
-
 		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
@@ -2444,7 +2412,9 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			return nil, fakeError
 		}
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		k8sData := k8sdatamocks.New(t)
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(
 			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2464,8 +2434,6 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	})
 
 	t.Run("when token is invalid, it responses 400", func(t *testing.T) {
-		cluster, _ := mock.NewCluster()
-
 		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
@@ -2492,7 +2460,9 @@ func TestImpoerDataEndHandler(t *testing.T) {
 		dbRun := dbrunmock.NewRunInterface()
 		dbData := dbdatamock.NewDataInterface()
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		k8sData := k8sdatamocks.New(t)
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(
 			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2509,8 +2479,6 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	})
 
 	t.Run("when key provider's GetKeychain cause error, it responses 500", func(t *testing.T) {
-		cluster, _ := mock.NewCluster()
-
 		claim := &handlers.DataImportClaim{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ID:      "nonce",
@@ -2532,7 +2500,9 @@ func TestImpoerDataEndHandler(t *testing.T) {
 		dbRun := dbrunmock.NewRunInterface()
 		dbData := dbdatamock.NewDataInterface()
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		k8sData := k8sdatamocks.New(t)
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(
 			e, "/api/backends/data/import/end", bytes.NewBufferString(token),
@@ -2549,13 +2519,12 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	})
 
 	t.Run("when no content body, it responses 400", func(t *testing.T) {
-		cluster, _ := mock.NewCluster()
-
 		kp := mockkeyprovider.New(t)
 		dbRun := dbrunmock.NewRunInterface()
 		dbData := dbdatamock.NewDataInterface()
+		k8sData := k8sdatamocks.New(t)
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/end", nil)
 		ectx.SetPath("/api/backends/data/import/end")
@@ -2569,13 +2538,13 @@ func TestImpoerDataEndHandler(t *testing.T) {
 	})
 
 	t.Run("when content type is not application/jwt, it responses 400", func(t *testing.T) {
-		cluster, _ := mock.NewCluster()
-
 		kp := mockkeyprovider.New(t)
 		dbRun := dbrunmock.NewRunInterface()
 		dbData := dbdatamock.NewDataInterface()
 
-		testee := handlers.ImportDataEndHandler(cluster, kp, dbRun, dbData)
+		k8sData := k8sdatamocks.New(t)
+
+		testee := handlers.ImportDataEndHandler(k8sData, kp, dbRun, dbData)
 		e := echo.New()
 		ectx, _ := httptestutil.Post(e, "/api/backends/data/import/end", nil, httptestutil.ContentType("application/json"))
 		ectx.SetPath("/api/backends/data/import/end")

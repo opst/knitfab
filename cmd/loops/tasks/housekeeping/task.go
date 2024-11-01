@@ -6,7 +6,8 @@ import (
 
 	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	"github.com/opst/knitfab/pkg/domain"
-	kdb "github.com/opst/knitfab/pkg/domain/data/db"
+	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
+	k8sdata "github.com/opst/knitfab/pkg/domain/data/k8s"
 	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
 	"github.com/opst/knitfab/pkg/utils/retry"
@@ -28,26 +29,22 @@ type GetPodder interface {
 //
 // - task: terminate orphan run based pseudo-plan
 func Task(
-	data kdb.DataInterface,
-	kluster GetPodder,
+	data kdbdata.DataInterface,
+	getPodder k8sdata.Interface,
 ) recurring.Task[domain.DataAgentCursor] {
 	return func(ctx context.Context, cursor domain.DataAgentCursor) (domain.DataAgentCursor, bool, error) {
 		_cursor, err := data.PickAndRemoveAgent(ctx, cursor, func(da domain.DataAgent) (bool, error) {
 			_ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
-			ppod := <-kluster.GetPod(
-				_ctx, retry.StaticBackoff(50*time.Millisecond), da.Name,
-				func(cluster.WithEvents[*kubecore.Pod]) error { return nil }, // everything is fine
-			)
-			if err := ppod.Err; err != nil {
+			pod, err := getPodder.FindDataAgent(_ctx, da)
+			if err != nil {
 				if k8serrors.AsMissingError(err) {
 					return true, nil
 				}
 				return false, err
 			}
 
-			pod := ppod.Value
-			switch s := pod.Status(); s {
+			switch s := pod.PodPhase(); s {
 			case cluster.PodSucceeded, cluster.PodFailed, cluster.PodStucking:
 				if err := pod.Close(); err != nil {
 					return false, err

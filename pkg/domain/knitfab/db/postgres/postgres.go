@@ -25,9 +25,9 @@ import (
 type knitDBPostgres struct {
 	pool     *pgxpool.Pool
 	data     kdata.DataInterface
-	runs     krun.RunInterface
+	runs     krun.Interface
 	plan     kplan.PlanInterface
-	garbage  kgarbage.GarbageInterface
+	garbage  kgarbage.Interface
 	keychain kkeychain.KeychainInterface
 	schema   kschema.SchemaInterface
 }
@@ -95,7 +95,7 @@ func (k *knitDBPostgres) Data() kdata.DataInterface {
 	return k.data
 }
 
-func (k *knitDBPostgres) Run() krun.RunInterface {
+func (k *knitDBPostgres) Run() krun.Interface {
 	return k.runs
 }
 
@@ -103,7 +103,7 @@ func (k *knitDBPostgres) Plan() kplan.PlanInterface {
 	return k.plan
 }
 
-func (k *knitDBPostgres) Garbage() kgarbage.GarbageInterface {
+func (k *knitDBPostgres) Garbage() kgarbage.Interface {
 	return k.garbage
 }
 
