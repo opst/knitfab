@@ -21,7 +21,7 @@ import (
 	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

@@ -10,8 +10,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 	apierr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	"github.com/opst/knitfab/pkg/archive"
-	kio "github.com/opst/knitfab/pkg/io"
+	"github.com/opst/knitfab/pkg/utils/archive"
+	kio "github.com/opst/knitfab/pkg/utils/io"
 )
 
 func Reader(root string) echo.HandlerFunc {

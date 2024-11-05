@@ -15,7 +15,7 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_resource "github.com/opst/knitfab/cmd/knit/subcommands/plan/resource"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 

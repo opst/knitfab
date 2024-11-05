@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	kstr "github.com/opst/knitfab/pkg/utils/strings"
 )
 

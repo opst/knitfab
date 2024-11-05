@@ -17,8 +17,8 @@ import (
 	apierr "github.com/opst/knitfab-api-types/errors"
 	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/logic"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -490,7 +490,7 @@ func TestFindPlan(t *testing.T) {
 
 		type when struct {
 			active   logic.Ternary
-			imageVer kdb.ImageIdentifier
+			imageVer domain.ImageIdentifier
 			inTags   []tags.Tag
 			outTags  []tags.Tag
 		}
@@ -510,7 +510,7 @@ func TestFindPlan(t *testing.T) {
 			"when query with active:Indeterminate nothing else, server receives empty query string": {
 				when: when{
 					active:   logic.Indeterminate,
-					imageVer: kdb.ImageIdentifier{},
+					imageVer: domain.ImageIdentifier{},
 					inTags:   []tags.Tag{},
 					outTags:  []tags.Tag{},
 				},
@@ -524,7 +524,7 @@ func TestFindPlan(t *testing.T) {
 			"when query with active:true, server receives this": {
 				when: when{
 					active:   logic.True,
-					imageVer: kdb.ImageIdentifier{},
+					imageVer: domain.ImageIdentifier{},
 					inTags:   []tags.Tag{},
 					outTags:  []tags.Tag{},
 				},
@@ -538,7 +538,7 @@ func TestFindPlan(t *testing.T) {
 			"when query with active:false, server receives this": {
 				when: when{
 					active:   logic.False,
-					imageVer: kdb.ImageIdentifier{},
+					imageVer: domain.ImageIdentifier{},
 					inTags:   []tags.Tag{},
 					outTags:  []tags.Tag{},
 				},
@@ -552,7 +552,7 @@ func TestFindPlan(t *testing.T) {
 			"when query with imageVer, server receives this": {
 				when: when{
 					active: logic.Indeterminate,
-					imageVer: kdb.ImageIdentifier{
+					imageVer: domain.ImageIdentifier{
 						Image:   "image-test",
 						Version: "v0.0.1",
 					},
@@ -569,7 +569,7 @@ func TestFindPlan(t *testing.T) {
 			"when query with tags, server receives them": {
 				when: when{
 					active:   logic.Indeterminate,
-					imageVer: kdb.ImageIdentifier{},
+					imageVer: domain.ImageIdentifier{},
 					inTags: []tags.Tag{
 						{Key: "key-a", Value: "value/a"},
 						{Key: "type", Value: "unknown?"},
@@ -677,7 +677,7 @@ func TestFindPlan(t *testing.T) {
 			// prepare for the tests
 			profile := kprof.KnitProfile{ApiRoot: ts.URL}
 			queryActive := logic.Indeterminate
-			queryImagever := kdb.ImageIdentifier{
+			queryImagever := domain.ImageIdentifier{
 				Image: "test-image", Version: "test-version",
 			}
 			queryInTags := []tags.Tag{
@@ -731,7 +731,7 @@ func TestFindPlan(t *testing.T) {
 					t.Fatal(err.Error())
 				}
 				queryActive := logic.Indeterminate
-				queryImagever := kdb.ImageIdentifier{
+				queryImagever := domain.ImageIdentifier{
 					Image: "test-image", Version: "test-version",
 				}
 				queryInTags := []tags.Tag{

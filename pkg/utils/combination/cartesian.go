@@ -1,6 +1,6 @@
 package combination
 
-import "github.com/opst/knitfab/pkg/utils"
+import "github.com/opst/knitfab/pkg/utils/slices"
 
 // from map[K][]T, choices one item for each keys and generate cartesian product.
 //
@@ -82,7 +82,7 @@ func MapCartesian[K comparable, V any](basis map[K][]V) []map[K]V {
 		newKnwon := []map[K]V{}
 
 		for _, item := range basis[topic] {
-			clone := utils.Map(known, mapCopy[K, V])
+			clone := slices.Map(known, mapCopy[K, V])
 
 			for i := range clone {
 				clone[i][topic] = item
@@ -97,7 +97,7 @@ func MapCartesian[K comparable, V any](basis map[K][]V) []map[K]V {
 	seed := keys[0]
 	rem := keys[1:]
 
-	known := utils.Map(basis[seed], func(item V) map[K]V {
+	known := slices.Map(basis[seed], func(item V) map[K]V {
 		return map[K]V{seed: item}
 	})
 

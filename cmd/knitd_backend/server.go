@@ -11,9 +11,9 @@ import (
 	"github.com/labstack/gommon/log"
 	handlers "github.com/opst/knitfab/cmd/knitd_backend/handlers"
 	keyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider"
-	knit "github.com/opst/knitfab/pkg"
-	"github.com/opst/knitfab/pkg/workloads/keychain"
-	"github.com/opst/knitfab/pkg/workloads/keychain/key"
+	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
+	knit "github.com/opst/knitfab/pkg/domain/knitfab"
 )
 
 var API_ROOT = "/api/backend"
@@ -25,7 +25,7 @@ func api(subpath string) string {
 	return fmt.Sprintf("%s/%s", API_ROOT, subpath)
 }
 
-func BuildServer(knit knit.KnitCluster, loglevel string) *echo.Echo {
+func BuildServer(knit knit.Knitfab, loglevel string) *echo.Echo {
 
 	e := echo.New()
 
@@ -79,23 +79,22 @@ func BuildServer(knit knit.KnitCluster, loglevel string) *echo.Echo {
 	})
 
 	e.POST(api("data"), handlers.PostDataHandler(
-		knit.Database().Data(),
-		knit.Database().Runs(),
-		knit.SpawnDataAgent,
+		knit.Data().Database(),
+		knit.Run().Database(),
+		knit.Data().K8s(),
 	))
 
 	e.GET(api("data/:knitId"), handlers.GetDataHandler(
-		knit.Database().Data(),
-		knit.SpawnDataAgent,
+		knit.Data().Database(),
+		knit.Data().K8s(),
 		"knitId",
 	))
 
 	keyProviderForImportToken := keyprovider.New(
-		knit.Database().Keychain(),
+		knit.Keychain().Database(),
 		func(ctx context.Context) (keychain.Keychain, error) {
-			return keychain.Get(
+			return knit.Keychain().K8s().Get(
 				ctx,
-				knit.BaseCluster(),
 				knit.Config().Keychains().SignKeyForImportToken().Name(),
 			)
 		},
@@ -103,21 +102,21 @@ func BuildServer(knit knit.KnitCluster, loglevel string) *echo.Echo {
 	)
 	e.POST(api("data/import/begin"), handlers.ImportDataBeginHandler(
 		keyProviderForImportToken,
-		knit.Database().Runs(),
+		knit.Run().Database(),
 	))
 
 	e.POST(api("data/import/end"), handlers.ImportDataEndHandler(
-		knit.BaseCluster(),
+		knit.Data().K8s(),
 		keyProviderForImportToken,
-		knit.Database().Runs(),
-		knit.Database().Data(),
+		knit.Run().Database(),
+		knit.Data().Database(),
 	))
 
 	e.GET(api("runs/:runid/log"), handlers.GetRunLogHandler(
-		knit.Database().Runs(),
-		knit.Database().Data(),
-		knit.SpawnDataAgent,
-		knit.GetWorker,
+		knit.Run().Database(),
+		knit.Data().Database(),
+		knit.Data().K8s(),
+		knit.Run().K8s(),
 		"runid",
 	))
 

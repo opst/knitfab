@@ -12,7 +12,7 @@ import (
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/youta-t/flarc"
 )
 
@@ -102,12 +102,12 @@ func Task() common.Task[Flag] {
 			}, nil
 		}
 
-		add, err := utils.MapUntilError(flags.Add, parseAnnotation)
+		add, err := slices.MapUntilError(flags.Add, parseAnnotation)
 		if err != nil {
 			return errors.Join(flarc.ErrUsage, err)
 		}
 
-		remove, err := utils.MapUntilError(flags.Remove, parseAnnotation)
+		remove, err := slices.MapUntilError(flags.Remove, parseAnnotation)
 		if err != nil {
 			return errors.Join(flarc.ErrUsage, err)
 		}

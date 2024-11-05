@@ -10,18 +10,18 @@ import (
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kflag "github.com/opst/knitfab/pkg/commandline/flag"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/youta-t/flarc"
 )
 
 type Flag struct {
-	PlanId    *kflag.Argslice         `flag:"planid" alias:"p" help:"Find Run with this Plan Id. Repeatable."`
-	KnitIdIn  *kflag.Argslice         `flag:"in-knitid" alias:"i" help:"Find Run where the Input has this Knit Id. Repeatable."`
-	KnitIdOut *kflag.Argslice         `flag:"out-knitid" alias:"o" help:"Find Run where the Output has this Knit Id. Repeatable."`
-	Status    *kflag.Argslice         `flag:"status" alias:"s" metavar:"waiting|deactivated|starting|running|done|failed..." help:"Find Run in this status. Repeatable."`
-	Since     *kflag.LooseRFC3339     `flag:"since" metavar:"YYYY-mm-dd[THH[:MM[:SS]]][TZ]" help:"Find Run only updated at this time or later."`
-	Duration  *kflag.OptionalDuration `flag:"duration" metavar:"DURATION" help:"Find Run only updated in '--duration' from '--since'."`
+	PlanId    *kargs.Argslice         `flag:"planid" alias:"p" help:"Find Run with this Plan Id. Repeatable."`
+	KnitIdIn  *kargs.Argslice         `flag:"in-knitid" alias:"i" help:"Find Run where the Input has this Knit Id. Repeatable."`
+	KnitIdOut *kargs.Argslice         `flag:"out-knitid" alias:"o" help:"Find Run where the Output has this Knit Id. Repeatable."`
+	Status    *kargs.Argslice         `flag:"status" alias:"s" metavar:"waiting|deactivated|starting|running|done|failed..." help:"Find Run in this status. Repeatable."`
+	Since     *kargs.LooseRFC3339     `flag:"since" metavar:"YYYY-mm-dd[THH[:MM[:SS]]][TZ]" help:"Find Run only updated at this time or later."`
+	Duration  *kargs.OptionalDuration `flag:"duration" metavar:"DURATION" help:"Find Run only updated in '--duration' from '--since'."`
 }
 
 type Option struct {
@@ -60,12 +60,12 @@ func New(
 	return flarc.NewCommand(
 		"Find Runs that satisfy all specified conditions.",
 		Flag{
-			PlanId:    &kflag.Argslice{},
-			KnitIdIn:  &kflag.Argslice{},
-			KnitIdOut: &kflag.Argslice{},
-			Status:    &kflag.Argslice{},
-			Since:     &kflag.LooseRFC3339{},
-			Duration:  &kflag.OptionalDuration{},
+			PlanId:    &kargs.Argslice{},
+			KnitIdIn:  &kargs.Argslice{},
+			KnitIdOut: &kargs.Argslice{},
+			Status:    &kargs.Argslice{},
+			Since:     &kargs.LooseRFC3339{},
+			Duration:  &kargs.OptionalDuration{},
 		},
 		flarc.Args{},
 		common.NewTask(Task(option.find)),

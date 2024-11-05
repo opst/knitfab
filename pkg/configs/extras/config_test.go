@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/cmp"
 	"github.com/opst/knitfab/pkg/configs/extras"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

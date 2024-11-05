@@ -17,10 +17,11 @@ import (
 	"github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab-api-types/tags"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
-	dbmock "github.com/opst/knitfab/pkg/db/mocks"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/domain"
+	dbmock "github.com/opst/knitfab/pkg/domain/data/db/mock"
+	kerr "github.com/opst/knitfab/pkg/domain/errors"
+	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 
 	"github.com/opst/knitfab/cmd/knitd/handlers"
@@ -30,51 +31,51 @@ func TestGetDataForDataHandler(t *testing.T) {
 
 	t.Run("When data is received from the database, it should be converted to JSON format", func(t *testing.T) {
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []domain.Tag, since *time.Time, until *time.Time) ([]string, error) {
 			return []string{"knit-1", "knit-2"}, nil
 		}
-		mckdbdata.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
-			d := map[string]kdb.KnitData{
+		mckdbdata.Impl.Get = func(ctx context.Context, knitId []string) (map[string]domain.KnitData, error) {
+			d := map[string]domain.KnitData{
 				"knit-1": {
-					KnitDataBody: kdb.KnitDataBody{
+					KnitDataBody: domain.KnitDataBody{
 						KnitId: "knit-1", VolumeRef: "pvc-knit-1",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "project", Value: "test-project"},
 							{Key: "series", Value: "42"},
 							{Key: "type", Value: "training-dataset"},
 							{Key: "format", Value: "semantic-segmentation"},
-							{Key: kdb.KeyKnitId, Value: "knit-1"},
-							{Key: kdb.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
+							{Key: domain.KeyKnitId, Value: "knit-1"},
+							{Key: domain.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
 						}),
 					},
-					Upsteram: kdb.Dependency{
-						RunBody: kdb.RunBody{
-							Id: "run-1", Status: kdb.Done,
+					Upsteram: domain.Dependency{
+						RunBody: domain.RunBody{
+							Id: "run-1", Status: domain.Done,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-07-29T01:10:25.666+09:00",
 							)).OrFatal(t).Time(),
-							PlanBody: kdb.PlanBody{
+							PlanBody: domain.PlanBody{
 								PlanId: "plan-1", Active: true, Hash: "#plan-1",
-								Pseudo: &kdb.PseudoPlanDetail{Name: "knit#uploaded"},
+								Pseudo: &domain.PseudoPlanDetail{Name: "knit#uploaded"},
 							},
 						},
-						MountPoint: kdb.MountPoint{Id: 1010, Path: "/out"},
+						MountPoint: domain.MountPoint{Id: 1010, Path: "/out"},
 					},
-					Downstreams: []kdb.Dependency{
+					Downstreams: []domain.Dependency{
 						{
-							RunBody: kdb.RunBody{
-								Id: "run-2", Status: kdb.Running,
+							RunBody: domain.RunBody{
+								Id: "run-2", Status: domain.Running,
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-07-30T01:10:25.222+09:00",
 								)).OrFatal(t).Time(),
-								PlanBody: kdb.PlanBody{
+								PlanBody: domain.PlanBody{
 									PlanId: "plan-2", Active: true, Hash: "hash-2",
-									Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "v1"},
+									Image: &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "v1"},
 								},
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 2100, Path: "/in",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "test-project"},
 									{Key: "type", Value: "training-dataset"},
 									{Key: "format", Value: "semantic-segmentation"},
@@ -82,15 +83,15 @@ func TestGetDataForDataHandler(t *testing.T) {
 							},
 						},
 						{
-							RunBody: kdb.RunBody{
-								Id: "run-x", Status: kdb.Invalidated,
+							RunBody: domain.RunBody{
+								Id: "run-x", Status: domain.Invalidated,
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-10-11T12:13:14+00:00",
 								)).OrFatal(t).Time(),
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 10100, Path: "/in",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "test-project"},
 									{Key: "type", Value: "training-dataset"},
 									{Key: "format", Value: "semantic-segmentation"},
@@ -98,15 +99,15 @@ func TestGetDataForDataHandler(t *testing.T) {
 							},
 						},
 					},
-					NominatedBy: []kdb.Nomination{
+					NominatedBy: []domain.Nomination{
 						{
-							PlanBody: kdb.PlanBody{
+							PlanBody: domain.PlanBody{
 								PlanId: "plan-2", Active: true, Hash: "hash-2",
-								Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "v1"},
+								Image: &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "v1"},
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 2100, Path: "/in",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "training-dataset"},
 									{Key: "format", Value: "semantic-segmentation"},
 								}),
@@ -115,30 +116,30 @@ func TestGetDataForDataHandler(t *testing.T) {
 					},
 				},
 				"knit-2": {
-					KnitDataBody: kdb.KnitDataBody{
+					KnitDataBody: domain.KnitDataBody{
 						KnitId: "knit-2", VolumeRef: "pvc-knit-2",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "framework", Value: "pytorch"},
 							{Key: "task", Value: "semantic-segmentation"},
-							{Key: kdb.KeyKnitId, Value: "knit-2"},
-							{Key: kdb.KeyKnitTransient, Value: "processing"},
+							{Key: domain.KeyKnitId, Value: "knit-2"},
+							{Key: domain.KeyKnitTransient, Value: "processing"},
 						}),
 					},
-					Upsteram: kdb.Dependency{
-						RunBody: kdb.RunBody{
-							Id: "run-2", Status: kdb.Running,
+					Upsteram: domain.Dependency{
+						RunBody: domain.RunBody{
+							Id: "run-2", Status: domain.Running,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-07-30T01:10:25.222+09:00",
 							)).OrFatal(t).Time(),
-							PlanBody: kdb.PlanBody{
+							PlanBody: domain.PlanBody{
 								PlanId: "plan-2", Active: true, Hash: "hash-2",
-								Image: &kdb.ImageIdentifier{Image: "repo.invalid/trainer", Version: "v1"},
+								Image: &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "v1"},
 							},
 						},
-						MountPoint: kdb.MountPoint{
+						MountPoint: domain.MountPoint{
 							Id: 2100, Path: "/out",
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "model-parameter"},
 								{Key: "framework", Value: "pytorch"},
 								{Key: "task", Value: "semantic-segmentation"},
@@ -158,7 +159,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expectTag := []kdb.Tag{
+		expectTag := []domain.Tag{
 			{Key: "Key-1", Value: "Value-2"},
 			{Key: "Key-2", Value: "Value-5"},
 			{Key: "knit#transient", Value: "processing"},
@@ -171,7 +172,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 		if !cmp.SliceEqWith(
 			mckdbdata.Calls.Find,
 			[]struct {
-				Tags  []kdb.Tag
+				Tags  []domain.Tag
 				Since *time.Time
 				Until *time.Time
 			}{
@@ -179,16 +180,16 @@ func TestGetDataForDataHandler(t *testing.T) {
 			},
 			func(
 				a struct {
-					Tags  []kdb.Tag
+					Tags  []domain.Tag
 					Since *time.Time
 					Until *time.Time
 				},
 				b struct {
-					Tags  []kdb.Tag
+					Tags  []domain.Tag
 					Since *time.Time
 					Until *time.Time
 				}) bool {
-				return cmp.SliceContentEqWith(utils.RefOf(a.Tags), utils.RefOf(b.Tags), (*kdb.Tag).Equal) &&
+				return cmp.SliceContentEqWith(slices.RefOf(a.Tags), slices.RefOf(b.Tags), (*domain.Tag).Equal) &&
 					a.Since.Equal(*b.Since) && a.Until.Equal(*b.Until)
 			},
 		) {
@@ -203,12 +204,12 @@ func TestGetDataForDataHandler(t *testing.T) {
 					{Key: "series", Value: "42"},
 					{Key: "type", Value: "training-dataset"},
 					{Key: "format", Value: "semantic-segmentation"},
-					{Key: kdb.KeyKnitId, Value: "knit-1"},
-					{Key: kdb.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
+					{Key: domain.KeyKnitId, Value: "knit-1"},
+					{Key: domain.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
 				},
 				Upstream: data.AssignedTo{
 					Run: runs.Summary{
-						RunId: "run-1", Status: string(kdb.Done),
+						RunId: "run-1", Status: string(domain.Done),
 						Plan: plans.Summary{PlanId: "plan-1", Name: "knit#uploaded"},
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-07-29T01:10:25.666+09:00",
@@ -219,7 +220,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 				Downstreams: []data.AssignedTo{
 					{
 						Run: runs.Summary{
-							RunId: "run-2", Status: string(kdb.Running),
+							RunId: "run-2", Status: string(domain.Running),
 							Plan: plans.Summary{
 								PlanId: "plan-2",
 								Image:  &plans.Image{Repository: "repo.invalid/trainer", Tag: "v1"},
@@ -261,12 +262,12 @@ func TestGetDataForDataHandler(t *testing.T) {
 					{Key: "type", Value: "model-parameter"},
 					{Key: "framework", Value: "pytorch"},
 					{Key: "task", Value: "semantic-segmentation"},
-					{Key: kdb.KeyKnitId, Value: "knit-2"},
-					{Key: kdb.KeyKnitTransient, Value: "processing"},
+					{Key: domain.KeyKnitId, Value: "knit-2"},
+					{Key: domain.KeyKnitTransient, Value: "processing"},
 				},
 				Upstream: data.AssignedTo{
 					Run: runs.Summary{
-						RunId: "run-2", Status: string(kdb.Running),
+						RunId: "run-2", Status: string(domain.Running),
 						Plan: plans.Summary{
 							PlanId: "plan-2",
 							Image:  &plans.Image{Repository: "repo.invalid/trainer", Tag: "v1"},
@@ -306,7 +307,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 		knitId := []string{}
 
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []domain.Tag, since *time.Time, until *time.Time) ([]string, error) {
 			d := knitId
 			return d, nil
 		}
@@ -366,7 +367,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 
 	t.Run("When Process of obtaining knitId from specified tag encounters an internal error, status code should be 500", func(t *testing.T) {
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []domain.Tag, since *time.Time, until *time.Time) ([]string, error) {
 			return nil, errors.New("Test Internal Error")
 		}
 
@@ -389,11 +390,11 @@ func TestGetDataForDataHandler(t *testing.T) {
 		knitId := []string{"knit-1"}
 
 		mckdbdata := dbmock.NewDataInterface()
-		mckdbdata.Impl.Find = func(ctx context.Context, tags []kdb.Tag, since *time.Time, until *time.Time) ([]string, error) {
+		mckdbdata.Impl.Find = func(ctx context.Context, tags []domain.Tag, since *time.Time, until *time.Time) ([]string, error) {
 			d := knitId
 			return d, nil
 		}
-		mckdbdata.Impl.Get = func(ctx context.Context, knitId []string) (map[string]kdb.KnitData, error) {
+		mckdbdata.Impl.Get = func(ctx context.Context, knitId []string) (map[string]domain.KnitData, error) {
 			return nil, errors.New("Test Internal Error")
 		}
 
@@ -433,15 +434,15 @@ func TestPutTagsForDataHandler(t *testing.T) {
 		)
 
 		dbdata := dbmock.NewDataInterface()
-		dbdata.Impl.UpdateTag = func(context.Context, string, kdb.TagDelta) error {
+		dbdata.Impl.UpdateTag = func(context.Context, string, domain.TagDelta) error {
 			return nil
 		}
-		dbdata.Impl.Get = func(ctx context.Context, s []string) (map[string]kdb.KnitData, error) {
-			return map[string]kdb.KnitData{
+		dbdata.Impl.Get = func(ctx context.Context, s []string) (map[string]domain.KnitData, error) {
+			return map[string]domain.KnitData{
 				knitId: {
-					KnitDataBody: kdb.KnitDataBody{
+					KnitDataBody: domain.KnitDataBody{
 						KnitId: knitId, VolumeRef: "#volume-ref",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "project", Value: "testing"},
 							{Key: "addtag1", Value: "addVal1"},
@@ -449,36 +450,36 @@ func TestPutTagsForDataHandler(t *testing.T) {
 							{Key: tags.KeyKnitId, Value: knitId},
 						}),
 					},
-					Upsteram: kdb.Dependency{
-						RunBody: kdb.RunBody{
-							Id: "run#1", Status: kdb.Done,
+					Upsteram: domain.Dependency{
+						RunBody: domain.RunBody{
+							Id: "run#1", Status: domain.Done,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-11T12:34:56+09:00")).OrFatal(t).Time(),
-							PlanBody: kdb.PlanBody{
+							PlanBody: domain.PlanBody{
 								PlanId: "plan#1", Hash: "#plan1", Active: true,
-								Image: &kdb.ImageIdentifier{Image: "repo.invalid/image", Version: "v1"},
+								Image: &domain.ImageIdentifier{Image: "repo.invalid/image", Version: "v1"},
 							},
 						},
-						MountPoint: kdb.MountPoint{
+						MountPoint: domain.MountPoint{
 							Id: 1010, Path: "/out/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "model-parameter"},
 								{Key: "project", Value: "testing"},
 							}),
 						},
 					},
-					Downstreams: []kdb.Dependency{
+					Downstreams: []domain.Dependency{
 						{
-							RunBody: kdb.RunBody{
-								Id: "run#2", Status: kdb.Running,
+							RunBody: domain.RunBody{
+								Id: "run#2", Status: domain.Running,
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-12T12:34:56+09:00")).OrFatal(t).Time(),
-								PlanBody: kdb.PlanBody{
+								PlanBody: domain.PlanBody{
 									PlanId: "plan#2", Hash: "#plan2", Active: true,
-									Image: &kdb.ImageIdentifier{Image: "repo.invalid/image", Version: "v2"},
+									Image: &domain.ImageIdentifier{Image: "repo.invalid/image", Version: "v2"},
 								},
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 2100, Path: "/in",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "model-parameter"},
 									{Key: "project", Value: "testing"},
 									{Key: "remTag1", Value: "remVal1"},
@@ -486,17 +487,17 @@ func TestPutTagsForDataHandler(t *testing.T) {
 							},
 						},
 						{
-							RunBody: kdb.RunBody{
-								Id: "run#3", Status: kdb.Starting,
+							RunBody: domain.RunBody{
+								Id: "run#3", Status: domain.Starting,
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-12T13:34:56+09:00")).OrFatal(t).Time(),
-								PlanBody: kdb.PlanBody{
+								PlanBody: domain.PlanBody{
 									PlanId: "plan#3", Hash: "#plan3", Active: true,
-									Image: &kdb.ImageIdentifier{Image: "repo.invalid/image", Version: "v3"},
+									Image: &domain.ImageIdentifier{Image: "repo.invalid/image", Version: "v3"},
 								},
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 3100, Path: "/in",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "model-parameter"},
 									{Key: "project", Value: "testing"},
 									{Key: "remTag2", Value: "remVal2"},
@@ -504,15 +505,15 @@ func TestPutTagsForDataHandler(t *testing.T) {
 							},
 						},
 					},
-					NominatedBy: []kdb.Nomination{
+					NominatedBy: []domain.Nomination{
 						{
-							PlanBody: kdb.PlanBody{
+							PlanBody: domain.PlanBody{
 								PlanId: "plan#4", Hash: "#plan3", Active: true,
-								Image: &kdb.ImageIdentifier{Image: "repo.invalid/image", Version: "v3"},
+								Image: &domain.ImageIdentifier{Image: "repo.invalid/image", Version: "v3"},
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 4100, Path: "/in",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "model-parameter"},
 									{Key: "project", Value: "testing"},
 									{Key: "addTag1", Value: "addVal1"},
@@ -524,12 +525,12 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			}, nil
 		}
 
-		expectedDelta := kdb.TagDelta{
-			Add: []kdb.Tag{
+		expectedDelta := domain.TagDelta{
+			Add: []domain.Tag{
 				{Key: "addTag1", Value: "addVal1"},
 				{Key: "addTag2", Value: "addVal2"},
 			},
-			Remove: []kdb.Tag{
+			Remove: []domain.Tag{
 				{Key: "remTag1", Value: "remVal1"},
 				{Key: "remTag2", Value: "remVal2"},
 			},
@@ -546,7 +547,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			},
 			Upstream: data.AssignedTo{
 				Run: runs.Summary{
-					RunId: "run#1", Status: string(kdb.Done),
+					RunId: "run#1", Status: string(domain.Done),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-11T12:34:56+09:00")).OrFatal(t),
 					Plan: plans.Summary{
 						PlanId: "plan#1",
@@ -564,7 +565,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			Downstreams: []data.AssignedTo{
 				{
 					Run: runs.Summary{
-						RunId: "run#2", Status: string(kdb.Running),
+						RunId: "run#2", Status: string(domain.Running),
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-12T12:34:56+09:00")).OrFatal(t),
 						Plan: plans.Summary{
 							PlanId: "plan#2",
@@ -582,7 +583,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 				},
 				{
 					Run: runs.Summary{
-						RunId: "run#3", Status: string(kdb.Starting),
+						RunId: "run#3", Status: string(domain.Starting),
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-12T13:34:56+09:00")).OrFatal(t),
 						Plan: plans.Summary{
 							PlanId: "plan#3",
@@ -634,13 +635,13 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			dbdata.Calls.Updatetag,
 			[]struct {
 				KnitId string
-				Delta  kdb.TagDelta
+				Delta  domain.TagDelta
 			}{
 				{KnitId: knitId, Delta: expectedDelta},
 			},
 			func(a, b struct {
 				KnitId string
-				Delta  kdb.TagDelta
+				Delta  domain.TagDelta
 			}) bool {
 				return a.KnitId == b.KnitId && a.Delta.Equal(&b.Delta)
 			},
@@ -737,8 +738,8 @@ func TestPutTagsForDataHandler(t *testing.T) {
 
 	t.Run("If target data is not found, it should response Not Found", func(t *testing.T) {
 		dbtag := dbmock.NewDataInterface()
-		dbtag.Impl.UpdateTag = func(ctx context.Context, knitId string, delta kdb.TagDelta) error {
-			return kdb.ErrMissing
+		dbtag.Impl.UpdateTag = func(ctx context.Context, knitId string, delta domain.TagDelta) error {
+			return kerr.ErrMissing
 		}
 
 		body := []byte(`{
@@ -771,7 +772,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 
 	t.Run("update operation did not completed with unexpected error. it should be retur internal server error", func(t *testing.T) {
 		dbtag := dbmock.NewDataInterface()
-		dbtag.Impl.UpdateTag = func(context.Context, string, kdb.TagDelta) error {
+		dbtag.Impl.UpdateTag = func(context.Context, string, domain.TagDelta) error {
 			return errors.New("some kind of error happen")
 		}
 		body := []byte(`{

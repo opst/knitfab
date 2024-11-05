@@ -13,18 +13,18 @@ import (
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kflg "github.com/opst/knitfab/pkg/commandline/flag"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/domain"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/youta-t/flarc"
 
 	pb "github.com/cheggaaa/pb/v3"
 )
 
 type Flags struct {
-	Tag         *kflg.Tags `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Tags to be put on Data. It can be specified multiple times."`
-	Name        bool       `flag:"name" alias:"n" help:"add tag name:<source>"`
-	Dereference bool       `flag:"dereference" short:"L" help:"Symlinks are followed and it stores target files of links. Otherwise symlinks are stored as such."`
+	Tag         *kargs.Tags `flag:"tag" alias:"t" metavar:"KEY:VALUE..." help:"Tags to be put on Data. It can be specified multiple times."`
+	Name        bool        `flag:"name" alias:"n" help:"add tag name:<source>"`
+	Dereference bool        `flag:"dereference" short:"L" help:"Symlinks are followed and it stores target files of links. Otherwise symlinks are stored as such."`
 }
 
 const ARG_SOURCE = "source"
@@ -33,7 +33,7 @@ func New() (flarc.Command, error) {
 	return flarc.NewCommand(
 		"Push (register) Data to Knitfab.",
 		Flags{
-			Tag:         &kflg.Tags{},
+			Tag:         &kargs.Tags{},
 			Name:        false,
 			Dereference: false,
 		},
@@ -84,7 +84,7 @@ func Task(
 	_ []any,
 ) error {
 	flags := cl.Flags()
-	rawtags := kflg.Tags{}
+	rawtags := kargs.Tags{}
 	if flags.Tag != nil {
 		rawtags = *flags.Tag
 	}
@@ -93,7 +93,7 @@ func Task(
 		if ut := new(apitag.UserTag); t.AsUserTag(ut) {
 			tags[*ut] = struct{}{}
 		} else {
-			return fmt.Errorf("%w: Tag starting %s is reserved", flarc.ErrUsage, kdb.SystemTagPrefix)
+			return fmt.Errorf("%w: Tag starting %s is reserved", flarc.ErrUsage, domain.SystemTagPrefix)
 		}
 	}
 
@@ -113,7 +113,7 @@ func Task(
 			continue
 		}
 
-		t := utils.KeysOf(tags)
+		t := slices.KeysOf(tags)
 		if toBeNamed {
 			t = append(t, apitag.UserTag{Key: "name", Value: filepath.Base(s)})
 		}
@@ -162,7 +162,7 @@ func Task(
 
 		l.Printf(
 			"registered: %s -> %s:%s",
-			s, kdb.KeyKnitId, knitData.KnitId,
+			s, domain.KeyKnitId, knitData.KnitId,
 		)
 
 		// tagging
@@ -177,7 +177,7 @@ func Task(
 
 			l.Printf(
 				"[[%d/%d]] [WARN] partially done: %s -> %s:%s (but not Tagged)",
-				n+1, total, s, kdb.KeyKnitId, res.KnitId,
+				n+1, total, s, domain.KeyKnitId, res.KnitId,
 			)
 			cl.Stdout().Write(buf)
 			return err
@@ -189,7 +189,7 @@ func Task(
 		}
 		l.Printf(
 			"[[%d/%d]] [OK] done: %s -> %s:%s",
-			n+1, total, s, kdb.KeyKnitId, res.KnitId,
+			n+1, total, s, domain.KeyKnitId, res.KnitId,
 		)
 		cl.Stdout().Write(buf)
 	}

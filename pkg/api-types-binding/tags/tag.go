@@ -2,9 +2,9 @@ package tags
 
 import (
 	"github.com/opst/knitfab-api-types/tags"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 )
 
-func Compose(dbtag kdb.Tag) tags.Tag {
+func Compose(dbtag domain.Tag) tags.Tag {
 	return tags.Tag(dbtag)
 }

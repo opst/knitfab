@@ -13,7 +13,7 @@ import (
 	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/env"
 	plan_template "github.com/opst/knitfab/cmd/knit/subcommands/plan/template"
-	"github.com/opst/knitfab/pkg/images/analyzer"
+	"github.com/opst/knitfab/pkg/utils/images/analyzer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

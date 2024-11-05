@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/opst/knitfab/cmd/volume_expander/metrics"
+	"github.com/opst/knitfab/pkg/conn/k8s/testenv"
 	"github.com/opst/knitfab/pkg/utils/try"
-	"github.com/opst/knitfab/pkg/workloads/k8s/testenv"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	kubecore "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

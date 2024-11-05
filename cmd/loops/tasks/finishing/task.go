@@ -7,20 +7,20 @@ import (
 
 	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	"github.com/opst/knitfab/pkg/api-types-binding/runs"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/workloads"
-	k8s "github.com/opst/knitfab/pkg/workloads/k8s"
-	"github.com/opst/knitfab/pkg/workloads/worker"
+	"github.com/opst/knitfab/pkg/domain"
+	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
+	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
+	k8srun "github.com/opst/knitfab/pkg/domain/run/k8s"
 )
 
 // initial value for task
-func Seed(pseudoPlans []kdb.PseudoPlanName) kdb.RunCursor {
-	return kdb.RunCursor{
+func Seed(pseudoPlans []domain.PseudoPlanName) domain.RunCursor {
+	return domain.RunCursor{
 		// statuses of the target runs for finishing
-		Status:   []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
+		Status:   []domain.KnitRunStatus{domain.Completing, domain.Aborting},
 		Pseudo:   pseudoPlans,
 		Debounce: 30 * time.Second,
 	}
@@ -35,25 +35,20 @@ func Seed(pseudoPlans []kdb.PseudoPlanName) kdb.RunCursor {
 // - task: let the Run finished (completing -> done, aborting -> failed) and
 // update run status.
 func Task(
-	iDbRun kdb.RunInterface,
-	find func(
-		ctx context.Context,
-		cluster k8s.Cluster,
-		runBody kdb.RunBody,
-	) (worker.Worker, error),
-	cluster k8s.Cluster,
+	iDbRun kdbrun.Interface,
+	iK8sRun k8srun.Interface,
 	hook hook.Hook[apiruns.Detail, struct{}],
-) recurring.Task[kdb.RunCursor] {
-	return func(ctx context.Context, cursor kdb.RunCursor) (kdb.RunCursor, bool, error) {
+) recurring.Task[domain.RunCursor] {
+	return func(ctx context.Context, cursor domain.RunCursor) (domain.RunCursor, bool, error) {
 		nextCursor, statusChanged, err := iDbRun.PickAndSetStatus(
 			ctx, cursor,
-			func(targetRun kdb.Run) (kdb.KnitRunStatus, error) {
-				var nextState kdb.KnitRunStatus
+			func(targetRun domain.Run) (domain.KnitRunStatus, error) {
+				var nextState domain.KnitRunStatus
 				switch targetRun.Status {
-				case kdb.Completing:
-					nextState = kdb.Done
-				case kdb.Aborting:
-					nextState = kdb.Failed
+				case domain.Completing:
+					nextState = domain.Done
+				case domain.Aborting:
+					nextState = domain.Failed
 				default:
 					// fatal
 					return targetRun.Status, errors.New("unexpected run status: assertion error")
@@ -73,9 +68,9 @@ func Task(
 					//
 
 					// find the worker corresponding to targetRun
-					worker, err := find(ctx, cluster, targetRun.RunBody)
+					worker, err := iK8sRun.FindWorker(ctx, targetRun.RunBody)
 					// is err ErrMissing?
-					if workloads.AsMissingError(err) {
+					if k8serrors.AsMissingError(err) {
 						// NOP: no worker exists.
 					} else if err != nil {
 						return targetRun.Status, err

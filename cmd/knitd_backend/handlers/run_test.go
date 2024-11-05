@@ -15,13 +15,16 @@ import (
 	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab/cmd/knitd_backend/handlers"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
-	dbmock "github.com/opst/knitfab/pkg/db/mocks"
+	"github.com/opst/knitfab/pkg/domain"
+	dbdatamock "github.com/opst/knitfab/pkg/domain/data/db/mock"
+	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
+	dataK8sMock "github.com/opst/knitfab/pkg/domain/data/k8s/mock"
+	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
+	dbrunmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
+	runK8sMock "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
+	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
-	"github.com/opst/knitfab/pkg/workloads"
-	"github.com/opst/knitfab/pkg/workloads/dataagt"
-	"github.com/opst/knitfab/pkg/workloads/worker"
 )
 
 func TestGetRunLogHandler(t *testing.T) {
@@ -137,44 +140,44 @@ func TestGetRunLogHandler(t *testing.T) {
 			svr := httptest.NewServer(hdr)
 			defer svr.Close()
 
-			targetData := kdb.KnitDataBody{
+			targetData := domain.KnitDataBody{
 				KnitId:    "test-log-knit-id",
 				VolumeRef: "pvc-test-log-knit-id",
 			}
-			targetRun := map[string]kdb.Run{
+			targetRun := map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
+					RunBody: domain.RunBody{
 						Id: "test-run-id",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash",
 						},
-						Status: kdb.Done,
+						Status: domain.Done,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "test-in-knit-id", VolumeRef: "pvc-test-in-knit-id",
 							},
-							MountPoint: kdb.MountPoint{Id: 1, Path: "/testinpath/test"},
+							MountPoint: domain.MountPoint{Id: 1, Path: "/testinpath/test"},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "test-out-knit-id", VolumeRef: "pvc-test-out-knit-id",
 							},
-							MountPoint: kdb.MountPoint{Id: 3, Path: "/testoutpath/test"},
+							MountPoint: domain.MountPoint{Id: 3, Path: "/testoutpath/test"},
 						},
 					},
-					Log: &kdb.Log{Id: 2, KnitDataBody: targetData},
+					Log: &domain.Log{Id: 2, KnitDataBody: targetData},
 				},
 			}
 
-			mRunInterface := dbmock.NewRunInterface()
-			mRunInterface.Impl.Get = func(ctx context.Context, runId []string) (map[string]kdb.Run, error) {
+			mRunDB := dbrunmock.NewRunInterface()
+			mRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 				expected := []string{"test-run-id"}
 				if !cmp.SliceContentEq(runId, expected) {
 					t.Errorf("unexpected query: runid: (actual, expected) = (%v, %v)", runId, expected)
@@ -183,24 +186,24 @@ func TestGetRunLogHandler(t *testing.T) {
 				return targetRun, nil
 			}
 
-			newDataAgent := kdb.DataAgent{
+			newDataAgent := domain.DataAgent{
 				Name:         "test-log-knit-id",
-				Mode:         kdb.DataAgentRead,
+				Mode:         domain.DataAgentRead,
 				KnitDataBody: targetData,
 			}
 
-			mDataInterface := dbmock.NewDataInterface()
-			mDataInterface.Impl.NewAgent = func(ctx context.Context, s string, dam kdb.DataAgentMode, d time.Duration) (kdb.DataAgent, error) {
+			mDataDB := dbdatamock.NewDataInterface()
+			mDataDB.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
 				if s != targetData.KnitId {
 					t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, targetData.KnitId)
 				}
-				if dam != kdb.DataAgentRead {
-					t.Errorf("unexpected query: mode: (actual, expected) = (%v, %v)", dam, kdb.DataAgentRead)
+				if dam != domain.DataAgentRead {
+					t.Errorf("unexpected query: mode: (actual, expected) = (%v, %v)", dam, domain.DataAgentRead)
 				}
 
 				return newDataAgent, nil
 			}
-			mDataInterface.Impl.RemoveAgent = func(ctx context.Context, s string) error {
+			mDataDB.Impl.RemoveAgent = func(ctx context.Context, s string) error {
 				if s != newDataAgent.Name {
 					t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, newDataAgent.Name)
 				}
@@ -220,27 +223,29 @@ func TestGetRunLogHandler(t *testing.T) {
 			ectx.SetParamNames("runid")
 			ectx.SetParamValues("test-run-id")
 
+			mDataK8s := dataK8sMock.New(t)
 			spawnDataagtCalled := 0
+			mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadlint time.Time) (dataagt.DataAgent, error) {
+				spawnDataagtCalled += 1
+
+				if !newDataAgent.Equal(&d) {
+					t.Errorf(
+						"DataAgent\nactual:   %+v\nexpected: %+v",
+						d, targetData,
+					)
+				}
+
+				return dagt, nil
+			}
+
+			mRunK8s := runK8sMock.New(t)
+			mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
+				t.Error("FindWorker: should not be called")
+				return nil, nil
+			}
+
 			testee := handlers.GetRunLogHandler(
-				mRunInterface,
-				mDataInterface,
-				func(ctx context.Context, d kdb.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
-					spawnDataagtCalled += 1
-
-					if !newDataAgent.Equal(&d) {
-						t.Errorf(
-							"DataAgent\nactual:   %+v\nexpected: %+v",
-							d, targetData,
-						)
-					}
-
-					return dagt, nil
-				},
-				func(ctx context.Context, r kdb.Run) (worker.Worker, error) {
-					t.Error("getWorker: should not be called")
-					return nil, nil
-				},
-				"runid",
+				mRunDB, mDataDB, mDataK8s, mRunK8s, "runid",
 			)
 			if err := testee(ectx); err != nil {
 				t.Fatalf("testee returns error unexpectedly. %v", err)
@@ -273,15 +278,15 @@ func TestGetRunLogHandler(t *testing.T) {
 				t.Errorf("dataagt.Close has not been called.")
 			}
 
-			if mRunInterface.Calls.Get.Times() < 1 {
+			if mRunDB.Calls.Get.Times() < 1 {
 				t.Errorf("RunInterface.Get has not been called.")
 			}
 
-			if mDataInterface.Calls.NewAgent.Times() < 1 {
+			if mDataDB.Calls.NewAgent.Times() < 1 {
 				t.Errorf("DataInterface.NewAgent has not been called.")
 			}
 
-			if mDataInterface.Calls.RemoveAgent.Times() < 1 {
+			if mDataDB.Calls.RemoveAgent.Times() < 1 {
 				t.Errorf("DataInterface.RemoveAgent has not been called.")
 			}
 
@@ -296,7 +301,7 @@ func TestGetRunLogHandler(t *testing.T) {
 
 	for name, testcase := range map[string]struct {
 		// data               kdb.KnitDataBody
-		run                     map[string]kdb.Run
+		run                     map[string]domain.Run
 		errorFromRunGet         error
 		errorFromNewAgent       error
 		errorFromSpawner        error
@@ -308,20 +313,20 @@ func TestGetRunLogHandler(t *testing.T) {
 			expectedStatusCode: 500,
 		},
 		"Run missing error causes 404 error": {
-			run:                map[string]kdb.Run{},
+			run:                map[string]domain.Run{},
 			expectedStatusCode: 404,
 		},
 		"Invalidated Run causes 404 error": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Invalidated,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Invalidated,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash",
-							Image:  &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image:  &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 							Pseudo: nil,
 						},
 					},
@@ -330,31 +335,31 @@ func TestGetRunLogHandler(t *testing.T) {
 			expectedStatusCode: 404,
 		},
 		"Run with no LogMountPoint causes 404 error": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Waiting,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Waiting,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash",
-							Image:  &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image:  &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 							Pseudo: nil,
 						},
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId:    "input-data",
 								VolumeRef: "vpc-input-data",
 							},
-							MountPoint: kdb.MountPoint{Id: 1, Path: "mp1/path"},
+							MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							MountPoint: kdb.MountPoint{Id: 3, Path: "mp3/path"},
+							MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"},
 						},
 					},
 				},
@@ -362,36 +367,36 @@ func TestGetRunLogHandler(t *testing.T) {
 			expectedStatusCode: 404,
 		},
 		"not started Run causes 503 error(Waiting)": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Waiting,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Waiting,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
-							Image:  &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image:  &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 							Pseudo: nil,
 						},
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId:    "input-data",
 								VolumeRef: "vpc-input-data",
 							},
-							MountPoint: kdb.MountPoint{Id: 1, Path: "mp1/path"},
+							MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							MountPoint: kdb.MountPoint{Id: 3, Path: "mp3/path"},
+							MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"},
 						},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 2,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "log-output-data",
 							VolumeRef: "vpc-log-output-data",
 						},
@@ -401,28 +406,28 @@ func TestGetRunLogHandler(t *testing.T) {
 			expectedStatusCode: 503,
 		},
 		"not started Run causes 503 error(Starting)": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Waiting,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Waiting,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
-							Image:  &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image:  &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 							Pseudo: nil,
 						},
 					},
-					Inputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 1, Path: "mp1/path"}},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
 					},
-					Outputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 3, Path: "mp3/path"}},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 2,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "log-output-data",
 							VolumeRef: "vpc-log-output-data",
 						},
@@ -432,52 +437,52 @@ func TestGetRunLogHandler(t *testing.T) {
 			expectedStatusCode: 503,
 		},
 		"not started Run causes 503 error(Deactivated)": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Deactivated,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Deactivated,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
-							Image:  &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image:  &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 							Pseudo: nil,
 						},
 					},
-					Inputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 1, Path: "mp1/path"}},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
 					},
-					Outputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 2, Path: "mp2/path"}},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 2, Path: "mp2/path"}},
 					},
-					Log: &kdb.Log{Id: 3, Tags: nil},
+					Log: &domain.Log{Id: 3, Tags: nil},
 				},
 			},
 			expectedStatusCode: 503,
 		},
 		"NewDataAgent failure causes 500 error": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Done,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Done,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
-							Image: &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image: &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 						},
 					},
-					Inputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 1, Path: "mp1/path"}},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
 					},
-					Outputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 3, Path: "mp3/path"}},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 2,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "test-log-knit-id",
 							VolumeRef: "vpc-test-log-knit-id",
 						},
@@ -488,58 +493,58 @@ func TestGetRunLogHandler(t *testing.T) {
 			expectedStatusCode: 500,
 		},
 		"Data reader spawn failure by ErrDeadlineExceeded causes 503 error": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Done,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Done,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
-							Image: &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image: &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 						},
 					},
-					Inputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 1, Path: "mp1/path"}},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
 					},
-					Outputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 3, Path: "mp3/path"}},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 2,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "test-log-knit-id",
 							VolumeRef: "vpc-test-log-knit-id",
 						},
 					},
 				},
 			},
-			errorFromSpawner:   workloads.ErrDeadlineExceeded,
+			errorFromSpawner:   k8serrors.ErrDeadlineExceeded,
 			expectedStatusCode: 503,
 		},
 		"Data reader spawn failure causes 500 error": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Done,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Done,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
-							Image: &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image: &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 						},
 					},
-					Inputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 1, Path: "mp1/path"}},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
 					},
-					Outputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 3, Path: "mp3/path"}},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 2,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "test-log-knit-id",
 							VolumeRef: "vpc-test-log-knit-id",
 						},
@@ -550,27 +555,27 @@ func TestGetRunLogHandler(t *testing.T) {
 			expectedStatusCode: 500,
 		},
 		"when closing Data reader is failed, data agent record should not be removed": {
-			run: map[string]kdb.Run{
+			run: map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
-						Id: "test-run-id", Status: kdb.Done,
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Done,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
-							Image: &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+							Image: &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 						},
 					},
-					Inputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 1, Path: "mp1/path"}},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
 					},
-					Outputs: []kdb.Assignment{
-						{MountPoint: kdb.MountPoint{Id: 3, Path: "mp3/path"}},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 2,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "test-log-knit-id",
 							VolumeRef: "vpc-test-log-knit-id",
 						},
@@ -582,58 +587,60 @@ func TestGetRunLogHandler(t *testing.T) {
 		},
 	} {
 		t.Run("When tring to read run log "+name, func(t *testing.T) {
-			mRunInterface := dbmock.NewRunInterface()
-			mRunInterface.Impl.Get = func(ctx context.Context, runId []string) (map[string]kdb.Run, error) {
+			mRunDB := dbrunmock.NewRunInterface()
+			mRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 				if testcase.errorFromRunGet != nil {
 					return nil, testcase.errorFromRunGet
 				} else if testcase.run != nil {
 					return testcase.run, nil
 				}
-				return map[string]kdb.Run{}, nil
+				return map[string]domain.Run{}, nil
 			}
 
-			mDataInterface := dbmock.NewDataInterface()
-			mDataInterface.Impl.NewAgent = func(ctx context.Context, s string, dam kdb.DataAgentMode, d time.Duration) (kdb.DataAgent, error) {
-				da := kdb.DataAgent{
+			mDataDB := dbdatamock.NewDataInterface()
+			mDataDB.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
+				da := domain.DataAgent{
 					Name:         "test-log-knit-id",
-					Mode:         kdb.DataAgentRead,
-					KnitDataBody: kdb.KnitDataBody{KnitId: "test-log-knit-id", VolumeRef: "pvc-test-log-knit-id"},
+					Mode:         domain.DataAgentRead,
+					KnitDataBody: domain.KnitDataBody{KnitId: "test-log-knit-id", VolumeRef: "pvc-test-log-knit-id"},
 				}
 
 				if testcase.errorFromNewAgent != nil {
-					return kdb.DataAgent{}, testcase.errorFromNewAgent
+					return domain.DataAgent{}, testcase.errorFromNewAgent
 				}
 				return da, nil
 			}
 
-			mDataInterface.Impl.RemoveAgent = func(ctx context.Context, s string) error {
+			mDataDB.Impl.RemoveAgent = func(ctx context.Context, s string) error {
 				return nil
 			}
 
-			testee := handlers.GetRunLogHandler(
-				mRunInterface,
-				mDataInterface,
-				func(context.Context, kdb.DataAgent, time.Time) (dataagt.Dataagt, error) {
-					if testcase.errorFromSpawner != nil {
-						return nil, testcase.errorFromSpawner
-					}
+			mDataK8s := dataK8sMock.New(t)
+			mDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
+				if testcase.errorFromSpawner != nil {
+					return nil, testcase.errorFromSpawner
+				}
 
-					serv := httptest.NewServer(
-						// No handlers are need for mock dataagt.
-						// This API should not access DataAgent because of the caused error.
-						nil,
-					)
-					t.Cleanup(serv.Close)
-					dagt := NewMockedDataagt(serv)
-					dagt.Impl.Close = func() error { return nil }
-					t.Cleanup(func() { dagt.Close() })
-					return dagt, nil
-				},
-				func(ctx context.Context, r kdb.Run) (worker.Worker, error) {
-					t.Error("getWorker: should not be called")
-					return nil, nil
-				},
-				"runid",
+				serv := httptest.NewServer(
+					// No handlers are need for mock dataagt.
+					// This API should not access DataAgent because of the caused error.
+					nil,
+				)
+				t.Cleanup(serv.Close)
+				dagt := NewMockedDataagt(serv)
+				dagt.Impl.Close = func() error { return nil }
+				t.Cleanup(func() { dagt.Close() })
+				return dagt, nil
+			}
+
+			mRunK8s := runK8sMock.New(t)
+			mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
+				t.Error("FindWorker: should not be called")
+				return nil, nil
+			}
+
+			testee := handlers.GetRunLogHandler(
+				mRunDB, mDataDB, mDataK8s, mRunK8s, "runid",
 			)
 
 			runId := "test-run-id"
@@ -648,7 +655,7 @@ func TestGetRunLogHandler(t *testing.T) {
 				if err != nil {
 					t.Errorf("response is error, unexpectedly: %+v", err)
 				}
-				if mDataInterface.Calls.RemoveAgent.Times() < 1 {
+				if mDataDB.Calls.RemoveAgent.Times() < 1 {
 					t.Errorf("DataInterface.RemoveAgent should be called.")
 				}
 				return
@@ -661,7 +668,7 @@ func TestGetRunLogHandler(t *testing.T) {
 					t.Errorf("error code is not %d. actual = %d", testcase.expectedStatusCode, httperr.Code)
 				}
 			}
-			if 0 < mDataInterface.Calls.RemoveAgent.Times() {
+			if 0 < mDataDB.Calls.RemoveAgent.Times() {
 				t.Errorf("DataInterface.RemoveAgent should not be called.")
 			}
 		})
@@ -669,48 +676,48 @@ func TestGetRunLogHandler(t *testing.T) {
 
 	t.Run("when dataagt is broken. response 500", func(t *testing.T) {
 
-		databody := kdb.KnitDataBody{
+		databody := domain.KnitDataBody{
 			KnitId:    "test-log-knit-id",
 			VolumeRef: "volume-ref",
 		}
-		run := map[string]kdb.Run{
+		run := map[string]domain.Run{
 			"test-run-id": {
-				RunBody: kdb.RunBody{
+				RunBody: domain.RunBody{
 					Id: "test-run-id",
-					PlanBody: kdb.PlanBody{
+					PlanBody: domain.PlanBody{
 						PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
-						Image:  &kdb.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+						Image:  &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
 						Pseudo: nil,
 					},
-					Status: kdb.Done,
+					Status: domain.Done,
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 						"2022-11-10T01:00:01.000+09:00",
 					)).OrFatal(t).Time(),
 				},
-				Inputs: []kdb.Assignment{
-					{MountPoint: kdb.MountPoint{Id: 1, Path: "/mp1/path"}},
+				Inputs: []domain.Assignment{
+					{MountPoint: domain.MountPoint{Id: 1, Path: "/mp1/path"}},
 				},
-				Outputs: []kdb.Assignment{
-					{MountPoint: kdb.MountPoint{Id: 3, Path: "/mp3/path"}},
+				Outputs: []domain.Assignment{
+					{MountPoint: domain.MountPoint{Id: 3, Path: "/mp3/path"}},
 				},
-				Log: &kdb.Log{Id: 2, KnitDataBody: databody},
+				Log: &domain.Log{Id: 2, KnitDataBody: databody},
 			},
 		}
 
-		mRunInterface := dbmock.NewRunInterface()
-		mRunInterface.Impl.Get = func(ctx context.Context, runId []string) (map[string]kdb.Run, error) {
+		mRunDB := dbrunmock.NewRunInterface()
+		mRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 			return run, nil
 		}
 
-		mDataInterface := dbmock.NewDataInterface()
-		mDataInterface.Impl.NewAgent = func(ctx context.Context, s string, dam kdb.DataAgentMode, d time.Duration) (kdb.DataAgent, error) {
-			return kdb.DataAgent{
+		mDataDB := dbdatamock.NewDataInterface()
+		mDataDB.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
+			return domain.DataAgent{
 				Name:         "test-log-knit-id",
-				Mode:         kdb.DataAgentRead,
+				Mode:         domain.DataAgentRead,
 				KnitDataBody: databody,
 			}, nil
 		}
-		mDataInterface.Impl.RemoveAgent = func(ctx context.Context, s string) error {
+		mDataDB.Impl.RemoveAgent = func(ctx context.Context, s string) error {
 			if s != "test-log-knit-id" {
 				t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, "test-log-knit-id")
 			}
@@ -720,16 +727,19 @@ func TestGetRunLogHandler(t *testing.T) {
 		dagt := NewBrokenDataagt()
 		dagt.Impl.Close = func() error { return nil }
 
+		mDataK8s := dataK8sMock.New(t)
+		mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
+			return dagt, nil
+		}
+
+		mRunK8s := runK8sMock.New(t)
+		mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
+			t.Error("FindWorker: should not be called")
+			return nil, nil
+		}
+
 		testee := handlers.GetRunLogHandler(
-			mRunInterface, mDataInterface,
-			func(context.Context, kdb.DataAgent, time.Time) (dataagt.Dataagt, error) {
-				return dagt, nil
-			},
-			func(ctx context.Context, r kdb.Run) (worker.Worker, error) {
-				t.Error("getWorker: should not be called")
-				return nil, nil
-			},
-			"runid",
+			mRunDB, mDataDB, mDataK8s, mRunK8s, "runid",
 		)
 
 		runId := "test-run-id"
@@ -752,7 +762,7 @@ func TestGetRunLogHandler(t *testing.T) {
 			t.Errorf("dataagt.Close has not been called.")
 		}
 
-		if mDataInterface.Calls.RemoveAgent.Times() < 1 {
+		if mDataDB.Calls.RemoveAgent.Times() < 1 {
 			t.Errorf("DataInterface.RemoveAgent has not been called.")
 		}
 
@@ -768,7 +778,7 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 	type When struct {
 		respFromDataAgt responseDescriptor
 
-		runStatus       kdb.KnitRunStatus
+		runStatus       domain.KnitRunStatus
 		errorFromRunGet error
 
 		worker          worker.Worker
@@ -782,15 +792,15 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 	theory := func(when When, then Then) func(*testing.T) {
 		return func(t *testing.T) {
 
-			targetData := kdb.KnitDataBody{
+			targetData := domain.KnitDataBody{
 				KnitId:    "test-log-knit-id",
 				VolumeRef: "pvc-test-log-knit-id",
 			}
-			targetRun := map[string]kdb.Run{
+			targetRun := map[string]domain.Run{
 				"test-run-id": {
-					RunBody: kdb.RunBody{
+					RunBody: domain.RunBody{
 						Id: "test-run-id",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "test-plan-id", Active: true, Hash: "hash",
 						},
 						Status: when.runStatus,
@@ -798,28 +808,28 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 							"2022-11-10T01:00:01.000+09:00",
 						)).OrFatal(t).Time(),
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "test-in-knit-id", VolumeRef: "pvc-test-in-knit-id",
 							},
-							MountPoint: kdb.MountPoint{Id: 1, Path: "/testinpath/test"},
+							MountPoint: domain.MountPoint{Id: 1, Path: "/testinpath/test"},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "test-out-knit-id", VolumeRef: "pvc-test-out-knit-id",
 							},
-							MountPoint: kdb.MountPoint{Id: 3, Path: "/testoutpath/test"},
+							MountPoint: domain.MountPoint{Id: 3, Path: "/testoutpath/test"},
 						},
 					},
-					Log: &kdb.Log{Id: 2, KnitDataBody: targetData},
+					Log: &domain.Log{Id: 2, KnitDataBody: targetData},
 				},
 			}
 
-			mRunInterface := dbmock.NewRunInterface()
-			mRunInterface.Impl.Get = func(ctx context.Context, runId []string) (map[string]kdb.Run, error) {
+			mRunDB := dbrunmock.NewRunInterface()
+			mRunDB.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 				wantRunId := []string{"test-run-id"}
 				if !cmp.SliceContentEq(runId, wantRunId) {
 					t.Errorf("unexpected query: runid: (actual, expected) = (%v, %v)", runId, wantRunId)
@@ -831,46 +841,48 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 				return targetRun, nil
 			}
 
-			mDataInterface := dbmock.NewDataInterface()
-			spawnDataAgent := func(ctx context.Context, d kdb.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
+			mDataDB := dbdatamock.NewDataInterface()
+			mDataK8s := dataK8sMock.New(t)
+			mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
 				t.Errorf("spawnDataAgent: should not be called")
 				return nil, nil
 			}
 
-			getWorker := func(ctx context.Context, r kdb.Run) (worker.Worker, error) {
-				t.Error("getWorker: should not be called")
+			mRunK8s := runK8sMock.New(t)
+			mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
+				t.Error("FindWorker: should not be called")
 				return nil, when.errorFromWorker
 			}
 
 			switch when.runStatus {
-			case kdb.Running, kdb.Starting:
-				getWorker = func(ctx context.Context, r kdb.Run) (worker.Worker, error) {
+			case domain.Running, domain.Starting:
+				mRunK8s.Impl.FindWorker = func(ctx context.Context, r domain.RunBody) (worker.Worker, error) {
 					if when.worker != nil {
 						return when.worker, nil
 					}
 					return nil, when.errorFromWorker
 				}
 			default:
-				mDataInterface.Impl.NewAgent = func(ctx context.Context, s string, dam kdb.DataAgentMode, d time.Duration) (kdb.DataAgent, error) {
+				mDataDB.Impl.NewAgent = func(ctx context.Context, s string, dam domain.DataAgentMode, d time.Duration) (domain.DataAgent, error) {
 					if s != targetData.KnitId {
 						t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, targetData.KnitId)
 					}
-					if dam != kdb.DataAgentRead {
-						t.Errorf("unexpected query: mode: (actual, expected) = (%v, %v)", dam, kdb.DataAgentRead)
+					if dam != domain.DataAgentRead {
+						t.Errorf("unexpected query: mode: (actual, expected) = (%v, %v)", dam, domain.DataAgentRead)
 					}
-					return kdb.DataAgent{
+					return domain.DataAgent{
 						Name:         targetData.KnitId,
-						Mode:         kdb.DataAgentRead,
+						Mode:         domain.DataAgentRead,
 						KnitDataBody: targetData,
 					}, nil
 				}
-				mDataInterface.Impl.RemoveAgent = func(ctx context.Context, s string) error {
+				mDataDB.Impl.RemoveAgent = func(ctx context.Context, s string) error {
 					if s != targetData.KnitId {
 						t.Errorf("unexpected query: knitId: (actual, expected) = (%v, %v)", s, targetData.KnitId)
 					}
 					return nil
 				}
-				spawnDataAgent = func(ctx context.Context, d kdb.DataAgent, deadline time.Time) (dataagt.Dataagt, error) {
+				mDataK8s.Impl.SpawnDataAgent = func(ctx context.Context, d domain.DataAgent, deadline time.Time) (dataagt.DataAgent, error) {
 					hdr := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						when.respFromDataAgt.WriteAsTarGzContainsSingleFile("/log/log", w)
 					})
@@ -885,11 +897,7 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 			}
 
 			testee := handlers.GetRunLogHandler(
-				mRunInterface,
-				mDataInterface,
-				spawnDataAgent,
-				getWorker,
-				"runid",
+				mRunDB, mDataDB, mDataK8s, mRunK8s, "runid",
 			)
 
 			runId := "test-run-id"
@@ -908,7 +916,7 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 				}
 			}
 
-			if mRunInterface.Calls.Get.Times() < 1 {
+			if mRunDB.Calls.Get.Times() < 1 {
 				t.Errorf("RunInterface.Get has not been called.")
 			}
 
@@ -941,7 +949,7 @@ lin3 3
 		}
 		t.Run("running run should return log", theory(
 			When{
-				runStatus: kdb.Running,
+				runStatus: domain.Running,
 				worker:    worker,
 			},
 			Then{
@@ -962,7 +970,7 @@ lin3 3
 		))
 		t.Run("starting run should return log", theory(
 			When{
-				runStatus: kdb.Starting,
+				runStatus: domain.Starting,
 				worker:    worker,
 			},
 			Then{
@@ -986,7 +994,7 @@ lin3 3
 	{
 		t.Run("waiting run should return 503", theory(
 			When{
-				runStatus: kdb.Waiting,
+				runStatus: domain.Waiting,
 			},
 			Then{
 				response: responseDescriptor{
@@ -999,7 +1007,7 @@ lin3 3
 		))
 		t.Run("deactivated run should return 503", theory(
 			When{
-				runStatus: kdb.Deactivated,
+				runStatus: domain.Deactivated,
 			},
 			Then{
 				response: responseDescriptor{
@@ -1012,7 +1020,7 @@ lin3 3
 		))
 		t.Run("ready run should return 503", theory(
 			When{
-				runStatus: kdb.Ready,
+				runStatus: domain.Ready,
 			},
 			Then{
 				response: responseDescriptor{
@@ -1028,7 +1036,7 @@ lin3 3
 	{
 		t.Run("done run should return log", theory(
 			When{
-				runStatus: kdb.Done,
+				runStatus: domain.Done,
 				respFromDataAgt: responseDescriptor{
 					code: 200,
 					header: map[string][]string{
@@ -1061,7 +1069,7 @@ lin3 3
 		))
 		t.Run("completing run should return log", theory(
 			When{
-				runStatus: kdb.Completing,
+				runStatus: domain.Completing,
 				respFromDataAgt: responseDescriptor{
 					code: 200,
 					header: map[string][]string{
@@ -1094,7 +1102,7 @@ lin3 3
 		))
 		t.Run("failed run should return log", theory(
 			When{
-				runStatus: kdb.Failed,
+				runStatus: domain.Failed,
 				respFromDataAgt: responseDescriptor{
 					code: 200,
 					header: map[string][]string{
@@ -1127,7 +1135,7 @@ lin3 3
 		))
 		t.Run("aborting run should return log", theory(
 			When{
-				runStatus: kdb.Aborting,
+				runStatus: domain.Aborting,
 				respFromDataAgt: responseDescriptor{
 					code: 200,
 					header: map[string][]string{

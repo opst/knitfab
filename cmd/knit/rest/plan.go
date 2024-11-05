@@ -9,7 +9,7 @@ import (
 
 	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab-api-types/tags"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils/logic"
 )
 
@@ -90,7 +90,7 @@ func (c *client) RegisterPlan(ctx context.Context, spec plans.PlanSpec) (plans.D
 func (c *client) FindPlan(
 	ctx context.Context,
 	active logic.Ternary,
-	imageVer kdb.ImageIdentifier,
+	imageVer domain.ImageIdentifier,
 	inTags []tags.Tag,
 	outTags []tags.Tag,
 ) ([]plans.Detail, error) {

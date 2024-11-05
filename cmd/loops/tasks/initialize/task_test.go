@@ -4,334 +4,31 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/opst/knitfab-api-types/misc/rfctime"
 	apiruns "github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/initialize"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
-	kdbmock "github.com/opst/knitfab/pkg/db/mocks"
-	"github.com/opst/knitfab/pkg/utils"
+	types "github.com/opst/knitfab/pkg/domain"
+	kdbrunmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
+	k8srunmock "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
 	"github.com/opst/knitfab/pkg/utils/try"
-	"github.com/opst/knitfab/pkg/workloads/data"
-	k8smock "github.com/opst/knitfab/pkg/workloads/k8s/mock"
-	"github.com/opst/knitfab/pkg/workloads/k8s/testenv"
-	kubecore "k8s.io/api/core/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func TestPVCinitializer(t *testing.T) {
-	t.Run("it creates PVCs for run's output", func(t *testing.T) {
-		ctx, cancel := context.Background(), func() {}
-		if deadline, ok := t.Deadline(); ok {
-			ctx, cancel = context.WithDeadline(ctx, deadline.Add(-time.Second))
-		}
-		defer cancel()
-
-		cluster, clientset := testenv.NewCluster(t)
-		template := data.VolumeTemplate{
-			Namespece:    testenv.Namespace(),
-			StorageClass: testenv.STORAGE_CLASS_NAME,
-			Capacity:     resource.MustParse("1Ki"),
-		}
-
-		testee := initialize.PVCInitializer(cluster, template)
-
-		run := kdb.Run{
-			// RunBody: do not care
-			Inputs: []kdb.Assignment{
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-input-1",
-						VolumeRef: "ref-initialize-input-1",
-					},
-				},
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-input-2",
-						VolumeRef: "ref-initialize-input-2",
-					},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-output-1",
-						VolumeRef: "ref-initialize-output-1",
-					},
-				},
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-output-2",
-						VolumeRef: "ref-initialize-output-2",
-					},
-				},
-			},
-			Log: &kdb.Log{
-				KnitDataBody: kdb.KnitDataBody{
-					KnitId:    "initialize-log",
-					VolumeRef: "ref-initialize-log",
-				},
-			},
-		}
-		defer func() {
-			volumeref := utils.Map(
-				run.Inputs,
-				func(a kdb.Assignment) string { return a.KnitDataBody.VolumeRef },
-			)
-			volumeref = append(
-				volumeref,
-				utils.Map(
-					run.Outputs,
-					func(a kdb.Assignment) string { return a.KnitDataBody.VolumeRef },
-				)...,
-			)
-			volumeref = append(volumeref, run.Log.KnitDataBody.VolumeRef)
-			for _, v := range volumeref {
-				clientset.CoreV1().
-					PersistentVolumeClaims(testenv.Namespace()).
-					Delete(ctx, v, *v1.NewDeleteOptions(0))
-			}
-		}()
-
-		if err := testee(ctx, run); err != nil {
-			t.Fatal(err)
-		}
-
-		for _, in := range run.Inputs {
-			_, err := clientset.CoreV1().
-				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, in.KnitDataBody.VolumeRef, v1.GetOptions{})
-			if !kubeerr.IsNotFound(err) {
-				t.Errorf("unexpected error (input: %s): %s", in.KnitDataBody.VolumeRef, err)
-			}
-		}
-
-		for _, out := range run.Outputs {
-			_, err := clientset.CoreV1().
-				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, out.KnitDataBody.VolumeRef, v1.GetOptions{})
-			if err != nil {
-				t.Errorf("unexpected error (output: %s): %s", out.KnitDataBody.VolumeRef, err)
-			}
-		}
-
-		{
-			_, err := clientset.CoreV1().
-				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, run.Log.KnitDataBody.VolumeRef, v1.GetOptions{})
-			if err != nil {
-				t.Errorf("unexpected error (log: %s): %s", run.Log.KnitDataBody.VolumeRef, err)
-			}
-		}
-	})
-
-	t.Run("it successes when pvcs exist already", func(t *testing.T) {
-		ctx, cancel := context.Background(), func() {}
-		if deadline, ok := t.Deadline(); ok {
-			ctx, cancel = context.WithDeadline(ctx, deadline.Add(-time.Second))
-		}
-		defer cancel()
-
-		cluster, clientset := testenv.NewCluster(t)
-		template := data.VolumeTemplate{
-			Namespece:    testenv.Namespace(),
-			StorageClass: testenv.STORAGE_CLASS_NAME,
-			Capacity:     resource.MustParse("1Ki"),
-		}
-
-		testee := initialize.PVCInitializer(cluster, template)
-
-		run := kdb.Run{
-			// RunBody: do not care
-			Inputs: []kdb.Assignment{
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-input-1",
-						VolumeRef: "ref-initialize-input-1",
-					},
-				},
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-input-2",
-						VolumeRef: "ref-initialize-input-2",
-					},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-output-1",
-						VolumeRef: "ref-initialize-output-1",
-					},
-				},
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-output-2",
-						VolumeRef: "ref-initialize-output-2",
-					},
-				},
-			},
-			Log: &kdb.Log{
-				KnitDataBody: kdb.KnitDataBody{
-					KnitId:    "initialize-log",
-					VolumeRef: "ref-initialize-log",
-				},
-			},
-		}
-		defer func() {
-			volumeRefs := utils.Map(
-				run.Inputs,
-				func(a kdb.Assignment) string { return a.KnitDataBody.VolumeRef },
-			)
-			volumeRefs = append(
-				volumeRefs,
-				utils.Map(
-					run.Outputs,
-					func(a kdb.Assignment) string { return a.KnitDataBody.VolumeRef },
-				)...,
-			)
-			volumeRefs = append(volumeRefs, run.Log.KnitDataBody.VolumeRef)
-			for _, v := range volumeRefs {
-				clientset.CoreV1().
-					PersistentVolumeClaims(testenv.Namespace()).
-					Delete(ctx, v, *v1.NewDeleteOptions(0))
-			}
-		}()
-
-		for _, out := range run.Outputs {
-			pvc := try.To(data.Of(out.KnitDataBody)).OrFatal(t).Build(template)
-			_, err := clientset.CoreV1().
-				PersistentVolumeClaims(testenv.Namespace()).
-				Create(ctx, pvc, v1.CreateOptions{})
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-
-		if err := testee(ctx, run); err != nil {
-			t.Fatal(err)
-		}
-
-		for _, in := range run.Inputs {
-			_, err := clientset.CoreV1().
-				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, in.KnitDataBody.VolumeRef, v1.GetOptions{})
-			if !kubeerr.IsNotFound(err) {
-				t.Errorf("unexpected error (input: %s): %s", in.KnitDataBody.VolumeRef, err)
-			}
-		}
-
-		for _, out := range run.Outputs {
-			_, err := clientset.CoreV1().
-				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, out.KnitDataBody.VolumeRef, v1.GetOptions{})
-			if err != nil {
-				t.Errorf("unexpected error (output: %s): %s", out.KnitDataBody.VolumeRef, err)
-			}
-		}
-
-		_, err := clientset.CoreV1().
-			PersistentVolumeClaims(testenv.Namespace()).
-			Get(ctx, run.Log.KnitDataBody.VolumeRef, v1.GetOptions{})
-		if err != nil {
-			t.Errorf("unexpected error (log: %s): %s", run.Log.KnitDataBody.VolumeRef, err)
-		}
-	})
-
-	t.Run("it escarate error from creating PVC", func(t *testing.T) {
-		ctx, cancel := context.Background(), func() {}
-		if deadline, ok := t.Deadline(); ok {
-			ctx, cancel = context.WithDeadline(ctx, deadline.Add(-time.Second))
-		}
-		defer cancel()
-
-		cluster, client := k8smock.NewCluster()
-		expectedError := errors.New("fake error")
-		client.Impl.CreatePVC = func(ctx context.Context, namespace string, pvc *kubecore.PersistentVolumeClaim) (*kubecore.PersistentVolumeClaim, error) {
-			return nil, expectedError
-		}
-		template := data.VolumeTemplate{
-			Namespece:    testenv.Namespace(),
-			StorageClass: testenv.STORAGE_CLASS_NAME,
-			Capacity:     resource.MustParse("1Ki"),
-		}
-
-		testee := initialize.PVCInitializer(cluster, template)
-
-		run := kdb.Run{
-			// RunBody: do not care
-			Inputs: []kdb.Assignment{
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-input-1",
-						VolumeRef: "ref-initialize-input-1",
-					},
-				},
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-input-2",
-						VolumeRef: "ref-initialize-input-2",
-					},
-				},
-			},
-			Outputs: []kdb.Assignment{
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-output-1",
-						VolumeRef: "ref-initialize-output-1",
-					},
-				},
-				{
-					MountPoint: kdb.MountPoint{},
-					KnitDataBody: kdb.KnitDataBody{
-						KnitId:    "initialize-output-2",
-						VolumeRef: "ref-initialize-output-2",
-					},
-				},
-			},
-			Log: &kdb.Log{
-				KnitDataBody: kdb.KnitDataBody{
-					KnitId:    "initialize-log",
-					VolumeRef: "ref-initialize-log",
-				},
-			},
-		}
-
-		if err := testee(ctx, run); !errors.Is(err, expectedError) {
-			t.Errorf("unexpected error: %s", err)
-		}
-	})
-}
 
 func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 
 	type When struct {
-		Cursor            kdb.RunCursor
-		NextCursor        kdb.RunCursor
+		Cursor            types.RunCursor
+		NextCursor        types.RunCursor
 		StatusChanged     bool
 		Err               error
 		IRunGetReturnsNil bool
-		UpdatedRun        kdb.Run
+		UpdatedRun        types.Run
 	}
 
 	type Then struct {
-		Cursor   kdb.RunCursor
+		Cursor   types.RunCursor
 		Continue bool
 		Err      error
 	}
@@ -339,19 +36,19 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 	theory := func(when When, then Then) func(t *testing.T) {
 		return func(t *testing.T) {
 			ctx := context.Background()
-			run := kdbmock.NewRunInterface()
+			run := kdbrunmock.NewRunInterface()
 			run.Impl.PickAndSetStatus = func(
-				ctx context.Context, value kdb.RunCursor,
-				f func(kdb.Run) (kdb.KnitRunStatus, error),
-			) (kdb.RunCursor, bool, error) {
+				ctx context.Context, value types.RunCursor,
+				f func(types.Run) (types.KnitRunStatus, error),
+			) (types.RunCursor, bool, error) {
 				return when.NextCursor, when.StatusChanged, when.Err
 			}
 
-			run.Impl.Get = func(ctx context.Context, ids []string) (map[string]kdb.Run, error) {
+			run.Impl.Get = func(ctx context.Context, ids []string) (map[string]types.Run, error) {
 				if when.IRunGetReturnsNil {
 					return nil, errors.New("irun.Get: should be ignored")
 				}
-				return map[string]kdb.Run{when.NextCursor.Head: when.UpdatedRun}, nil
+				return map[string]types.Run{when.NextCursor.Head: when.UpdatedRun}, nil
 			}
 
 			hookAfterHasBeenCalled := false
@@ -391,72 +88,72 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 
 	t.Run("it continues when PickAndSetStatus returns a new cursor", theory(
 		When{
-			Cursor: kdb.RunCursor{
+			Cursor: types.RunCursor{
 				Head:   "previous-run",
-				Status: []kdb.KnitRunStatus{kdb.Waiting},
+				Status: []types.KnitRunStatus{types.Waiting},
 			},
 
-			NextCursor: kdb.RunCursor{
+			NextCursor: types.RunCursor{
 				Head:   "next-run",
-				Status: []kdb.KnitRunStatus{kdb.Waiting},
+				Status: []types.KnitRunStatus{types.Waiting},
 			},
 			StatusChanged: true,
 			Err:           nil,
 
-			UpdatedRun: kdb.Run{
-				RunBody: kdb.RunBody{
+			UpdatedRun: types.Run{
+				RunBody: types.RunBody{
 					Id:         "next-run",
-					Status:     kdb.Ready,
+					Status:     types.Ready,
 					WorkerName: "worker-name",
 					UpdatedAt: try.To(
 						rfctime.ParseRFC3339DateTime("2021-10-11T12:13:14+09:00"),
 					).OrFatal(t).Time(),
-					PlanBody: kdb.PlanBody{
+					PlanBody: types.PlanBody{
 						PlanId: "plan-id",
-						Image: &kdb.ImageIdentifier{
+						Image: &types.ImageIdentifier{
 							Image:   "example.repo.invalid/image",
 							Version: "v1.0.0",
 						},
 					},
 				},
-				Inputs: []kdb.Assignment{
+				Inputs: []types.Assignment{
 					{
-						MountPoint: kdb.MountPoint{
+						MountPoint: types.MountPoint{
 							Id:   100_100,
 							Path: "/in/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "csv"}}),
+							Tags: types.NewTagSet([]types.Tag{{Key: "type", Value: "csv"}}),
 						},
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: types.KnitDataBody{
 							KnitId:    "next-run-input-1",
 							VolumeRef: "ref-next-run-input-1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: types.NewTagSet([]types.Tag{
 								{Key: "type", Value: "csv"},
 								{Key: "input", Value: "1"},
 							}),
 						},
 					},
 				},
-				Outputs: []kdb.Assignment{
+				Outputs: []types.Assignment{
 					{
-						MountPoint: kdb.MountPoint{
+						MountPoint: types.MountPoint{
 							Id:   100_010,
 							Path: "/out/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: types.NewTagSet([]types.Tag{
 								{Key: "type", Value: "model"},
 								{Key: "output", Value: "1"},
 							}),
 						},
 					},
 				},
-				Log: &kdb.Log{
+				Log: &types.Log{
 					Id: 100_001,
-					Tags: kdb.NewTagSet([]kdb.Tag{
+					Tags: types.NewTagSet([]types.Tag{
 						{Key: "type", Value: "jsonl"},
 					}),
-					KnitDataBody: kdb.KnitDataBody{
+					KnitDataBody: types.KnitDataBody{
 						KnitId:    "next-run-log",
 						VolumeRef: "ref-next-run-log",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: types.NewTagSet([]types.Tag{
 							{Key: "type", Value: "jsonl"},
 							{Key: "log", Value: "1"},
 						}),
@@ -465,8 +162,8 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 			},
 		},
 		Then{
-			Cursor: kdb.RunCursor{
-				Head: "next-run", Status: []kdb.KnitRunStatus{kdb.Waiting},
+			Cursor: types.RunCursor{
+				Head: "next-run", Status: []types.KnitRunStatus{types.Waiting},
 			},
 			Continue: true,
 			Err:      nil,
@@ -475,21 +172,21 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 
 	t.Run("it stops when PickAndSetStatus does not move cursor", theory(
 		When{
-			Cursor: kdb.RunCursor{
+			Cursor: types.RunCursor{
 				Head:   "previous-run",
-				Status: []kdb.KnitRunStatus{kdb.Waiting},
+				Status: []types.KnitRunStatus{types.Waiting},
 			},
 
-			NextCursor: kdb.RunCursor{
+			NextCursor: types.RunCursor{
 				Head:   "previous-run",
-				Status: []kdb.KnitRunStatus{kdb.Waiting},
+				Status: []types.KnitRunStatus{types.Waiting},
 			},
 			StatusChanged: false,
 			Err:           nil,
 		},
 		Then{
-			Cursor: kdb.RunCursor{
-				Head: "previous-run", Status: []kdb.KnitRunStatus{kdb.Waiting},
+			Cursor: types.RunCursor{
+				Head: "previous-run", Status: []types.KnitRunStatus{types.Waiting},
 			},
 			Continue: false,
 			Err:      nil,
@@ -498,21 +195,21 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 
 	t.Run("it ignores context.Canceled", theory(
 		When{
-			Cursor: kdb.RunCursor{
+			Cursor: types.RunCursor{
 				Head:   "previous-run",
-				Status: []kdb.KnitRunStatus{kdb.Waiting},
+				Status: []types.KnitRunStatus{types.Waiting},
 			},
 
-			NextCursor: kdb.RunCursor{
+			NextCursor: types.RunCursor{
 				Head:   "next-run",
-				Status: []kdb.KnitRunStatus{kdb.Waiting},
+				Status: []types.KnitRunStatus{types.Waiting},
 			},
 			StatusChanged: false,
 			Err:           context.Canceled,
 		},
 		Then{
-			Cursor: kdb.RunCursor{
-				Head: "next-run", Status: []kdb.KnitRunStatus{kdb.Waiting},
+			Cursor: types.RunCursor{
+				Head: "next-run", Status: []types.KnitRunStatus{types.Waiting},
 			},
 			Continue: true,
 		},
@@ -520,21 +217,21 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 
 	t.Run("it ignores context.DeadlineExceeded", theory(
 		When{
-			Cursor: kdb.RunCursor{
+			Cursor: types.RunCursor{
 				Head:   "previous-run",
-				Status: []kdb.KnitRunStatus{kdb.Waiting},
+				Status: []types.KnitRunStatus{types.Waiting},
 			},
 
-			NextCursor: kdb.RunCursor{
+			NextCursor: types.RunCursor{
 				Head:   "next-run",
-				Status: []kdb.KnitRunStatus{kdb.Waiting},
+				Status: []types.KnitRunStatus{types.Waiting},
 			},
 			StatusChanged: false,
 			Err:           context.DeadlineExceeded,
 		},
 		Then{
-			Cursor: kdb.RunCursor{
-				Head: "next-run", Status: []kdb.KnitRunStatus{kdb.Waiting},
+			Cursor: types.RunCursor{
+				Head: "next-run", Status: []types.KnitRunStatus{types.Waiting},
 			},
 			Continue: true,
 			Err:      nil,
@@ -545,62 +242,62 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 	ctx := context.Background()
 
-	pickedRun := kdb.Run{
-		RunBody: kdb.RunBody{
+	pickedRun := types.Run{
+		RunBody: types.RunBody{
 			Id:         "picked-run",
-			Status:     kdb.Waiting,
+			Status:     types.Waiting,
 			WorkerName: "worker-name",
 			UpdatedAt: try.To(
 				rfctime.ParseRFC3339DateTime("2021-10-11T12:13:14+09:00"),
 			).OrFatal(t).Time(),
-			PlanBody: kdb.PlanBody{
+			PlanBody: types.PlanBody{
 				PlanId: "plan-id",
-				Image: &kdb.ImageIdentifier{
+				Image: &types.ImageIdentifier{
 					Image:   "example.repo.invalid/image",
 					Version: "v1.0.0",
 				},
 			},
 		},
-		Inputs: []kdb.Assignment{
+		Inputs: []types.Assignment{
 			{
-				MountPoint: kdb.MountPoint{
+				MountPoint: types.MountPoint{
 					Id:   100_100,
 					Path: "/in/1",
-					Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "csv"}}),
+					Tags: types.NewTagSet([]types.Tag{{Key: "type", Value: "csv"}}),
 				},
-				KnitDataBody: kdb.KnitDataBody{
+				KnitDataBody: types.KnitDataBody{
 					KnitId:    "picked-run-input-1",
 					VolumeRef: "ref-picked-run-input-1",
-					Tags: kdb.NewTagSet([]kdb.Tag{
+					Tags: types.NewTagSet([]types.Tag{
 						{Key: "type", Value: "csv"},
 						{Key: "input", Value: "1"},
 					}),
 				},
 			},
 		},
-		Outputs: []kdb.Assignment{
+		Outputs: []types.Assignment{
 			{
-				MountPoint: kdb.MountPoint{
+				MountPoint: types.MountPoint{
 					Id:   100_010,
 					Path: "/out/1",
-					Tags: kdb.NewTagSet([]kdb.Tag{
+					Tags: types.NewTagSet([]types.Tag{
 						{Key: "type", Value: "model"},
 						{Key: "output", Value: "1"},
 					}),
 				},
 			},
 		},
-		Log: &kdb.Log{
+		Log: &types.Log{
 			Id: 100_001,
-			Tags: kdb.NewTagSet([]kdb.Tag{
+			Tags: types.NewTagSet([]types.Tag{
 				{Key: "type", Value: "jsonl"},
 				{Key: "log", Value: "1"},
 			}),
 		},
 	}
-	seed := kdb.RunCursor{
+	seed := types.RunCursor{
 		Head:   "previous-run",
-		Status: []kdb.KnitRunStatus{kdb.Waiting},
+		Status: []types.KnitRunStatus{types.Waiting},
 	}
 
 	type When struct {
@@ -609,17 +306,17 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 	}
 
 	type Then struct {
-		NewStatus kdb.KnitRunStatus
+		NewStatus types.KnitRunStatus
 		Err       error
 	}
 
 	theory := func(when When, then Then) func(t *testing.T) {
 		return func(t *testing.T) {
-			run := kdbmock.NewRunInterface()
+			run := kdbrunmock.NewRunInterface()
 			run.Impl.PickAndSetStatus = func(
-				ctx context.Context, value kdb.RunCursor,
-				f func(kdb.Run) (kdb.KnitRunStatus, error),
-			) (kdb.RunCursor, bool, error) {
+				ctx context.Context, value types.RunCursor,
+				f func(types.Run) (types.KnitRunStatus, error),
+			) (types.RunCursor, bool, error) {
 				gotStatus, err := f(pickedRun)
 
 				if when.BeforeErr != nil {
@@ -638,12 +335,13 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 
 				return seed, true, err
 			}
-			run.Impl.Get = func(ctx context.Context, ids []string) (map[string]kdb.Run, error) {
-				return map[string]kdb.Run{pickedRun.Id: pickedRun}, nil
+			run.Impl.Get = func(ctx context.Context, ids []string) (map[string]types.Run, error) {
+				return map[string]types.Run{pickedRun.Id: pickedRun}, nil
 			}
 
 			initHasBeenCalled := false
-			pvcInitializer := func(ctx context.Context, r kdb.Run) error {
+			mockIRun := k8srunmock.New(t)
+			mockIRun.Impl.Initialize = func(ctx context.Context, r types.Run) error {
 				initHasBeenCalled = true
 				if !r.Equal(&pickedRun) {
 					t.Errorf(
@@ -655,7 +353,7 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 			}
 
 			beforeFnHasBeenCalled := false
-			testee := initialize.Task(run, pvcInitializer, hook.Func[apiruns.Detail, struct{}]{
+			testee := initialize.Task(run, mockIRun, hook.Func[apiruns.Detail, struct{}]{
 				BeforeFn: func(d apiruns.Detail) (struct{}, error) {
 					beforeFnHasBeenCalled = true
 					if want := bindruns.ComposeDetail(pickedRun); !d.Equal(want) {
@@ -692,7 +390,7 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 			InitErr:   nil,
 		},
 		Then{
-			NewStatus: kdb.Ready,
+			NewStatus: types.Ready,
 			Err:       nil,
 		},
 	))

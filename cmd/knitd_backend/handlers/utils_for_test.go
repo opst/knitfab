@@ -15,13 +15,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
-	kio "github.com/opst/knitfab/pkg/io"
-	"github.com/opst/knitfab/pkg/utils"
-	"github.com/opst/knitfab/pkg/workloads/dataagt"
-	"github.com/opst/knitfab/pkg/workloads/k8s"
-	"github.com/opst/knitfab/pkg/workloads/worker"
+	types "github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
+	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
+	"github.com/opst/knitfab/pkg/utils/cmp"
+	kio "github.com/opst/knitfab/pkg/utils/io"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
 type responseDescriptor struct {
@@ -114,7 +114,7 @@ func Read(req *http.Request) (*requestSnapshot, error) {
 	}
 
 	var chunked bool
-	if _, ok := utils.First(req.TransferEncoding, func(s string) bool { return s == "chunked" }); ok {
+	if _, ok := slices.First(req.TransferEncoding, func(s string) bool { return s == "chunked" }); ok {
 		chunked = true
 	}
 
@@ -198,9 +198,10 @@ type MockedDataagt struct {
 		Close     func() error
 		APIPort   func() int32
 		URL       func() string
-		Mode      func() kdb.DataAgentMode
+		Mode      func() types.DataAgentMode
 		KnitID    func() string
 		VolumeRef func() string
+		PodPhase  func() cluster.PodPhase
 		String    func() string
 	}
 	Calls struct {
@@ -215,6 +216,7 @@ type MockedDataagt struct {
 		Mode      CallLog[any]
 		KnitID    CallLog[any]
 		VolumeRef CallLog[any]
+		PodPhase  CallLog[any]
 		String    CallLog[any]
 	}
 }
@@ -245,7 +247,7 @@ func NewBrokenDataagt() *MockedDataagt {
 	return da
 }
 
-var _ dataagt.Dataagt = &MockedDataagt{}
+var _ dataagt.DataAgent = &MockedDataagt{}
 
 func (m *MockedDataagt) Namespace() string {
 	m.Calls.Namespace.Args = append(m.Calls.Namespace.Args, nil)
@@ -311,7 +313,7 @@ func (m *MockedDataagt) URL() string {
 	panic(errors.New("it should not be called"))
 }
 
-func (m *MockedDataagt) Mode() kdb.DataAgentMode {
+func (m *MockedDataagt) Mode() types.DataAgentMode {
 	m.Calls.Mode.Args = append(m.Calls.Mode.Args, nil)
 	if m.Impl.Mode != nil {
 		return m.Impl.Mode()
@@ -343,10 +345,18 @@ func (m *MockedDataagt) String() string {
 	panic(errors.New("it should not be called"))
 }
 
+func (m *MockedDataagt) PodPhase() cluster.PodPhase {
+	m.Calls.PodPhase.Args = append(m.Calls.PodPhase.Args, nil)
+	if m.Impl.PodPhase != nil {
+		return m.Impl.PodPhase()
+	}
+	panic(errors.New("it should not be called"))
+}
+
 type mockWorker struct {
 	Impl struct {
 		RunId     func() string
-		JobStatus func() k8s.JobStatus
+		JobStatus func() cluster.JobStatus
 		ExitCode  func() (uint8, string, bool)
 		Log       func(context.Context) (io.ReadCloser, error)
 		Close     func() error
@@ -374,7 +384,7 @@ func (m *mockWorker) RunId() string {
 	panic(errors.New("it should not be called"))
 }
 
-func (m *mockWorker) JobStatus(ctx context.Context) k8s.JobStatus {
+func (m *mockWorker) JobStatus(ctx context.Context) cluster.JobStatus {
 	m.Calls.JobStatus.Args = append(m.Calls.JobStatus.Args, nil)
 	if m.Impl.JobStatus != nil {
 		return m.Impl.JobStatus()

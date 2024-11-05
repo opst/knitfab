@@ -5,7 +5,7 @@ import (
 
 	apitags "github.com/opst/knitfab-api-types/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 func TestLoadKnitEnv(t *testing.T) {

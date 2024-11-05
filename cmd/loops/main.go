@@ -12,17 +12,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/opst/knitfab/cmd/loops/recurring"
-	knit "github.com/opst/knitfab/pkg"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	configs "github.com/opst/knitfab/pkg/configs/backend"
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
-	kdb "github.com/opst/knitfab/pkg/db"
-	kpg "github.com/opst/knitfab/pkg/db/postgres"
-	"github.com/opst/knitfab/pkg/kubeutil"
+	"github.com/opst/knitfab/pkg/domain"
+	knitfab "github.com/opst/knitfab/pkg/domain/knitfab"
 	"github.com/opst/knitfab/pkg/utils/args"
 	"github.com/opst/knitfab/pkg/utils/filewatch"
 	"github.com/opst/knitfab/pkg/utils/try"
-	"github.com/opst/knitfab/pkg/workloads/k8s"
 )
 
 //go:embed CREDITS
@@ -48,7 +45,7 @@ func main() {
 		"hooks", os.Getenv("KNIT_HOOK_CONFIG"), "path to hook config file",
 	)
 	//-- which loop type to run
-	loopType := args.Parser(kdb.AsLoopType)
+	loopType := args.Parser(domain.AsLoopType)
 	flag.Var(loopType, "type", "one of loop type")
 	//-- loop policy
 	policy := args.Parser(recurring.ParsePolicy)
@@ -79,17 +76,16 @@ func main() {
 	}
 
 	conf := try.To(configs.LoadBackendConfig(*pconfig)).OrFatal(logger)
-	kclientset := kubeutil.ConnectToK8s()
 
-	kcluster := knit.AttachKnitCluster(
-		kclientset,
-		conf.Cluster(),
-		try.To(kpg.New(ctx, conf.Cluster().Database(), kpg.WithSchemaRepository(*pSchemaRepo))).OrFatal(logger),
-	)
+	options := []knitfab.Option{}
+	if *pSchemaRepo != "" {
+		options = append(options, knitfab.WithSchemaRepository(*pSchemaRepo))
+	}
+
+	kcluster := try.To(knitfab.Default(ctx, conf.Cluster(), options...)).OrFatal(logger)
 
 	{
-		db := kcluster.Database()
-		ctx_, ccan := db.Schema().Context(ctx)
+		ctx_, ccan := kcluster.Schema().Database().Context(ctx)
 		defer ccan()
 		ctx = ctx_
 	}
@@ -107,17 +103,17 @@ func main() {
 	manifest := LoopManifest{Policy: policy.Value(), Hooks: hooks}
 	var err error
 	switch loopType.Value() {
-	case kdb.Projection:
+	case domain.Projection:
 		err = StartProjectionLoop(ctx, logger, kcluster, manifest)
-	case kdb.Initialize:
+	case domain.Initialize:
 		err = StartInitializeLoop(ctx, logger, kcluster, manifest)
-	case kdb.RunManagement:
+	case domain.RunManagement:
 		err = StartRunManagementLoop(ctx, logger, kcluster, manifest)
-	case kdb.Finishing:
+	case domain.Finishing:
 		err = StartFinishingLoop(ctx, logger, kcluster, manifest)
-	case kdb.GarbageCollection:
-		err = StartGarbageCollectionLoop(ctx, logger, kcluster, k8s.WrapK8sClient(kclientset), manifest)
-	case kdb.Housekeeping:
+	case domain.GarbageCollection:
+		err = StartGarbageCollectionLoop(ctx, logger, kcluster, manifest)
+	case domain.Housekeeping:
 		err = StartHousekeepingLoop(ctx, logger, kcluster, manifest)
 	default:
 		err = fmt.Errorf("unsupported loop type: %s", loopType.Value())

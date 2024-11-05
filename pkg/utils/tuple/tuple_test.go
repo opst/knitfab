@@ -3,7 +3,7 @@ package tuple_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/tuple"
 )
 

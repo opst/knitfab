@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/opst/knitfab/cmd/loops/recurring"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
+	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
 )
 
 // initial value for task
@@ -16,7 +16,7 @@ func Seed() struct{} {
 // return:
 //
 // - task : creating new runs in waiting/deactivated state.
-func Task(logger *log.Logger, dbrun kdb.RunInterface) recurring.Task[struct{}] {
+func Task(logger *log.Logger, dbrun kdbrun.Interface) recurring.Task[struct{}] {
 	return func(ctx context.Context, value struct{}) (struct{}, bool, error) {
 		logger.Printf("checking...")
 		runId, triggered, err := dbrun.New(ctx)

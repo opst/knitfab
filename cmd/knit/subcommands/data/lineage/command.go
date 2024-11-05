@@ -15,8 +15,8 @@ import (
 	"github.com/opst/knitfab-api-types/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/youta-t/flarc"
 
 	krst "github.com/opst/knitfab/cmd/knit/rest"
@@ -236,7 +236,7 @@ func (d *DataNode) ToDot(w io.Writer, isArgKnitId bool) error {
 	userTags := []string{}
 	for _, tag := range d.Tags {
 		switch tag.Key {
-		case kdb.KeyKnitTimestamp:
+		case domain.KeyKnitTimestamp:
 			tsp, err := rfctime.ParseRFC3339DateTime(tag.Value)
 			if err != nil {
 				return err
@@ -246,7 +246,7 @@ func (d *DataNode) ToDot(w io.Writer, isArgKnitId bool) error {
 				html.EscapeString(tsp.Time().Local().Format(rfctime.RFC3339DateTimeFormat)),
 			)
 			continue
-		case kdb.KeyKnitTransient:
+		case domain.KeyKnitTransient:
 			systemtag = append(systemtag, html.EscapeString(tag.String()))
 			continue
 		case tags.KeyKnitId:
@@ -306,12 +306,12 @@ func (r *RunNode) ToDot(w io.Writer) error {
 	}
 
 	status := html.EscapeString(r.Status)
-	switch kdb.KnitRunStatus(r.Status) {
-	case kdb.Deactivated:
+	switch domain.KnitRunStatus(r.Status) {
+	case domain.Deactivated:
 		status = fmt.Sprintf(`<FONT COLOR="gray"><B>%s</B></FONT>`, status)
-	case kdb.Completing, kdb.Done:
+	case domain.Completing, domain.Done:
 		status = fmt.Sprintf(`<FONT COLOR="#007700"><B>%s</B></FONT>`, status)
-	case kdb.Aborting, kdb.Failed:
+	case domain.Aborting, domain.Failed:
 		status = fmt.Sprintf(`<FONT COLOR="red"><B>%s</B></FONT>`, status)
 	}
 
@@ -790,7 +790,7 @@ func getData(ctx context.Context, client krst.KnitClient, knitId string) (data.D
 
 func knitIdTag(knitId string) tags.Tag {
 	return tags.Tag{
-		Key:   kdb.KeyKnitId,
+		Key:   domain.KeyKnitId,
 		Value: knitId,
 	}
 }

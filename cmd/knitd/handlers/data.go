@@ -14,10 +14,12 @@ import (
 	apitags "github.com/opst/knitfab-api-types/tags"
 	binddata "github.com/opst/knitfab/pkg/api-types-binding/data"
 	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
+	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
+	kerr "github.com/opst/knitfab/pkg/domain/errors"
 )
 
-func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
+func GetDataForDataHandler(dbData kdbdata.DataInterface) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
 		ctx := c.Request().Context()
@@ -93,9 +95,9 @@ func GetDataForDataHandler(dbData kdb.DataInterface) echo.HandlerFunc {
 //	...
 //
 // When queryparam is empty, it assumes no tag is specified and returns an empty list.
-func queryParamToTags(queryParam []string) ([]kdb.Tag, error) {
+func queryParamToTags(queryParam []string) ([]domain.Tag, error) {
 
-	tags := make([]kdb.Tag, len(queryParam))
+	tags := make([]domain.Tag, len(queryParam))
 
 	for nth, p := range queryParam {
 		var found bool
@@ -112,7 +114,7 @@ func queryParamToTags(queryParam []string) ([]kdb.Tag, error) {
 
 var errIncorrectQueryTag = errors.New("incorrect query tag")
 
-func PutTagForDataHandler(dbData kdb.DataInterface, paramKey string) echo.HandlerFunc {
+func PutTagForDataHandler(dbData kdbdata.DataInterface, paramKey string) echo.HandlerFunc {
 
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
@@ -132,25 +134,25 @@ func PutTagForDataHandler(dbData kdb.DataInterface, paramKey string) echo.Handle
 			)
 		}
 
-		delta := kdb.TagDelta{
+		delta := domain.TagDelta{
 			RemoveKey: change.RemoveKey,
 		}
 		for _, tag := range change.AddTags {
-			if t, err := kdb.NewTag(tag.Key, tag.Value); err != nil {
+			if t, err := domain.NewTag(tag.Key, tag.Value); err != nil {
 				binderr.BadRequest(fmt.Sprintf("bad tag: %s", tag), err)
 			} else {
 				delta.Add = append(delta.Add, t)
 			}
 		}
 		for _, tag := range change.RemoveTags {
-			if t, err := kdb.NewTag(tag.Key, tag.Value); err != nil {
+			if t, err := domain.NewTag(tag.Key, tag.Value); err != nil {
 				binderr.BadRequest(fmt.Sprintf("bad tag: %s", tag), err)
 			} else {
 				delta.Remove = append(delta.Remove, t)
 			}
 		}
 
-		if err := dbData.UpdateTag(ctx, knitId, delta); errors.Is(err, kdb.ErrMissing) {
+		if err := dbData.UpdateTag(ctx, knitId, delta); errors.Is(err, kerr.ErrMissing) {
 			return binderr.NewErrorMessage(http.StatusNotFound, "correspontind data is missing")
 		} else if err != nil {
 			return binderr.InternalServerError(err)

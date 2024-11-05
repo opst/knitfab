@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 func TestMerge(t *testing.T) {

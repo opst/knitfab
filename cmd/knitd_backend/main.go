@@ -13,10 +13,8 @@ import (
 	"time"
 
 	configs "github.com/opst/knitfab/pkg/configs/backend"
-	"github.com/opst/knitfab/pkg/kubeutil"
 
-	knit "github.com/opst/knitfab/pkg"
-	kpg "github.com/opst/knitfab/pkg/db/postgres"
+	knitfab "github.com/opst/knitfab/pkg/domain/knitfab"
 )
 
 //go:embed CREDITS
@@ -46,19 +44,20 @@ func main() {
 		panic(err)
 	}
 
-	clientset := kubeutil.ConnectToK8s()
+	options := []knitfab.Option{}
+	if *schemaRepo != "" {
+		options = append(options, knitfab.WithSchemaRepository(*schemaRepo))
+	}
 
-	db, err := kpg.New(ctx, conf.Cluster().Database(), kpg.WithSchemaRepository(*schemaRepo))
+	knitCluster, err := knitfab.Default(ctx, conf.Cluster(), options...)
 	if err != nil {
 		panic(err)
 	}
 	{
-		ctx_, ccan := db.Schema().Context(ctx)
+		ctx_, ccan := knitCluster.Schema().Database().Context(ctx)
 		defer ccan()
 		ctx = ctx_
 	}
-
-	knitCluster := knit.AttachKnitCluster(clientset, conf.Cluster(), db)
 
 	server := BuildServer(knitCluster, *loglevel)
 	for _, r := range server.Routes() {
