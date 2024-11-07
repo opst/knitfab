@@ -49,28 +49,64 @@ func TestFindCommand(t *testing.T) {
 				},
 				Name: "test-Name",
 			},
-			Inputs: []plans.Mountpoint{
+			Inputs: []plans.Input{
 				{
-					Path: "/in/1",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "raw data"},
-						{Key: "format", Value: "rgb image"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "raw data"},
+							{Key: "format", Value: "rgb image"},
+						},
+					},
+					Upstreams: []plans.Upstream{
+						{
+							Summary: plans.Summary{
+								PlanId: "upstream-plan-id",
+								Image: &plans.Image{
+									Repository: "upstream-image", Tag: "upstream-version",
+								},
+								Entrypoint: []string{"/upstream/entrypoint"},
+								Args:       []string{"upstream-arg"},
+								Annotations: []plans.Annotation{
+									{Key: "upstream-annotation-key", Value: "upstream-annotation-value"},
+								},
+							},
+						},
 					},
 				},
 			},
-			Outputs: []plans.Mountpoint{
+			Outputs: []plans.Output{
 				{
-					Path: "/out/2",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "training data"},
-						{Key: "format", Value: "mask"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/out/2",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "training data"},
+							{Key: "format", Value: "mask"},
+						},
+					},
+					Downstreams: []plans.Downstream{
+						{
+							Summary: plans.Summary{
+								PlanId: "downstream-plan-id",
+								Image: &plans.Image{
+									Repository: "downstream-image", Tag: "downstream-version",
+								},
+								Entrypoint: []string{"/downstream/entrypoint"},
+								Args:       []string{"downstream-arg"},
+								Annotations: []plans.Annotation{
+									{Key: "downstream-annotation-key", Value: "downstream-annotation-value"},
+								},
+							},
+						},
 					},
 				},
 			},
-			Log: &plans.LogPoint{
-				Tags: []tags.Tag{
-					{Key: "type", Value: "log"},
-					{Key: "format", Value: "jsonl"},
+			Log: &plans.Log{
+				LogPoint: plans.LogPoint{
+					Tags: []tags.Tag{
+						{Key: "type", Value: "log"},
+						{Key: "format", Value: "jsonl"},
+					},
 				},
 			},
 			Active: true,
@@ -336,28 +372,69 @@ func TestRunFindPlan(t *testing.T) {
 				},
 				Name: "test-Name",
 			},
-			Inputs: []plans.Mountpoint{
+			Inputs: []plans.Input{
 				{
-					Path: "/in/1",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "raw data"},
-						{Key: "format", Value: "rgb image"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "raw data"},
+							{Key: "format", Value: "rgb image"},
+						},
+					},
+					Upstreams: []plans.Upstream{
+						{
+							Summary: plans.Summary{
+								PlanId: "upstream-plan-id",
+								Image: &plans.Image{
+									Repository: "upstream-image", Tag: "upstream-version",
+								},
+								Entrypoint: []string{"/upstream/entrypoint"},
+								Args:       []string{"upstream-arg"},
+								Annotations: []plans.Annotation{
+									{Key: "upstream-annotation-key", Value: "upstream-annotation-value"},
+								},
+							},
+						},
 					},
 				},
 			},
-			Outputs: []plans.Mountpoint{
+			Outputs: []plans.Output{
 				{
-					Path: "/out/2",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "training data"},
-						{Key: "format", Value: "mask"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/out/2",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "training data"},
+							{Key: "format", Value: "mask"},
+						},
+					},
+					Downstreams: []plans.Downstream{
+						{
+							Summary: plans.Summary{
+								PlanId: "downstream-plan-id",
+								Image: &plans.Image{
+									Repository: "downstream-image", Tag: "downstream-version",
+								},
+							},
+						},
 					},
 				},
 			},
-			Log: &plans.LogPoint{
-				Tags: []tags.Tag{
-					{Key: "type", Value: "log"},
-					{Key: "format", Value: "jsonl"},
+			Log: &plans.Log{
+				LogPoint: plans.LogPoint{
+					Tags: []tags.Tag{
+						{Key: "type", Value: "log"},
+						{Key: "format", Value: "jsonl"},
+					},
+				},
+				Downstreams: []plans.Downstream{
+					{
+						Summary: plans.Summary{
+							PlanId: "downstream-plan-id",
+							Image: &plans.Image{
+								Repository: "downstream-image", Tag: "downstream-version",
+							},
+						},
+					},
 				},
 			},
 			Active: true,

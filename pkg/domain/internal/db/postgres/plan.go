@@ -176,9 +176,9 @@ func GetPlanBody(ctx context.Context, conn kpool.Queryer, planIds []string) (map
 	return result, nil
 }
 
-func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[string]*domain.Plan, error) {
+func GetPlan(ctx context.Context, conn kpool.Queryer, planIds []string) (map[string]*domain.Plan, error) {
 
-	bodies, err := GetPlanBody(ctx, conn, planId)
+	bodies, err := GetPlanBody(ctx, conn, planIds)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 	// inputs: planId -> []Input
 	inputs := map[string][]domain.Input{}
 	{
-		_inputMps, err := GetInputMountpointsForPlan(ctx, conn, planId)
+		_inputMps, err := GetInputMountpointsForPlan(ctx, conn, planIds)
 		if err != nil {
 			return nil, err
 		}
@@ -205,6 +205,7 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 			upstreamIds := map[int][]tuple.Pair[string, int]{}
 
 			outputIds := map[int]struct{}{}
+			upstreamPlanIds := map[string]struct{}{}
 
 			ret, err := conn.Query(
 				ctx,
@@ -264,9 +265,15 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 				}
 				upstreamIds[inputId] = append(upstreamIds[inputId], tuple.PairOf(planId, upstreamId))
 				outputIds[upstreamId] = struct{}{}
+				upstreamPlanIds[planId] = struct{}{}
 			}
 
 			_outputs, err := GetOutputs(ctx, conn, slices.KeysOf(outputIds))
+			if err != nil {
+				return nil, err
+			}
+
+			_upstreamBodies, err := GetPlanBody(ctx, conn, slices.KeysOf(upstreamPlanIds))
 			if err != nil {
 				return nil, err
 			}
@@ -278,7 +285,9 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 						planId, upstreamId := planIdAndUpstreamId.Decompose()
 						output := _outputs[upstreamId]
 
-						u := domain.PlanUpstream{PlanId: planId}
+						u := domain.PlanUpstream{
+							PlanBody: _upstreamBodies[planId],
+						}
 
 						if output.ForLog {
 							u.Log = &domain.LogPoint{
@@ -316,7 +325,7 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 	logs := map[string]domain.LogPoint{}
 
 	{
-		_outputMps, err := GetOutputMountpointsForPlan(ctx, conn, planId)
+		_outputMps, err := GetOutputMountpointsForPlan(ctx, conn, planIds)
 		if err != nil {
 			return nil, err
 		}
@@ -335,6 +344,7 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 			downstreamIds := map[int][]tuple.Pair[string, int]{}
 
 			inputIds := map[int]struct{}{}
+			_planIds := map[string]struct{}{}
 
 			ret, err := conn.Query(
 				ctx,
@@ -399,9 +409,15 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 				}
 				downstreamIds[outputId] = append(downstreamIds[outputId], tuple.PairOf(planId, downstreamId))
 				inputIds[downstreamId] = struct{}{}
+				_planIds[planId] = struct{}{}
 			}
 
 			_inputs, err := GetInputs(ctx, conn, slices.KeysOf(inputIds))
+			if err != nil {
+				return nil, err
+			}
+
+			_downstreamBodies, err := GetPlanBody(ctx, conn, slices.KeysOf(_planIds))
 			if err != nil {
 				return nil, err
 			}
@@ -413,7 +429,7 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 						planId, downstreamId := planIdAndDownstreamId.Decompose()
 						input := _inputs[downstreamId]
 						return domain.PlanDownstream{
-							PlanId:     planId,
+							PlanBody:   _downstreamBodies[planId],
 							Mountpoint: input,
 						}
 					},

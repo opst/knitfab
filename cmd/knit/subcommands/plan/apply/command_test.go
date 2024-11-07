@@ -85,28 +85,34 @@ func TestApplyPlan(t *testing.T) {
 				},
 				Name: "test-Name",
 			},
-			Inputs: []plans.Mountpoint{
+			Inputs: []plans.Input{
 				{
-					Path: "/in/1",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "raw data"},
-						{Key: "format", Value: "rgb image"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "raw data"},
+							{Key: "format", Value: "rgb image"},
+						},
 					},
 				},
 			},
-			Outputs: []plans.Mountpoint{
+			Outputs: []plans.Output{
 				{
-					Path: "/out/2",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "training data"},
-						{Key: "format", Value: "mask"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/out/2",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "training data"},
+							{Key: "format", Value: "mask"},
+						},
 					},
 				},
 			},
-			Log: &plans.LogPoint{
-				Tags: []tags.Tag{
-					{Key: "type", Value: "log"},
-					{Key: "format", Value: "jsonl"},
+			Log: &plans.Log{
+				LogPoint: plans.LogPoint{
+					Tags: []tags.Tag{
+						{Key: "type", Value: "log"},
+						{Key: "format", Value: "jsonl"},
+					},
 				},
 			},
 			Active: true,

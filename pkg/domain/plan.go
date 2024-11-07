@@ -285,7 +285,7 @@ func (m *MountPoint) Equiv(other *MountPoint) bool {
 }
 
 type PlanUpstream struct {
-	PlanId     string
+	PlanBody
 	Mountpoint *MountPoint
 	Log        *LogPoint
 }
@@ -303,11 +303,11 @@ func (u PlanUpstream) Equal(other PlanUpstream) bool {
 	if u.Log != nil && !u.Log.Equal(other.Log) {
 		return false
 	}
-	return u.PlanId == other.PlanId
+	return u.PlanBody.Equal(&other.PlanBody)
 }
 
 type PlanDownstream struct {
-	PlanId     string
+	PlanBody
 	Mountpoint MountPoint
 }
 

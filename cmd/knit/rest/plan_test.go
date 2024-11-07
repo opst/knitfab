@@ -50,28 +50,116 @@ func TestGetPlans(t *testing.T) {
 			},
 			Name: "test-Name",
 		}
-		expectedInputs := []plans.Mountpoint{
+		expectedInputs := []plans.Input{
 			{
-				Path: "/in/1",
-				Tags: []tags.Tag{
-					{Key: "type", Value: "raw data"},
-					{Key: "format", Value: "rgb image"},
+				Mountpoint: plans.Mountpoint{
+					Path: "/in/1",
+					Tags: []tags.Tag{
+						{Key: "type", Value: "raw data"},
+						{Key: "format", Value: "rgb image"},
+					},
+				},
+				Upstreams: []plans.Upstream{
+					{
+						Summary: plans.Summary{
+							PlanId: "test-Id-1",
+							Image: &plans.Image{
+								Repository: "test-image", Tag: "test-version",
+							},
+							Entrypoint: []string{"test-command"},
+							Args:       []string{"test-arg"},
+							Annotations: []plans.Annotation{
+								{Key: "test-key", Value: "test-value"},
+							},
+						},
+						Mountpoint: &plans.Mountpoint{
+							Path: "/out/1",
+							Tags: []tags.Tag{
+								{Key: "type", Value: "raw data"},
+								{Key: "format", Value: "rgb image"},
+							},
+						},
+					},
+					{
+						Summary: plans.Summary{
+							PlanId: "test-Id-2",
+							Image: &plans.Image{
+								Repository: "test-image", Tag: "test-version",
+							},
+						},
+						Log: &plans.LogPoint{
+							Tags: []tags.Tag{
+								{Key: "type", Value: "raw data"},
+								{Key: "format", Value: "rgb image"},
+								{Key: "type", Value: "log"},
+								{Key: "format", Value: "jsonl"},
+							},
+						},
+					},
 				},
 			},
 		}
-		expectedOutputs := []plans.Mountpoint{
+		expectedOutputs := []plans.Output{
 			{
-				Path: "/out/2",
-				Tags: []tags.Tag{
-					{Key: "type", Value: "training data"},
-					{Key: "format", Value: "mask"},
+				Mountpoint: plans.Mountpoint{
+					Path: "/out/2",
+					Tags: []tags.Tag{
+						{Key: "type", Value: "training data"},
+						{Key: "format", Value: "mask"},
+					},
+				},
+				Downstreams: []plans.Downstream{
+					{
+						Summary: plans.Summary{
+							PlanId: "test-Id-1",
+							Image: &plans.Image{
+								Repository: "test-image", Tag: "test-version",
+							},
+							Entrypoint: []string{"test-command"},
+							Args:       []string{"test-arg"},
+							Annotations: []plans.Annotation{
+								{Key: "test-key", Value: "test-value"},
+							},
+						},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []tags.Tag{
+								{Key: "type", Value: "training data"},
+								{Key: "format", Value: "mask"},
+							},
+						},
+					},
 				},
 			},
 		}
-		expectedLog := &plans.LogPoint{
-			Tags: []tags.Tag{
-				{Key: "type", Value: "log"},
-				{Key: "format", Value: "jsonl"},
+		expectedLog := &plans.Log{
+			LogPoint: plans.LogPoint{
+				Tags: []tags.Tag{
+					{Key: "type", Value: "log"},
+					{Key: "format", Value: "jsonl"},
+				},
+			},
+			Downstreams: []plans.Downstream{
+				{
+					Summary: plans.Summary{
+						PlanId: "test-Id-1",
+						Image: &plans.Image{
+							Repository: "test-image", Tag: "test-version",
+						},
+						Entrypoint: []string{"test-command"},
+						Args:       []string{"test-arg"},
+						Annotations: []plans.Annotation{
+							{Key: "test-key", Value: "test-value"},
+						},
+					},
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "log"},
+							{Key: "format", Value: "jsonl"},
+						},
+					},
+				},
 			},
 		}
 		expectedResponse := plans.Detail{
@@ -244,28 +332,85 @@ func dummyplan(isActivate bool) plans.Detail {
 			},
 			Name: "test-Name",
 		},
-		Inputs: []plans.Mountpoint{
+		Inputs: []plans.Input{
 			{
-				Path: "/in/1",
-				Tags: []tags.Tag{
-					{Key: "type", Value: "raw data"},
-					{Key: "format", Value: "rgb image"},
+				Mountpoint: plans.Mountpoint{
+					Path: "/in/1",
+					Tags: []tags.Tag{
+						{Key: "type", Value: "raw data"},
+						{Key: "format", Value: "rgb image"},
+					},
+				},
+				Upstreams: []plans.Upstream{
+					{
+						Summary: plans.Summary{
+							PlanId: "test-Id-1",
+							Image: &plans.Image{
+								Repository: "test-image", Tag: "test-version",
+							},
+						},
+						Mountpoint: &plans.Mountpoint{
+							Path: "/out/1",
+							Tags: []tags.Tag{
+								{Key: "type", Value: "raw data"},
+								{Key: "format", Value: "rgb image"},
+							},
+						},
+					},
 				},
 			},
 		},
-		Outputs: []plans.Mountpoint{
+		Outputs: []plans.Output{
 			{
-				Path: "/out/2",
-				Tags: []tags.Tag{
-					{Key: "type", Value: "training data"},
-					{Key: "format", Value: "mask"},
+				Mountpoint: plans.Mountpoint{
+					Path: "/out/2",
+					Tags: []tags.Tag{
+						{Key: "type", Value: "training data"},
+						{Key: "format", Value: "mask"},
+					},
+				},
+				Downstreams: []plans.Downstream{
+					{
+						Summary: plans.Summary{
+							PlanId: "test-Id-1",
+							Image: &plans.Image{
+								Repository: "test-image", Tag: "test-version",
+							},
+						},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []tags.Tag{
+								{Key: "type", Value: "training data"},
+								{Key: "format", Value: "mask"},
+							},
+						},
+					},
 				},
 			},
 		},
-		Log: &plans.LogPoint{
-			Tags: []tags.Tag{
-				{Key: "type", Value: "log"},
-				{Key: "format", Value: "jsonl"},
+		Log: &plans.Log{
+			LogPoint: plans.LogPoint{
+				Tags: []tags.Tag{
+					{Key: "type", Value: "log"},
+					{Key: "format", Value: "jsonl"},
+				},
+			},
+			Downstreams: []plans.Downstream{
+				{
+					Summary: plans.Summary{
+						PlanId: "test-Id-1",
+						Image: &plans.Image{
+							Repository: "test-image", Tag: "test-version",
+						},
+					},
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "log"},
+							{Key: "format", Value: "jsonl"},
+						},
+					},
+				},
 			},
 		},
 		Active: isActivate,
@@ -359,28 +504,34 @@ func TestRegisterPlan(t *testing.T) {
 					},
 					Name: "test-Name",
 				},
-				Inputs: []plans.Mountpoint{
+				Inputs: []plans.Input{
 					{
-						Path: "/in/1",
-						Tags: []tags.Tag{
-							{Key: "type", Value: "raw data"},
-							{Key: "format", Value: "rgb image"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []tags.Tag{
+								{Key: "type", Value: "raw data"},
+								{Key: "format", Value: "rgb image"},
+							},
 						},
 					},
 				},
-				Outputs: []plans.Mountpoint{
+				Outputs: []plans.Output{
 					{
-						Path: "/out/2",
-						Tags: []tags.Tag{
-							{Key: "type", Value: "training data"},
-							{Key: "format", Value: "mask"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/out/2",
+							Tags: []tags.Tag{
+								{Key: "type", Value: "training data"},
+								{Key: "format", Value: "mask"},
+							},
 						},
 					},
 				},
-				Log: &plans.LogPoint{
-					Tags: []tags.Tag{
-						{Key: "type", Value: "log"},
-						{Key: "format", Value: "jsonl"},
+				Log: &plans.Log{
+					LogPoint: plans.LogPoint{
+						Tags: []tags.Tag{
+							{Key: "type", Value: "log"},
+							{Key: "format", Value: "jsonl"},
+						},
 					},
 				},
 				Active: true,
@@ -794,28 +945,34 @@ func TestUpdateResources(t *testing.T) {
 				},
 				Name: "test-Name",
 			},
-			Inputs: []plans.Mountpoint{
+			Inputs: []plans.Input{
 				{
-					Path: "/in/1",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "raw data"},
-						{Key: "format", Value: "rgb image"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "raw data"},
+							{Key: "format", Value: "rgb image"},
+						},
 					},
 				},
 			},
-			Outputs: []plans.Mountpoint{
+			Outputs: []plans.Output{
 				{
-					Path: "/out/2",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "training data"},
-						{Key: "format", Value: "mask"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/out/2",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "training data"},
+							{Key: "format", Value: "mask"},
+						},
 					},
 				},
 			},
-			Log: &plans.LogPoint{
-				Tags: []tags.Tag{
-					{Key: "type", Value: "log"},
-					{Key: "format", Value: "jsonl"},
+			Log: &plans.Log{
+				LogPoint: plans.LogPoint{
+					Tags: []tags.Tag{
+						{Key: "type", Value: "log"},
+						{Key: "format", Value: "jsonl"},
+					},
 				},
 			},
 			Active: true,
@@ -945,28 +1102,34 @@ func TestUpdateAnnotations(t *testing.T) {
 						{Key: "key-c", Value: "value-c"},
 					},
 				},
-				Inputs: []plans.Mountpoint{
+				Inputs: []plans.Input{
 					{
-						Path: "/in/1",
-						Tags: []tags.Tag{
-							{Key: "type", Value: "raw data"},
-							{Key: "format", Value: "rgb image"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []tags.Tag{
+								{Key: "type", Value: "raw data"},
+								{Key: "format", Value: "rgb image"},
+							},
 						},
 					},
 				},
-				Outputs: []plans.Mountpoint{
+				Outputs: []plans.Output{
 					{
-						Path: "/out/2",
-						Tags: []tags.Tag{
-							{Key: "type", Value: "training data"},
-							{Key: "format", Value: "mask"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/out/2",
+							Tags: []tags.Tag{
+								{Key: "type", Value: "training data"},
+								{Key: "format", Value: "mask"},
+							},
 						},
 					},
 				},
-				Log: &plans.LogPoint{
-					Tags: []tags.Tag{
-						{Key: "type", Value: "log"},
-						{Key: "format", Value: "jsonl"},
+				Log: &plans.Log{
+					LogPoint: plans.LogPoint{
+						Tags: []tags.Tag{
+							{Key: "type", Value: "log"},
+							{Key: "format", Value: "jsonl"},
+						},
 					},
 				},
 				Active: true,
@@ -1101,28 +1264,34 @@ func TestSetServiceAccount_success_case(t *testing.T) {
 				},
 				Name: "test-Name",
 			},
-			Inputs: []plans.Mountpoint{
+			Inputs: []plans.Input{
 				{
-					Path: "/in/1",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "raw data"},
-						{Key: "format", Value: "rgb image"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "raw data"},
+							{Key: "format", Value: "rgb image"},
+						},
 					},
 				},
 			},
-			Outputs: []plans.Mountpoint{
+			Outputs: []plans.Output{
 				{
-					Path: "/out/2",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "training data"},
-						{Key: "format", Value: "mask"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/out/2",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "training data"},
+							{Key: "format", Value: "mask"},
+						},
 					},
 				},
 			},
-			Log: &plans.LogPoint{
-				Tags: []tags.Tag{
-					{Key: "type", Value: "log"},
-					{Key: "format", Value: "jsonl"},
+			Log: &plans.Log{
+				LogPoint: plans.LogPoint{
+					Tags: []tags.Tag{
+						{Key: "type", Value: "log"},
+						{Key: "format", Value: "jsonl"},
+					},
 				},
 			},
 			Active:         true,
@@ -1252,28 +1421,34 @@ func TestUnsetServiceAccount_success_case(t *testing.T) {
 				},
 				Name: "test-Name",
 			},
-			Inputs: []plans.Mountpoint{
+			Inputs: []plans.Input{
 				{
-					Path: "/in/1",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "raw data"},
-						{Key: "format", Value: "rgb image"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "raw data"},
+							{Key: "format", Value: "rgb image"},
+						},
 					},
 				},
 			},
-			Outputs: []plans.Mountpoint{
+			Outputs: []plans.Output{
 				{
-					Path: "/out/2",
-					Tags: []tags.Tag{
-						{Key: "type", Value: "training data"},
-						{Key: "format", Value: "mask"},
+					Mountpoint: plans.Mountpoint{
+						Path: "/out/2",
+						Tags: []tags.Tag{
+							{Key: "type", Value: "training data"},
+							{Key: "format", Value: "mask"},
+						},
 					},
 				},
 			},
-			Log: &plans.LogPoint{
-				Tags: []tags.Tag{
-					{Key: "type", Value: "log"},
-					{Key: "format", Value: "jsonl"},
+			Log: &plans.Log{
+				LogPoint: plans.LogPoint{
+					Tags: []tags.Tag{
+						{Key: "type", Value: "log"},
+						{Key: "format", Value: "jsonl"},
+					},
 				},
 			},
 			Active: true,

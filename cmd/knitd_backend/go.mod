@@ -10,7 +10,7 @@ require (
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/labstack/gommon v0.4.2
 	github.com/opst/knitfab v1.5.0-beta
-	github.com/opst/knitfab-api-types v1.5.0-alpha.4
+	github.com/opst/knitfab-api-types v1.5.0-alpha.5
 )
 
 require (
