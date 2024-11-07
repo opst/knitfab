@@ -98,7 +98,9 @@ func TestPlan_Register(t *testing.T) {
 			conn := try.To(pool.Acquire(ctx)).OrFatal(t)
 			defer conn.Release()
 			planIdsBeforeRegister := try.To(allPlanIds(ctx, conn)).OrFatal(t)
+
 			actualPlanId := try.To(testee.Register(ctx, when.spec)).OrFatal(t)
+
 			planIdsAfrerRegister := try.To(allPlanIds(ctx, conn)).OrFatal(t)
 			expectedPlanIds := append([]string{actualPlanId}, planIdsBeforeRegister...)
 			if !cmp.SliceContentEq(planIdsAfrerRegister, expectedPlanIds) {
@@ -169,7 +171,7 @@ func TestPlan_Register(t *testing.T) {
 			expectedNominatorCalls := [][]int{
 				slices.Map(
 					registeredPlan.Inputs,
-					func(mp domain.MountPoint) int { return mp.Id },
+					func(in domain.Input) int { return in.MountPoint.Id },
 				),
 			}
 
@@ -272,37 +274,47 @@ func TestPlan_Register(t *testing.T) {
 						{Key: "anno2", Value: "val2"},
 					},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Path: "/in/1",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "key1", Value: "value1"},
-							{Key: "key1", Value: "value2"},
-							{Key: "key2", Value: "value1"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/in/1",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "key1", Value: "value1"},
+								{Key: "key1", Value: "value2"},
+								{Key: "key2", Value: "value1"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{},
 					},
 					{
-						Path: "/in/2",
-						Tags: domain.NewTagSet([]domain.Tag{
+						MountPoint: domain.MountPoint{
+							Path: "/in/2",
+							Tags: domain.NewTagSet([]domain.Tag{
 
-							{Key: "key1", Value: "value1"},
-							{Key: "key1", Value: "value3"},
-							{Key: "key2", Value: "value2"},
-						}),
+								{Key: "key1", Value: "value1"},
+								{Key: "key1", Value: "value3"},
+								{Key: "key2", Value: "value2"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Path: "/out/1",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "key1", Value: "valueA"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/out/1",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "key1", Value: "valueA"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{},
 					},
 				},
 				Log: &domain.LogPoint{
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "log", Value: "true"},
 					}),
+					Downstreams: []domain.PlanDownstream{},
 				},
 			},
 		},
@@ -370,16 +382,22 @@ func TestPlan_Register(t *testing.T) {
 					PlanId: th.Padding36("plan-1"), Active: true, Hash: th.Padding64("example-hash"),
 					Image: &domain.ImageIdentifier{Image: "repo.invalid/test-image", Version: "v0.1"},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Id: 100, Path: "/in/1",
-						Tags: domain.NewTagSet([]domain.Tag{{Key: "tag-1", Value: "value-1"}}),
+						MountPoint: domain.MountPoint{
+							Id: 100, Path: "/in/1",
+							Tags: domain.NewTagSet([]domain.Tag{{Key: "tag-1", Value: "value-1"}}),
+						},
+						Upstreams: []domain.PlanUpstream{},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Id: 200, Path: "/out/1",
-						Tags: domain.NewTagSet([]domain.Tag{{Key: "tag-2", Value: "value-2"}}),
+						MountPoint: domain.MountPoint{
+							Id: 200, Path: "/out/1",
+							Tags: domain.NewTagSet([]domain.Tag{{Key: "tag-2", Value: "value-2"}}),
+						},
+						Downstreams: []domain.PlanDownstream{},
 					},
 				},
 			},
@@ -390,30 +408,39 @@ func TestPlan_Register(t *testing.T) {
 					Entrypoint: []string{"python", "main.py"},
 					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Path: "/in/data",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "tag-1", Value: "value-1"},
-							{Key: "tag-1", Value: "value-2"},
-							{Key: "tag-x", Value: "value-3"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/in/data",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "tag-1", Value: "value-1"},
+								{Key: "tag-1", Value: "value-2"},
+								{Key: "tag-x", Value: "value-3"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{},
 					},
 					{
-						Path: "/in/params",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "tag-x", Value: "value-3"},
-							{Key: domain.KeyKnitId, Value: th.Padding36("some-knit-id")},
-							{Key: domain.KeyKnitTimestamp, Value: "2022-08-15T12:34:56+00:00"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/in/params",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "tag-x", Value: "value-3"},
+								{Key: domain.KeyKnitId, Value: th.Padding36("some-knit-id")},
+								{Key: domain.KeyKnitTimestamp, Value: "2022-08-15T12:34:56+00:00"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Path: "/out/model",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "tag-y", Value: "value-4"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/out/model",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "tag-y", Value: "value-4"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{},
 					},
 				},
 			},
@@ -497,22 +524,40 @@ func TestPlan_Register(t *testing.T) {
 					PlanId: th.Padding36("plan-3"), Active: true, Hash: th.Padding64("hash:plan-3"),
 					Image: &domain.ImageIdentifier{Image: "repo.invalid/image-3", Version: "0.0.1"},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Id: 31, Path: "/in/3",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "type", Value: "log-analysis"},
-							{Key: "format", Value: "csv"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 31, Path: "/in/3",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "type", Value: "log-analysis"},
+								{Key: "format", Value: "csv"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Id: 32, Path: "/out/3",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "type", Value: "report"},
-							{Key: "format", Value: "markdown"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 32, Path: "/out/3",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "type", Value: "report"},
+								{Key: "format", Value: "markdown"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{
+							{
+								PlanId: th.Padding36("UNKNOWN"),
+								Mountpoint: domain.MountPoint{
+									Id:   -1,
+									Path: "/in/x",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "report"},
+										{Key: "format", Value: "markdown"},
+									}),
+								},
+							},
+						},
 					},
 				},
 				Log: &domain.LogPoint{
@@ -520,6 +565,7 @@ func TestPlan_Register(t *testing.T) {
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "type", Value: "log"},
 					}),
+					Downstreams: []domain.PlanDownstream{},
 				},
 			},
 			{
@@ -529,29 +575,50 @@ func TestPlan_Register(t *testing.T) {
 					Entrypoint: []string{"python", "main.py"},
 					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Path: "/in/x",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "type", Value: "report"},
-							{Key: "format", Value: "markdown"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/in/x",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "type", Value: "report"},
+								{Key: "format", Value: "markdown"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{
+							{
+								PlanId: th.Padding36("plan-3"),
+								Mountpoint: &domain.MountPoint{
+									Id:   32,
+									Path: "/out/3",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "report"},
+										{Key: "format", Value: "markdown"},
+									}),
+								},
+							},
+						},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Path: "/out/x",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "project", Value: "test"},
-							{Key: "type", Value: "raw data"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/out/x",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "project", Value: "test"},
+								{Key: "type", Value: "raw data"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{},
 					},
 					{
-						Path: "/out/x2",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "project", Value: "example"},
-							{Key: "type", Value: "raw data"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/out/x2",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "project", Value: "example"},
+								{Key: "type", Value: "raw data"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{},
 					},
 				},
 			},
@@ -602,7 +669,6 @@ func TestPlan_Register(t *testing.T) {
 						{
 							Path: "/in/x",
 							Tags: domain.NewTagSet([]domain.Tag{
-								// depends on mountpoint 32 (/out/3)
 								{Key: "type", Value: "report"},
 								{Key: "format", Value: "markdown"},
 							}),
@@ -634,22 +700,39 @@ func TestPlan_Register(t *testing.T) {
 					PlanId: th.Padding36("plan-1"), Active: true, Hash: th.Padding64("hash:plan-1"),
 					Image: &domain.ImageIdentifier{Image: "repo.invalid/image-1", Version: "0.0.1-alpha"},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Id: 11, Path: "/in/1",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "project", Value: "test"},
-							{Key: "type", Value: "raw data"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 11, Path: "/in/1",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "project", Value: "test"},
+								{Key: "type", Value: "raw data"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{
+							{
+								PlanId: th.Padding36("UNKNOWN"),
+								Mountpoint: &domain.MountPoint{
+									Id: -1,
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "test"},
+										{Key: "type", Value: "raw data"},
+									}),
+								},
+							},
+						},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Id: 12, Path: "/out/1",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "project", Value: "test"},
-							{Key: "type", Value: "training data"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 12, Path: "/out/1",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "project", Value: "test"},
+								{Key: "type", Value: "training data"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{},
 					},
 				},
 				Log: &domain.LogPoint{
@@ -659,6 +742,7 @@ func TestPlan_Register(t *testing.T) {
 						{Key: "type", Value: "log"},
 						{Key: "subtype", Value: "throughput"},
 					}),
+					Downstreams: []domain.PlanDownstream{},
 				},
 			},
 			{
@@ -668,29 +752,50 @@ func TestPlan_Register(t *testing.T) {
 					Entrypoint: []string{"python", "main.py"},
 					Args:       []string{"--input", "/in/1", "--output", "/out/1"},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Path: "/in/x",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "type", Value: "report"},
-							{Key: "format", Value: "markdown"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/in/x",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "type", Value: "report"},
+								{Key: "format", Value: "markdown"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Path: "/out/x",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "project", Value: "test"},
-							{Key: "type", Value: "raw data"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/out/x",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "project", Value: "test"},
+								{Key: "type", Value: "raw data"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{
+							{
+								PlanId: th.Padding36("plan-1"),
+								Mountpoint: domain.MountPoint{
+									Id:   11,
+									Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "test"},
+										{Key: "type", Value: "raw data"},
+									}),
+								},
+							},
+						},
 					},
 					{
-						Path: "/out/x2",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "project", Value: "example"},
-							{Key: "type", Value: "raw data"},
-						}),
+						MountPoint: domain.MountPoint{
+							Path: "/out/x2",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "project", Value: "example"},
+								{Key: "type", Value: "raw data"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{},
 					},
 				},
 			},

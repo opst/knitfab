@@ -86,8 +86,11 @@ func Test_Get(t *testing.T) {
 							PlanId: Padding36("plan/ch1#1:uploaded"), Hash: Padding64("#plan/ch1#1:uploaded"), Active: true,
 							Pseudo: &domain.PseudoPlanDetail{Name: domain.Uploaded},
 						},
-						Outputs: []domain.MountPoint{
-							{Id: 9_01_01_010, Path: "/out"},
+						Outputs: []domain.Output{
+							{
+								MountPoint:  domain.MountPoint{Id: 9_01_01_010, Path: "/out"},
+								Downstreams: []domain.PlanDownstream{},
+							},
 						},
 					},
 				},
@@ -484,38 +487,51 @@ func Test_Get(t *testing.T) {
 							},
 							ServiceAccount: "trainer",
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
+
 							{
-								Id: 9_03_01_100, Path: "/in",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{Key: "type", Value: "training-data"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_03_01_100, Path: "/in",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "training-data"},
+									}),
+								},
+								Upstreams: []domain.PlanUpstream{},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 9_03_01_010, Path: "/out/1",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{Key: "type", Value: "model"},
-									{Key: "task", Value: "encode"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_03_01_010, Path: "/out/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "model"},
+										{Key: "task", Value: "encode"},
+									}),
+								},
+								Downstreams: []domain.PlanDownstream{},
 							},
 							{
-								Id: 9_03_01_020, Path: "/out/2",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{Key: "type", Value: "model"},
-									{Key: "task", Value: "decode"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_03_01_020, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "model"},
+										{Key: "task", Value: "decode"},
+									}),
+								},
+								Downstreams: []domain.PlanDownstream{},
 							},
 							{
-								Id: 9_03_01_030, Path: "/out/3",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{Key: "type", Value: "validation-stats"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_03_01_030, Path: "/out/3",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "validation-stats"},
+									}),
+								},
+								Downstreams: []domain.PlanDownstream{},
 							},
 						},
 						Log: &domain.LogPoint{
@@ -524,6 +540,7 @@ func Test_Get(t *testing.T) {
 								{Key: "project", Value: "testing"},
 								{Key: "type", Value: "log"},
 							}),
+							Downstreams: []domain.PlanDownstream{},
 						},
 					},
 				},
@@ -1149,23 +1166,29 @@ func Test_Get(t *testing.T) {
 							Hash:   Padding64("#plan/ch4#1"), Active: true,
 							Image: &domain.ImageIdentifier{Image: "repo.invalid/test", Version: "v4#1"},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 9_04_01_100, Path: "/in",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{Key: "type", Value: "model"},
-									{Key: "extra-key", Value: "extra-value"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_04_01_100, Path: "/in",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "model"},
+										{Key: "extra-key", Value: "extra-value"},
+									}),
+								},
+								Upstreams: []domain.PlanUpstream{},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 9_04_01_010, Path: "/out",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{Key: "type", Value: "test-report"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_04_01_010, Path: "/out",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "test-report"},
+									}),
+								},
+								Downstreams: []domain.PlanDownstream{},
 							},
 						},
 					},
@@ -1175,13 +1198,16 @@ func Test_Get(t *testing.T) {
 							Hash:   Padding64("#plan/ch4#2"), Active: false,
 							Image: &domain.ImageIdentifier{Image: "repo.invalid/norifier", Version: "v4#2"},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 9_04_02_100, Path: "/trigger",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{Key: domain.KeyKnitId, Value: Padding36("data/ch3#4:run/ch3#1/log")},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_04_02_100, Path: "/trigger",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: domain.KeyKnitId, Value: Padding36("data/ch3#4:run/ch3#1/log")},
+									}),
+								},
+								Upstreams: []domain.PlanUpstream{},
 							},
 						},
 					},
@@ -1191,26 +1217,32 @@ func Test_Get(t *testing.T) {
 							Hash:   Padding64("#plan/ch4#3"), Active: true,
 							Image: &domain.ImageIdentifier{Image: "repo.invalid/reporter", Version: "v4#3"},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 9_04_03_100, Path: "/metrics",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{
-										Key:   domain.KeyKnitTimestamp,
-										Value: rfctime.RFC3339(START_AT.Add(30*time.Second + 103*time.Millisecond)).String(),
-									},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_04_03_100, Path: "/metrics",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{
+											Key:   domain.KeyKnitTimestamp,
+											Value: rfctime.RFC3339(START_AT.Add(30*time.Second + 103*time.Millisecond)).String(),
+										},
+									}),
+								},
+								Upstreams: []domain.PlanUpstream{},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 9_04_03_010, Path: "/out",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "project", Value: "testing"},
-									{Key: "type", Value: "report"},
-									{Key: "format", Value: "pdf"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 9_04_03_010, Path: "/out",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "report"},
+										{Key: "format", Value: "pdf"},
+									}),
+								},
+								Downstreams: []domain.PlanDownstream{},
 							},
 						},
 					},
@@ -1454,6 +1486,267 @@ func Test_Get(t *testing.T) {
 										Image: "repo.invalid/reporter", Version: "v4#3",
 									},
 								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{ // chapter 5: plan dependencies
+			"plan dependencies",
+			tables.Operation{
+				Plan: []tables.Plan{
+					{
+						PlanId: Padding36("plan/ch5#1:train"),
+						Hash:   Padding64("#plan/ch5#1"), Active: true,
+					},
+					{
+						PlanId: Padding36("plan/ch5#2:summary-log"),
+						Hash:   Padding64("#plan/ch5#2"), Active: true,
+					},
+				},
+				PlanImage: []tables.PlanImage{
+					{
+						PlanId: Padding36("plan/ch5#1:train"),
+						Image:  "repo.invalid/trainer", Version: "ch5#1",
+					},
+					{
+						PlanId: Padding36("plan/ch5#2:summary-log"),
+						Image:  "repo.invalid/summarizer", Version: "ch5#2",
+					},
+				},
+				Inputs: map[tables.Input]tables.InputAttr{
+					{
+						PlanId:  Padding36("plan/ch5#1:train"),
+						Path:    "/in",
+						InputId: 9_05_01_100,
+					}: {
+						UserTag: []domain.Tag{
+							{Key: "project", Value: "testing"},
+							{Key: "task", Value: "encode"},
+						},
+					},
+					{
+						PlanId:  Padding36("plan/ch5#1:train"),
+						Path:    "/log",
+						InputId: 9_05_01_200,
+					}: {
+						UserTag: []domain.Tag{
+							{Key: "project", Value: "testing"},
+							{Key: "type", Value: "log"},
+						},
+					},
+
+					{
+						PlanId:  Padding36("plan/ch5#2:summary-log"),
+						InputId: 9_05_02_100,
+						Path:    "/in/1",
+					}: {
+						UserTag: []domain.Tag{
+							{Key: "project", Value: "testing"},
+							{Key: "type", Value: "stats"},
+							{Key: "format", Value: "jsonl"},
+						},
+					},
+					{
+						PlanId:  Padding36("plan/ch5#2:summary-log"),
+						InputId: 9_05_02_200,
+						Path:    "/in/2",
+					}: {
+						UserTag: []domain.Tag{
+							{Key: "project", Value: "testing"},
+							{Key: "type", Value: "model"},
+							{Key: "task", Value: "encode"},
+							{Key: "task", Value: "decode"},
+						},
+					},
+				},
+				Outputs: map[tables.Output]tables.OutputAttr{
+					{
+						PlanId:   Padding36("plan/ch5#1:train"),
+						OutputId: 9_05_01_010,
+						Path:     "/out/1",
+					}: {
+						UserTag: []domain.Tag{
+							{Key: "project", Value: "testing"},
+							{Key: "type", Value: "model"},
+							{Key: "extra-key", Value: "extra-value"},
+						},
+					},
+					{
+						PlanId:   Padding36("plan/ch5#1:train"),
+						OutputId: 9_05_01_020,
+						Path:     "/out/2",
+					}: {
+						UserTag: []domain.Tag{
+							{Key: "do-not-match", Value: "anything"},
+						},
+					},
+					{
+						PlanId:   Padding36("plan/ch5#1:train"),
+						OutputId: 9_05_01_001,
+						Path:     "/log",
+					}: {
+						IsLog: true,
+						UserTag: []domain.Tag{
+							{Key: "project", Value: "testing"},
+							{Key: "type", Value: "stats"},
+							{Key: "format", Value: "jsonl"},
+						},
+					},
+				},
+			},
+			expectation{
+				plan: []domain.Plan{
+					{
+						PlanBody: domain.PlanBody{
+							PlanId: Padding36("plan/ch5#1:train"),
+							Hash:   Padding64("#plan/ch5#1"), Active: true,
+							Image: &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch5#1"},
+						},
+						Inputs: []domain.Input{
+							{
+								MountPoint: domain.MountPoint{
+									Id: 9_05_01_100, Path: "/in",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "task", Value: "encode"},
+									}),
+								},
+								Upstreams: []domain.PlanUpstream{
+									{
+										PlanId: Padding36("plan/ch3#1:trainer"),
+										Mountpoint: &domain.MountPoint{
+											Id: 9_03_01_010, Path: "/out/1",
+											Tags: domain.NewTagSet([]domain.Tag{
+												{Key: "project", Value: "testing"},
+												{Key: "type", Value: "model"},
+												{Key: "task", Value: "encode"},
+											}),
+										},
+									},
+								},
+							},
+							{
+								MountPoint: domain.MountPoint{
+									Id: 9_05_01_200, Path: "/log",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "log"},
+									}),
+								},
+								Upstreams: []domain.PlanUpstream{
+									{
+										PlanId: Padding36("plan/ch3#1:trainer"),
+										Log: &domain.LogPoint{
+											Id: 9_03_01_001,
+											Tags: domain.NewTagSet([]domain.Tag{
+												{Key: "project", Value: "testing"},
+												{Key: "type", Value: "log"},
+											}),
+										},
+									},
+								},
+							},
+						},
+						Outputs: []domain.Output{
+							{
+								MountPoint: domain.MountPoint{
+									Id: 9_05_01_010, Path: "/out/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "model"},
+										{Key: "extra-key", Value: "extra-value"},
+									}),
+								},
+								Downstreams: []domain.PlanDownstream{
+									{
+										PlanId: Padding36("plan/ch4#1:test"),
+										Mountpoint: domain.MountPoint{
+											Id: 9_04_01_100, Path: "/in",
+											Tags: domain.NewTagSet([]domain.Tag{
+												{Key: "project", Value: "testing"},
+												{Key: "type", Value: "model"},
+												{Key: "extra-key", Value: "extra-value"},
+											}),
+										},
+									},
+								},
+							},
+							{
+								MountPoint: domain.MountPoint{
+									Id: 9_05_01_020, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "do-not-match", Value: "anything"},
+									}),
+								},
+								Downstreams: []domain.PlanDownstream{},
+							},
+						},
+						Log: &domain.LogPoint{
+							Id: 9_05_01_001,
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "project", Value: "testing"},
+								{Key: "type", Value: "stats"},
+								{Key: "format", Value: "jsonl"},
+							}),
+							Downstreams: []domain.PlanDownstream{
+								{
+									PlanId: Padding36("plan/ch5#2:summary-log"),
+									Mountpoint: domain.MountPoint{
+										Id: 9_05_02_100, Path: "/in/1",
+										Tags: domain.NewTagSet([]domain.Tag{
+											{Key: "project", Value: "testing"},
+											{Key: "type", Value: "stats"},
+											{Key: "format", Value: "jsonl"},
+										}),
+									},
+								},
+							},
+						},
+					},
+					{
+						PlanBody: domain.PlanBody{
+							PlanId: Padding36("plan/ch5#2:summary-log"),
+							Hash:   Padding64("#plan/ch5#2"), Active: true,
+							Image: &domain.ImageIdentifier{Image: "repo.invalid/summarizer", Version: "ch5#2"},
+						},
+						Inputs: []domain.Input{
+							{
+								MountPoint: domain.MountPoint{
+									Id: 9_05_02_100, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "stats"},
+										{Key: "format", Value: "jsonl"},
+									}),
+								},
+								Upstreams: []domain.PlanUpstream{
+									{
+										PlanId: Padding36("plan/ch5#1:train"),
+										Log: &domain.LogPoint{
+											Id: 9_05_01_001,
+											Tags: domain.NewTagSet([]domain.Tag{
+												{Key: "project", Value: "testing"},
+												{Key: "type", Value: "stats"},
+												{Key: "format", Value: "jsonl"},
+											}),
+										},
+									},
+								},
+							},
+							{
+								MountPoint: domain.MountPoint{
+									Id: 9_05_02_200, Path: "/in/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "project", Value: "testing"},
+										{Key: "type", Value: "model"},
+										{Key: "task", Value: "encode"},
+										{Key: "task", Value: "decode"},
+									}),
+								},
+								Upstreams: []domain.PlanUpstream{},
 							},
 						},
 					},

@@ -29,21 +29,67 @@ func TestComposeDetail(t *testing.T) {
 						{Key: "anno2", Value: "val2"},
 					},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Id: 1, Path: "C:\\mp1",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "key1", Value: "val1"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 1, Path: "/in/mp1",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "key1", Value: "val1"},
+							}),
+						},
+						Upstreams: []domain.PlanUpstream{
+							{
+								PlanId: "upstream-plan-1",
+								Mountpoint: &domain.MountPoint{
+									Id: 11, Path: "/upstream1/mp1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key1", Value: "val1"},
+										{Key: "upkey1", Value: "upval1"},
+									}),
+								},
+							},
+							{
+								PlanId: "upstream-plan-2",
+								Log: &domain.LogPoint{
+									Id: 12,
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "logkey1", Value: "logval1"},
+										{Key: "logkey2", Value: "logval2"},
+									}),
+								},
+							},
+						},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Id: 2, Path: "C:\\mp2",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "key2", Value: "val2"},
-							{Key: "key3", Value: "val3"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 2, Path: "/out/mp2",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "key2", Value: "val2"},
+								{Key: "key3", Value: "val3"},
+							}),
+						},
+						Downstreams: []domain.PlanDownstream{
+							{
+								PlanId: "downstream-plan-1",
+								Mountpoint: domain.MountPoint{
+									Id: 21, Path: "/downstream1/mp1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key1", Value: "val1"},
+									}),
+								},
+							},
+							{
+								PlanId: "downstream-plan-2",
+								Mountpoint: domain.MountPoint{
+									Id: 22, Path: "/downstream2/mp1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key2", Value: "val2"},
+									}),
+								},
+							},
+						},
 					},
 				},
 				Log: &domain.LogPoint{
@@ -52,6 +98,17 @@ func TestComposeDetail(t *testing.T) {
 						{Key: "logkey1", Value: "logval1"},
 						{Key: "logkey2", Value: "logval2"},
 					}),
+					Downstreams: []domain.PlanDownstream{
+						{
+							PlanId: "log-downstream-plan-1",
+							Mountpoint: domain.MountPoint{
+								Id: 31, Path: "/log-downstream1/mp1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "logkey1", Value: "logval1"},
+								}),
+							},
+						},
+					},
 				},
 			},
 			then: apiplans.Detail{
@@ -68,28 +125,86 @@ func TestComposeDetail(t *testing.T) {
 						{Key: "anno2", Value: "val2"},
 					},
 				},
-				Inputs: []apiplans.Mountpoint{
+				Inputs: []apiplans.Input{
 
 					{
-						Path: "C:\\mp1",
-						Tags: []apitags.Tag{
-							{Key: "key1", Value: "val1"},
+						Mountpoint: apiplans.Mountpoint{
+							Path: "/in/mp1",
+							Tags: []apitags.Tag{
+								{Key: "key1", Value: "val1"},
+							},
+						},
+						Upstreams: []apiplans.Upstream{
+							{
+								PlanId: "upstream-plan-1",
+								Mountpoint: &apiplans.Mountpoint{
+									Path: "/upstream1/mp1",
+									Tags: []apitags.Tag{
+										{Key: "key1", Value: "val1"},
+										{Key: "upkey1", Value: "upval1"},
+									},
+								},
+							},
+							{
+								PlanId: "upstream-plan-2",
+								Log: &apiplans.LogPoint{
+									Tags: []apitags.Tag{
+										{Key: "logkey1", Value: "logval1"},
+										{Key: "logkey2", Value: "logval2"},
+									},
+								},
+							},
 						},
 					},
 				},
-				Outputs: []apiplans.Mountpoint{
+				Outputs: []apiplans.Output{
 					{
-						Path: "C:\\mp2",
-						Tags: []apitags.Tag{
-							{Key: "key2", Value: "val2"},
-							{Key: "key3", Value: "val3"},
+						Mountpoint: apiplans.Mountpoint{
+							Path: "/out/mp2",
+							Tags: []apitags.Tag{
+								{Key: "key2", Value: "val2"},
+								{Key: "key3", Value: "val3"},
+							},
+						},
+						Downstreams: []apiplans.Downstream{
+							{
+								PlanId: "downstream-plan-1",
+								Mountpoint: apiplans.Mountpoint{
+									Path: "/downstream1/mp1",
+									Tags: []apitags.Tag{
+										{Key: "key1", Value: "val1"},
+									},
+								},
+							},
+							{
+								PlanId: "downstream-plan-2",
+								Mountpoint: apiplans.Mountpoint{
+									Path: "/downstream2/mp1",
+									Tags: []apitags.Tag{
+										{Key: "key2", Value: "val2"},
+									},
+								},
+							},
 						},
 					},
 				},
-				Log: &apiplans.LogPoint{
-					Tags: []apitags.Tag{
-						{Key: "logkey1", Value: "logval1"},
-						{Key: "logkey2", Value: "logval2"},
+				Log: &apiplans.Log{
+					LogPoint: apiplans.LogPoint{
+						Tags: []apitags.Tag{
+							{Key: "logkey1", Value: "logval1"},
+							{Key: "logkey2", Value: "logval2"},
+						},
+					},
+					Downstreams: []apiplans.Downstream{
+						{
+							PlanId: "log-downstream-plan-1",
+							Mountpoint: apiplans.Mountpoint{
+								Path: "/log-downstream1/mp1",
+								Tags: []apitags.Tag{
+									{Key: "logkey1", Value: "logval1"},
+								},
+							},
+						},
 					},
 				},
 				Active:         true,
@@ -103,28 +218,34 @@ func TestComposeDetail(t *testing.T) {
 					Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 					Pseudo: &domain.PseudoPlanDetail{},
 				},
-				Inputs: []domain.MountPoint{
+				Inputs: []domain.Input{
 					{
-						Id: 1, Path: "C:\\mp1",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "key1", Value: "val1"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 1, Path: "/in/mp1",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "key1", Value: "val1"},
+							}),
+						},
 					},
 				},
-				Outputs: []domain.MountPoint{
+				Outputs: []domain.Output{
 					{
-						Id: 2, Path: "C:\\mp2",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "key2", Value: "val2"},
-							{Key: "key3", Value: "val3"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 2, Path: "/out/mp2",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "key2", Value: "val2"},
+								{Key: "key3", Value: "val3"},
+							}),
+						},
 					},
 					{
-						Id: 3, Path: "C:\\mp3",
-						Tags: domain.NewTagSet([]domain.Tag{
-							{Key: "key4", Value: "val4"},
-							{Key: "key5", Value: "val5"},
-						}),
+						MountPoint: domain.MountPoint{
+							Id: 3, Path: "/out/mp3",
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "key4", Value: "val4"},
+								{Key: "key5", Value: "val5"},
+							}),
+						},
 					},
 				},
 			},
@@ -132,28 +253,37 @@ func TestComposeDetail(t *testing.T) {
 				Summary: apiplans.Summary{
 					PlanId: "plan-1", Image: &apiplans.Image{Repository: "image-1", Tag: "ver-1"},
 				},
-				Inputs: []apiplans.Mountpoint{
+				Inputs: []apiplans.Input{
 					{
-						Path: "C:\\mp1",
-						Tags: []apitags.Tag{
-							{Key: "key1", Value: "val1"},
+						Mountpoint: apiplans.Mountpoint{
+							Path: "/in/mp1",
+							Tags: []apitags.Tag{
+								{Key: "key1", Value: "val1"},
+							},
 						},
+						Upstreams: []apiplans.Upstream{},
 					},
 				},
-				Outputs: []apiplans.Mountpoint{
+				Outputs: []apiplans.Output{
 					{
-						Path: "C:\\mp2",
-						Tags: []apitags.Tag{
-							{Key: "key2", Value: "val2"},
-							{Key: "key3", Value: "val3"},
+						Mountpoint: apiplans.Mountpoint{
+							Path: "/out/mp2",
+							Tags: []apitags.Tag{
+								{Key: "key2", Value: "val2"},
+								{Key: "key3", Value: "val3"},
+							},
 						},
+						Downstreams: []apiplans.Downstream{},
 					},
 					{
-						Path: "C:\\mp3",
-						Tags: []apitags.Tag{
-							{Key: "key4", Value: "val4"},
-							{Key: "key5", Value: "val5"},
+						Mountpoint: apiplans.Mountpoint{
+							Path: "/out/mp3",
+							Tags: []apitags.Tag{
+								{Key: "key4", Value: "val4"},
+								{Key: "key5", Value: "val5"},
+							},
 						},
+						Downstreams: []apiplans.Downstream{},
 					},
 				},
 				Active: true,

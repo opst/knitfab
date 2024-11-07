@@ -163,7 +163,12 @@ func GetRun(ctx context.Context, conn kpool.Queryer, runIds []string) (map[strin
 		planIds[rd.PlanId] = struct{}{}
 	}
 
-	plans, err := GetPlan(ctx, conn, slices.KeysOf(planIds))
+	inputMPs, err := GetInputMountpointsForPlan(ctx, conn, slices.KeysOf(planIds))
+	if err != nil {
+		return nil, err
+	}
+
+	outputMPs, err := GetOutputMountpointsForPlan(ctx, conn, slices.KeysOf(planIds))
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +268,7 @@ func GetRun(ctx context.Context, conn kpool.Queryer, runIds []string) (map[strin
 		out := []domain.Assignment{}
 		var log *domain.Log
 
-		for _, mp := range plans[rb.PlanId].Inputs {
+		for _, mp := range inputMPs[rb.PlanId] {
 			knitId, ok := assignment_in[rb.Id][mp.Id]
 			if !ok {
 				in = append(in, domain.Assignment{MountPoint: mp})
@@ -275,27 +280,23 @@ func GetRun(ctx context.Context, conn kpool.Queryer, runIds []string) (map[strin
 			}
 		}
 
-		for _, mp := range plans[rb.PlanId].Outputs {
-			knitId, ok := assignment_out[rb.Id][mp.Id]
-			if !ok {
-				out = append(out, domain.Assignment{MountPoint: mp})
-			} else {
-				out = append(out, domain.Assignment{
-					MountPoint:   mp,
-					KnitDataBody: dataBodies[knitId],
-				})
-			}
-		}
+		for _, mp := range outputMPs[rb.PlanId] {
 
-		if l := plans[rb.PlanId].Log; l != nil {
-			knitId, ok := assignment_log[rb.Id]
-			if ok {
-				log = &domain.Log{
-					Id:           l.Id,
-					Tags:         l.Tags,
-					KnitDataBody: dataBodies[knitId],
+			if mp.ForLog {
+				knitId, ok := assignment_log[rb.Id]
+				log = &domain.Log{Id: mp.Id, Tags: mp.Tags}
+				if ok {
+					log.KnitDataBody = dataBodies[knitId]
 				}
+				continue
 			}
+
+			knitId, ok := assignment_out[rb.Id][mp.Id]
+			a := domain.Assignment{MountPoint: mp.MountPoint}
+			if ok {
+				a.KnitDataBody = dataBodies[knitId]
+			}
+			out = append(out, a)
 		}
 
 		result[rb.Id] = domain.Run{
