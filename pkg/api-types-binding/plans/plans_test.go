@@ -39,7 +39,16 @@ func TestComposeDetail(t *testing.T) {
 						},
 						Upstreams: []domain.PlanUpstream{
 							{
-								PlanId: "upstream-plan-1",
+								PlanBody: domain.PlanBody{
+									PlanId:     "upstream-plan-1",
+									Image:      &domain.ImageIdentifier{Image: "upstream-image-1", Version: "upstream-ver-1"},
+									Entrypoint: []string{"python", "upstream-main.py"},
+									Args:       []string{"--uparg1", "upval1", "--uparg2", "upval2"},
+									Annotations: []domain.Annotation{
+										{Key: "upanno1", Value: "upval1"},
+										{Key: "upanno2", Value: "upval2"},
+									},
+								},
 								Mountpoint: &domain.MountPoint{
 									Id: 11, Path: "/upstream1/mp1",
 									Tags: domain.NewTagSet([]domain.Tag{
@@ -49,7 +58,10 @@ func TestComposeDetail(t *testing.T) {
 								},
 							},
 							{
-								PlanId: "upstream-plan-2",
+								PlanBody: domain.PlanBody{
+									PlanId: "upstream-plan-2",
+									Image:  &domain.ImageIdentifier{Image: "upstream-image-2", Version: "upstream-ver-2"},
+								},
 								Log: &domain.LogPoint{
 									Id: 12,
 									Tags: domain.NewTagSet([]domain.Tag{
@@ -72,7 +84,16 @@ func TestComposeDetail(t *testing.T) {
 						},
 						Downstreams: []domain.PlanDownstream{
 							{
-								PlanId: "downstream-plan-1",
+								PlanBody: domain.PlanBody{
+									PlanId:     "downstream-plan-1",
+									Image:      &domain.ImageIdentifier{Image: "downstream-image-1", Version: "downstream-ver-1"},
+									Entrypoint: []string{"python", "downstream-main.py"},
+									Args:       []string{"--downarg1", "downval1", "--downarg2", "downval2"},
+									Annotations: []domain.Annotation{
+										{Key: "downanno1", Value: "downval1"},
+										{Key: "downanno2", Value: "downval2"},
+									},
+								},
 								Mountpoint: domain.MountPoint{
 									Id: 21, Path: "/downstream1/mp1",
 									Tags: domain.NewTagSet([]domain.Tag{
@@ -81,7 +102,10 @@ func TestComposeDetail(t *testing.T) {
 								},
 							},
 							{
-								PlanId: "downstream-plan-2",
+								PlanBody: domain.PlanBody{
+									PlanId: "downstream-plan-2",
+									Image:  &domain.ImageIdentifier{Image: "downstream-image-2", Version: "downstream-ver-2"},
+								},
 								Mountpoint: domain.MountPoint{
 									Id: 22, Path: "/downstream2/mp1",
 									Tags: domain.NewTagSet([]domain.Tag{
@@ -100,7 +124,16 @@ func TestComposeDetail(t *testing.T) {
 					}),
 					Downstreams: []domain.PlanDownstream{
 						{
-							PlanId: "log-downstream-plan-1",
+							PlanBody: domain.PlanBody{
+								PlanId:     "log-downstream-plan-1",
+								Image:      &domain.ImageIdentifier{Image: "log-downstream-image-1", Version: "log-downstream-ver-1"},
+								Entrypoint: []string{"python", "log-downstream-main.py"},
+								Args:       []string{"--log-downarg1", "log-downval1", "--log-downarg2", "log-downval2"},
+								Annotations: []domain.Annotation{
+									{Key: "log-downanno1", Value: "log-downval1"},
+									{Key: "log-downanno2", Value: "log-downval2"},
+								},
+							},
 							Mountpoint: domain.MountPoint{
 								Id: 31, Path: "/log-downstream1/mp1",
 								Tags: domain.NewTagSet([]domain.Tag{
@@ -136,7 +169,19 @@ func TestComposeDetail(t *testing.T) {
 						},
 						Upstreams: []apiplans.Upstream{
 							{
-								PlanId: "upstream-plan-1",
+								Summary: apiplans.Summary{
+									PlanId: "upstream-plan-1",
+									Image: &apiplans.Image{
+										Repository: "upstream-image-1",
+										Tag:        "upstream-ver-1",
+									},
+									Entrypoint: []string{"python", "upstream-main.py"},
+									Args:       []string{"--uparg1", "upval1", "--uparg2", "upval2"},
+									Annotations: apiplans.Annotations{
+										{Key: "upanno1", Value: "upval1"},
+										{Key: "upanno2", Value: "upval2"},
+									},
+								},
 								Mountpoint: &apiplans.Mountpoint{
 									Path: "/upstream1/mp1",
 									Tags: []apitags.Tag{
@@ -146,7 +191,13 @@ func TestComposeDetail(t *testing.T) {
 								},
 							},
 							{
-								PlanId: "upstream-plan-2",
+								Summary: apiplans.Summary{
+									PlanId: "upstream-plan-2",
+									Image: &apiplans.Image{
+										Repository: "upstream-image-2",
+										Tag:        "upstream-ver-2",
+									},
+								},
 								Log: &apiplans.LogPoint{
 									Tags: []apitags.Tag{
 										{Key: "logkey1", Value: "logval1"},
@@ -168,7 +219,19 @@ func TestComposeDetail(t *testing.T) {
 						},
 						Downstreams: []apiplans.Downstream{
 							{
-								PlanId: "downstream-plan-1",
+								Summary: apiplans.Summary{
+									PlanId: "downstream-plan-1",
+									Image: &apiplans.Image{
+										Repository: "downstream-image-1",
+										Tag:        "downstream-ver-1",
+									},
+									Entrypoint: []string{"python", "downstream-main.py"},
+									Args:       []string{"--downarg1", "downval1", "--downarg2", "downval2"},
+									Annotations: apiplans.Annotations{
+										{Key: "downanno1", Value: "downval1"},
+										{Key: "downanno2", Value: "downval2"},
+									},
+								},
 								Mountpoint: apiplans.Mountpoint{
 									Path: "/downstream1/mp1",
 									Tags: []apitags.Tag{
@@ -177,7 +240,13 @@ func TestComposeDetail(t *testing.T) {
 								},
 							},
 							{
-								PlanId: "downstream-plan-2",
+								Summary: apiplans.Summary{
+									PlanId: "downstream-plan-2",
+									Image: &apiplans.Image{
+										Repository: "downstream-image-2",
+										Tag:        "downstream-ver-2",
+									},
+								},
 								Mountpoint: apiplans.Mountpoint{
 									Path: "/downstream2/mp1",
 									Tags: []apitags.Tag{
@@ -197,7 +266,19 @@ func TestComposeDetail(t *testing.T) {
 					},
 					Downstreams: []apiplans.Downstream{
 						{
-							PlanId: "log-downstream-plan-1",
+							Summary: apiplans.Summary{
+								PlanId: "log-downstream-plan-1",
+								Image: &apiplans.Image{
+									Repository: "log-downstream-image-1",
+									Tag:        "log-downstream-ver-1",
+								},
+								Entrypoint: []string{"python", "log-downstream-main.py"},
+								Args:       []string{"--log-downarg1", "log-downval1", "--log-downarg2", "log-downval2"},
+								Annotations: apiplans.Annotations{
+									{Key: "log-downanno1", Value: "log-downval1"},
+									{Key: "log-downanno2", Value: "log-downval2"},
+								},
+							},
 							Mountpoint: apiplans.Mountpoint{
 								Path: "/log-downstream1/mp1",
 								Tags: []apitags.Tag{

@@ -547,7 +547,16 @@ func TestPlan_Register(t *testing.T) {
 						},
 						Downstreams: []domain.PlanDownstream{
 							{
-								PlanId: th.Padding36("UNKNOWN"),
+								PlanBody: domain.PlanBody{
+									PlanId: th.Padding36("UNKNOWN"),
+									Active: true,
+									Hash:   th.Padding64("hash:plan-x"),
+									Image: &domain.ImageIdentifier{
+										Image: "repo.invalid/image-x", Version: "0.0.1",
+									},
+									Entrypoint: []string{"python", "main.py"},
+									Args:       []string{"--input", "/in/1", "--output", "/out/1"},
+								},
 								Mountpoint: domain.MountPoint{
 									Id:   -1,
 									Path: "/in/x",
@@ -586,7 +595,14 @@ func TestPlan_Register(t *testing.T) {
 						},
 						Upstreams: []domain.PlanUpstream{
 							{
-								PlanId: th.Padding36("plan-3"),
+								PlanBody: domain.PlanBody{
+									PlanId: th.Padding36("plan-3"),
+									Active: true,
+									Hash:   th.Padding64("hash:plan-3"),
+									Image: &domain.ImageIdentifier{
+										Image: "repo.invalid/image-3", Version: "0.0.1",
+									},
+								},
 								Mountpoint: &domain.MountPoint{
 									Id:   32,
 									Path: "/out/3",
@@ -711,7 +727,16 @@ func TestPlan_Register(t *testing.T) {
 						},
 						Upstreams: []domain.PlanUpstream{
 							{
-								PlanId: th.Padding36("UNKNOWN"),
+								PlanBody: domain.PlanBody{
+									PlanId: th.Padding36("UNKNOWN"),
+									Active: true,
+									Hash:   th.Padding64("hash:plan-x"),
+									Image: &domain.ImageIdentifier{
+										Image: "repo.invalid/image-x", Version: "0.0.1",
+									},
+									Entrypoint: []string{"python", "main.py"},
+									Args:       []string{"--input", "/in/1", "--output", "/out/1"},
+								},
 								Mountpoint: &domain.MountPoint{
 									Id: -1,
 									Tags: domain.NewTagSet([]domain.Tag{
@@ -775,7 +800,14 @@ func TestPlan_Register(t *testing.T) {
 						},
 						Downstreams: []domain.PlanDownstream{
 							{
-								PlanId: th.Padding36("plan-1"),
+								PlanBody: domain.PlanBody{
+									PlanId: th.Padding36("plan-1"),
+									Active: true,
+									Hash:   th.Padding64("hash:plan-1"),
+									Image: &domain.ImageIdentifier{
+										Image: "repo.invalid/image-1", Version: "0.0.1-alpha",
+									},
+								},
 								Mountpoint: domain.MountPoint{
 									Id:   11,
 									Path: "/in/1",

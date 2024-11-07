@@ -1516,6 +1516,47 @@ func Test_Get(t *testing.T) {
 						Image:  "repo.invalid/summarizer", Version: "ch5#2",
 					},
 				},
+				PlanEntrypoint: []tables.PlanEntrypoint{
+					{
+						PlanId:     Padding36("plan/ch5#1:train"),
+						Entrypoint: []string{"python", "trainer.py"},
+					},
+
+					{
+						PlanId:     Padding36("plan/ch5#2:summary-log"),
+						Entrypoint: []string{"python", "summarizer.py"},
+					},
+				},
+				PlanArgs: []tables.PlanArgs{
+					{
+						PlanId: Padding36("plan/ch5#1:train"),
+						Args:   []string{"--input", "/in", "--output", "/out"},
+					},
+
+					{
+						PlanId: Padding36("plan/ch5#2:summary-log"),
+						Args:   []string{"--input", "/in", "--output", "/out"},
+					},
+				},
+				PlanAnnotations: []tables.Annotation{
+					{
+						PlanId: Padding36("plan/ch5#1:train"),
+						Key:    "model-version", Value: "1",
+					},
+					{
+						PlanId: Padding36("plan/ch5#1:train"),
+						Key:    "description", Value: "testing",
+					},
+
+					{
+						PlanId: Padding36("plan/ch5#2:summary-log"),
+						Key:    "description", Value: "testing",
+					},
+					{
+						PlanId: Padding36("plan/ch5#2:summary-log"),
+						Key:    "model-version", Value: "1",
+					},
+				},
 				Inputs: map[tables.Input]tables.InputAttr{
 					{
 						PlanId:  Padding36("plan/ch5#1:train"),
@@ -1603,7 +1644,13 @@ func Test_Get(t *testing.T) {
 						PlanBody: domain.PlanBody{
 							PlanId: Padding36("plan/ch5#1:train"),
 							Hash:   Padding64("#plan/ch5#1"), Active: true,
-							Image: &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch5#1"},
+							Image:      &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch5#1"},
+							Entrypoint: []string{"python", "trainer.py"},
+							Args:       []string{"--input", "/in", "--output", "/out"},
+							Annotations: []domain.Annotation{
+								{Key: "model-version", Value: "1"},
+								{Key: "description", Value: "testing"},
+							},
 						},
 						Inputs: []domain.Input{
 							{
@@ -1616,7 +1663,27 @@ func Test_Get(t *testing.T) {
 								},
 								Upstreams: []domain.PlanUpstream{
 									{
-										PlanId: Padding36("plan/ch3#1:trainer"),
+										PlanBody: domain.PlanBody{
+											PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
+											Hash:       Padding64("#plan/ch3#1:trainer"),
+											Image:      &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+											Entrypoint: []string{"python", "trainer.py"},
+											Args:       []string{"--input", "/in", "--output", "/out"},
+											OnNode: []domain.OnNode{
+												{Mode: domain.MustOnNode, Key: "accelerator", Value: "gpu"},
+												{Mode: domain.PreferOnNode, Key: "accelerator", Value: "high-power"},
+											},
+											Resources: map[string]resource.Quantity{
+												"gpu":    resource.MustParse("1"),
+												"cpu":    resource.MustParse("0.5"),
+												"memory": resource.MustParse("1Gi"),
+											},
+											Annotations: []domain.Annotation{
+												{Key: "model-version", Value: "1"},
+												{Key: "description", Value: "testing"},
+											},
+											ServiceAccount: "trainer",
+										},
 										Mountpoint: &domain.MountPoint{
 											Id: 9_03_01_010, Path: "/out/1",
 											Tags: domain.NewTagSet([]domain.Tag{
@@ -1638,7 +1705,27 @@ func Test_Get(t *testing.T) {
 								},
 								Upstreams: []domain.PlanUpstream{
 									{
-										PlanId: Padding36("plan/ch3#1:trainer"),
+										PlanBody: domain.PlanBody{
+											PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
+											Hash:       Padding64("#plan/ch3#1:trainer"),
+											Image:      &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch3#1"},
+											Entrypoint: []string{"python", "trainer.py"},
+											Args:       []string{"--input", "/in", "--output", "/out"},
+											OnNode: []domain.OnNode{
+												{Mode: domain.MustOnNode, Key: "accelerator", Value: "gpu"},
+												{Mode: domain.PreferOnNode, Key: "accelerator", Value: "high-power"},
+											},
+											Resources: map[string]resource.Quantity{
+												"gpu":    resource.MustParse("1"),
+												"cpu":    resource.MustParse("0.5"),
+												"memory": resource.MustParse("1Gi"),
+											},
+											Annotations: []domain.Annotation{
+												{Key: "model-version", Value: "1"},
+												{Key: "description", Value: "testing"},
+											},
+											ServiceAccount: "trainer",
+										},
 										Log: &domain.LogPoint{
 											Id: 9_03_01_001,
 											Tags: domain.NewTagSet([]domain.Tag{
@@ -1662,7 +1749,11 @@ func Test_Get(t *testing.T) {
 								},
 								Downstreams: []domain.PlanDownstream{
 									{
-										PlanId: Padding36("plan/ch4#1:test"),
+										PlanBody: domain.PlanBody{
+											PlanId: Padding36("plan/ch4#1:test"),
+											Hash:   Padding64("#plan/ch4#1"), Active: true,
+											Image: &domain.ImageIdentifier{Image: "repo.invalid/test", Version: "v4#1"},
+										},
 										Mountpoint: domain.MountPoint{
 											Id: 9_04_01_100, Path: "/in",
 											Tags: domain.NewTagSet([]domain.Tag{
@@ -1693,7 +1784,17 @@ func Test_Get(t *testing.T) {
 							}),
 							Downstreams: []domain.PlanDownstream{
 								{
-									PlanId: Padding36("plan/ch5#2:summary-log"),
+									PlanBody: domain.PlanBody{
+										PlanId: Padding36("plan/ch5#2:summary-log"),
+										Hash:   Padding64("#plan/ch5#2"), Active: true,
+										Image:      &domain.ImageIdentifier{Image: "repo.invalid/summarizer", Version: "ch5#2"},
+										Entrypoint: []string{"python", "summarizer.py"},
+										Args:       []string{"--input", "/in", "--output", "/out"},
+										Annotations: []domain.Annotation{
+											{Key: "model-version", Value: "1"},
+											{Key: "description", Value: "testing"},
+										},
+									},
 									Mountpoint: domain.MountPoint{
 										Id: 9_05_02_100, Path: "/in/1",
 										Tags: domain.NewTagSet([]domain.Tag{
@@ -1710,7 +1811,13 @@ func Test_Get(t *testing.T) {
 						PlanBody: domain.PlanBody{
 							PlanId: Padding36("plan/ch5#2:summary-log"),
 							Hash:   Padding64("#plan/ch5#2"), Active: true,
-							Image: &domain.ImageIdentifier{Image: "repo.invalid/summarizer", Version: "ch5#2"},
+							Image:      &domain.ImageIdentifier{Image: "repo.invalid/summarizer", Version: "ch5#2"},
+							Entrypoint: []string{"python", "summarizer.py"},
+							Args:       []string{"--input", "/in", "--output", "/out"},
+							Annotations: []domain.Annotation{
+								{Key: "model-version", Value: "1"},
+								{Key: "description", Value: "testing"},
+							},
 						},
 						Inputs: []domain.Input{
 							{
@@ -1724,7 +1831,17 @@ func Test_Get(t *testing.T) {
 								},
 								Upstreams: []domain.PlanUpstream{
 									{
-										PlanId: Padding36("plan/ch5#1:train"),
+										PlanBody: domain.PlanBody{
+											PlanId: Padding36("plan/ch5#1:train"),
+											Hash:   Padding64("#plan/ch5#1"), Active: true,
+											Image:      &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "ch5#1"},
+											Entrypoint: []string{"python", "trainer.py"},
+											Args:       []string{"--input", "/in", "--output", "/out"},
+											Annotations: []domain.Annotation{
+												{Key: "model-version", Value: "1"},
+												{Key: "description", Value: "testing"},
+											},
+										},
 										Log: &domain.LogPoint{
 											Id: 9_05_01_001,
 											Tags: domain.NewTagSet([]domain.Tag{
