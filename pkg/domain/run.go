@@ -238,6 +238,13 @@ func (l *Log) Equal(o *Log) bool {
 		l.KnitDataBody.Equal(&o.KnitDataBody)
 }
 
+func (l *Log) String() string {
+	if l == nil {
+		return "(nil)"
+	}
+	return fmt.Sprintf("%+v", *l)
+}
+
 // Core part of run.
 type RunBody struct {
 	Id     string

@@ -178,15 +178,15 @@ func (o OnNode) String() string {
 
 type Plan struct {
 	PlanBody
-	Inputs  []MountPoint
-	Outputs []MountPoint
+	Inputs  []Input
+	Outputs []Output
 	Log     *LogPoint
 }
 
 func (p *Plan) String() string {
 
-	inputs := slices.Map(p.Inputs, func(mp MountPoint) string { return mp.String() })
-	outputs := slices.Map(p.Outputs, func(mp MountPoint) string { return mp.String() })
+	inputs := slices.Map(p.Inputs, func(mp Input) string { return mp.MountPoint.String() })
+	outputs := slices.Map(p.Outputs, func(mp Output) string { return mp.MountPoint.String() })
 
 	return fmt.Sprintf(
 		"Plan{PlanBody:%+v Inputs:{%+v} Outputs:{%+v} Log:%+v}",
@@ -199,35 +199,18 @@ func (p *Plan) String() string {
 
 // true iff p and other are equal, means they represent same entity.
 func (p *Plan) Equal(other *Plan) bool {
-	return p.PlanBody.Equal(&other.PlanBody) &&
-		cmp.SliceContentEqWith(
-			slices.RefOf(p.Inputs),
-			slices.RefOf(other.Inputs),
-			(*MountPoint).Equal,
-		) &&
-		cmp.SliceContentEqWith(
-			slices.RefOf(p.Outputs),
-			slices.RefOf(other.Outputs),
-			(*MountPoint).Equal,
-		) &&
-		p.Log.Equal(other.Log)
+	matchBody := p.PlanBody.Equal(&other.PlanBody)
+	matchInput := cmp.SliceContentEqWith(p.Inputs, other.Inputs, Input.Equal)
+	matchOutput := cmp.SliceContentEqWith(p.Outputs, other.Outputs, Output.Equal)
+	matchLog := p.Log.Equal(other.Log)
+	return matchBody && matchInput && matchOutput && matchLog
 }
 
 // true iff p and other are equivarent, means they represent same except PlanId.
 func (p *Plan) Equiv(other *Plan) bool {
-	eqInputs := cmp.SliceContentEqWith(
-		slices.RefOf(p.Inputs),
-		slices.RefOf(other.Inputs),
-		(*MountPoint).Equiv,
-	)
-	eqOutputs := cmp.SliceContentEqWith(
-		slices.RefOf(p.Outputs),
-		slices.RefOf(other.Outputs),
-		(*MountPoint).Equiv,
-	)
 	return p.PlanBody.Equiv(&other.PlanBody) &&
-		eqInputs &&
-		eqOutputs &&
+		cmp.SliceContentEqWith(p.Inputs, other.Inputs, Input.Equiv) &&
+		cmp.SliceContentEqWith(p.Outputs, other.Outputs, Output.Equiv) &&
 		p.Log.Equiv(other.Log)
 }
 
@@ -299,6 +282,71 @@ func (m *MountPoint) Equiv(other *MountPoint) bool {
 			slices.RefOf(other.Tags.Slice()),
 			(*Tag).Equal,
 		)
+}
+
+type PlanUpstream struct {
+	PlanId     string
+	Mountpoint *MountPoint
+	Log        *LogPoint
+}
+
+func (u PlanUpstream) Equal(other PlanUpstream) bool {
+	if (u.Mountpoint == nil) != (other.Mountpoint == nil) {
+		return false
+	}
+	if u.Mountpoint != nil && !u.Mountpoint.Equal(other.Mountpoint) {
+		return false
+	}
+	if (u.Log == nil) != (other.Log == nil) {
+		return false
+	}
+	if u.Log != nil && !u.Log.Equal(other.Log) {
+		return false
+	}
+	return u.PlanId == other.PlanId
+}
+
+type PlanDownstream struct {
+	PlanId     string
+	Mountpoint MountPoint
+}
+
+func (d PlanDownstream) Equal(other PlanDownstream) bool {
+	return d.PlanId == other.PlanId && d.Mountpoint.Equal(&other.Mountpoint)
+}
+
+type Input struct {
+	MountPoint
+
+	Upstreams []PlanUpstream
+}
+
+func (i Input) Equal(other Input) bool {
+	return i.MountPoint.Equal(&other.MountPoint) &&
+		cmp.SliceContentEqWith(
+			i.Upstreams, other.Upstreams, PlanUpstream.Equal,
+		)
+}
+
+func (i Input) Equiv(other Input) bool {
+	return i.MountPoint.Equiv(&other.MountPoint)
+}
+
+type Output struct {
+	MountPoint
+
+	Downstreams []PlanDownstream
+}
+
+func (o Output) Equal(other Output) bool {
+	return o.MountPoint.Equal(&other.MountPoint) &&
+		cmp.SliceContentEqWith(
+			o.Downstreams, other.Downstreams, PlanDownstream.Equal,
+		)
+}
+
+func (o Output) Equiv(other Output) bool {
+	return o.MountPoint.Equiv(&other.MountPoint)
 }
 
 type PlanParam struct {
@@ -512,12 +560,15 @@ func (ps *PlanSpec) EquivPlan(plan *Plan) bool {
 	}
 
 	if !cmp.SliceContentEqWith(
-		ps.inputs, slices.RefOf(plan.Inputs), MountPointParam.EquivMountPoint,
+		ps.inputs, plan.Inputs,
+		func(mpp MountPointParam, in Input) bool { return mpp.EquivMountPoint(&in.MountPoint) },
 	) {
 		return false
 	}
+
 	if !cmp.SliceContentEqWith(
-		ps.outputs, slices.RefOf(plan.Outputs), MountPointParam.EquivMountPoint,
+		ps.outputs, plan.Outputs,
+		func(mpp MountPointParam, out Output) bool { return mpp.EquivMountPoint(&out.MountPoint) },
 	) {
 		return false
 	}
@@ -854,6 +905,8 @@ type LogPoint struct {
 
 	// tags for this mountpoint
 	Tags *TagSet
+
+	Downstreams []PlanDownstream
 }
 
 func (lp *LogPoint) String() string {
@@ -867,7 +920,14 @@ func (lp *LogPoint) Equal(other *LogPoint) bool {
 	if (lp == nil) || (other == nil) {
 		return (lp == nil) && (other == nil)
 	}
-	return lp.Id == other.Id && lp.Equiv(other)
+	return lp.Id == other.Id &&
+		lp.Equiv(other) &&
+		cmp.SliceContentEqWith(
+			lp.Downstreams, other.Downstreams,
+			func(a, b PlanDownstream) bool {
+				return a.PlanId == b.PlanId && a.Mountpoint.Equal(&b.Mountpoint)
+			},
+		)
 }
 
 func (lp *LogPoint) Equiv(other *LogPoint) bool {

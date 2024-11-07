@@ -183,35 +183,262 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 		return nil, err
 	}
 
-	ins := map[string][]domain.MountPoint{}
+	// inputs: planId -> []Input
+	inputs := map[string][]domain.Input{}
 	{
-		_ins, err := GetInputsForPlan(ctx, conn, planId)
+		_inputMps, err := GetInputMountpointsForPlan(ctx, conn, planId)
 		if err != nil {
 			return nil, err
 		}
 
-		for planId, mps := range _ins {
-			ins[planId] = slices.ValuesOf(mps)
+		upstreams := map[int][]domain.PlanUpstream{}
+
+		{
+			_inpitIds := []int{}
+			for _, mps := range _inputMps {
+				for _, mp := range mps {
+					_inpitIds = append(_inpitIds, mp.Id)
+				}
+			}
+
+			// upstreams: inputId -> [](planId, outputId)
+			upstreamIds := map[int][]tuple.Pair[string, int]{}
+
+			outputIds := map[int]struct{}{}
+
+			ret, err := conn.Query(
+				ctx,
+				`
+				with "inputs" as (
+					select distinct unnest($1::int[]) as "input_id"
+				),
+				"i_tags" as (
+					select "input_id", "tag_id" from "tag_input"
+					where
+							"input_id" in (select "input_id" from "inputs")
+						-- output has no system tag. exclude them.
+						and "input_id" not in (select "input_id" from "knitid_input")
+						and "input_id" not in (select "input_id" from "timestamp_input")
+				),
+				"i_tags_count" as (
+					select "input_id", count(*) as "count" from "i_tags" group by "input_id"
+				),
+				"o_tags" as (
+					select "output_id", "tag_id" from "tag_output"
+					where "tag_id" in (select distinct "tag_id" from "i_tags")
+				),
+				"shared_tags_count" as (
+					select "input_id", "output_id", count(*) as "count"
+					from "i_tags"
+					inner join "o_tags" using ("tag_id")
+					group by "input_id", "output_id"
+				),
+				"match" as (
+					select distinct
+						"i_tags_count"."input_id" as "input_id",
+						"output_id"
+					from "shared_tags_count"
+					inner join "i_tags_count" on
+						"i_tags_count"."input_id" = "shared_tags_count"."input_id"
+					and "i_tags_count"."count"    = "shared_tags_count"."count"
+				)
+				select
+					"input_id",
+					"plan_id" as "output_plan_id",
+					"output_id" as "upstream_id"
+				from "match"
+				inner join "output" using ("output_id")
+				`,
+				_inpitIds,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			defer ret.Close()
+			for ret.Next() {
+				var inputId, upstreamId int
+				var planId string
+				if err := ret.Scan(&inputId, &planId, &upstreamId); err != nil {
+					return nil, err
+				}
+				upstreamIds[inputId] = append(upstreamIds[inputId], tuple.PairOf(planId, upstreamId))
+				outputIds[upstreamId] = struct{}{}
+			}
+
+			_outputs, err := GetOutputs(ctx, conn, slices.KeysOf(outputIds))
+			if err != nil {
+				return nil, err
+			}
+
+			for inputId, planIdAndUpstreamIds := range upstreamIds {
+				upstreams[inputId] = slices.Map(
+					planIdAndUpstreamIds,
+					func(planIdAndUpstreamId tuple.Pair[string, int]) domain.PlanUpstream {
+						planId, upstreamId := planIdAndUpstreamId.Decompose()
+						output := _outputs[upstreamId]
+
+						u := domain.PlanUpstream{PlanId: planId}
+
+						if output.ForLog {
+							u.Log = &domain.LogPoint{
+								Id:   output.MountPoint.Id,
+								Tags: output.MountPoint.Tags,
+							}
+						} else {
+							u.Mountpoint = &output.MountPoint
+						}
+
+						return u
+					},
+				)
+			}
+
+		}
+
+		for planId, mps := range _inputMps {
+			inputs[planId] = slices.Map(
+				slices.ValuesOf(mps),
+				func(mp domain.MountPoint) domain.Input {
+					return domain.Input{
+						MountPoint: mp,
+						Upstreams:  upstreams[mp.Id],
+					}
+				},
+			)
 		}
 	}
 
-	outs := map[string][]domain.MountPoint{}
+	// outputs: planId -> []Output
+	outputs := map[string][]domain.Output{}
+
+	// logs: planId -> Log
 	logs := map[string]domain.LogPoint{}
+
 	{
-		_outs, err := GetOutputsForPlan(ctx, conn, planId)
+		_outputMps, err := GetOutputMountpointsForPlan(ctx, conn, planId)
 		if err != nil {
 			return nil, err
 		}
-		for planId, ops := range _outs {
+
+		downstreams := map[int][]domain.PlanDownstream{}
+
+		{
+			_outputIds := []int{}
+			for _, mps := range _outputMps {
+				for _, mp := range mps {
+					_outputIds = append(_outputIds, mp.Id)
+				}
+			}
+
+			// downstreams: outputId -> [](planId, inputId)
+			downstreamIds := map[int][]tuple.Pair[string, int]{}
+
+			inputIds := map[int]struct{}{}
+
+			ret, err := conn.Query(
+				ctx,
+				`
+				with "query" as (
+					select distinct unnest($1::int[]) as "output_id"
+				),
+				"o_tags" as (
+					select "output_id", "tag_id" from "tag_output"
+					where "output_id" in (select "output_id" from "query")
+				),
+				"_i_tags" as (
+					-- filter out inputs have no tags in common with the outputs
+					select "input_id", "tag_id" from "tag_input"
+					where "input_id" in (
+						select distinct "input_id" from "tag_input"
+						where "tag_id" in (select distinct "tag_id" from "o_tags")
+					)
+				),
+				"i_tags" as (
+					select "input_id", "tag_id" from "_i_tags"
+					where "input_id" not in (select "input_id" from "knitid_input")
+					and "input_id" not in (select "input_id" from "timestamp_input")
+				),
+				"i_tags_count" as (
+					select "input_id", count(*) as "count" from "i_tags" group by "input_id"
+				),
+				"shared_tags_count" as (
+					select "output_id", "input_id", count(*) as "count"
+					from "o_tags"
+					inner join "i_tags" using ("tag_id")
+					group by "output_id", "input_id"
+				),
+				"match" as (
+					select distinct
+						"i_tags_count"."input_id" as "input_id",
+						"output_id"
+					from "shared_tags_count"
+					inner join "i_tags_count" on
+							"i_tags_count"."input_id" = "shared_tags_count"."input_id"
+						and "i_tags_count"."count"    = "shared_tags_count"."count"
+				)
+				select
+					"output_id",
+					"plan_id" as "input_plan_id",
+					"input_id" as "downstream_id"
+				from "match"
+				inner join "input" using ("input_id")
+				`,
+				_outputIds,
+			)
+			if err != nil {
+				return nil, err
+			}
+			defer ret.Close()
+
+			for ret.Next() {
+				var outputId, downstreamId int
+				var planId string
+				if err := ret.Scan(&outputId, &planId, &downstreamId); err != nil {
+					return nil, err
+				}
+				downstreamIds[outputId] = append(downstreamIds[outputId], tuple.PairOf(planId, downstreamId))
+				inputIds[downstreamId] = struct{}{}
+			}
+
+			_inputs, err := GetInputs(ctx, conn, slices.KeysOf(inputIds))
+			if err != nil {
+				return nil, err
+			}
+
+			for outputId, planIdAndInputIds := range downstreamIds {
+				downstreams[outputId] = slices.Map(
+					planIdAndInputIds,
+					func(planIdAndDownstreamId tuple.Pair[string, int]) domain.PlanDownstream {
+						planId, downstreamId := planIdAndDownstreamId.Decompose()
+						input := _inputs[downstreamId]
+						return domain.PlanDownstream{
+							PlanId:     planId,
+							Mountpoint: input,
+						}
+					},
+				)
+			}
+		}
+
+		for planId, ops := range _outputMps {
 			for _, op := range ops {
+				dss := downstreams[op.Id]
+
 				if op.ForLog {
 					logs[planId] = domain.LogPoint{
 						Id: op.Id, Tags: op.Tags,
+						Downstreams: dss,
 					}
 					continue
 				}
 
-				outs[planId] = append(outs[planId], op.MountPoint)
+				outputs[planId] = append(
+					outputs[planId], domain.Output{
+						MountPoint:  op.MountPoint,
+						Downstreams: dss,
+					},
+				)
 			}
 		}
 	}
@@ -224,8 +451,8 @@ func GetPlan(ctx context.Context, conn kpool.Queryer, planId []string) (map[stri
 		}
 		result[plid] = &domain.Plan{
 			PlanBody: body,
-			Inputs:   ins[plid],
-			Outputs:  outs[plid],
+			Inputs:   inputs[plid],
+			Outputs:  outputs[plid],
 			Log:      log,
 		}
 	}
@@ -468,7 +695,7 @@ func getTagsOnOutput(ctx context.Context, conn kpool.Queryer, outputIds []int) (
 	return tss, nil
 }
 
-func GetInputsForPlan(
+func GetInputMountpointsForPlan(
 	ctx context.Context, conn kpool.Queryer, planIds []string,
 ) (map[string]map[int]domain.MountPoint, error) {
 	bodies := map[int]tuple.Pair[string, domain.MountPoint]{}
@@ -541,7 +768,7 @@ func GetInputsForPlan(
 	return ret, nil
 }
 
-func GetOutputsForPlan(
+func GetOutputMountpointsForPlan(
 	ctx context.Context, conn kpool.Queryer, planIds []string,
 ) (map[string]map[int]OutputPoint, error) {
 

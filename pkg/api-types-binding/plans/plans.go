@@ -16,10 +16,53 @@ func ComposeMountpoint(mp domain.MountPoint) apiplans.Mountpoint {
 	}
 }
 
+func ComposeLogPoint(log *domain.LogPoint) *apiplans.LogPoint {
+	if log == nil {
+		return nil
+	}
+	return &apiplans.LogPoint{Tags: slices.Map(log.Tags.Slice(), bindtags.Compose)}
+}
+
+func ComposeDownstream(d domain.PlanDownstream) apiplans.Downstream {
+	return apiplans.Downstream{
+		PlanId:     d.PlanId,
+		Mountpoint: ComposeMountpoint(d.Mountpoint),
+	}
+}
+
+func ComposeInputs(i domain.Input) apiplans.Input {
+	return apiplans.Input{
+		Mountpoint: ComposeMountpoint(i.MountPoint),
+		Upstreams: slices.Map(i.Upstreams, func(u domain.PlanUpstream) apiplans.Upstream {
+			var mp *apiplans.Mountpoint = nil
+			if u.Mountpoint != nil {
+				_mp := ComposeMountpoint(*u.Mountpoint)
+				mp = &_mp
+			}
+
+			return apiplans.Upstream{
+				PlanId:     u.PlanId,
+				Mountpoint: mp,
+				Log:        ComposeLogPoint(u.Log),
+			}
+		}),
+	}
+}
+
+func ComposeOutputs(o domain.Output) apiplans.Output {
+	return apiplans.Output{
+		Mountpoint:  ComposeMountpoint(o.MountPoint),
+		Downstreams: slices.Map(o.Downstreams, ComposeDownstream),
+	}
+}
+
 func ComposeDetail(plan domain.Plan) apiplans.Detail {
-	var log *apiplans.LogPoint
-	if plan.Log != nil {
-		log = &apiplans.LogPoint{Tags: slices.Map(plan.Log.Tags.Slice(), bindtags.Compose)}
+	var log *apiplans.Log
+	if lp := ComposeLogPoint(plan.Log); lp != nil {
+		log = &apiplans.Log{
+			LogPoint:    *lp,
+			Downstreams: slices.Map(plan.Log.Downstreams, ComposeDownstream),
+		}
 	}
 
 	var onNode *apiplans.OnNode
@@ -40,8 +83,8 @@ func ComposeDetail(plan domain.Plan) apiplans.Detail {
 	return apiplans.Detail{
 		Summary:        ComposeSummary(plan.PlanBody),
 		Active:         plan.Active,
-		Inputs:         slices.Map(plan.Inputs, ComposeMountpoint),
-		Outputs:        slices.Map(plan.Outputs, ComposeMountpoint),
+		Inputs:         slices.Map(plan.Inputs, ComposeInputs),
+		Outputs:        slices.Map(plan.Outputs, ComposeOutputs),
 		Resources:      apiplans.Resources(plan.Resources),
 		Log:            log,
 		OnNode:         onNode,
