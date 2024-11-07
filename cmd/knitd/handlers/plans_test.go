@@ -133,22 +133,26 @@ func TestRegisterPlan(t *testing.T) {
 								{Key: "annot2", Value: "val2"},
 							},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
 						Log: &domain.LogPoint{
@@ -226,28 +230,34 @@ func TestRegisterPlan(t *testing.T) {
 							},
 						},
 						Active: true,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{
-								{Key: "type", Value: "log"},
-								{Key: "format", Value: "jsonl"},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{
+									{Key: "type", Value: "log"},
+									{Key: "format", Value: "jsonl"},
+								},
 							},
 						},
 						OnNode: &plans.OnNode{
@@ -316,22 +326,26 @@ func TestRegisterPlan(t *testing.T) {
 								"memory": resource.MustParse("128Mi"),
 							},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
 						Log: &domain.LogPoint{
@@ -395,28 +409,34 @@ func TestRegisterPlan(t *testing.T) {
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{
-								{Key: "type", Value: "log"},
-								{Key: "format", Value: "jsonl"},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{
+									{Key: "type", Value: "log"},
+									{Key: "format", Value: "jsonl"},
+								},
 							},
 						},
 						Resources: map[string]resource.Quantity{
@@ -470,22 +490,26 @@ func TestRegisterPlan(t *testing.T) {
 								"memory": resource.MustParse("1Gi"),
 							},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
 						Log: &domain.LogPoint{
@@ -544,28 +568,34 @@ func TestRegisterPlan(t *testing.T) {
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: false,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{
-								{Key: "type", Value: "log"},
-								{Key: "format", Value: "jsonl"},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{
+									{Key: "type", Value: "log"},
+									{Key: "format", Value: "jsonl"},
+								},
 							},
 						},
 						Resources: map[string]resource.Quantity{
@@ -607,22 +637,26 @@ func TestRegisterPlan(t *testing.T) {
 								"memory": resource.MustParse("1Gi"),
 							},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
 						Log: &domain.LogPoint{
@@ -681,28 +715,34 @@ func TestRegisterPlan(t *testing.T) {
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{
-								{Key: "type", Value: "log"},
-								{Key: "format", Value: "jsonl"},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{
+									{Key: "type", Value: "log"},
+									{Key: "format", Value: "jsonl"},
+								},
 							},
 						},
 						Resources: map[string]resource.Quantity{
@@ -740,22 +780,26 @@ func TestRegisterPlan(t *testing.T) {
 								"memory": resource.MustParse("1Gi"),
 							},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
 					},
@@ -801,21 +845,25 @@ func TestRegisterPlan(t *testing.T) {
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
@@ -1148,20 +1196,24 @@ func TestFind(t *testing.T) {
 							PlanId: "plan-1", Active: true, Hash: "hash-1",
 							Image: &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "path-1",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
-								),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "path-1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+									),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "path-2",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "path-2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"},
+									}),
+								},
 							},
 						},
 					},
@@ -1170,12 +1222,14 @@ func TestFind(t *testing.T) {
 							PlanId: "plan-2", Active: false, Hash: "hash-2",
 							Image: &domain.ImageIdentifier{Image: "image-2", Version: "ver-2"},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 3, Path: "path-3",
-								Tags: domain.NewTagSet([]domain.Tag{
-									{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
-								),
+								MountPoint: domain.MountPoint{
+									Id: 3, Path: "path-3",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
+									),
+								},
 							},
 						},
 						Log: &domain.LogPoint{
@@ -1202,16 +1256,20 @@ func TestFind(t *testing.T) {
 							PlanId: "plan-1",
 							Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 						},
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "path-1",
-								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+								Mountpoint: plans.Mountpoint{
+									Path: "path-1",
+									Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "path-2",
-								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+								Mountpoint: plans.Mountpoint{
+									Path: "path-2",
+									Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+								},
 							},
 						},
 						Log: nil, Active: true,
@@ -1221,14 +1279,18 @@ func TestFind(t *testing.T) {
 							PlanId: "plan-2",
 							Image:  &plans.Image{Repository: "image-2", Tag: "ver-2"},
 						},
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "path-3",
-								Tags: []apitag.Tag{{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
+								Mountpoint: plans.Mountpoint{
+									Path: "path-3",
+									Tags: []apitag.Tag{{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
+								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+							},
 						},
 						Active: false,
 					},
@@ -1497,16 +1559,20 @@ func TestGetPlanHandler(t *testing.T) {
 							Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 							Pseudo: &domain.PseudoPlanDetail{},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "path-1",
-								Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "path-1",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "path-2",
-								Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "path-2",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								},
 							},
 						},
 					},
@@ -1522,16 +1588,20 @@ func TestGetPlanHandler(t *testing.T) {
 						PlanId: "plan-1",
 						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []plans.Mountpoint{
+					Inputs: []plans.Input{
 						{
-							Path: "path-1",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-1",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							},
 						},
 					},
-					Outputs: []plans.Mountpoint{
+					Outputs: []plans.Output{
 						{
-							Path: "path-2",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-2",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							},
 						},
 					},
 					Log: nil, Active: true,
@@ -1666,16 +1736,20 @@ func TestActivatePlan(t *testing.T) {
 							Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 							Pseudo: &domain.PseudoPlanDetail{},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "path-1",
-								Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "path-1",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "path-2",
-								Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "path-2",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								},
 							},
 						},
 					},
@@ -1689,16 +1763,20 @@ func TestActivatePlan(t *testing.T) {
 						PlanId: "plan-1",
 						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []plans.Mountpoint{
+					Inputs: []plans.Input{
 						{
-							Path: "path-1",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-1",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							},
 						},
 					},
-					Outputs: []plans.Mountpoint{
+					Outputs: []plans.Output{
 						{
-							Path: "path-2",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-2",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							},
 						},
 					},
 					Log: nil, Active: true,
@@ -1731,16 +1809,20 @@ func TestActivatePlan(t *testing.T) {
 							Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 							Pseudo: &domain.PseudoPlanDetail{},
 						},
-						Inputs: []domain.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "path-1",
-								Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "path-1",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								},
 							},
 						},
-						Outputs: []domain.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "path-2",
-								Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "path-2",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								},
 							},
 						},
 					},
@@ -1754,16 +1836,20 @@ func TestActivatePlan(t *testing.T) {
 						PlanId: "plan-1",
 						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []plans.Mountpoint{
+					Inputs: []plans.Input{
 						{
-							Path: "path-1",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-1",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							},
 						},
 					},
-					Outputs: []plans.Mountpoint{
+					Outputs: []plans.Output{
 						{
-							Path: "path-2",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-2",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							},
 						},
 					},
 					Log: nil, Active: false,
@@ -1977,16 +2063,20 @@ func TestPutPlanResource(t *testing.T) {
 				"memory": resource.MustParse("100Mi"),
 			},
 		},
-		Inputs: []domain.MountPoint{
+		Inputs: []domain.Input{
 			{
-				Id: 1, Path: "/in/1",
-				Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+				MountPoint: domain.MountPoint{
+					Id: 1, Path: "/in/1",
+					Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+				},
 			},
 		},
-		Outputs: []domain.MountPoint{
+		Outputs: []domain.Output{
 			{
-				Id: 2, Path: "/out/1",
-				Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+				MountPoint: domain.MountPoint{
+					Id: 2, Path: "/out/1",
+					Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+				},
 			},
 		},
 		Log: &domain.LogPoint{
@@ -2346,22 +2436,26 @@ func TestPutAnnotations(t *testing.T) {
 							{Key: "annot-2", Value: "val-2"},
 						},
 					},
-					Inputs: []domain.MountPoint{
+					Inputs: []domain.Input{
 						{
-							Id: 1, Path: "/in/1",
-							Tags: domain.NewTagSet([]domain.Tag{
-								{Key: "key-1", Value: "val-1"},
-								{Key: "key-2", Value: "val-2"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 1, Path: "/in/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-1"},
+									{Key: "key-2", Value: "val-2"},
+								}),
+							},
 						},
 					},
-					Outputs: []domain.MountPoint{
+					Outputs: []domain.Output{
 						{
-							Id: 2, Path: "/out/1",
-							Tags: domain.NewTagSet([]domain.Tag{
-								{Key: "key-1", Value: "val-3"},
-								{Key: "key-3", Value: "val-4"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 2, Path: "/out/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-3"},
+									{Key: "key-3", Value: "val-4"},
+								}),
+							},
 						},
 					},
 				},
@@ -2384,21 +2478,25 @@ func TestPutAnnotations(t *testing.T) {
 					},
 				},
 				Active: true,
-				Inputs: []plans.Mountpoint{
+				Inputs: []plans.Input{
 					{
-						Path: "/in/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-1"},
-							{Key: "key-2", Value: "val-2"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-1"},
+								{Key: "key-2", Value: "val-2"},
+							},
 						},
 					},
 				},
-				Outputs: []plans.Mountpoint{
+				Outputs: []plans.Output{
 					{
-						Path: "/out/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-3"},
-							{Key: "key-3", Value: "val-4"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/out/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-3"},
+								{Key: "key-3", Value: "val-4"},
+							},
 						},
 					},
 				},
@@ -2589,20 +2687,24 @@ func TestPutPlanServiceAccount(t *testing.T) {
 						Image:          &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 						ServiceAccount: "service-account-1",
 					},
-					Inputs: []domain.MountPoint{
+					Inputs: []domain.Input{
 						{
-							Id: 1, Path: "/in/1",
-							Tags: domain.NewTagSet([]domain.Tag{
-								{Key: "key-1", Value: "val-1"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 1, Path: "/in/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-1"},
+								}),
+							},
 						},
 					},
-					Outputs: []domain.MountPoint{
+					Outputs: []domain.Output{
 						{
-							Id: 2, Path: "/out/1",
-							Tags: domain.NewTagSet([]domain.Tag{
-								{Key: "key-1", Value: "val-3"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 2, Path: "/out/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-3"},
+								}),
+							},
 						},
 					},
 				},
@@ -2618,19 +2720,23 @@ func TestPutPlanServiceAccount(t *testing.T) {
 				},
 				Active:         true,
 				ServiceAccount: "service-account-1",
-				Inputs: []plans.Mountpoint{
+				Inputs: []plans.Input{
 					{
-						Path: "/in/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-1"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-1"},
+							},
 						},
 					},
 				},
-				Outputs: []plans.Mountpoint{
+				Outputs: []plans.Output{
 					{
-						Path: "/out/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-3"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/out/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-3"},
+							},
 						},
 					},
 				},
@@ -2790,20 +2896,24 @@ func TestDeletePlanServiceAccount(t *testing.T) {
 						PlanId: "plan-1", Active: true, Hash: "hash-1",
 						Image: &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 					},
-					Inputs: []domain.MountPoint{
+					Inputs: []domain.Input{
 						{
-							Id: 1, Path: "/in/1",
-							Tags: domain.NewTagSet([]domain.Tag{
-								{Key: "key-1", Value: "val-1"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 1, Path: "/in/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-1"},
+								}),
+							},
 						},
 					},
-					Outputs: []domain.MountPoint{
+					Outputs: []domain.Output{
 						{
-							Id: 2, Path: "/out/1",
-							Tags: domain.NewTagSet([]domain.Tag{
-								{Key: "key-1", Value: "val-3"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 2, Path: "/out/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-3"},
+								}),
+							},
 						},
 					},
 				},
@@ -2818,19 +2928,23 @@ func TestDeletePlanServiceAccount(t *testing.T) {
 					Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 				},
 				Active: true,
-				Inputs: []plans.Mountpoint{
+				Inputs: []plans.Input{
 					{
-						Path: "/in/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-1"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-1"},
+							},
 						},
 					},
 				},
-				Outputs: []plans.Mountpoint{
+				Outputs: []plans.Output{
 					{
-						Path: "/out/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-3"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/out/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-3"},
+							},
 						},
 					},
 				},
