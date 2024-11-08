@@ -12,28 +12,24 @@ import (
 	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/maps"
 )
 
 type DirectedGraph struct {
-	DataNodes     map[string]DataNode
-	RunNodes      map[string]RunNode
+	DataNodes     maps.Map[string, DataNode]
+	RunNodes      maps.Map[string, RunNode]
 	RootNodes     []string          //to runId
 	EdgesFromRun  map[string][]Edge //key:from runId, value:to knitId
 	EdgesFromData map[string][]Edge //key:from knitId, value:to runId
-	//The order of these array becomes the order of description when outputting to the dot format.
-	KeysDataNode []string
-	KeysRunNode  []string
 }
 
 func NewDirectedGraph() *DirectedGraph {
 	return &DirectedGraph{
-		DataNodes:     map[string]DataNode{},
-		RunNodes:      map[string]RunNode{},
+		DataNodes:     maps.NewOrderedMap[string, DataNode](),
+		RunNodes:      maps.NewOrderedMap[string, RunNode](),
 		RootNodes:     []string{},
 		EdgesFromRun:  map[string][]Edge{},
 		EdgesFromData: map[string][]Edge{},
-		KeysDataNode:  make([]string, 0),
-		KeysRunNode:   make([]string, 0),
 	}
 }
 
@@ -171,7 +167,7 @@ type Edge struct {
 }
 
 func (g *DirectedGraph) AddDataNode(data data.Detail) {
-	g.DataNodes[data.KnitId] = DataNode{
+	g.DataNodes.Set(data.KnitId, DataNode{
 		KnitId:    data.KnitId,
 		Tags:      data.Tags,
 		FromRunId: data.Upstream.Run.RunId,
@@ -182,15 +178,13 @@ func (g *DirectedGraph) AddDataNode(data data.Detail) {
 			}
 			return runIds
 		}(),
-	}
-	g.KeysDataNode = append(g.KeysDataNode, data.KnitId)
+	})
 }
 
 func (g *DirectedGraph) AddRunNode(run runs.Detail) {
-	g.RunNodes[run.RunId] = RunNode{
+	g.RunNodes.Set(run.RunId, RunNode{
 		Summary: run.Summary,
-	}
-	g.KeysRunNode = append(g.KeysRunNode, run.RunId)
+	})
 }
 
 // This method assumes that the run nodes of the edge to be added are included in the graph.
@@ -209,18 +203,14 @@ func (g *DirectedGraph) AddEdgeFromData(knitId string, runId string, label strin
 }
 
 func (g *DirectedGraph) GenerateDotFromNodes(w io.Writer, argKnitId string) error {
-	for _, knitId := range g.KeysDataNode {
-		if data, ok := g.DataNodes[knitId]; ok {
-			if err := data.ToDot(w, argKnitId == knitId); err != nil {
-				return err
-			}
+	for knitId, data := range g.DataNodes.Iter() {
+		if err := data.ToDot(w, argKnitId == knitId); err != nil {
+			return err
 		}
 	}
-	for _, runId := range g.KeysRunNode {
-		if run, ok := g.RunNodes[runId]; ok {
-			if err := run.ToDot(w); err != nil {
-				return err
-			}
+	for _, run := range g.RunNodes.Iter() {
+		if err := run.ToDot(w); err != nil {
+			return err
 		}
 	}
 	for i := range g.RootNodes {
@@ -237,12 +227,12 @@ func (g *DirectedGraph) GenerateDotFromNodes(w io.Writer, argKnitId string) erro
 }
 
 func (g DirectedGraph) GenerateDotFromEdges(w io.Writer) error {
-	err := writeEdgesToDot(w, g.KeysDataNode, g.EdgesFromData, "d", "r")
+	err := writeEdgesToDot(w, g.DataNodes.Keys(), g.EdgesFromData, "d", "r")
 	if err != nil {
 		return err
 	}
 
-	err = writeEdgesToDot(w, g.KeysRunNode, g.EdgesFromRun, "r", "d")
+	err = writeEdgesToDot(w, g.RunNodes.Keys(), g.EdgesFromRun, "r", "d")
 	if err != nil {
 		return err
 	}
@@ -265,7 +255,8 @@ func writeEdgesToDot(
 	w io.Writer,
 	keys []string,
 	edgesMap map[string][]Edge,
-	fromPrefix, toPrefix string) error {
+	fromPrefix, toPrefix string,
+) error {
 	for _, id := range keys {
 		if edges, ok := edgesMap[id]; ok {
 			for _, edge := range edges {
@@ -323,12 +314,6 @@ func ErrFindDataWithKnitId(knitId string, err error) error {
 
 func ErrGetRunWithRunId(runId string, err error) error {
 	return fmt.Errorf("%w: during searching run %s", err, runId)
-}
-
-var ErrNotFoundData = fmt.Errorf("data not found")
-
-func errNotFoundData(knitId string) error {
-	return fmt.Errorf("%w: %s", ErrNotFoundData, knitId)
 }
 
 func knitIdTag(knitId string) tags.Tag {

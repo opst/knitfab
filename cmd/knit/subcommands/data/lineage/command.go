@@ -194,7 +194,7 @@ func AddEdgeFromRunToLog(
 		return "", nil
 	}
 
-	if _, ok := graph.DataNodes[log.KnitId]; ok {
+	if _, ok := graph.DataNodes.Get(log.KnitId); ok {
 		graph.AddEdgeFromRun(run.RunId, log.KnitId, "(log)")
 		return log.KnitId, nil
 	} else {
@@ -263,18 +263,20 @@ func TraceDownstreamForSingleNode(
 ) (*knitgraph.DirectedGraph, []string, error) {
 
 	//1. If the argument's data does not exist in the graph, add that data　to the graph.
-	if _, ok := graph.DataNodes[knitId]; !ok {
-		data, err := getData(ctx, client, knitId)
+	data, ok := graph.DataNodes.Get(knitId)
+	if !ok {
+		_data, err := getData(ctx, client, knitId)
 		if err != nil {
 			return graph, []string{}, err
 		}
-		graph.AddDataNode(data)
+		graph.AddDataNode(_data)
+		data, _ = graph.DataNodes.Get(knitId)
 	}
 
 	nextKnitIds := []string{}
 	//2-1. trace the run node where that data is input.
-	for _, toRunId := range graph.DataNodes[knitId].ToRunIds {
-		if _, ok := graph.RunNodes[toRunId]; ok {
+	for _, toRunId := range data.ToRunIds {
+		if _, ok := graph.RunNodes.Get(toRunId); ok {
 			continue
 		}
 		//If the run does not exist in the graph, add it to the graph.
@@ -286,7 +288,7 @@ func TraceDownstreamForSingleNode(
 
 		//2-2. Add the edges from the data that serve as the input to that run.
 		for _, in := range run.Inputs {
-			if _, ok := graph.DataNodes[in.KnitId]; ok {
+			if _, ok := graph.DataNodes.Get(in.KnitId); ok {
 				graph.AddEdgeFromData(in.KnitId, run.RunId, in.Mountpoint.Path)
 				continue
 			}
@@ -300,7 +302,7 @@ func TraceDownstreamForSingleNode(
 		}
 		//2-3. Add the edges from that run to the data that serve as the output.
 		for _, out := range run.Outputs {
-			if _, ok := graph.DataNodes[out.KnitId]; ok {
+			if _, ok := graph.DataNodes.Get(out.KnitId); ok {
 				graph.AddEdgeFromRun(run.RunId, out.KnitId, out.Mountpoint.Path)
 
 				//Hold the data that will be the next argument.
@@ -385,18 +387,20 @@ func TraceUpstreamForSingleNode(
 ) (*knitgraph.DirectedGraph, []string, error) {
 
 	///1. If the argument's data does not exist in the graph, add that data　to the graph.
-	if _, ok := graph.DataNodes[knitId]; !ok {
-		data, err := getData(ctx, client, knitId)
+	data, ok := graph.DataNodes.Get(knitId)
+	if !ok {
+		_data, err := getData(ctx, client, knitId)
 		if err != nil {
 			return graph, []string{}, err
 		}
-		graph.AddDataNode(data)
+		graph.AddDataNode(_data)
+		data, _ = graph.DataNodes.Get(knitId)
 	}
 
 	nextKnitIds := []string{}
 	//2-1. trace the run node where that data is output.
-	fromRunId := graph.DataNodes[knitId].FromRunId
-	if _, ok := graph.RunNodes[fromRunId]; ok {
+	fromRunId := data.FromRunId
+	if _, ok := graph.RunNodes.Get(fromRunId); ok {
 	} else {
 		//If the run does not exist in the graph, add it to the graph.
 		run, err := client.GetRun(ctx, fromRunId)
@@ -407,7 +411,7 @@ func TraceUpstreamForSingleNode(
 
 		//2-2. Add the edges from that run to the data that serve as the output.
 		for _, out := range run.Outputs {
-			if _, ok := graph.DataNodes[out.KnitId]; ok {
+			if _, ok := graph.DataNodes.Get(out.KnitId); ok {
 				graph.AddEdgeFromRun(run.RunId, out.KnitId, out.Mountpoint.Path)
 				continue
 			}
@@ -432,7 +436,7 @@ func TraceUpstreamForSingleNode(
 			graph.AddRootNode(run.RunId)
 		} else {
 			for _, in := range run.Inputs {
-				if _, ok := graph.DataNodes[in.KnitId]; ok {
+				if _, ok := graph.DataNodes.Get(in.KnitId); ok {
 					graph.AddEdgeFromData(in.KnitId, run.RunId, in.Mountpoint.Path)
 					//Hold the data that will be the next argument.
 					nextKnitIds = append(nextKnitIds, in.KnitId)

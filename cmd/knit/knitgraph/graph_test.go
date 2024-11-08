@@ -11,6 +11,8 @@ import (
 	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/knitgraph"
 	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/utils/maps"
+	"github.com/opst/knitfab/pkg/utils/tuple"
 )
 
 func TestGenerateDot(t *testing.T) {
@@ -41,13 +43,13 @@ func TestGenerateDot(t *testing.T) {
 		t.Run(" Confirm that when only nodes exist in the graph, they can be output as dot format.", theory(
 			When{
 				Graph: knitgraph.DirectedGraph{
-					DataNodes:     map[string]knitgraph.DataNode{"data1": toDataNode(data1)},
-					RunNodes:      map[string]knitgraph.RunNode{},
+					DataNodes: maps.NewOrderedMap(
+						tuple.PairOf("data1", toDataNode(data1)),
+					),
+					RunNodes:      maps.NewOrderedMap[string, knitgraph.RunNode](),
 					EdgesFromData: map[string][]knitgraph.Edge{},
 					EdgesFromRun:  map[string][]knitgraph.Edge{},
 					RootNodes:     []string{},
-					KeysDataNode:  []string{"data1"},
-					KeysRunNode:   []string{},
 				},
 				ArgKnitId: "data1",
 			},
@@ -84,13 +86,16 @@ func TestGenerateDot(t *testing.T) {
 		t.Run(" Confirm that when only nodes, edges, exist in the graph, they can be output as dot format.", theory(
 			When{
 				Graph: knitgraph.DirectedGraph{
-					DataNodes:     map[string]knitgraph.DataNode{"data1": toDataNode(data1), "data2": toDataNode(data2)},
-					RunNodes:      map[string]knitgraph.RunNode{"run1": {Summary: run1.Summary}},
+					DataNodes: maps.NewOrderedMap(
+						tuple.PairOf("data1", toDataNode(data1)),
+						tuple.PairOf("data2", toDataNode(data2)),
+					),
+					RunNodes: maps.NewOrderedMap(
+						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
+					),
 					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run1", Label: "in/1"}}, "data2": {{ToId: "run1", Label: "out/1"}}},
 					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data1", Label: "in/1"}, {ToId: "data2", Label: "out/1"}}},
 					RootNodes:     []string{},
-					KeysDataNode:  []string{"data1", "data2"},
-					KeysRunNode:   []string{"run1"},
 				},
 				ArgKnitId: "data1",
 			},
@@ -152,14 +157,18 @@ func TestGenerateDot(t *testing.T) {
 		t.Run("Confirm that when nodes, edges, and roots exist in the graph, they can be output as dot format.", theory(
 			When{
 				Graph: knitgraph.DirectedGraph{
-					DataNodes:     map[string]knitgraph.DataNode{"data1": toDataNode(data1), "data2": toDataNode(data2)},
-					RunNodes:      map[string]knitgraph.RunNode{"run1": {Summary: run1.Summary}, "run2": {Summary: run2.Summary}},
+					DataNodes: maps.NewOrderedMap(
+						tuple.PairOf("data1", toDataNode(data1)),
+						tuple.PairOf("data2", toDataNode(data2)),
+					),
+					RunNodes: maps.NewOrderedMap(
+						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
+						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
+					),
 					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run2", Label: "in/1"}}, "data2": {}},
 					EdgesFromRun: map[string][]knitgraph.Edge{
 						"run1": {{ToId: "data1", Label: "upload"}}, "run2": {{ToId: "data2", Label: "out/1"}}},
-					KeysDataNode: []string{"data1", "data2"},
-					KeysRunNode:  []string{"run1", "run2"},
-					RootNodes:    []string{"run1"},
+					RootNodes: []string{"run1"},
 				},
 				ArgKnitId: "data2",
 			},
@@ -235,14 +244,19 @@ func TestGenerateDot(t *testing.T) {
 		t.Run("When there are failed run and its output, they can be output as dot format.", theory(
 			When{
 				Graph: knitgraph.DirectedGraph{
-					DataNodes:     map[string]knitgraph.DataNode{"data1": toDataNode(data1), "data2": toDataNode(data2), "log": toDataNode(log)},
-					RunNodes:      map[string]knitgraph.RunNode{"run1": {Summary: run1.Summary}, "run2": {Summary: run2.Summary}},
+					DataNodes: maps.NewOrderedMap(
+						tuple.PairOf("data1", toDataNode(data1)),
+						tuple.PairOf("data2", toDataNode(data2)),
+						tuple.PairOf("log", toDataNode(log)),
+					),
+					RunNodes: maps.NewOrderedMap(
+						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
+						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
+					),
 					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run2", Label: "in/1"}}, "data2": {}, "log": {}},
 					EdgesFromRun: map[string][]knitgraph.Edge{
 						"run1": {{ToId: "data1", Label: "upload"}}, "run2": {{ToId: "data2", Label: "out/1"}, {ToId: "log", Label: "(log)"}}},
-					KeysDataNode: []string{"data1", "data2", "log"},
-					KeysRunNode:  []string{"run1", "run2"},
-					RootNodes:    []string{"run1"},
+					RootNodes: []string{"run1"},
 				},
 				ArgKnitId: "data1",
 			},
@@ -336,13 +350,19 @@ func TestGenerateDot(t *testing.T) {
 		t.Run("Confirm that when the graph configuration is complex, they can be output as dot format.", theory(
 			When{
 				Graph: knitgraph.DirectedGraph{
-					DataNodes: map[string]knitgraph.DataNode{
-						"data1": toDataNode(data1), "data2": toDataNode(data2), "data3": toDataNode(data3),
-						"data4": toDataNode(data4), "data5": toDataNode(data5), "data6": toDataNode(data6),
-					},
-					RunNodes: map[string]knitgraph.RunNode{
-						"run1": {Summary: run1.Summary}, "run2": {Summary: run2.Summary}, "run3": {Summary: run3.Summary},
-					},
+					DataNodes: maps.NewOrderedMap(
+						tuple.PairOf("data1", toDataNode(data1)),
+						tuple.PairOf("data2", toDataNode(data2)),
+						tuple.PairOf("data3", toDataNode(data3)),
+						tuple.PairOf("data4", toDataNode(data4)),
+						tuple.PairOf("data5", toDataNode(data5)),
+						tuple.PairOf("data6", toDataNode(data6)),
+					),
+					RunNodes: maps.NewOrderedMap(
+						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
+						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
+						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
+					),
 					EdgesFromData: map[string][]knitgraph.Edge{
 						"data1": {{ToId: "run1", Label: "in/1"}}, "data2": {{ToId: "run2", Label: "in/2"}}, "data3": {{ToId: "run3", Label: "in/4"}},
 						"data4": {{ToId: "run2", Label: "in/3"}}, "data5": {}, "data6": {},
@@ -351,9 +371,7 @@ func TestGenerateDot(t *testing.T) {
 						"run1": {{ToId: "data2", Label: "out/1"}, {ToId: "data3", Label: "out/2"}},
 						"run2": {{ToId: "data5", Label: "out/3"}}, "run3": {{ToId: "data6", Label: "out/4"}},
 					},
-					KeysDataNode: []string{"data1", "data2", "data3", "data4", "data5", "data6"},
-					KeysRunNode:  []string{"run1", "run2", "run3"},
-					RootNodes:    []string{},
+					RootNodes: []string{},
 				},
 				ArgKnitId: "data1",
 			},
