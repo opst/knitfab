@@ -25,10 +25,8 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils/args"
 	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/maps"
 	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
-	"github.com/opst/knitfab/pkg/utils/tuple"
 )
 
 func TestLineageCommand(t *testing.T) {
@@ -246,7 +244,7 @@ func TestTraceDownStream(t *testing.T) {
 	}
 
 	type Then struct {
-		Graph knitgraph.DirectedGraph
+		Graph *knitgraph.DirectedGraph
 		Err   error
 	}
 
@@ -354,18 +352,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run1", Label: "in/1"}}},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data2", Label: "out/1"}}},
-					RootNodes:     []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2),
+					knitgraph.WithRun(run1),
+				),
 				Err: nil,
 			},
 		))
@@ -379,18 +369,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run1", Label: "in/1"}}},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data2", Label: "out/1"}}},
-					RootNodes:     []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2),
+					knitgraph.WithRun(run1),
+				),
 				Err: nil,
 			},
 		))
@@ -414,27 +396,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1, run2},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}},
-						"data2": {{ToId: "run2", Label: "in/2"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data2", Label: "out/1"}},
-						"run2": {{ToId: "data3", Label: "out/2"}, {ToId: "data4", Label: "out/3"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run2),
+				),
 				Err: nil,
 			},
 		))
@@ -448,18 +413,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run1", Label: "in/1"}}},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data2", Label: "out/1"}}},
-					RootNodes:     []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2),
+					knitgraph.WithRun(run1),
+				),
 				Err: nil,
 			},
 		),
@@ -483,19 +440,10 @@ func TestTraceDownStream(t *testing.T) {
 				FindDataReturns: [][]data.Detail{{data1}, {data2}, {data3}},
 				GetRunReturns:   []runs.Detail{run1}},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run1", Label: "in/1"}}, "data2": {{ToId: "run1", Label: "in/2"}}},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data3", Label: "out/1"}}},
-					RootNodes:     []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3),
+					knitgraph.WithRun(run1),
+				),
 				Err: nil,
 			},
 		))
@@ -521,27 +469,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1, run2, run3},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}, {ToId: "run2", Label: "in/2"}},
-						"data2": {{ToId: "run3", Label: "in/3"}}, "data3": {{ToId: "run3", Label: "in/4"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data2", Label: "out/1"}}, "run2": {{ToId: "data3", Label: "out/2"}}, "run3": {{ToId: "data4", Label: "out/3"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run2, run3),
+				),
 				Err: nil,
 			},
 		))
@@ -568,26 +499,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1, run2},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}}, "data2": {{ToId: "run1", Label: "in/2"}, {ToId: "run2", Label: "in/3"}},
-						"data3": {{ToId: "run2", Label: "in/4"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data3", Label: "out/1"}}, "run2": {{ToId: "data4", Label: "out/2"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run2),
+				),
 				Err: nil,
 			},
 		))
@@ -618,23 +533,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1, run3},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}, {ToId: "run3", Label: "in/2"}}, "data3": {{ToId: "run3", Label: "in/4"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{"run1": {{ToId: "data2", Label: "out/1"}}, "run3": {{ToId: "data4", Label: "out/3"}}},
-					RootNodes:    []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run3),
+				),
 				Err: nil,
 			},
 		))
@@ -648,27 +550,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1, run3, run2},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}, {ToId: "run3", Label: "in/2"}},
-						"data2": {{ToId: "run2", Label: "in/3"}}, "data3": {{ToId: "run3", Label: "in/4"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data2", Label: "out/1"}}, "run2": {{ToId: "data3", Label: "out/2"}}, "run3": {{ToId: "data4", Label: "out/3"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run3, run2),
+				),
 				Err: nil,
 			},
 		))
@@ -682,31 +567,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1, run3, run2, run4},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-						tuple.PairOf("data5", toDataNode(data5)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-						tuple.PairOf("run4", knitgraph.RunNode{Summary: run4.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}, {ToId: "run3", Label: "in/2"}},
-						"data2": {{ToId: "run2", Label: "in/3"}},
-						"data3": {{ToId: "run3", Label: "in/4"}, {ToId: "run4", Label: "in/5"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data2", Label: "out/1"}}, "run2": {{ToId: "data3", Label: "out/2"}},
-						"run3": {{ToId: "data4", Label: "out/3"}}, "run4": {{ToId: "data5", Label: "out/4"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4, data5),
+					knitgraph.WithRun(run1, run3, run2, run4),
+				),
 				Err: nil,
 			},
 		))
@@ -727,19 +591,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1, run2},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run1", Label: "in/1"}}, "data2": {{ToId: "run2", Label: "in/2"}}},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data2", Label: "out/1"}}},
-					RootNodes:     []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2),
+					knitgraph.WithRun(run1, run2),
+				),
 				Err: nil,
 			},
 		))
@@ -763,48 +618,18 @@ func TestTraceDownStream(t *testing.T) {
 			When{
 				RootKnitId: "data1",
 				Depth:      args.NewInfinityDepth(),
-				ArgGraph: &knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data3": {{ToId: "run1", Label: "in/1"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data1", Label: "out/1"}, {ToId: "data2", Label: "out/2"}},
-					},
-					RootNodes: []string{},
-				},
+				ArgGraph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3),
+					knitgraph.WithRun(run1),
+				),
 				FindDataReturns: [][]data.Detail{{data4}},
 				GetRunReturns:   []runs.Detail{run2},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run2", Label: "in/2"}}, "data2": {{ToId: "run2", Label: "in/3"}},
-						"data3": {{ToId: "run1", Label: "in/1"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data1", Label: "out/1"}, {ToId: "data2", Label: "out/2"}},
-						"run2": {{ToId: "data4", Label: "out/3"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run2),
+				),
 				Err: nil,
 			},
 		))
@@ -834,26 +659,10 @@ func TestTraceDownStream(t *testing.T) {
 				GetRunReturns: []runs.Detail{run1, run2},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}}, "data3": {{ToId: "run2", Label: "in/2"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data2", Label: "out/1"}, {ToId: "data3", Label: "(log)"}},
-						"run2": {{ToId: "data4", Label: "out/2"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run2),
+				),
 				Err: nil,
 			},
 		))
@@ -925,7 +734,7 @@ func TestTraceUpStream(t *testing.T) {
 	}
 
 	type Then struct {
-		Graph knitgraph.DirectedGraph
+		Graph *knitgraph.DirectedGraph
 		Err   error
 	}
 
@@ -1031,17 +840,11 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data1", Label: "upload"}}},
-					RootNodes:     []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1),
+					knitgraph.WithRun(run1),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				Err: nil,
 			},
 		))
@@ -1053,17 +856,11 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data1", Label: "upload"}}},
-					RootNodes:     []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1),
+					knitgraph.WithRun(run1),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				Err: nil,
 			},
 		))
@@ -1083,19 +880,11 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run2, run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run2", Label: "in/1"}}},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data1", Label: "upload"}}, "run2": {{ToId: "data2", Label: "out/1"}}},
-					RootNodes:     []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2),
+					knitgraph.WithRun(run1, run2),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				Err: nil,
 			},
 		))
@@ -1107,18 +896,10 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run2},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run2", Label: "in/1"}}},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run2": {{ToId: "data2", Label: "out/1"}}},
-					RootNodes:     []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2),
+					knitgraph.WithRun(run2),
+				),
 				Err: nil,
 			},
 		))
@@ -1141,22 +922,11 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run2, run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run2", Label: "in/1"}}},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data1", Label: "upload"}}, "run2": {{ToId: "data2", Label: "out/1"}, {ToId: "data3", Label: "out/2"}},
-					},
-					RootNodes: []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3),
+					knitgraph.WithRun(run1, run2),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				Err: nil,
 			},
 		))
@@ -1181,27 +951,11 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run3, run2, run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run2", Label: "in/1"}}, "data2": {{ToId: "run3", Label: "in/2"}}, "data3": {{ToId: "run3", Label: "in/3"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data1", Label: "upload"}}, "run2": {{ToId: "data2", Label: "out/1"}, {ToId: "data3", Label: "out/2"}},
-						"run3": {{ToId: "data4", Label: "out/3"}},
-					},
-					RootNodes: []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run2, run3),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				Err: nil,
 			},
 		))
@@ -1230,23 +984,10 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run4},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run4", knitgraph.RunNode{Summary: run4.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run4", Label: "in/3"}}, "data3": {{ToId: "run4", Label: "in/4"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run4": {{ToId: "data4", Label: "out/3"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data3, data4),
+					knitgraph.WithRun(run4),
+				),
 				Err: nil,
 			},
 		))
@@ -1258,27 +999,11 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run4, run1, run3},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
-						tuple.PairOf("run4", knitgraph.RunNode{Summary: run4.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run4", Label: "in/3"}, {ToId: "run3", Label: "in/2"}},
-						"data2": {{ToId: "run3", Label: "in/4"}}, "data3": {{ToId: "run4", Label: "in/4"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run4": {{ToId: "data4", Label: "out/3"}}, "run3": {{ToId: "data3", Label: "out/2"}}, "run1": {{ToId: "data1", Label: "upload"}},
-					},
-					RootNodes: []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run3, run4),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				Err: nil,
 			},
 		))
@@ -1291,29 +1016,11 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run4, run1, run3, run2},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
-						tuple.PairOf("run4", knitgraph.RunNode{Summary: run4.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run4", Label: "in/3"}, {ToId: "run3", Label: "in/2"}, {ToId: "run2", Label: "in/1"}},
-						"data2": {{ToId: "run3", Label: "in/4"}}, "data3": {{ToId: "run4", Label: "in/4"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run4": {{ToId: "data4", Label: "out/3"}}, "run3": {{ToId: "data3", Label: "out/2"}}, "run1": {{ToId: "data1", Label: "upload"}},
-						"run2": {{ToId: "data2", Label: "out/1"}},
-					},
-					RootNodes: []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4),
+					knitgraph.WithRun(run1, run3, run2, run4),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				Err: nil,
 			},
 		))
@@ -1343,27 +1050,10 @@ func TestTraceUpStream(t *testing.T) {
 				GetRunReturns:   []runs.Detail{run2, run1},
 			},
 			Then{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-						tuple.PairOf("data2", toDataNode(data5)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}}, "data3": {{ToId: "run2", Label: "in/2"}},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data3", Label: "out/1"}, {ToId: "data2", Label: "(log)"}},
-						"run2": {{ToId: "data4", Label: "out/2"}, {ToId: "data5", Label: "(log)"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, data3, data4, data5),
+					knitgraph.WithRun(run1, run2),
+				),
 				Err: nil,
 			},
 		))
@@ -1427,18 +1117,7 @@ func TestTraceUpStream(t *testing.T) {
 }
 
 func toDataNode(data data.Detail) knitgraph.DataNode {
-	return knitgraph.DataNode{
-		KnitId:    data.KnitId,
-		Tags:      data.Tags,
-		FromRunId: data.Upstream.Run.RunId,
-		ToRunIds: func() []string {
-			ids := []string{}
-			for _, downstream := range data.Downstreams {
-				ids = append(ids, downstream.Run.RunId)
-			}
-			return ids
-		}(),
-	}
+	return knitgraph.DataNode{Detail: data}
 }
 
 func dummyCreatedFrom(runId string) data.CreatedFrom {

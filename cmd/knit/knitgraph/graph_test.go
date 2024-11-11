@@ -1,23 +1,24 @@
 package knitgraph_test
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/opst/knitfab-api-types/data"
+	"github.com/opst/knitfab-api-types/misc/rfctime"
 	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab-api-types/runs"
 	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/knitgraph"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/maps"
-	"github.com/opst/knitfab/pkg/utils/tuple"
+	"github.com/opst/knitfab/pkg/utils/try"
 )
 
 func TestGenerateDot(t *testing.T) {
 	type When struct {
-		Graph     knitgraph.DirectedGraph
+		Graph     *knitgraph.DirectedGraph
 		ArgKnitId string
 	}
 	type Then struct {
@@ -38,25 +39,92 @@ func TestGenerateDot(t *testing.T) {
 	}
 	{
 		// [test case of data lineage]
-		// data1 (When there is no downstream for data to be tracked)
-		data1 := dummyData("data1", "run0")
-		t.Run(" Confirm that when only nodes exist in the graph, they can be output as dot format.", theory(
-			When{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-					),
-					RunNodes:      maps.NewOrderedMap[string, knitgraph.RunNode](),
-					EdgesFromData: map[string][]knitgraph.Edge{},
-					EdgesFromRun:  map[string][]knitgraph.Edge{},
-					RootNodes:     []string{},
+		// data1 --[in/1]--> run1 --[out/1]--> data2
+		data1 := data.Detail{
+			KnitId: "data1",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data1"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:55+00:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: runs.Summary{
+					RunId: "run0", Status: "done",
+					Plan: plans.Summary{PlanId: "upload", Name: "knit#uploaded"},
 				},
+				Mountpoint: plans.Mountpoint{Path: "/out/1"},
+			},
+			Downstreams: []data.AssignedTo{
+				{
+					Run: runs.Summary{
+						RunId: "run1", Status: "done",
+						Plan: plans.Summary{
+							PlanId: "plan-3",
+							Image: &plans.Image{
+								Repository: "knit.image.repo.invalid/trainer",
+								Tag:        "v1",
+							},
+						},
+					},
+					Mountpoint: plans.Mountpoint{Path: "/in/1"},
+				},
+			},
+		}
+		data2 := data.Detail{
+			KnitId: "data2",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data2"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: runs.Summary{
+					RunId: "run1", Status: "done",
+					Plan: plans.Summary{
+						PlanId: "plan-3",
+						Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+					},
+				},
+				Mountpoint: plans.Mountpoint{Path: "/out/1"},
+			},
+		}
+		run1 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run1", Status: "done",
+				Plan: plans.Summary{
+					PlanId: "plan-3",
+					Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+				},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{
+				{
+					KnitId:     "data1",
+					Mountpoint: plans.Mountpoint{Path: "/in/1"},
+				},
+			},
+			Outputs: []runs.Assignment{
+				{
+					KnitId:     "data2",
+					Mountpoint: plans.Mountpoint{Path: "/out/1"},
+				},
+			},
+		}
+		t.Run("When graph have nodes and edges, then they should be output as dot format.", theory(
+			When{
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2),
+					knitgraph.WithRun(run1),
+				),
 				ArgKnitId: "data1",
 			},
 			Then{
-				// The specification is to represent the node name as "r" + runId for run,
-				// and "d" + knitId for data.
-				RequiredContent: `digraph G {
+				RequiredContent: fmt.Sprintf(
+					`digraph G {
 	node [shape=record fontsize=10]
 	edge [fontsize=10]
 
@@ -66,51 +134,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#d4ecc6">knit#id: data1</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
-				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
-			</TABLE>
-		>
-	];
-
-
-}`,
-			},
-		))
-	}
-	{
-		// [test case of data lineage]
-		// data1 --> [in/1] -->  run1 --> [out/1] --> data2
-		data1 := dummyData("data1", "run0", "run1")
-		data2 := dummyData("data2", "run1")
-		run1 := dummyRun("run1", map[string]string{"data1": "in/1"}, map[string]string{"data2": "out/1"})
-		t.Run(" Confirm that when only nodes, edges, exist in the graph, they can be output as dot format.", theory(
-			When{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run1", Label: "in/1"}}, "data2": {{ToId: "run1", Label: "out/1"}}},
-					EdgesFromRun:  map[string][]knitgraph.Edge{"run1": {{ToId: "data1", Label: "in/1"}, {ToId: "data2", Label: "out/1"}}},
-					RootNodes:     []string{},
-				},
-				ArgKnitId: "data1",
-			},
-			Then{
-				RequiredContent: `digraph G {
-	node [shape=record fontsize=10]
-	edge [fontsize=10]
-
-	"ddata1"[
-		shape=none
-		color="#1c9930"
-		label=<
-			<TABLE CELLSPACING="0">
-				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#d4ecc6">knit#id: data1</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -121,7 +145,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data2</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -132,81 +156,163 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD>id: run1</TD></TR>
-				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: 0001-01-01T09:18:59+09:18</FONT></TD></TR>
-				<TR><TD COLSPAN="3">image = test-image:test-version</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 			</TABLE>
 		>
 	];
 
-	"ddata1" -> "rrun1" [label="in/1"];
-	"ddata2" -> "rrun1" [label="out/1"];
-	"rrun1" -> "ddata1" [label="in/1"];
-	"rrun1" -> "ddata2" [label="out/1"];
+	"ddata1" -> "rrun1" [label="/in/1"];
+	"rrun1" -> "ddata2" [label="/out/1"];
 
 }`,
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:55+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+				),
 			},
 		))
 	}
 	{
 		// [test case of data lineage]
-		// root -->  run1 --> [upload] --> data1 --> [in/1] --> run2 --> [out/1] --> data2
-		run1 := dummyRun("run1", map[string]string{}, map[string]string{"data1": "upload"})
-		data1 := dummyData("data1", "run1")
-		run2 := dummyRun("run2", map[string]string{"data1": "in/1"}, map[string]string{"data2": "out/1"})
-		data2 := dummyData("data2", "run2")
+		// root -->  run1 --[/upload]--> data1 --[/in/1]--> run2 --[/out/1]--> data2
+		run1 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run1", Status: "done",
+				Plan: plans.Summary{PlanId: "upload", Name: "knit#uploaded"},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{},
+			Outputs: []runs.Assignment{
+				{
+					KnitId:     "data1",
+					Mountpoint: plans.Mountpoint{Path: "/upload"},
+				},
+			},
+		}
+		data1 := data.Detail{
+			KnitId: "data1",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data1"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T21:34:56+09:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: runs.Summary{
+					RunId: "run1", Status: "done",
+					Plan: plans.Summary{
+						PlanId: "upload",
+						Name:   "knit#uploaded",
+					},
+				},
+				Mountpoint: plans.Mountpoint{Path: "/upload"},
+			},
+			Downstreams: []data.AssignedTo{
+				{
+					Run: runs.Summary{
+						RunId: "run2", Status: "done",
+						Plan: plans.Summary{
+							PlanId: "plan-3",
+							Image: &plans.Image{
+								Repository: "knit.image.repo.invalid/trainer",
+								Tag:        "v1",
+							},
+						},
+					},
+					Mountpoint: plans.Mountpoint{Path: "/in/1"},
+				},
+			},
+		}
+		run2 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run2", Status: "done",
+				Plan: plans.Summary{
+					PlanId: "plan-3",
+					Image: &plans.Image{
+						Repository: "knit.image.repo.invalid/trainer",
+						Tag:        "v2",
+					},
+				},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{
+				{
+					KnitId:     "data1",
+					Mountpoint: plans.Mountpoint{Path: "/in/1"},
+				},
+			},
+			Outputs: []runs.Assignment{
+				{
+					KnitId:     "data2",
+					Mountpoint: plans.Mountpoint{Path: "/out/1"},
+				},
+			},
+		}
+		data2 := data.Detail{
+			KnitId: "data2",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data2"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T21:34:56+09:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: runs.Summary{
+					RunId: "run2", Status: "done",
+					Plan: plans.Summary{
+						PlanId: "plan-3",
+						Image: &plans.Image{
+							Repository: "knit.image.repo.invalid/trainer",
+							Tag:        "v2",
+						},
+					},
+				},
+				Mountpoint: plans.Mountpoint{Path: "/out/1"},
+			},
+		}
 		t.Run("Confirm that when nodes, edges, and roots exist in the graph, they can be output as dot format.", theory(
 			When{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run2", Label: "in/1"}}, "data2": {}},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data1", Label: "upload"}}, "run2": {{ToId: "data2", Label: "out/1"}}},
-					RootNodes: []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data2),
+					knitgraph.WithRun(run2),
+					knitgraph.WithData(data1),
+					knitgraph.WithRun(run1),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				ArgKnitId: "data2",
 			},
 			Then{
-				RequiredContent: `digraph G {
+				RequiredContent: fmt.Sprintf(`digraph G {
 	node [shape=record fontsize=10]
 	edge [fontsize=10]
 
-	"ddata1"[
-		shape=none
-		color="#1c9930"
-		label=<
-			<TABLE CELLSPACING="0">
-				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data1</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
-				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
-			</TABLE>
-		>
-	];
 	"ddata2"[
 		shape=none
 		color="#1c9930"
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#d4ecc6">knit#id: data2</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
 	];
-	"rrun1"[
+	"ddata1"[
 		shape=none
-		color=orange
+		color="#1c9930"
 		label=<
 			<TABLE CELLSPACING="0">
-				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD>id: run1</TD></TR>
-				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: 0001-01-01T09:18:59+09:18</FONT></TD></TR>
-				<TR><TD COLSPAN="3">image = test-image:test-version</TD></TR>
+				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data1</TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
 	];
@@ -216,52 +322,160 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD>id: run2</TD></TR>
-				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: 0001-01-01T09:18:59+09:18</FONT></TD></TR>
-				<TR><TD COLSPAN="3">image = test-image:test-version</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v2</TD></TR>
+			</TABLE>
+		>
+	];
+	"rrun1"[
+		shape=none
+		color=orange
+		label=<
+			<TABLE CELLSPACING="0">
+				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD>id: run1</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">knit#uploaded</TD></TR>
 			</TABLE>
 		>
 	];
 	"root#0"[shape=Mdiamond];
 
-	"ddata1" -> "rrun2" [label="in/1"];
-	"rrun1" -> "ddata1" [label="upload"];
-	"rrun2" -> "ddata2" [label="out/1"];
+	"ddata1" -> "rrun2" [label="/in/1"];
+	"rrun2" -> "ddata2" [label="/out/1"];
+	"rrun1" -> "ddata1" [label="/upload"];
 	"root#0" -> "rrun1";
 
 }`,
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+				),
 			},
 		))
 	}
 	{
 		// [test case of data lineage]
-		// root -->  run1 --> [upload] --> data1 --> [in/1] --> run2 (failed) --> [out/1] --> data2
-		//                                                                                |-> log
-		run1 := dummyRun("run1", map[string]string{}, map[string]string{"data1": "upload"})
-		data1 := dummyData("data1", "run1")
-		log := dummyDataForFailed("log", "run2")
-		run2 := dummyFailedRunWithLog("run2", "log", map[string]string{"data1": "in/1"}, map[string]string{"data2": "out/1"})
-		data2 := dummyDataForFailed("data2", "run2")
+		// root -->  run1 --[/upload]--> data1 --[/in/1]--> run2 (failed) --[/out/1]--> data2
+		//                                                                          `-> log
+		run1 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run1", Status: "done",
+				Plan: plans.Summary{PlanId: "upload", Name: "knit#uploaded"},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{},
+			Outputs: []runs.Assignment{
+				{
+					KnitId:     "data1",
+					Mountpoint: plans.Mountpoint{Path: "/upload"},
+				},
+			},
+		}
+		data1 := data.Detail{
+			KnitId: "data1",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data1"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run:        run1.Summary,
+				Mountpoint: plans.Mountpoint{Path: "/upload"},
+			},
+			Downstreams: []data.AssignedTo{
+				{
+					Run: runs.Summary{
+						RunId: "run2", Status: "failed",
+						Plan: plans.Summary{
+							PlanId: "plan-3",
+							Image: &plans.Image{
+								Repository: "knit.image.repo.invalid/trainer",
+								Tag:        "v1",
+							},
+						},
+					},
+					Mountpoint: plans.Mountpoint{Path: "/in/1"},
+				},
+			},
+		}
+		run2 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run2", Status: "failed",
+				Plan: plans.Summary{
+					PlanId: "plan-3",
+					Image: &plans.Image{
+						Repository: "knit.image.repo.invalid/trainer",
+						Tag:        "v1",
+					},
+				},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{
+				{
+					KnitId:     "data1",
+					Mountpoint: plans.Mountpoint{Path: "/in/1"},
+				},
+			},
+			Outputs: []runs.Assignment{
+				{
+					KnitId:     "data2",
+					Mountpoint: plans.Mountpoint{Path: "/out/1"},
+				},
+			},
+			Log: &runs.LogSummary{KnitId: "log"},
+		}
+
+		data2 := data.Detail{
+			KnitId: "data2",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data2"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
+				{Key: domain.KeyKnitTransient, Value: "failed"},
+			},
+			Upstream: data.AssignedTo{
+				Run:        run2.Summary,
+				Mountpoint: plans.Mountpoint{Path: "/out/1"},
+			},
+		}
+		log := data.Detail{
+			KnitId: "log",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "log"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
+				{Key: domain.KeyKnitTransient, Value: "failed"},
+			},
+			Upstream: data.AssignedTo{
+				Run:        run2.Summary,
+				Mountpoint: plans.Mountpoint{Path: "/log"},
+			},
+		}
+
 		t.Run("When there are failed run and its output, they can be output as dot format.", theory(
 			When{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("log", toDataNode(log)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{"data1": {{ToId: "run2", Label: "in/1"}}, "data2": {}, "log": {}},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data1", Label: "upload"}}, "run2": {{ToId: "data2", Label: "out/1"}, {ToId: "log", Label: "(log)"}}},
-					RootNodes: []string{"run1"},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, data2, log),
+					knitgraph.WithRun(run1, run2),
+					knitgraph.WithRoot(run1.RunId),
+				),
 				ArgKnitId: "data1",
 			},
 			Then{
-				RequiredContent: `digraph G {
+				RequiredContent: fmt.Sprintf(
+					`digraph G {
 	node [shape=record fontsize=10]
 	edge [fontsize=10]
 
@@ -271,7 +485,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#d4ecc6">knit#id: data1</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -282,7 +496,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data2</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00 | knit#transient:failed</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s | knit#transient:failed</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -293,7 +507,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: log</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00 | knit#transient:failed</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s | knit#transient:failed</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -304,8 +518,8 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD>id: run1</TD></TR>
-				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: 0001-01-01T09:18:59+09:18</FONT></TD></TR>
-				<TR><TD COLSPAN="3">image = test-image:test-version</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">knit#uploaded</TD></TR>
 			</TABLE>
 		>
 	];
@@ -315,68 +529,252 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="red"><B>failed</B></FONT></TD><TD>id: run2</TD></TR>
-				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: 0001-01-01T09:18:59+09:18</FONT></TD></TR>
-				<TR><TD COLSPAN="3">image = test-image:test-version</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 			</TABLE>
 		>
 	];
 	"root#0"[shape=Mdiamond];
 
-	"ddata1" -> "rrun2" [label="in/1"];
-	"rrun1" -> "ddata1" [label="upload"];
-	"rrun2" -> "ddata2" [label="out/1"];
+	"ddata1" -> "rrun2" [label="/in/1"];
+	"rrun1" -> "ddata1" [label="/upload"];
+	"rrun2" -> "ddata2" [label="/out/1"];
 	"rrun2" -> "dlog" [label="(log)"];
 	"root#0" -> "rrun1";
 
 }`,
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+				),
 			},
 		))
 	}
 	{
-		// [test case of data lineage]
-		//         	                                  data4 --> [in/3] -|
-		// data1 --> [in/1] -->  run1 --> [out/1] --> data2 --> [in/2] --> run2 --> [out/3] --> data5
-		//					          |-> [out/2] --> data3 --> [in/4] --> run3 --> [out/4] --> data6
-		data1 := dummyData("data1", "run0", "run1")
-		run1 := dummyRun("run1", map[string]string{"data1": "in/1"}, map[string]string{"data2": "out/1", "data3": "out/2"})
-		data2 := dummyData("data2", "run1", "run2")
-		data3 := dummyData("data3", "run1", "run3")
-		run2 := dummyRun("run2", map[string]string{"data2": "in/2", "data4": "in/3"}, map[string]string{"data5": "out/3"})
-		data4 := dummyData("data4", "runxx", "run2")
-		data5 := dummyData("data5", "run2")
-		run3 := dummyRun("run3", map[string]string{"data3": "in/4"}, map[string]string{"data6": "out/4"})
-		data6 := dummyData("data6", "run3")
+		// [test case of comprex data lineage]
+		//         	                           data4 --[in/3]-,
+		// data1 --[in/1]--> run1 --[out/1]--> data2 --[in/2]--> run2 --[out/3]--> data5
+		//                        `-[out/2]--> data3 --[in/4]--> run3 --[out/4]--> data6
+		run1 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run1", Status: "done",
+				Plan: plans.Summary{
+					PlanId: "plan-1",
+					Image: &plans.Image{
+						Repository: "knit.image.repo.invalid/trainer",
+						Tag:        "v1",
+					},
+				},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{
+				{KnitId: "data1", Mountpoint: plans.Mountpoint{Path: "/in/1"}},
+			},
+			Outputs: []runs.Assignment{
+				{KnitId: "data2", Mountpoint: plans.Mountpoint{Path: "/out/1"}},
+				{KnitId: "data3", Mountpoint: plans.Mountpoint{Path: "/out/2"}},
+			},
+		}
+
+		run2 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run2", Status: "done",
+				Plan: plans.Summary{
+					PlanId: "plan-2",
+					Image: &plans.Image{
+						Repository: "knit.image.repo.invalid/trainer",
+						Tag:        "v2",
+					},
+				},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{
+				{KnitId: "data2", Mountpoint: plans.Mountpoint{Path: "/in/2"}},
+				{KnitId: "data4", Mountpoint: plans.Mountpoint{Path: "/in/3"}},
+			},
+			Outputs: []runs.Assignment{
+				{KnitId: "data5", Mountpoint: plans.Mountpoint{Path: "/out/3"}},
+			},
+		}
+
+		run3 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run3", Status: "done",
+				Plan: plans.Summary{
+					PlanId: "plan-3",
+					Image: &plans.Image{
+						Repository: "knit.image.repo.invalid/trainer",
+						Tag:        "v3",
+					},
+				},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{
+				{KnitId: "data3", Mountpoint: plans.Mountpoint{Path: "/in/4"}},
+			},
+			Outputs: []runs.Assignment{
+				{KnitId: "data6", Mountpoint: plans.Mountpoint{Path: "/out/4"}},
+			},
+		}
+
+		data1 := data.Detail{
+			KnitId: "data1",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data1"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T21:34:56+09:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: runs.Summary{
+					RunId: "run0", Status: "done",
+					Plan: plans.Summary{PlanId: "upload", Name: "knit#uploaded"},
+				},
+				Mountpoint: plans.Mountpoint{Path: "/out/1"},
+			},
+			Downstreams: []data.AssignedTo{
+				{
+					Run: run1.Summary,
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/1",
+					},
+				},
+			},
+		}
+		data2 := data.Detail{
+			KnitId: "data2",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data2"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T21:34:56+09:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: run1.Summary,
+				Mountpoint: plans.Mountpoint{
+					Path: "/out/1",
+				},
+			},
+			Downstreams: []data.AssignedTo{
+				{
+					Run: run2.Summary,
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/2",
+					},
+				},
+			},
+		}
+
+		data3 := data.Detail{
+			KnitId: "data3",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data3"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T21:34:56+09:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: run1.Summary,
+				Mountpoint: plans.Mountpoint{
+					Path: "/out/2",
+				},
+			},
+			Downstreams: []data.AssignedTo{
+				{
+					Run: run3.Summary,
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/4",
+					},
+				},
+			},
+		}
+
+		data4 := data.Detail{
+			KnitId: "data4",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data4"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T21:34:56+09:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: runs.Summary{
+					RunId: "runxx", Status: "done",
+					Plan: plans.Summary{PlanId: "plan-xx", Name: "knit#xx"},
+				},
+				Mountpoint: plans.Mountpoint{
+					Path: "/out/xx",
+				},
+			},
+			Downstreams: []data.AssignedTo{
+				{
+					Run: run2.Summary,
+					Mountpoint: plans.Mountpoint{
+						Path: "/in/3",
+					},
+				},
+			},
+		}
+		data5 := data.Detail{
+			KnitId: "data5",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data5"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T21:34:56+09:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: run2.Summary,
+				Mountpoint: plans.Mountpoint{
+					Path: "/out/3",
+				},
+			},
+		}
+
+		data6 := data.Detail{
+			KnitId: "data6",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data6"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T21:34:56+09:00"},
+			},
+			Upstream: data.AssignedTo{
+				Run: run3.Summary,
+				Mountpoint: plans.Mountpoint{
+					Path: "/out/4",
+				},
+			},
+		}
 
 		t.Run("Confirm that when the graph configuration is complex, they can be output as dot format.", theory(
 			When{
-				Graph: knitgraph.DirectedGraph{
-					DataNodes: maps.NewOrderedMap(
-						tuple.PairOf("data1", toDataNode(data1)),
-						tuple.PairOf("data2", toDataNode(data2)),
-						tuple.PairOf("data3", toDataNode(data3)),
-						tuple.PairOf("data4", toDataNode(data4)),
-						tuple.PairOf("data5", toDataNode(data5)),
-						tuple.PairOf("data6", toDataNode(data6)),
-					),
-					RunNodes: maps.NewOrderedMap(
-						tuple.PairOf("run1", knitgraph.RunNode{Summary: run1.Summary}),
-						tuple.PairOf("run2", knitgraph.RunNode{Summary: run2.Summary}),
-						tuple.PairOf("run3", knitgraph.RunNode{Summary: run3.Summary}),
-					),
-					EdgesFromData: map[string][]knitgraph.Edge{
-						"data1": {{ToId: "run1", Label: "in/1"}}, "data2": {{ToId: "run2", Label: "in/2"}}, "data3": {{ToId: "run3", Label: "in/4"}},
-						"data4": {{ToId: "run2", Label: "in/3"}}, "data5": {}, "data6": {},
-					},
-					EdgesFromRun: map[string][]knitgraph.Edge{
-						"run1": {{ToId: "data2", Label: "out/1"}, {ToId: "data3", Label: "out/2"}},
-						"run2": {{ToId: "data5", Label: "out/3"}}, "run3": {{ToId: "data6", Label: "out/4"}},
-					},
-					RootNodes: []string{},
-				},
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1),
+					knitgraph.WithRun(run1),
+					knitgraph.WithData(data2, data3),
+					knitgraph.WithRun(run2, run3),
+					knitgraph.WithData(data4),
+					knitgraph.WithData(data5, data6),
+				),
 				ArgKnitId: "data1",
 			},
 			Then{
-				RequiredContent: `digraph G {
+				RequiredContent: fmt.Sprintf(
+					`digraph G {
 	node [shape=record fontsize=10]
 	edge [fontsize=10]
 
@@ -386,7 +784,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#d4ecc6">knit#id: data1</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -397,7 +795,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data2</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -408,7 +806,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data3</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -419,7 +817,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data4</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -430,7 +828,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data5</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -441,7 +839,7 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data6</TD></TR>
-				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">2024-04-01T21:34:56+09:00</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s</FONT></TD></TR>
 				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
 			</TABLE>
 		>
@@ -452,8 +850,8 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD>id: run1</TD></TR>
-				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: 0001-01-01T09:18:59+09:18</FONT></TD></TR>
-				<TR><TD COLSPAN="3">image = test-image:test-version</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 			</TABLE>
 		>
 	];
@@ -463,8 +861,8 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD>id: run2</TD></TR>
-				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: 0001-01-01T09:18:59+09:18</FONT></TD></TR>
-				<TR><TD COLSPAN="3">image = test-image:test-version</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v2</TD></TR>
 			</TABLE>
 		>
 	];
@@ -474,39 +872,43 @@ func TestGenerateDot(t *testing.T) {
 		label=<
 			<TABLE CELLSPACING="0">
 				<TR><TD BGCOLOR="orange"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD>id: run3</TD></TR>
-				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: 0001-01-01T09:18:59+09:18</FONT></TD></TR>
-				<TR><TD COLSPAN="3">image = test-image:test-version</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v3</TD></TR>
 			</TABLE>
 		>
 	];
 
-	"ddata1" -> "rrun1" [label="in/1"];
-	"ddata2" -> "rrun2" [label="in/2"];
-	"ddata3" -> "rrun3" [label="in/4"];
-	"ddata4" -> "rrun2" [label="in/3"];
-	"rrun1" -> "ddata2" [label="out/1"];
-	"rrun1" -> "ddata3" [label="out/2"];
-	"rrun2" -> "ddata5" [label="out/3"];
-	"rrun3" -> "ddata6" [label="out/4"];
+	"ddata1" -> "rrun1" [label="/in/1"];
+	"ddata2" -> "rrun2" [label="/in/2"];
+	"ddata3" -> "rrun3" [label="/in/4"];
+	"ddata4" -> "rrun2" [label="/in/3"];
+	"rrun1" -> "ddata2" [label="/out/1"];
+	"rrun1" -> "ddata3" [label="/out/2"];
+	"rrun2" -> "ddata5" [label="/out/3"];
+	"rrun3" -> "ddata6" [label="/out/4"];
 
 }`,
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+				),
 			},
 		))
-	}
-}
-
-func toDataNode(data data.Detail) knitgraph.DataNode {
-	return knitgraph.DataNode{
-		KnitId:    data.KnitId,
-		Tags:      data.Tags,
-		FromRunId: data.Upstream.Run.RunId,
-		ToRunIds: func() []string {
-			ids := []string{}
-			for _, downstream := range data.Downstreams {
-				ids = append(ids, downstream.Run.RunId)
-			}
-			return ids
-		}(),
 	}
 }
 

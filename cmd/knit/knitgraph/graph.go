@@ -21,29 +21,58 @@ type DirectedGraph struct {
 	RootNodes     []string          //to runId
 	EdgesFromRun  map[string][]Edge //key:from runId, value:to knitId
 	EdgesFromData map[string][]Edge //key:from knitId, value:to runId
+
+	thunkData map[string][]func(data.Detail)
+	thunkRun  map[string][]func(runs.Detail)
 }
 
-func NewDirectedGraph() *DirectedGraph {
-	return &DirectedGraph{
+type Option func(*DirectedGraph)
+
+func WithData(d ...data.Detail) Option {
+	return func(g *DirectedGraph) {
+		for _, _d := range d {
+			g.AddDataNode(_d)
+		}
+	}
+}
+
+func WithRun(r ...runs.Detail) Option {
+	return func(g *DirectedGraph) {
+		for _, _r := range r {
+			g.AddRunNode(_r)
+		}
+	}
+}
+
+func WithRoot(r ...string) Option {
+	return func(g *DirectedGraph) {
+		for _, _r := range r {
+			g.AddRootNode(_r)
+		}
+	}
+}
+
+func NewDirectedGraph(opt ...Option) *DirectedGraph {
+	g := &DirectedGraph{
 		DataNodes:     maps.NewOrderedMap[string, DataNode](),
 		RunNodes:      maps.NewOrderedMap[string, RunNode](),
 		RootNodes:     []string{},
 		EdgesFromRun:  map[string][]Edge{},
 		EdgesFromData: map[string][]Edge{},
+
+		thunkData: map[string][]func(data.Detail){},
+		thunkRun:  map[string][]func(runs.Detail){},
 	}
+
+	for _, o := range opt {
+		o(g)
+	}
+
+	return g
 }
 
 type DataNode struct {
-	KnitId string
-	Tags   []tags.Tag
-	// FromRunId is coreresponding runId in Upstream of apidata.Detail.
-	// ToRunIds is coreresponding runIds in Downstreams of apidata.Detail.
-	// The reason for holding these two types of runIds in this node is related to the data tracking algorithm.
-	// According to the algorithm's specifications, when data is first identified,
-	// there may be runIds contained in that data that are not yet determined to be added to the graph.
-	// The timing for confirming the addition is when the algorithm identifies that data again.
-	FromRunId string
-	ToRunIds  []string
+	data.Detail
 }
 
 func (d *DataNode) Equal(o *DataNode) bool {
@@ -116,7 +145,7 @@ func (d *DataNode) ToDot(w io.Writer, isArgKnitId bool) error {
 }
 
 type RunNode struct {
-	runs.Summary
+	runs.Detail
 }
 
 func (r *RunNode) ToDot(w io.Writer) error {
@@ -163,28 +192,96 @@ func (r *RunNode) ToDot(w io.Writer) error {
 
 type Edge struct {
 	ToId  string
-	Label string //mountpath
+	Label string
 }
 
 func (g *DirectedGraph) AddDataNode(data data.Detail) {
-	g.DataNodes.Set(data.KnitId, DataNode{
-		KnitId:    data.KnitId,
-		Tags:      data.Tags,
-		FromRunId: data.Upstream.Run.RunId,
-		ToRunIds: func() []string {
-			runIds := []string{}
-			for _, ds := range data.Downstreams {
-				runIds = append(runIds, ds.Run.RunId)
+	g.DataNodes.Set(data.KnitId, DataNode{Detail: data})
+
+	for _, thunk := range g.thunkData[data.KnitId] {
+		thunk(data)
+	}
+	delete(g.thunkData, data.KnitId)
+
+	{
+		upstreamId := data.Upstream.Run.RunId
+		if _, ok := g.RunNodes.Get(upstreamId); !ok {
+			thunks, ok := g.thunkRun[upstreamId]
+			if !ok {
+				thunks = []func(runs.Detail){}
+				g.thunkRun[upstreamId] = thunks
 			}
-			return runIds
-		}(),
-	})
+			g.thunkRun[upstreamId] = append(thunks, func(run runs.Detail) {
+				if log := run.Log; log != nil && log.KnitId == data.KnitId {
+					g.addEdgeFromRun(run.RunId, data.KnitId, "(log)")
+					return
+				}
+				g.addEdgeFromRun(run.RunId, data.KnitId, data.Upstream.Path)
+			})
+		}
+	}
+
+	for _, ds := range data.Downstreams {
+		downstreamId := ds.Run.RunId
+		if _, ok := g.RunNodes.Get(downstreamId); !ok {
+			thunks, ok := g.thunkRun[downstreamId]
+			if !ok {
+				thunks = []func(runs.Detail){}
+				g.thunkRun[downstreamId] = thunks
+			}
+			g.thunkRun[downstreamId] = append(thunks, func(run runs.Detail) {
+				g.addEdgeFromData(data.KnitId, run.RunId, ds.Path)
+			})
+		}
+	}
 }
 
 func (g *DirectedGraph) AddRunNode(run runs.Detail) {
-	g.RunNodes.Set(run.RunId, RunNode{
-		Summary: run.Summary,
-	})
+	g.RunNodes.Set(run.RunId, RunNode{Detail: run})
+
+	for _, thunk := range g.thunkRun[run.RunId] {
+		thunk(run)
+	}
+	delete(g.thunkRun, run.RunId)
+
+	for _, in := range run.Inputs {
+		if _, ok := g.DataNodes.Get(in.KnitId); !ok {
+			thunks, ok := g.thunkData[in.KnitId]
+			if !ok {
+				thunks = []func(data.Detail){}
+				g.thunkData[in.KnitId] = thunks
+			}
+			g.thunkData[in.KnitId] = append(thunks, func(data data.Detail) {
+				g.addEdgeFromData(data.KnitId, run.RunId, in.Path)
+			})
+		}
+	}
+
+	for _, out := range run.Outputs {
+		if _, ok := g.DataNodes.Get(out.KnitId); !ok {
+			thunks, ok := g.thunkData[out.KnitId]
+			if !ok {
+				thunks = []func(data.Detail){}
+				g.thunkData[out.KnitId] = thunks
+			}
+			g.thunkData[out.KnitId] = append(thunks, func(data data.Detail) {
+				g.addEdgeFromRun(run.RunId, data.KnitId, out.Path)
+			})
+		}
+	}
+
+	if log := run.Log; log != nil {
+		if _, ok := g.DataNodes.Get(log.KnitId); !ok {
+			thunks, ok := g.thunkData[log.KnitId]
+			if !ok {
+				thunks = []func(data.Detail){}
+				g.thunkData[log.KnitId] = thunks
+			}
+			g.thunkData[log.KnitId] = append(thunks, func(data data.Detail) {
+				g.addEdgeFromRun(data.KnitId, run.RunId, "(log)")
+			})
+		}
+	}
 }
 
 // This method assumes that the run nodes of the edge to be added are included in the graph.
@@ -193,12 +290,12 @@ func (g *DirectedGraph) AddRootNode(runId string) {
 }
 
 // This method assumes that the nodes of the edge to be added are included in the graph.
-func (g *DirectedGraph) AddEdgeFromRun(runId string, knitId string, label string) {
+func (g *DirectedGraph) addEdgeFromRun(runId string, knitId string, label string) {
 	g.EdgesFromRun[runId] = append(g.EdgesFromRun[runId], Edge{ToId: knitId, Label: label})
 }
 
 // This method assumes that the nodes of the edge to be added are included in the graph.
-func (g *DirectedGraph) AddEdgeFromData(knitId string, runId string, label string) {
+func (g *DirectedGraph) addEdgeFromData(knitId string, runId string, label string) {
 	g.EdgesFromData[knitId] = append(g.EdgesFromData[knitId], Edge{ToId: runId, Label: label})
 }
 
