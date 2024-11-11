@@ -285,7 +285,6 @@ func TestGenerateDot(t *testing.T) {
 					knitgraph.WithRun(run2),
 					knitgraph.WithData(data1),
 					knitgraph.WithRun(run1),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				ArgKnitId: "data2",
 			},
@@ -340,8 +339,8 @@ func TestGenerateDot(t *testing.T) {
 	];
 	"root#0"[shape=Mdiamond];
 
-	"ddata1" -> "rrun2" [label="/in/1"];
 	"rrun2" -> "ddata2" [label="/out/1"];
+	"ddata1" -> "rrun2" [label="/in/1"];
 	"rrun1" -> "ddata1" [label="/upload"];
 	"root#0" -> "rrun1";
 
@@ -469,7 +468,6 @@ func TestGenerateDot(t *testing.T) {
 				Graph: knitgraph.NewDirectedGraph(
 					knitgraph.WithData(data1, data2, log),
 					knitgraph.WithRun(run1, run2),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				ArgKnitId: "data1",
 			},
@@ -536,11 +534,11 @@ func TestGenerateDot(t *testing.T) {
 	];
 	"root#0"[shape=Mdiamond];
 
-	"ddata1" -> "rrun2" [label="/in/1"];
 	"rrun1" -> "ddata1" [label="/upload"];
+	"root#0" -> "rrun1";
+	"ddata1" -> "rrun2" [label="/in/1"];
 	"rrun2" -> "ddata2" [label="/out/1"];
 	"rrun2" -> "dlog" [label="(log)"];
-	"root#0" -> "rrun1";
 
 }`,
 					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T21:34:56+09:00")).OrFatal(t).
@@ -879,11 +877,11 @@ func TestGenerateDot(t *testing.T) {
 	];
 
 	"ddata1" -> "rrun1" [label="/in/1"];
+	"rrun1" -> "ddata2" [label="/out/1"];
+	"rrun1" -> "ddata3" [label="/out/2"];
 	"ddata2" -> "rrun2" [label="/in/2"];
 	"ddata3" -> "rrun3" [label="/in/4"];
 	"ddata4" -> "rrun2" [label="/in/3"];
-	"rrun1" -> "ddata2" [label="/out/1"];
-	"rrun1" -> "ddata3" [label="/out/2"];
 	"rrun2" -> "ddata5" [label="/out/3"];
 	"rrun3" -> "ddata6" [label="/out/4"];
 

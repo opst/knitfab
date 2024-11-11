@@ -301,33 +301,13 @@ func TestTraceDownStream(t *testing.T) {
 					graph.RunNodes, then.Graph.RunNodes,
 				)
 			}
-			if !cmp.MapEqWith(
-				graph.EdgesFromData,
-				then.Graph.EdgesFromData,
-				func(a []knitgraph.Edge, b []knitgraph.Edge) bool {
-					return cmp.SliceContentEq(a, b)
-				},
-			) {
+			if !cmp.SliceContentEq(graph.Edges, then.Graph.Edges) {
 				t.Errorf(
-					"EdgesFromData is not equal (actual,expected): %v,%v",
-					graph.EdgesFromData, then.Graph.EdgesFromData,
+					"Edges is not equal (actual,expected): %v,%v",
+					graph.Edges, then.Graph.Edges,
 				)
 			}
-			if !cmp.MapEqWith(
-				graph.EdgesFromRun,
-				then.Graph.EdgesFromRun,
-				func(a []knitgraph.Edge, b []knitgraph.Edge) bool {
-					return cmp.SliceContentEq(a, b)
-				},
-			) {
-				t.Errorf(
-					"EdgesFromRun is not equal (actual,expected): %v,%v",
-					graph.EdgesFromRun, then.Graph.EdgesFromRun,
-				)
-			}
-			if !cmp.SliceContentEq(
-				graph.RootNodes, then.Graph.RootNodes,
-			) {
+			if !cmp.SliceContentEq(graph.RootNodes, then.Graph.RootNodes) {
 				t.Errorf(
 					"RootNodes is not equal (actual,expected): %v,%v",
 					graph.RootNodes, then.Graph.RootNodes,
@@ -792,28 +772,10 @@ func TestTraceUpStream(t *testing.T) {
 					graph.RunNodes, then.Graph.RunNodes,
 				)
 			}
-			if !cmp.MapEqWith(
-				graph.EdgesFromData,
-				then.Graph.EdgesFromData,
-				func(a []knitgraph.Edge, b []knitgraph.Edge) bool {
-					return cmp.SliceContentEq(a, b)
-				},
-			) {
+			if !cmp.SliceContentEq(graph.Edges, then.Graph.Edges) {
 				t.Errorf(
 					"EdgesFromData is not equal (actual,expected): %v,%v",
-					graph.EdgesFromData, then.Graph.EdgesFromData,
-				)
-			}
-			if !cmp.MapEqWith(
-				graph.EdgesFromRun,
-				then.Graph.EdgesFromRun,
-				func(a []knitgraph.Edge, b []knitgraph.Edge) bool {
-					return cmp.SliceContentEq(a, b)
-				},
-			) {
-				t.Errorf(
-					"EdgesFromRun is not equal (actual,expected): %v,%v",
-					graph.EdgesFromRun, then.Graph.EdgesFromRun,
+					graph.Edges, then.Graph.Edges,
 				)
 			}
 			if !cmp.SliceContentEq(
@@ -843,7 +805,6 @@ func TestTraceUpStream(t *testing.T) {
 				Graph: knitgraph.NewDirectedGraph(
 					knitgraph.WithData(data1),
 					knitgraph.WithRun(run1),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				Err: nil,
 			},
@@ -859,7 +820,6 @@ func TestTraceUpStream(t *testing.T) {
 				Graph: knitgraph.NewDirectedGraph(
 					knitgraph.WithData(data1),
 					knitgraph.WithRun(run1),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				Err: nil,
 			},
@@ -883,7 +843,6 @@ func TestTraceUpStream(t *testing.T) {
 				Graph: knitgraph.NewDirectedGraph(
 					knitgraph.WithData(data1, data2),
 					knitgraph.WithRun(run1, run2),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				Err: nil,
 			},
@@ -925,7 +884,6 @@ func TestTraceUpStream(t *testing.T) {
 				Graph: knitgraph.NewDirectedGraph(
 					knitgraph.WithData(data1, data2, data3),
 					knitgraph.WithRun(run1, run2),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				Err: nil,
 			},
@@ -954,7 +912,6 @@ func TestTraceUpStream(t *testing.T) {
 				Graph: knitgraph.NewDirectedGraph(
 					knitgraph.WithData(data1, data2, data3, data4),
 					knitgraph.WithRun(run1, run2, run3),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				Err: nil,
 			},
@@ -1002,7 +959,6 @@ func TestTraceUpStream(t *testing.T) {
 				Graph: knitgraph.NewDirectedGraph(
 					knitgraph.WithData(data1, data2, data3, data4),
 					knitgraph.WithRun(run1, run3, run4),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				Err: nil,
 			},
@@ -1019,7 +975,6 @@ func TestTraceUpStream(t *testing.T) {
 				Graph: knitgraph.NewDirectedGraph(
 					knitgraph.WithData(data1, data2, data3, data4),
 					knitgraph.WithRun(run1, run3, run2, run4),
-					knitgraph.WithRoot(run1.RunId),
 				),
 				Err: nil,
 			},

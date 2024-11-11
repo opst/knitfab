@@ -395,8 +395,7 @@ func TraceUpstreamForSingleNode(
 	nextKnitIds := []string{}
 	//2-1. trace the run node where that data is output.
 	fromRunId := d.Upstream.Run.RunId
-	if _, ok := graph.RunNodes.Get(fromRunId); ok {
-	} else {
+	if _, ok := graph.RunNodes.Get(fromRunId); !ok {
 		//If the run does not exist in the graph, add it to the graph.
 		run, err := client.GetRun(ctx, fromRunId)
 		if err != nil {
@@ -421,25 +420,20 @@ func TraceUpstreamForSingleNode(
 		}
 
 		//2-4. Add the edges from the data that serve as the output to that run.
-		if len(run.Inputs) == 0 {
-			//Since a run without an Input is a PeudoRun, add the root node for that run to the graph.
-			graph.AddRootNode(run.RunId)
-		} else {
-			for _, in := range run.Inputs {
-				if _, ok := graph.DataNodes.Get(in.KnitId); ok {
-					//Hold the data that will be the next argument.
-					nextKnitIds = append(nextKnitIds, in.KnitId)
-					continue
-				}
-				inputData, err := getData(ctx, client, in.KnitId)
-				if err != nil {
-					return graph, []string{}, err
-				}
-				graph.AddDataNode(inputData)
-
+		for _, in := range run.Inputs {
+			if _, ok := graph.DataNodes.Get(in.KnitId); ok {
 				//Hold the data that will be the next argument.
-				nextKnitIds = append(nextKnitIds, inputData.KnitId)
+				nextKnitIds = append(nextKnitIds, in.KnitId)
+				continue
 			}
+			inputData, err := getData(ctx, client, in.KnitId)
+			if err != nil {
+				return graph, []string{}, err
+			}
+			graph.AddDataNode(inputData)
+
+			//Hold the data that will be the next argument.
+			nextKnitIds = append(nextKnitIds, inputData.KnitId)
 		}
 	}
 	return graph, nextKnitIds, nil
