@@ -42,4 +42,44 @@ func TestDepth(t *testing.T) {
 			t.Errorf("Expected error, got nil")
 		}
 	})
+
+	t.Run("Add positive value", func(t *testing.T) {
+		depth := args.NewDepth(10)
+		depth = depth.Add(5)
+		if depth.Value() != 15 {
+			t.Errorf("Expected 15, got %v", depth.Value())
+		}
+	})
+
+	t.Run("Add negative value", func(t *testing.T) {
+		depth := args.NewDepth(10)
+		depth = depth.Add(-5)
+		if depth.Value() != 5 {
+			t.Errorf("Expected 5, got %v", depth.Value())
+		}
+	})
+
+	t.Run("Add negative value to zero", func(t *testing.T) {
+		depth := args.NewDepth(3)
+		depth = depth.Add(-5)
+		if depth.Value() != 0 {
+			t.Errorf("Expected 0, got %v", depth.Value())
+		}
+	})
+
+	t.Run("Add positive value to infinity", func(t *testing.T) {
+		depth := args.NewInfinityDepth()
+		depth = depth.Add(5)
+		if !depth.IsInfinity() {
+			t.Errorf("Expected true, got false")
+		}
+	})
+
+	t.Run("Add negative value to infinity", func(t *testing.T) {
+		depth := args.NewInfinityDepth()
+		depth = depth.Add(-5)
+		if !depth.IsInfinity() {
+			t.Errorf("Expected true, got false")
+		}
+	})
 }

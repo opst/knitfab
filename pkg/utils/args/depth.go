@@ -30,6 +30,24 @@ func (d Depth) IsInfinity() bool {
 	return d.infinity
 }
 
+// IsZero returns whether the depth is zero.
+func (d Depth) IsZero() bool {
+	return d.n == 0 && !d.infinity
+}
+
+func (d Depth) Add(n int) Depth {
+	if d.infinity {
+		return NewInfinityDepth()
+	}
+	if n < 0 {
+		if d.n < uint(-n) {
+			return NewDepth(0)
+		}
+		return NewDepth(d.n - uint(-n))
+	}
+	return NewDepth(d.n + uint(n))
+}
+
 // NewDepth creates a new (finite) Depth with the given value.
 func NewDepth(value uint) Depth {
 	return Depth{n: value, infinity: false}

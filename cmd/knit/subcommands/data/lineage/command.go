@@ -139,7 +139,7 @@ func Task(option Traverser) common.Task[Flag] {
 	) error {
 		flags := cl.Flags()
 		numbers := flags.Numbers
-		if !numbers.IsInfinity() && numbers.Value() == 0 {
+		if numbers.IsZero() {
 			return fmt.Errorf("%w: --numbers must be a positive integer or 'all'", flarc.ErrUsage)
 		}
 		shoudUpstream := flags.Upstream
@@ -168,7 +168,7 @@ func Task(option Traverser) common.Task[Flag] {
 			graph = _graph
 		}
 
-		if err := graph.GenerateDot(cl.Stdout(), knitId); err != nil {
+		if err := graph.GenerateDot(cl.Stdout()); err != nil {
 			return fmt.Errorf("fail to output dot format: %w", err)
 		}
 		logger.Println("success to output dot format")
@@ -222,7 +222,7 @@ func TraceDownStream(
 
 	for (maxDepth.IsInfinity() || depth < maxDepth.Value()) && 0 < len(startKnitIds) {
 		var err error
-		graph, startKnitIds, err = TraceDownstreamOneStep(ctx, client, graph, startKnitIds)
+		graph, startKnitIds, err = TraceDownstreamOneStep(ctx, client, graph, startKnitIds, depth == 0)
 		if err != nil {
 			return graph, err
 		}
@@ -237,6 +237,7 @@ func TraceDownstreamOneStep(
 	client krst.KnitClient,
 	graph *knitgraph.DirectedGraph,
 	knitIds []string,
+	emphasize bool,
 ) (*knitgraph.DirectedGraph, []string, error) {
 
 	TotalnextKnitIds := []string{}
@@ -244,7 +245,7 @@ func TraceDownstreamOneStep(
 	for _, knitId := range knitIds {
 		var err error
 		var nextKnitIds []string
-		graph, nextKnitIds, err = TraceDownstreamForSingleNode(ctx, client, graph, knitId)
+		graph, nextKnitIds, err = TraceDownstreamForSingleNode(ctx, client, graph, knitId, emphasize)
 		if err != nil {
 			return graph, []string{}, err
 		}
@@ -259,16 +260,21 @@ func TraceDownstreamForSingleNode(
 	client krst.KnitClient,
 	graph *knitgraph.DirectedGraph,
 	knitId string,
+	emphasize bool,
 ) (*knitgraph.DirectedGraph, []string, error) {
 
-	//1. If the argument's d does not exist in the graph, add that d　to the graph.
+	//1. If the argument's d does not exist in the graph, add that Data to the graph.
 	d, ok := graph.DataNodes.Get(knitId)
 	if !ok {
 		_data, err := getData(ctx, client, knitId)
 		if err != nil {
 			return graph, []string{}, err
 		}
-		graph.AddDataNode(_data)
+		styles := []knitgraph.StyleOption{}
+		if emphasize {
+			styles = append(styles, knitgraph.Emphasize())
+		}
+		graph.AddDataNode(_data, styles...)
 		d, _ = graph.DataNodes.Get(knitId)
 	}
 
@@ -291,6 +297,9 @@ func TraceDownstreamForSingleNode(
 		//2-2. Add the edges from the data that serve as the input to that run.
 		for _, in := range run.Inputs {
 			//If the data node does not exist in the graph, add that data node before adding the edge.
+			if _, ok := graph.DataNodes.Get(in.KnitId); ok {
+				continue
+			}
 			otherData, err := getData(ctx, client, in.KnitId)
 			if err != nil {
 				return graph, []string{}, err
@@ -342,7 +351,7 @@ func TraceUpStream(
 
 	for (maxDepth.IsInfinity() || depth < maxDepth.Value()) && 0 < len(startKnitIds) {
 		var err error
-		graph, startKnitIds, err = TraceUpstreamOneStep(ctx, client, graph, startKnitIds)
+		graph, startKnitIds, err = TraceUpstreamOneStep(ctx, client, graph, startKnitIds, depth == 0)
 		if err != nil {
 			return graph, err
 		}
@@ -357,6 +366,7 @@ func TraceUpstreamOneStep(
 	client krst.KnitClient,
 	graph *knitgraph.DirectedGraph,
 	knitIds []string,
+	entry bool,
 ) (*knitgraph.DirectedGraph, []string, error) {
 
 	TotalnextKnitIds := []string{}
@@ -364,7 +374,7 @@ func TraceUpstreamOneStep(
 	for _, knitId := range knitIds {
 		var err error
 		var nextKnitIds []string
-		graph, nextKnitIds, err = TraceUpstreamForSingleNode(ctx, client, graph, knitId)
+		graph, nextKnitIds, err = TraceUpstreamForSingleNode(ctx, client, graph, knitId, entry)
 		if err != nil {
 			return graph, []string{}, err
 		}
@@ -379,6 +389,7 @@ func TraceUpstreamForSingleNode(
 	client krst.KnitClient,
 	graph *knitgraph.DirectedGraph,
 	knitId string,
+	entry bool,
 ) (*knitgraph.DirectedGraph, []string, error) {
 
 	///1. If the argument's d does not exist in the graph, add that d　to the graph.
@@ -388,7 +399,11 @@ func TraceUpstreamForSingleNode(
 		if err != nil {
 			return graph, []string{}, err
 		}
-		graph.AddDataNode(_data)
+		styles := []knitgraph.StyleOption{}
+		if entry {
+			styles = append(styles, knitgraph.Emphasize())
+		}
+		graph.AddDataNode(_data, styles...)
 		d, _ = graph.DataNodes.Get(knitId)
 	}
 
@@ -405,6 +420,9 @@ func TraceUpstreamForSingleNode(
 
 		//2-2. Add the edges from that run to the data that serve as the output.
 		for _, out := range run.Outputs {
+			if _, ok := graph.DataNodes.Get(out.KnitId); ok {
+				continue
+			}
 			//If the data node does not exist in the graph, add that data node before adding the edge.
 			otherData, err := getData(ctx, client, out.KnitId)
 			if err != nil {
