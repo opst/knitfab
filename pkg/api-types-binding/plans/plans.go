@@ -25,7 +25,7 @@ func ComposeLogPoint(log *domain.LogPoint) *apiplans.LogPoint {
 
 func ComposeDownstream(d domain.PlanDownstream) apiplans.Downstream {
 	return apiplans.Downstream{
-		Summary:    ComposeSummary(d.PlanBody),
+		Plan:       ComposeSummary(d.PlanBody),
 		Mountpoint: ComposeMountpoint(d.Mountpoint),
 	}
 }
@@ -41,7 +41,7 @@ func ComposeInputs(i domain.Input) apiplans.Input {
 			}
 
 			return apiplans.Upstream{
-				Summary:    ComposeSummary(u.PlanBody),
+				Plan:       ComposeSummary(u.PlanBody),
 				Mountpoint: mp,
 				Log:        ComposeLogPoint(u.Log),
 			}

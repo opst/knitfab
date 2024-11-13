@@ -207,7 +207,7 @@ func Test_Get(t *testing.T) {
 								{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
 							}),
 						},
-						Upsteram: domain.Dependency{
+						Upsteram: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch2#1:plan/ch1#1"), Status: domain.Running,
 								UpdatedAt: START_AT.Add(10*time.Second + 100*time.Millisecond),
@@ -217,7 +217,7 @@ func Test_Get(t *testing.T) {
 									Pseudo: &domain.PseudoPlanDetail{Name: domain.Uploaded},
 								},
 							},
-							MountPoint: domain.MountPoint{
+							MountPoint: &domain.MountPoint{
 								Id: 9_01_01_010, Path: "/out",
 							},
 						},
@@ -235,7 +235,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.Dependency{
+						Upsteram: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch2#2:plan/ch1#1"), Status: domain.Failed,
 								UpdatedAt: START_AT.Add(10*time.Second + 200*time.Millisecond),
@@ -249,7 +249,7 @@ func Test_Get(t *testing.T) {
 									Message: "failed",
 								},
 							},
-							MountPoint: domain.MountPoint{
+							MountPoint: &domain.MountPoint{
 								Id: 9_01_01_010, Path: "/out",
 							},
 						},
@@ -268,7 +268,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.Dependency{
+						Upsteram: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch2#3:plan/ch1#1"), Status: domain.Done,
 								UpdatedAt: START_AT.Add(10*time.Second + 300*time.Millisecond),
@@ -282,7 +282,7 @@ func Test_Get(t *testing.T) {
 									Message: "succeeded",
 								},
 							},
-							MountPoint: domain.MountPoint{
+							MountPoint: &domain.MountPoint{
 								Id: 9_01_01_010, Path: "/out",
 							},
 						},
@@ -706,7 +706,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.Dependency{
+						Upsteram: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch2#3:plan/ch1#1"), Status: domain.Done,
 								UpdatedAt: START_AT.Add(10*time.Second + 300*time.Millisecond),
@@ -716,11 +716,11 @@ func Test_Get(t *testing.T) {
 									Pseudo: &domain.PseudoPlanDetail{Name: domain.Uploaded},
 								},
 							},
-							MountPoint: domain.MountPoint{
+							MountPoint: &domain.MountPoint{
 								Id: 9_01_01_010, Path: "/out",
 							},
 						},
-						Downstreams: []domain.Dependency{
+						Downstreams: []domain.DataSink{
 							{
 								RunBody: domain.RunBody{
 									Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
@@ -798,7 +798,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.Dependency{
+						Upsteram: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
 								Exit: &domain.RunExit{
@@ -823,7 +823,7 @@ func Test_Get(t *testing.T) {
 									},
 								},
 							},
-							MountPoint: domain.MountPoint{
+							MountPoint: &domain.MountPoint{
 								Id: 9_03_01_010, Path: "/out/1",
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "testing"},
@@ -848,7 +848,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.Dependency{
+						Upsteram: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
 								Exit: &domain.RunExit{
@@ -873,7 +873,7 @@ func Test_Get(t *testing.T) {
 									},
 								},
 							},
-							MountPoint: domain.MountPoint{
+							MountPoint: &domain.MountPoint{
 								Id: 9_03_01_020, Path: "/out/2",
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "testing"},
@@ -896,7 +896,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.Dependency{
+						Upsteram: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
 								Exit: &domain.RunExit{
@@ -921,7 +921,7 @@ func Test_Get(t *testing.T) {
 									},
 								},
 							},
-							MountPoint: domain.MountPoint{
+							MountPoint: &domain.MountPoint{
 								Id: 9_03_01_030, Path: "/out/3",
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "testing"},
@@ -943,7 +943,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.Dependency{
+						Upsteram: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
 								Exit: &domain.RunExit{
@@ -968,8 +968,8 @@ func Test_Get(t *testing.T) {
 									},
 								},
 							},
-							MountPoint: domain.MountPoint{
-								Id: 9_03_01_001, Path: "/log",
+							LogPoint: &domain.LogPoint{
+								Id: 9_03_01_001,
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "testing"},
 									{Key: "type", Value: "log"},
@@ -1465,8 +1465,8 @@ func Test_Get(t *testing.T) {
 								{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
 							}),
 						},
-						Upsteram: domain.Dependency{
-							MountPoint: domain.MountPoint{
+						Upsteram: domain.DataSource{
+							MountPoint: &domain.MountPoint{
 								Id: 9_04_03_100, Path: "/metrics",
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "testing"},

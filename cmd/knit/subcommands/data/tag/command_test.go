@@ -68,7 +68,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: dara.AssignedTo{
+				Upstream: dara.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -204,7 +204,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: dara.AssignedTo{
+				Upstream: dara.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -333,7 +333,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: dara.AssignedTo{
+				Upstream: dara.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(

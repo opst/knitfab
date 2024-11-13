@@ -61,7 +61,7 @@ func TestGetPlans(t *testing.T) {
 				},
 				Upstreams: []plans.Upstream{
 					{
-						Summary: plans.Summary{
+						Plan: plans.Summary{
 							PlanId: "test-Id-1",
 							Image: &plans.Image{
 								Repository: "test-image", Tag: "test-version",
@@ -81,7 +81,7 @@ func TestGetPlans(t *testing.T) {
 						},
 					},
 					{
-						Summary: plans.Summary{
+						Plan: plans.Summary{
 							PlanId: "test-Id-2",
 							Image: &plans.Image{
 								Repository: "test-image", Tag: "test-version",
@@ -110,7 +110,7 @@ func TestGetPlans(t *testing.T) {
 				},
 				Downstreams: []plans.Downstream{
 					{
-						Summary: plans.Summary{
+						Plan: plans.Summary{
 							PlanId: "test-Id-1",
 							Image: &plans.Image{
 								Repository: "test-image", Tag: "test-version",
@@ -141,7 +141,7 @@ func TestGetPlans(t *testing.T) {
 			},
 			Downstreams: []plans.Downstream{
 				{
-					Summary: plans.Summary{
+					Plan: plans.Summary{
 						PlanId: "test-Id-1",
 						Image: &plans.Image{
 							Repository: "test-image", Tag: "test-version",
@@ -343,7 +343,7 @@ func dummyplan(isActivate bool) plans.Detail {
 				},
 				Upstreams: []plans.Upstream{
 					{
-						Summary: plans.Summary{
+						Plan: plans.Summary{
 							PlanId: "test-Id-1",
 							Image: &plans.Image{
 								Repository: "test-image", Tag: "test-version",
@@ -371,7 +371,7 @@ func dummyplan(isActivate bool) plans.Detail {
 				},
 				Downstreams: []plans.Downstream{
 					{
-						Summary: plans.Summary{
+						Plan: plans.Summary{
 							PlanId: "test-Id-1",
 							Image: &plans.Image{
 								Repository: "test-image", Tag: "test-version",
@@ -397,7 +397,7 @@ func dummyplan(isActivate bool) plans.Detail {
 			},
 			Downstreams: []plans.Downstream{
 				{
-					Summary: plans.Summary{
+					Plan: plans.Summary{
 						PlanId: "test-Id-1",
 						Image: &plans.Image{
 							Repository: "test-image", Tag: "test-version",

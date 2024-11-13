@@ -1355,6 +1355,34 @@ func toDataNode(data data.Detail) lineage.DataNode {
 	}
 }
 
+func dummyCreatedFrom(runId string) data.CreatedFrom {
+	return data.CreatedFrom{
+		Run: runs.Summary{
+			RunId:  runId,
+			Status: "done",
+			Plan: plans.Summary{
+				PlanId: "plan-3",
+				Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+			},
+		},
+		Mountpoint: &plans.Mountpoint{Path: "/out"},
+	}
+}
+
+func dummyLogFrom(runId string) data.CreatedFrom {
+	return data.CreatedFrom{
+		Run: runs.Summary{
+			RunId:  runId,
+			Status: "done",
+			Plan: plans.Summary{
+				PlanId: "plan-3",
+				Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+			},
+		},
+		Log: &plans.LogPoint{},
+	}
+}
+
 func dummyAssignedTo(runId string) data.AssignedTo {
 	return data.AssignedTo{
 		Run: runs.Summary{
@@ -1387,7 +1415,7 @@ func dummyData(knitId string, fromRunId string, toRunIds ...string) data.Detail 
 			{Key: domain.KeyKnitId, Value: knitId},
 			{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
 		},
-		Upstream:    dummyAssignedTo(fromRunId),
+		Upstream:    dummyCreatedFrom(fromRunId),
 		Downstreams: dummySliceAssignedTo(toRunIds...),
 		Nomination:  []data.NominatedBy{},
 	}
@@ -1403,7 +1431,7 @@ func dummyDataForFailed(knitId string, fromRunId string, toRunIds ...string) dat
 			{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
 			{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientFailed},
 		},
-		Upstream:    dummyAssignedTo(fromRunId),
+		Upstream:    dummyCreatedFrom(fromRunId),
 		Downstreams: dummySliceAssignedTo(toRunIds...),
 		Nomination:  []data.NominatedBy{},
 	}
@@ -1492,7 +1520,7 @@ func dummyLogData(knitId string, fromRunId string, toRunIds ...string) data.Deta
 			{Key: "type", Value: "log"},
 			{Key: "format", Value: "jsonl"},
 		},
-		Upstream:    dummyAssignedTo(fromRunId),
+		Upstream:    dummyLogFrom(fromRunId),
 		Downstreams: dummySliceAssignedTo(toRunIds...),
 		Nomination:  []data.NominatedBy{},
 	}

@@ -55,7 +55,7 @@ func TestPostData(t *testing.T) {
 			response := data.Detail{
 				KnitId: "1234",
 				Tags:   []tags.Tag{{Key: "keydata", Value: "valdata"}},
-				Upstream: data.AssignedTo{
+				Upstream: data.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "parent-run", Status: string(domain.Done),
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -66,7 +66,7 @@ func TestPostData(t *testing.T) {
 							Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 						},
 					},
-					Mountpoint: plans.Mountpoint{
+					Mountpoint: &plans.Mountpoint{
 						Path: "/out/model",
 						Tags: []tags.Tag{
 							{Key: "type", Value: "model-paramter"},
@@ -647,7 +647,7 @@ func TestFindData(t *testing.T) {
 						{Key: "task", Value: "LLM"},
 						{Key: "tag-a", Value: "value-a"},
 					},
-					Upstream: data.AssignedTo{
+					Upstream: data.CreatedFrom{
 						Run: runs.Summary{
 							RunId: "parent-run", Status: string(domain.Done),
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -658,7 +658,7 @@ func TestFindData(t *testing.T) {
 								Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 							},
 						},
-						Mountpoint: plans.Mountpoint{
+						Mountpoint: &plans.Mountpoint{
 							Path: "/out/model",
 							Tags: []tags.Tag{
 								{Key: "type", Value: "model-paramter"},
@@ -723,7 +723,7 @@ func TestFindData(t *testing.T) {
 						{Key: "tag-a", Value: "value-a"},
 						{Key: "tag-b", Value: "value-b"},
 					},
-					Upstream: data.AssignedTo{
+					Upstream: data.CreatedFrom{
 						Run: runs.Summary{
 							RunId: "parent-run", Status: string(domain.Done),
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -734,7 +734,7 @@ func TestFindData(t *testing.T) {
 								Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 							},
 						},
-						Mountpoint: plans.Mountpoint{
+						Mountpoint: &plans.Mountpoint{
 							Path: "/out/model",
 							Tags: []tags.Tag{
 								{Key: "type", Value: "model-paramter"},
