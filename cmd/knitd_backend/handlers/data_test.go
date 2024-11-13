@@ -303,7 +303,7 @@ func TestGetDataHandler(t *testing.T) {
 					{Key: domain.KeyKnitId, Value: knitId},
 				}),
 			},
-			Upsteram: domain.Dependency{
+			Upsteram: domain.DataSource{
 				RunBody: domain.RunBody{
 					Id: "run#1", Status: domain.Done,
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -315,7 +315,7 @@ func TestGetDataHandler(t *testing.T) {
 						},
 					},
 				},
-				MountPoint: domain.MountPoint{Id: 42, Path: "/out"},
+				MountPoint: &domain.MountPoint{Id: 42, Path: "/out"},
 			},
 		}
 
@@ -447,7 +447,7 @@ func TestPostDataHandler(t *testing.T) {
 						{Key: "some-user-defined-tag", Value: "tag value"},
 					}),
 				},
-				Upsteram: domain.Dependency{
+				Upsteram: domain.DataSource{
 					RunBody: domain.RunBody{
 						Id: runId, Status: domain.Done,
 						UpdatedAt: try.To(
@@ -458,7 +458,7 @@ func TestPostDataHandler(t *testing.T) {
 							Pseudo: &domain.PseudoPlanDetail{Name: domain.Uploaded},
 						},
 					},
-					MountPoint: domain.MountPoint{Id: 1, Path: "/out"},
+					MountPoint: &domain.MountPoint{Id: 1, Path: "/out"},
 				},
 			}
 
@@ -674,7 +674,7 @@ func TestPostDataHandler(t *testing.T) {
 					{Key: "knit#timestamp", Value: "2022-01-02T12:23:34+00:00"},
 					{Key: "some-user-defined-tag", Value: "tag value"},
 				},
-				Upstream: apidata.AssignedTo{
+				Upstream: apidata.CreatedFrom{
 					Run: runs.Summary{
 						RunId: runId, Status: string(domain.Done),
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -682,7 +682,7 @@ func TestPostDataHandler(t *testing.T) {
 						)).OrFatal(t),
 						Plan: plans.Summary{PlanId: planId, Name: string(domain.Uploaded)},
 					},
-					Mountpoint: plans.Mountpoint{Path: "/out"},
+					Mountpoint: &plans.Mountpoint{Path: "/out"},
 				},
 			}
 
@@ -2012,8 +2012,8 @@ func TestImpoerDataEndHandler(t *testing.T) {
 				KnitId:    claim.KnitId,
 				VolumeRef: claim.Subject,
 			},
-			Upsteram: domain.Dependency{
-				MountPoint: domain.MountPoint{Id: 1, Path: "/imported"},
+			Upsteram: domain.DataSource{
+				MountPoint: &domain.MountPoint{Id: 1, Path: "/imported"},
 				RunBody: domain.RunBody{
 					Id: claim.RunId, Status: domain.Completing,
 					PlanBody: domain.PlanBody{
@@ -2120,8 +2120,8 @@ func TestImpoerDataEndHandler(t *testing.T) {
 					KnitId:    claim.KnitId,
 					VolumeRef: claim.Subject,
 				},
-				Upsteram: domain.Dependency{
-					MountPoint: domain.MountPoint{Id: 1, Path: "/imported"},
+				Upsteram: domain.DataSource{
+					MountPoint: &domain.MountPoint{Id: 1, Path: "/imported"},
 					RunBody: domain.RunBody{
 						Id: claim.RunId, Status: domain.Completing,
 						PlanBody: domain.PlanBody{

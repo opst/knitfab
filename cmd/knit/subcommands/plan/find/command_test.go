@@ -60,7 +60,7 @@ func TestFindCommand(t *testing.T) {
 					},
 					Upstreams: []plans.Upstream{
 						{
-							Summary: plans.Summary{
+							Plan: plans.Summary{
 								PlanId: "upstream-plan-id",
 								Image: &plans.Image{
 									Repository: "upstream-image", Tag: "upstream-version",
@@ -86,7 +86,7 @@ func TestFindCommand(t *testing.T) {
 					},
 					Downstreams: []plans.Downstream{
 						{
-							Summary: plans.Summary{
+							Plan: plans.Summary{
 								PlanId: "downstream-plan-id",
 								Image: &plans.Image{
 									Repository: "downstream-image", Tag: "downstream-version",
@@ -383,7 +383,7 @@ func TestRunFindPlan(t *testing.T) {
 					},
 					Upstreams: []plans.Upstream{
 						{
-							Summary: plans.Summary{
+							Plan: plans.Summary{
 								PlanId: "upstream-plan-id",
 								Image: &plans.Image{
 									Repository: "upstream-image", Tag: "upstream-version",
@@ -409,7 +409,7 @@ func TestRunFindPlan(t *testing.T) {
 					},
 					Downstreams: []plans.Downstream{
 						{
-							Summary: plans.Summary{
+							Plan: plans.Summary{
 								PlanId: "downstream-plan-id",
 								Image: &plans.Image{
 									Repository: "downstream-image", Tag: "downstream-version",
@@ -428,7 +428,7 @@ func TestRunFindPlan(t *testing.T) {
 				},
 				Downstreams: []plans.Downstream{
 					{
-						Summary: plans.Summary{
+						Plan: plans.Summary{
 							PlanId: "downstream-plan-id",
 							Image: &plans.Image{
 								Repository: "downstream-image", Tag: "downstream-version",

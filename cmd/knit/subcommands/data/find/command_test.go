@@ -55,7 +55,7 @@ func TestFindDataCommand(t *testing.T) {
 				{Key: "foo", Value: "bar"},
 				{Key: "baz", Value: "quux"},
 			},
-			Upstream: data.AssignedTo{
+			Upstream: data.CreatedFrom{
 				Run: runs.Summary{
 					RunId: "sample-run-id", Status: string(domain.Running),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -65,7 +65,7 @@ func TestFindDataCommand(t *testing.T) {
 						PlanId: "sample-plan-id", Name: "knit#upload",
 					},
 				},
-				Mountpoint: plans.Mountpoint{Path: "/out"},
+				Mountpoint: &plans.Mountpoint{Path: "/out"},
 			},
 			Downstreams: []data.AssignedTo{},
 		},
@@ -442,7 +442,7 @@ func TestFindData(t *testing.T) {
 			{Key: "knit#id", Value: "item-1"},
 			{Key: "knit#timestamp", Value: "2022-08-01T12:34:56+00:00"},
 		},
-		Upstream: data.AssignedTo{
+		Upstream: data.CreatedFrom{
 			Run: runs.Summary{
 				RunId: "run-1", Status: string(domain.Done),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -450,7 +450,7 @@ func TestFindData(t *testing.T) {
 				)).OrFatal(t),
 				Plan: plans.Summary{PlanId: "plan-1", Name: "knit#upload"},
 			},
-			Mountpoint: plans.Mountpoint{Path: "/out"},
+			Mountpoint: &plans.Mountpoint{Path: "/out"},
 		},
 		Downstreams: []data.AssignedTo{},
 		Nomination: []data.NominatedBy{
@@ -469,7 +469,7 @@ func TestFindData(t *testing.T) {
 			{Key: "knit#id", Value: "item-2"},
 			{Key: "knit#timestamp", Value: "2022-08-02T12:34:56+00:00"},
 		},
-		Upstream: data.AssignedTo{
+		Upstream: data.CreatedFrom{
 			Run: runs.Summary{
 				RunId: "run-2", Status: string(domain.Done),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -480,7 +480,7 @@ func TestFindData(t *testing.T) {
 					Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
 				},
 			},
-			Mountpoint: plans.Mountpoint{Path: "/out"},
+			Mountpoint: &plans.Mountpoint{Path: "/out"},
 		},
 		Downstreams: []data.AssignedTo{
 			{
@@ -516,7 +516,7 @@ func TestFindData(t *testing.T) {
 			{Key: domain.KeyKnitId, Value: "item-1"},
 			{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
 		},
-		Upstream: data.AssignedTo{
+		Upstream: data.CreatedFrom{
 			Run: runs.Summary{
 				RunId: "run-3", Status: string(domain.Running),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -524,7 +524,7 @@ func TestFindData(t *testing.T) {
 				)).OrFatal(t),
 				Plan: plans.Summary{PlanId: "plan-1", Name: "knit#upload"},
 			},
-			Mountpoint: plans.Mountpoint{Path: "/out"},
+			Mountpoint: &plans.Mountpoint{Path: "/out"},
 		},
 		Downstreams: []data.AssignedTo{},
 		Nomination:  []data.NominatedBy{},
@@ -537,7 +537,7 @@ func TestFindData(t *testing.T) {
 			{Key: domain.KeyKnitId, Value: "item-4"},
 			{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientFailed},
 		},
-		Upstream: data.AssignedTo{
+		Upstream: data.CreatedFrom{
 			Run: runs.Summary{
 				RunId: "run-4", Status: string(domain.Failed),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -548,7 +548,7 @@ func TestFindData(t *testing.T) {
 					Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
 				},
 			},
-			Mountpoint: plans.Mountpoint{Path: "/out"},
+			Mountpoint: &plans.Mountpoint{Path: "/out"},
 		},
 		Downstreams: []data.AssignedTo{},
 		Nomination: []data.NominatedBy{

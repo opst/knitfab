@@ -70,8 +70,8 @@ func (kbody *KnitDataBody) Fulfilled() bool {
 
 type KnitData struct {
 	KnitDataBody
-	Upsteram    Dependency
-	Downstreams []Dependency
+	Upsteram    DataSource
+	Downstreams []DataSink
 	NominatedBy []Nomination
 }
 
@@ -80,7 +80,13 @@ func (d *KnitData) Equal(other *KnitData) bool {
 		d.Tags.Equal(other.Tags)
 }
 
-type Dependency struct {
+type DataSource struct {
+	LogPoint   *LogPoint
+	MountPoint *MountPoint
+	RunBody    RunBody
+}
+
+type DataSink struct {
 	MountPoint
 	RunBody
 }

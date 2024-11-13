@@ -164,19 +164,31 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 	result := map[string]domain.KnitData{}
 	for knitId, b := range bodies {
 		runId, outputId := upstreamIds[knitId].Decompose()
+		var mp *domain.MountPoint
+		var lp *domain.LogPoint
+
+		if u, ok := upstreams[outputId]; ok {
+			if u.ForLog {
+				lp = &domain.LogPoint{Tags: u.MountPoint.Tags}
+			} else {
+				mp = &u.MountPoint
+			}
+		}
+
 		data := domain.KnitData{
 			KnitDataBody: b,
-			Upsteram: domain.Dependency{
+			Upsteram: domain.DataSource{
 				RunBody:    runBodies[runId],
-				MountPoint: upstreams[outputId].MountPoint,
+				MountPoint: mp,
+				LogPoint:   lp,
 			},
-			Downstreams: []domain.Dependency{},
+			Downstreams: []domain.DataSink{},
 			NominatedBy: nominations[knitId],
 		}
 
 		for _, dn := range downstreamIds[knitId] {
 			runId, inputId := dn.Decompose()
-			dep := domain.Dependency{
+			dep := domain.DataSink{
 				RunBody:    runBodies[runId],
 				MountPoint: downstreams[inputId],
 			}

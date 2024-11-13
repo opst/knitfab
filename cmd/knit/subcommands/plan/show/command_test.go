@@ -38,7 +38,7 @@ func TestShowCommand(t *testing.T) {
 				},
 				Upstreams: []plans.Upstream{
 					{
-						Summary: plans.Summary{
+						Plan: plans.Summary{
 							PlanId: "test-Id-1",
 							Image: &plans.Image{
 								Repository: "test-Image", Tag: "test-Version",
@@ -58,7 +58,7 @@ func TestShowCommand(t *testing.T) {
 						},
 					},
 					{
-						Summary: plans.Summary{
+						Plan: plans.Summary{
 							PlanId: "test-Id-2",
 							Image: &plans.Image{
 								Repository: "test-Image", Tag: "test-Version",
@@ -203,7 +203,7 @@ func TestRunShowplan(t *testing.T) {
 					},
 					Upstreams: []plans.Upstream{
 						{
-							Summary: plans.Summary{
+							Plan: plans.Summary{
 								PlanId: "test-Id-1",
 								Image: &plans.Image{
 									Repository: "test-Image", Tag: "test-Version",
@@ -216,7 +216,7 @@ func TestRunShowplan(t *testing.T) {
 							},
 						},
 						{
-							Summary: plans.Summary{
+							Plan: plans.Summary{
 								PlanId: "test-Id-2",
 								Image: &plans.Image{
 									Repository: "test-Image", Tag: "test-Version",
@@ -245,7 +245,7 @@ func TestRunShowplan(t *testing.T) {
 					},
 					Downstreams: []plans.Downstream{
 						{
-							Summary: plans.Summary{
+							Plan: plans.Summary{
 								PlanId: "test-Id-1",
 								Image: &plans.Image{
 									Repository: "test-Image", Tag: "test-Version",

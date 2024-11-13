@@ -48,7 +48,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 							{Key: domain.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
 						}),
 					},
-					Upsteram: domain.Dependency{
+					Upsteram: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run-1", Status: domain.Done,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -59,9 +59,9 @@ func TestGetDataForDataHandler(t *testing.T) {
 								Pseudo: &domain.PseudoPlanDetail{Name: "knit#uploaded"},
 							},
 						},
-						MountPoint: domain.MountPoint{Id: 1010, Path: "/out"},
+						MountPoint: &domain.MountPoint{Id: 1010, Path: "/out"},
 					},
-					Downstreams: []domain.Dependency{
+					Downstreams: []domain.DataSink{
 						{
 							RunBody: domain.RunBody{
 								Id: "run-2", Status: domain.Running,
@@ -126,7 +126,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 							{Key: domain.KeyKnitTransient, Value: "processing"},
 						}),
 					},
-					Upsteram: domain.Dependency{
+					Upsteram: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run-2", Status: domain.Running,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -137,7 +137,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 								Image: &domain.ImageIdentifier{Image: "repo.invalid/trainer", Version: "v1"},
 							},
 						},
-						MountPoint: domain.MountPoint{
+						MountPoint: &domain.MountPoint{
 							Id: 2100, Path: "/out",
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "model-parameter"},
@@ -207,7 +207,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 					{Key: domain.KeyKnitId, Value: "knit-1"},
 					{Key: domain.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
 				},
-				Upstream: data.AssignedTo{
+				Upstream: data.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "run-1", Status: string(domain.Done),
 						Plan: plans.Summary{PlanId: "plan-1", Name: "knit#uploaded"},
@@ -215,7 +215,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 							"2022-07-29T01:10:25.666+09:00",
 						)).OrFatal(t),
 					},
-					Mountpoint: plans.Mountpoint{Path: "/out"},
+					Mountpoint: &plans.Mountpoint{Path: "/out"},
 				},
 				Downstreams: []data.AssignedTo{
 					{
@@ -265,7 +265,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 					{Key: domain.KeyKnitId, Value: "knit-2"},
 					{Key: domain.KeyKnitTransient, Value: "processing"},
 				},
-				Upstream: data.AssignedTo{
+				Upstream: data.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "run-2", Status: string(domain.Running),
 						Plan: plans.Summary{
@@ -276,7 +276,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 							"2022-07-30T01:10:25.222+09:00",
 						)).OrFatal(t),
 					},
-					Mountpoint: plans.Mountpoint{
+					Mountpoint: &plans.Mountpoint{
 						Path: "/out",
 						Tags: []tags.Tag{
 							{Key: "type", Value: "model-parameter"},
@@ -450,7 +450,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 							{Key: tags.KeyKnitId, Value: knitId},
 						}),
 					},
-					Upsteram: domain.Dependency{
+					Upsteram: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run#1", Status: domain.Done,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-11T12:34:56+09:00")).OrFatal(t).Time(),
@@ -459,7 +459,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 								Image: &domain.ImageIdentifier{Image: "repo.invalid/image", Version: "v1"},
 							},
 						},
-						MountPoint: domain.MountPoint{
+						MountPoint: &domain.MountPoint{
 							Id: 1010, Path: "/out/1",
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "model-parameter"},
@@ -467,7 +467,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 							}),
 						},
 					},
-					Downstreams: []domain.Dependency{
+					Downstreams: []domain.DataSink{
 						{
 							RunBody: domain.RunBody{
 								Id: "run#2", Status: domain.Running,
@@ -545,7 +545,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 				{Key: "addtag2", Value: "addVal2"},
 				{Key: tags.KeyKnitId, Value: knitId},
 			},
-			Upstream: data.AssignedTo{
+			Upstream: data.CreatedFrom{
 				Run: runs.Summary{
 					RunId: "run#1", Status: string(domain.Done),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-11T12:34:56+09:00")).OrFatal(t),
@@ -554,7 +554,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 						Image:  &plans.Image{Repository: "repo.invalid/image", Tag: "v1"},
 					},
 				},
-				Mountpoint: plans.Mountpoint{
+				Mountpoint: &plans.Mountpoint{
 					Path: "/out/1",
 					Tags: []tags.Tag{
 						{Key: "type", Value: "model-parameter"},

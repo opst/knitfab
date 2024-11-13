@@ -169,7 +169,7 @@ func TestComposeDetail(t *testing.T) {
 						},
 						Upstreams: []apiplans.Upstream{
 							{
-								Summary: apiplans.Summary{
+								Plan: apiplans.Summary{
 									PlanId: "upstream-plan-1",
 									Image: &apiplans.Image{
 										Repository: "upstream-image-1",
@@ -191,7 +191,7 @@ func TestComposeDetail(t *testing.T) {
 								},
 							},
 							{
-								Summary: apiplans.Summary{
+								Plan: apiplans.Summary{
 									PlanId: "upstream-plan-2",
 									Image: &apiplans.Image{
 										Repository: "upstream-image-2",
@@ -219,7 +219,7 @@ func TestComposeDetail(t *testing.T) {
 						},
 						Downstreams: []apiplans.Downstream{
 							{
-								Summary: apiplans.Summary{
+								Plan: apiplans.Summary{
 									PlanId: "downstream-plan-1",
 									Image: &apiplans.Image{
 										Repository: "downstream-image-1",
@@ -240,7 +240,7 @@ func TestComposeDetail(t *testing.T) {
 								},
 							},
 							{
-								Summary: apiplans.Summary{
+								Plan: apiplans.Summary{
 									PlanId: "downstream-plan-2",
 									Image: &apiplans.Image{
 										Repository: "downstream-image-2",
@@ -266,7 +266,7 @@ func TestComposeDetail(t *testing.T) {
 					},
 					Downstreams: []apiplans.Downstream{
 						{
-							Summary: apiplans.Summary{
+							Plan: apiplans.Summary{
 								PlanId: "log-downstream-plan-1",
 								Image: &apiplans.Image{
 									Repository: "log-downstream-image-1",
