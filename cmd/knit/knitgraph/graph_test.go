@@ -916,6 +916,7 @@ func TestGenerateDot(t *testing.T) {
 				PlanId: "plan0",
 				Name:   "knit#uploaded",
 			},
+			Active: true,
 			Inputs: []plans.Input{},
 			Outputs: []plans.Output{
 				{
@@ -933,6 +934,7 @@ func TestGenerateDot(t *testing.T) {
 					Tag:        "v1",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -963,6 +965,7 @@ func TestGenerateDot(t *testing.T) {
 					{Key: "foo", Value: "bar"},
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -997,6 +1000,7 @@ func TestGenerateDot(t *testing.T) {
 					{Key: "fizz", Value: "bazz"},
 				},
 			},
+			Active: false,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -1024,66 +1028,66 @@ func TestGenerateDot(t *testing.T) {
 	node [shape=record fontsize=10]
 	edge [fontsize=10]
 
-	subgraph {
+	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 		"pplan0"[
 			shape=none
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#FFFFFF">id: plan0</TD></TR>
-					<TR><TD COLSPAN="2">knit#uploaded</TD></TR>
-					<TR><TD COLSPAN="2"></TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan0</TD></TR>
+					<TR><TD COLSPAN="3">knit#uploaded</TD></TR>
+					<TR><TD COLSPAN="3"></TD></TR>
 				</TABLE>
 			>
 		];
-		"pplan0@/out/1"[shape=point, color="#1c9930"];
-		"pplan0" -> "pplan0@/out/1" [label="/out/1"];
+		"pplan0@/out/1"[shape=point, color="#1c9930", margin="0,0"];
+		"pplan0" -> "pplan0@/out/1" [label="/out/1", weight=10, penwidth=0.3];
 	}
-	subgraph {
+	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 		"pplan1@/in/1"[shape=point, color="#1c9930"];
-		"pplan1@/in/1" -> "pplan1" [label="/in/1"];
+		"pplan1@/in/1" -> "pplan1" [label="/in/1", weight=10, penwidth=0.3];
 		"pplan1"[
 			shape=none
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#EDD9B4">id: plan1</TD></TR>
-					<TR><TD COLSPAN="2">image = knit.image.repo.invalid/trainer:v1</TD></TR>
-					<TR><TD COLSPAN="2"></TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#EDD9B4">id: plan1</TD></TR>
+					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
+					<TR><TD COLSPAN="3"></TD></TR>
 				</TABLE>
 			>
 		];
-		"pplan1@/out/1"[shape=point, color="#1c9930"];
-		"pplan1" -> "pplan1@/out/1" [label="/out/1"];
+		"pplan1@/out/1"[shape=point, color="#1c9930", margin="0,0"];
+		"pplan1" -> "pplan1@/out/1" [label="/out/1", weight=10, penwidth=0.3];
 	}
-	subgraph {
+	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 		"pplan2@/in/1"[shape=point, color="#1c9930"];
-		"pplan2@/in/1" -> "pplan2" [label="/in/1"];
+		"pplan2@/in/1" -> "pplan2" [label="/in/1", weight=10, penwidth=0.3];
 		"pplan2"[
 			shape=none
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#FFFFFF">id: plan2</TD></TR>
-					<TR><TD COLSPAN="2">image = knit.image.repo.invalid/trainer:v1</TD></TR>
-					<TR><TD COLSPAN="2"><B>foo</B>=bar</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan2</TD></TR>
+					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
+					<TR><TD COLSPAN="3"><B>foo</B>=bar</TD></TR>
 				</TABLE>
 			>
 		];
-		"pplan2@log"[shape=point, color="#1c9930"];
-		"pplan2" -> "pplan2@log" [label="(log)"];
+		"pplan2@log"[shape=point, color="#1c9930", margin="0,0"];
+		"pplan2" -> "pplan2@log" [label="(log)", weight=10, penwidth=0.3];
 	}
-	subgraph {
+	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 		"pplan3@/in/1"[shape=point, color="#1c9930"];
-		"pplan3@/in/1" -> "pplan3" [label="/in/1"];
+		"pplan3@/in/1" -> "pplan3" [label="/in/1", weight=10, penwidth=0.3];
 		"pplan3"[
 			shape=none
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#FFFFFF">id: plan3</TD></TR>
-					<TR><TD COLSPAN="2">image = knit.image.repo.invalid/trainer:v1</TD></TR>
-					<TR><TD COLSPAN="2"><B>foo</B>=bar<BR/><B>fizz</B>=bazz</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="gray"><FONT COLOR="#FFFFFF">inactive</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan3</TD></TR>
+					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
+					<TR><TD COLSPAN="3"><B>foo</B>=bar<BR/><B>fizz</B>=bazz</TD></TR>
 				</TABLE>
 			>
 		];
@@ -1110,69 +1114,69 @@ func TestGenerateDot(t *testing.T) {
 	node [shape=record fontsize=10]
 	edge [fontsize=10]
 
-	subgraph {
+	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 		"pplan3@/in/1"[shape=point, color="#1c9930"];
-		"pplan3@/in/1" -> "pplan3" [label="/in/1"];
+		"pplan3@/in/1" -> "pplan3" [label="/in/1", weight=10, penwidth=0.3];
 		"pplan3"[
 			shape=none
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#EDD9B4">id: plan3</TD></TR>
-					<TR><TD COLSPAN="2">image = knit.image.repo.invalid/trainer:v1</TD></TR>
-					<TR><TD COLSPAN="2"><B>foo</B>=bar<BR/><B>fizz</B>=bazz</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="gray"><FONT COLOR="#FFFFFF">inactive</FONT></TD><TD BGCOLOR="#EDD9B4">id: plan3</TD></TR>
+					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
+					<TR><TD COLSPAN="3"><B>foo</B>=bar<BR/><B>fizz</B>=bazz</TD></TR>
 				</TABLE>
 			>
 		];
 	}
-	subgraph {
+	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 		"pplan2@/in/1"[shape=point, color="#1c9930"];
-		"pplan2@/in/1" -> "pplan2" [label="/in/1"];
+		"pplan2@/in/1" -> "pplan2" [label="/in/1", weight=10, penwidth=0.3];
 		"pplan2"[
 			shape=none
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#FFFFFF">id: plan2</TD></TR>
-					<TR><TD COLSPAN="2">image = knit.image.repo.invalid/trainer:v1</TD></TR>
-					<TR><TD COLSPAN="2"><B>foo</B>=bar</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan2</TD></TR>
+					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
+					<TR><TD COLSPAN="3"><B>foo</B>=bar</TD></TR>
 				</TABLE>
 			>
 		];
-		"pplan2@log"[shape=point, color="#1c9930"];
-		"pplan2" -> "pplan2@log" [label="(log)"];
+		"pplan2@log"[shape=point, color="#1c9930", margin="0,0"];
+		"pplan2" -> "pplan2@log" [label="(log)", weight=10, penwidth=0.3];
 	}
-	subgraph {
+	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 		"pplan1@/in/1"[shape=point, color="#1c9930"];
-		"pplan1@/in/1" -> "pplan1" [label="/in/1"];
+		"pplan1@/in/1" -> "pplan1" [label="/in/1", weight=10, penwidth=0.3];
 		"pplan1"[
 			shape=none
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#FFFFFF">id: plan1</TD></TR>
-					<TR><TD COLSPAN="2">image = knit.image.repo.invalid/trainer:v1</TD></TR>
-					<TR><TD COLSPAN="2"></TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan1</TD></TR>
+					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
+					<TR><TD COLSPAN="3"></TD></TR>
 				</TABLE>
 			>
 		];
-		"pplan1@/out/1"[shape=point, color="#1c9930"];
-		"pplan1" -> "pplan1@/out/1" [label="/out/1"];
+		"pplan1@/out/1"[shape=point, color="#1c9930", margin="0,0"];
+		"pplan1" -> "pplan1@/out/1" [label="/out/1", weight=10, penwidth=0.3];
 	}
-	subgraph {
+	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 		"pplan0"[
 			shape=none
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#FFFFFF">id: plan0</TD></TR>
-					<TR><TD COLSPAN="2">knit#uploaded</TD></TR>
-					<TR><TD COLSPAN="2"></TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan0</TD></TR>
+					<TR><TD COLSPAN="3">knit#uploaded</TD></TR>
+					<TR><TD COLSPAN="3"></TD></TR>
 				</TABLE>
 			>
 		];
-		"pplan0@/out/1"[shape=point, color="#1c9930"];
-		"pplan0" -> "pplan0@/out/1" [label="/out/1"];
+		"pplan0@/out/1"[shape=point, color="#1c9930", margin="0,0"];
+		"pplan0" -> "pplan0@/out/1" [label="/out/1", weight=10, penwidth=0.3];
 	}
 
 	"pplan2@log" -> "pplan3@/in/1";

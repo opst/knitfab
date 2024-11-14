@@ -66,7 +66,7 @@ func (o *OutputNode) Equal(oo *OutputNode) bool {
 func (o *OutputNode) ToDot(w io.Writer) error {
 	_, err := fmt.Fprintf(
 		w,
-		`		"%s"[shape=point, color="#1c9930"];
+		`		"%s"[shape=point, color="#1c9930", margin="0,0"];
 `,
 		o.NodeId,
 	)
@@ -92,7 +92,7 @@ func (l *PlanLogNode) Equal(o *PlanLogNode) bool {
 func (l *PlanLogNode) ToDot(w io.Writer) error {
 	_, err := fmt.Fprintf(
 		w,
-		`		"%s"[shape=point, color="#1c9930"];
+		`		"%s"[shape=point, color="#1c9930", margin="0,0"];
 `,
 		l.NodeId,
 	)
@@ -139,7 +139,7 @@ func (p *PlanNode) ToDot(w io.Writer) error {
 		annotations = append(annotations, fmt.Sprintf(`<B>%s</B>=%s`, html.EscapeString(a.Key), html.EscapeString(a.Value)))
 	}
 	{
-		_, err := fmt.Fprintf(w, `	subgraph {
+		_, err := fmt.Fprintf(w, `	subgraph { cluster=true; style=solid; penwidth=0.3; color="#DAA520"; margin="0,0";
 `)
 		if err != nil {
 			return err
@@ -153,7 +153,7 @@ func (p *PlanNode) ToDot(w io.Writer) error {
 
 		_, err := fmt.Fprintf(
 			w,
-			`		"%s" -> "%s" [label="%s"];
+			`		"%s" -> "%s" [label="%s", weight=10, penwidth=0.3];
 `,
 			in.NodeId, p.NodeId, in.Input.Mountpoint.Path,
 		)
@@ -167,6 +167,14 @@ func (p *PlanNode) ToDot(w io.Writer) error {
 		if p.Emphasize {
 			idBgColor = "#EDD9B4"
 		}
+
+		activeColor := "#007700"
+		activeness := "active"
+		if !p.Active {
+			activeColor = "gray"
+			activeness = "inactive"
+		}
+
 		_, err := fmt.Fprintf(
 			w,
 			`		"%s"[
@@ -174,15 +182,15 @@ func (p *PlanNode) ToDot(w io.Writer) error {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="%s">id: %s</TD></TR>
-					<TR><TD COLSPAN="2">%s</TD></TR>
-					<TR><TD COLSPAN="2">%s</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="%s">%s</FONT></TD><TD BGCOLOR="%s">id: %s</TD></TR>
+					<TR><TD COLSPAN="3">%s</TD></TR>
+					<TR><TD COLSPAN="3">%s</TD></TR>
 				</TABLE>
 			>
 		];
 `,
 			p.NodeId,
-			idBgColor, p.PlanId,
+			activeColor, activeness, idBgColor, p.PlanId,
 			html.EscapeString(title),
 			strings.Join(annotations, "<BR/>"),
 		)
@@ -198,7 +206,7 @@ func (p *PlanNode) ToDot(w io.Writer) error {
 
 		_, err := fmt.Fprintf(
 			w,
-			`		"%s" -> "%s" [label="%s"];
+			`		"%s" -> "%s" [label="%s", weight=10, penwidth=0.3];
 `,
 			p.NodeId, out.NodeId, out.Output.Mountpoint.Path,
 		)
@@ -214,7 +222,7 @@ func (p *PlanNode) ToDot(w io.Writer) error {
 
 		_, err := fmt.Fprintf(
 			w,
-			`		"%s" -> "%s" [label="(log)"];
+			`		"%s" -> "%s" [label="(log)", weight=10, penwidth=0.3];
 `,
 			p.NodeId, p.LogNode.NodeId,
 		)
