@@ -26,7 +26,7 @@ const ARG_PLANID = "PLAN_ID"
 
 func New() (flarc.Command, error) {
 	return flarc.NewCommand(
-		"Output a pipeline graph of Plans in a dot format.",
+		"Output a Plan Graph, overview of Plan pipeline, in a dot format.",
 		Flag{
 			Upstream:   nil,
 			Downstream: nil,
@@ -35,10 +35,36 @@ func New() (flarc.Command, error) {
 		flarc.Args{
 			{
 				Name: ARG_PLANID, Required: true,
-				Help: "The ID of the starting Plan to trace.",
+				Help: "The ID of the starting Plan to traverse.",
 			},
 		},
 		common.NewTask(Task(MakeGraph)),
+		flarc.WithDescription(`
+{{ .Command }} outputs a "Plan Graph" in a dot format.
+
+The Plan Graph explains the overview of the specified Plan and its upstream/downstream Plans with the specified depth.
+
+"Plan A is upstream of Plan B" or "Plan B is downstream of Plan A" mean that an output of a Run of Plan A can be an input of Plan B.
+
+The graph is output in a dot format, which can be converted to an image using the dot command.
+
+    {{ .Command }} PLAN_ID | dot -Tpng -o graph.png
+
+By default, the graph includes both upstream and downstream Plans upto 3 Plans away from specified plans.
+
+To restrict the depth of the graph, use the --numbers flag.
+
+	{{ .Command }} PLAN_ID --numbers 2 | dot -Tpng -o graph.png
+
+Or, to traverse unlimitedly, use 'all'.
+
+	{{ .Command }} PLAN_ID --numbers all | dot -Tpng -o graph.png
+
+To traverse only the upstream or downstream Plans, use the --upstream or --downstream flag.
+
+	{{ .Command }} PLAN_ID --upstream | dot -Tpng -o graph.png
+	{{ .Command }} PLAN_ID --downstream | dot -Tpng -o graph.png
+`),
 	)
 }
 
