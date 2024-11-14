@@ -5,6 +5,7 @@ import (
 	plan_annotate "github.com/opst/knitfab/cmd/knit/subcommands/plan/annotate"
 	plan_apply "github.com/opst/knitfab/cmd/knit/subcommands/plan/apply"
 	plan_find "github.com/opst/knitfab/cmd/knit/subcommands/plan/find"
+	plan_graph "github.com/opst/knitfab/cmd/knit/subcommands/plan/graph"
 	plan_resource "github.com/opst/knitfab/cmd/knit/subcommands/plan/resource"
 	plan_serviceaccount "github.com/opst/knitfab/cmd/knit/subcommands/plan/serviceaccount"
 	plan_show "github.com/opst/knitfab/cmd/knit/subcommands/plan/show"
@@ -54,11 +55,17 @@ func New() (flarc.Command, error) {
 		return nil, err
 	}
 
+	graph, err := plan_graph.New()
+	if err != nil {
+		return nil, err
+	}
+
 	return flarc.NewCommandGroup(
 		"Manipulate Knitfab Plan.",
 		struct{}{},
 		flarc.WithSubcommand("show", show),
 		flarc.WithSubcommand("find", find),
+		flarc.WithSubcommand("graph", graph),
 		flarc.WithSubcommand("template", template),
 		flarc.WithSubcommand("apply", apply),
 		flarc.WithSubcommand("active", active),
