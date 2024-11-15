@@ -1034,7 +1034,7 @@ func TestGenerateDot(t *testing.T) {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan0</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="#007700">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan0</TD></TR>
 					<TR><TD COLSPAN="3">knit#uploaded</TD></TR>
 					<TR><TD COLSPAN="3"></TD></TR>
 				</TABLE>
@@ -1051,7 +1051,7 @@ func TestGenerateDot(t *testing.T) {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#EDD9B4">id: plan1</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="#007700">active</FONT></TD><TD BGCOLOR="#EDD9B4">id: plan1</TD></TR>
 					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 					<TR><TD COLSPAN="3"></TD></TR>
 				</TABLE>
@@ -1068,7 +1068,7 @@ func TestGenerateDot(t *testing.T) {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan2</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="#007700">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan2</TD></TR>
 					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 					<TR><TD COLSPAN="3"><B>foo</B>=bar</TD></TR>
 				</TABLE>
@@ -1085,7 +1085,7 @@ func TestGenerateDot(t *testing.T) {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="gray"><FONT COLOR="#FFFFFF">inactive</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan3</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="gray">inactive</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan3</TD></TR>
 					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 					<TR><TD COLSPAN="3"><B>foo</B>=bar<BR/><B>fizz</B>=bazz</TD></TR>
 				</TABLE>
@@ -1122,7 +1122,7 @@ func TestGenerateDot(t *testing.T) {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="gray"><FONT COLOR="#FFFFFF">inactive</FONT></TD><TD BGCOLOR="#EDD9B4">id: plan3</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="gray">inactive</FONT></TD><TD BGCOLOR="#EDD9B4">id: plan3</TD></TR>
 					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 					<TR><TD COLSPAN="3"><B>foo</B>=bar<BR/><B>fizz</B>=bazz</TD></TR>
 				</TABLE>
@@ -1137,7 +1137,7 @@ func TestGenerateDot(t *testing.T) {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan2</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="#007700">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan2</TD></TR>
 					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 					<TR><TD COLSPAN="3"><B>foo</B>=bar</TD></TR>
 				</TABLE>
@@ -1154,7 +1154,7 @@ func TestGenerateDot(t *testing.T) {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan1</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="#007700">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan1</TD></TR>
 					<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
 					<TR><TD COLSPAN="3"></TD></TR>
 				</TABLE>
@@ -1169,7 +1169,7 @@ func TestGenerateDot(t *testing.T) {
 			color="#DAA520"
 			label=<
 				<TABLE CELLSPACING="0">
-					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD BGCOLOR="#007700"><FONT COLOR="#FFFFFF">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan0</TD></TR>
+					<TR><TD BGCOLOR="#DAA520"><FONT COLOR="#FFFFFF"><B>Plan</B></FONT></TD><TD><FONT COLOR="#007700">active</FONT></TD><TD BGCOLOR="#FFFFFF">id: plan0</TD></TR>
 					<TR><TD COLSPAN="3">knit#uploaded</TD></TR>
 					<TR><TD COLSPAN="3"></TD></TR>
 				</TABLE>
