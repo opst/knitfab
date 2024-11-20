@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -84,7 +84,7 @@ func forContext[T any](ctx context.Context, ch <-chan T) <-chan T {
 func merge[T any](ch ...<-chan T) <-chan T {
 	out := make(chan T)
 
-	cases := utils.Map(
+	cases := slices.Map(
 		ch,
 		func(c <-chan T) reflect.SelectCase {
 			return reflect.SelectCase{

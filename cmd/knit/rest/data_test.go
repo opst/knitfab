@@ -28,10 +28,10 @@ import (
 	"github.com/opst/knitfab-api-types/tags"
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/pkg/archive"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
-	kio "github.com/opst/knitfab/pkg/io"
+	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/utils/archive"
+	"github.com/opst/knitfab/pkg/utils/cmp"
+	kio "github.com/opst/knitfab/pkg/utils/io"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -55,9 +55,9 @@ func TestPostData(t *testing.T) {
 			response := data.Detail{
 				KnitId: "1234",
 				Tags:   []tags.Tag{{Key: "keydata", Value: "valdata"}},
-				Upstream: data.AssignedTo{
+				Upstream: data.CreatedFrom{
 					Run: runs.Summary{
-						RunId: "parent-run", Status: string(kdb.Done),
+						RunId: "parent-run", Status: string(domain.Done),
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-04-02T12:00:00+00:00",
 						)).OrFatal(t),
@@ -66,7 +66,7 @@ func TestPostData(t *testing.T) {
 							Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 						},
 					},
-					Mountpoint: plans.Mountpoint{
+					Mountpoint: &plans.Mountpoint{
 						Path: "/out/model",
 						Tags: []tags.Tag{
 							{Key: "type", Value: "model-paramter"},
@@ -77,7 +77,7 @@ func TestPostData(t *testing.T) {
 				Downstreams: []data.AssignedTo{
 					{
 						Run: runs.Summary{
-							RunId: "evaluator-1-1", Status: string(kdb.Done),
+							RunId: "evaluator-1-1", Status: string(domain.Done),
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-04-03T12:00:00+00:00",
 							)).OrFatal(t),
@@ -647,9 +647,9 @@ func TestFindData(t *testing.T) {
 						{Key: "task", Value: "LLM"},
 						{Key: "tag-a", Value: "value-a"},
 					},
-					Upstream: data.AssignedTo{
+					Upstream: data.CreatedFrom{
 						Run: runs.Summary{
-							RunId: "parent-run", Status: string(kdb.Done),
+							RunId: "parent-run", Status: string(domain.Done),
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-04-02T12:00:00+00:00",
 							)).OrFatal(t),
@@ -658,7 +658,7 @@ func TestFindData(t *testing.T) {
 								Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 							},
 						},
-						Mountpoint: plans.Mountpoint{
+						Mountpoint: &plans.Mountpoint{
 							Path: "/out/model",
 							Tags: []tags.Tag{
 								{Key: "type", Value: "model-paramter"},
@@ -669,7 +669,7 @@ func TestFindData(t *testing.T) {
 					Downstreams: []data.AssignedTo{
 						{
 							Run: runs.Summary{
-								RunId: "evaluator-1-1", Status: string(kdb.Done),
+								RunId: "evaluator-1-1", Status: string(domain.Done),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-03T12:00:00+00:00",
 								)).OrFatal(t),
@@ -688,7 +688,7 @@ func TestFindData(t *testing.T) {
 						},
 						{
 							Run: runs.Summary{
-								RunId: "evaluator-1-2", Status: string(kdb.Running),
+								RunId: "evaluator-1-2", Status: string(domain.Running),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-04T12:00:00+00:00",
 								)).OrFatal(t),
@@ -723,9 +723,9 @@ func TestFindData(t *testing.T) {
 						{Key: "tag-a", Value: "value-a"},
 						{Key: "tag-b", Value: "value-b"},
 					},
-					Upstream: data.AssignedTo{
+					Upstream: data.CreatedFrom{
 						Run: runs.Summary{
-							RunId: "parent-run", Status: string(kdb.Done),
+							RunId: "parent-run", Status: string(domain.Done),
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 								"2022-04-02T12:00:00+00:00",
 							)).OrFatal(t),
@@ -734,7 +734,7 @@ func TestFindData(t *testing.T) {
 								Image:  &plans.Image{Repository: "image-name", Tag: "v0.0.1"},
 							},
 						},
-						Mountpoint: plans.Mountpoint{
+						Mountpoint: &plans.Mountpoint{
 							Path: "/out/model",
 							Tags: []tags.Tag{
 								{Key: "type", Value: "model-paramter"},
@@ -745,7 +745,7 @@ func TestFindData(t *testing.T) {
 					Downstreams: []data.AssignedTo{
 						{
 							Run: runs.Summary{
-								RunId: "evaluator-2-1", Status: string(kdb.Running),
+								RunId: "evaluator-2-1", Status: string(domain.Running),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-02T12:30:00+00:00",
 								)).OrFatal(t),
@@ -763,7 +763,7 @@ func TestFindData(t *testing.T) {
 						},
 						{
 							Run: runs.Summary{
-								RunId: "evaluator-2-2", Status: string(kdb.Running),
+								RunId: "evaluator-2-2", Status: string(domain.Running),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-02T12:30:00+00:00",
 								)).OrFatal(t),
@@ -781,7 +781,7 @@ func TestFindData(t *testing.T) {
 						},
 						{
 							Run: runs.Summary{
-								RunId: "done-hook", Status: string(kdb.Done),
+								RunId: "done-hook", Status: string(domain.Done),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-04-02T12:30:00+00:00",
 								)).OrFatal(t),

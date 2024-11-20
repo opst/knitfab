@@ -6,27 +6,28 @@ import (
 	manager "github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/domain"
+	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
-const PLAN_NAME = kdb.Uploaded
+const PLAN_NAME = domain.Uploaded
 
-func New(dbdata kdb.DataInterface) manager.Manager {
+func New(dbdata kdbdata.DataInterface) manager.Manager {
 	return func(
 		ctx context.Context,
 		hooks runManagementHook.Hooks,
-		r kdb.Run,
+		r domain.Run,
 	) (
-		kdb.KnitRunStatus,
+		domain.KnitRunStatus,
 		error,
 	) {
 		if pp := r.RunBody.PlanBody.Pseudo; pp != nil && pp.Name != PLAN_NAME {
 			return r.Status, nil
 		}
 
-		outputs := utils.Map(
-			r.Outputs, func(o kdb.Assignment) kdb.KnitDataBody { return o.KnitDataBody },
+		outputs := slices.Map(
+			r.Outputs, func(o domain.Assignment) domain.KnitDataBody { return o.KnitDataBody },
 		)
 		if r.Log != nil {
 			outputs = append(outputs, r.Log.KnitDataBody)
@@ -36,7 +37,7 @@ func New(dbdata kdb.DataInterface) manager.Manager {
 			var agents []string
 			agents, err := dbdata.GetAgentName(
 				ctx, d.KnitId,
-				[]kdb.DataAgentMode{kdb.DataAgentWrite},
+				[]domain.DataAgentMode{domain.DataAgentWrite},
 			)
 			if err != nil {
 				return r.Status, err
@@ -50,6 +51,6 @@ func New(dbdata kdb.DataInterface) manager.Manager {
 		if _, err := hooks.ToAborting.Before(bindruns.ComposeDetail(r)); err != nil {
 			return r.Status, err
 		}
-		return kdb.Aborting, nil
+		return domain.Aborting, nil
 	}
 }

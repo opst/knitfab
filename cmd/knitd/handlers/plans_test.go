@@ -17,17 +17,18 @@ import (
 	handlers "github.com/opst/knitfab/cmd/knitd/handlers"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
 	bindplans "github.com/opst/knitfab/pkg/api-types-binding/plans"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
-	mockdb "github.com/opst/knitfab/pkg/db/mocks"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/domain"
+	kerr "github.com/opst/knitfab/pkg/domain/errors"
+	mockdb "github.com/opst/knitfab/pkg/domain/plan/db/mock"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/logic"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func allValidated[T any, V interface{ Validate() (T, error) }](t *testing.T, vs []V) []T {
-	return utils.Map(
+	return slices.Map(
 		vs, func(v V) T { return try.To(v.Validate()).OrFatal(t) },
 	)
 }
@@ -50,7 +51,7 @@ func TestRegisterPlan(t *testing.T) {
 		Body    string
 	}
 	type registerResult struct {
-		plan *kdb.Plan
+		plan *domain.Plan
 		err  error
 	}
 	type when struct {
@@ -68,7 +69,7 @@ func TestRegisterPlan(t *testing.T) {
 	}
 
 	type then struct {
-		Query   []*kdb.PlanSpec
+		Query   []*domain.PlanSpec
 		Err     *resultErr
 		Success *resultSuccess
 	}
@@ -108,51 +109,55 @@ func TestRegisterPlan(t *testing.T) {
 }`,
 				},
 				registerResult{
-					plan: &kdb.Plan{
-						PlanBody: kdb.PlanBody{
+					plan: &domain.Plan{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-1", Active: true, Hash: "plan-hash",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo.invalid/image-1", Version: "0.1.0",
 							},
 							Entrypoint: []string{"python", "main.py"},
 							Args:       []string{"--arg1", "val1"},
-							OnNode: []kdb.OnNode{
-								{Mode: kdb.MayOnNode, Key: "vram", Value: "xlarge"},
-								{Mode: kdb.PreferOnNode, Key: "vram", Value: "large"},
-								{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "tpu"},
-								{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
+							OnNode: []domain.OnNode{
+								{Mode: domain.MayOnNode, Key: "vram", Value: "xlarge"},
+								{Mode: domain.PreferOnNode, Key: "vram", Value: "large"},
+								{Mode: domain.PreferOnNode, Key: "accelerator", Value: "tpu"},
+								{Mode: domain.MustOnNode, Key: "accelerator", Value: "gpu"},
 							},
 							Resources: map[string]resource.Quantity{
 								"cpu":    resource.MustParse("1"),
 								"memory": resource.MustParse("1Gi"),
 							},
 							ServiceAccount: "example-service-account",
-							Annotations: []kdb.Annotation{
+							Annotations: []domain.Annotation{
 								{Key: "annot1", Value: "val1"},
 								{Key: "annot2", Value: "val2"},
 							},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
-						Log: &kdb.LogPoint{
+						Log: &domain.LogPoint{
 							Id: 3,
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							}),
@@ -161,40 +166,40 @@ func TestRegisterPlan(t *testing.T) {
 				},
 			},
 			then{
-				Query: allValidated(t, []kdb.PlanParam{
+				Query: allValidated(t, []domain.PlanParam{
 					{
 						Image: "repo.invalid/image-1", Version: "0.1.0", Active: true,
 						Entrypoint: []string{"python", "main.py"},
 						Args:       []string{"--arg1", "val1"},
-						Inputs: []kdb.MountPointParam{
+						Inputs: []domain.MountPointParam{
 							{
 								Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "raw data"},
 									{Key: "format", Value: "rgb image"},
 								}),
 							},
 						},
-						Outputs: []kdb.MountPointParam{
+						Outputs: []domain.MountPointParam{
 							{
 								Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "training data"},
 									{Key: "format", Value: "mask"},
 								}),
 							},
 						},
-						Log: &kdb.LogParam{
-							Tags: kdb.NewTagSet([]kdb.Tag{
+						Log: &domain.LogParam{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							}),
 						},
-						OnNode: []kdb.OnNode{
-							{Mode: kdb.MayOnNode, Key: "vram", Value: "xlarge"},
-							{Mode: kdb.PreferOnNode, Key: "vram", Value: "large"},
-							{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "tpu"},
-							{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
+						OnNode: []domain.OnNode{
+							{Mode: domain.MayOnNode, Key: "vram", Value: "xlarge"},
+							{Mode: domain.PreferOnNode, Key: "vram", Value: "large"},
+							{Mode: domain.PreferOnNode, Key: "accelerator", Value: "tpu"},
+							{Mode: domain.MustOnNode, Key: "accelerator", Value: "gpu"},
 						},
 						Resources: map[string]resource.Quantity{
 							// should be defaulted
@@ -202,7 +207,7 @@ func TestRegisterPlan(t *testing.T) {
 							"memory": resource.MustParse("1Gi"),
 						},
 						ServiceAccount: "example-service-account",
-						Annotations: []kdb.Annotation{
+						Annotations: []domain.Annotation{
 							{Key: "annot1", Value: "val1"},
 							{Key: "annot2", Value: "val2"},
 						},
@@ -225,28 +230,34 @@ func TestRegisterPlan(t *testing.T) {
 							},
 						},
 						Active: true,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{
-								{Key: "type", Value: "log"},
-								{Key: "format", Value: "jsonl"},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{
+									{Key: "type", Value: "log"},
+									{Key: "format", Value: "jsonl"},
+								},
 							},
 						},
 						OnNode: &plans.OnNode{
@@ -298,44 +309,48 @@ func TestRegisterPlan(t *testing.T) {
 }`,
 				},
 				registerResult{
-					plan: &kdb.Plan{
-						PlanBody: kdb.PlanBody{
+					plan: &domain.Plan{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-1", Active: true, Hash: "plan-hash",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo.invalid/image-1", Version: "0.1.0",
 							},
-							OnNode: []kdb.OnNode{
-								{Mode: kdb.MayOnNode, Key: "vram", Value: "xlarge"},
-								{Mode: kdb.PreferOnNode, Key: "vram", Value: "large"},
-								{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "tpu"},
-								{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
+							OnNode: []domain.OnNode{
+								{Mode: domain.MayOnNode, Key: "vram", Value: "xlarge"},
+								{Mode: domain.PreferOnNode, Key: "vram", Value: "large"},
+								{Mode: domain.PreferOnNode, Key: "accelerator", Value: "tpu"},
+								{Mode: domain.MustOnNode, Key: "accelerator", Value: "gpu"},
 							},
 							Resources: map[string]resource.Quantity{
 								"cpu":    resource.MustParse("500m"),
 								"memory": resource.MustParse("128Mi"),
 							},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
-						Log: &kdb.LogPoint{
+						Log: &domain.LogPoint{
 							Id: 3,
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							}),
@@ -344,38 +359,38 @@ func TestRegisterPlan(t *testing.T) {
 				},
 			},
 			then{
-				Query: allValidated[*kdb.PlanSpec](t, []kdb.PlanParam{
+				Query: allValidated[*domain.PlanSpec](t, []domain.PlanParam{
 					{
 						Image: "repo.invalid/image-1", Version: "0.1.0", Active: true,
-						Inputs: []kdb.MountPointParam{
+						Inputs: []domain.MountPointParam{
 							{
 								Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "raw data"},
 									{Key: "format", Value: "rgb image"},
 								}),
 							},
 						},
-						Outputs: []kdb.MountPointParam{
+						Outputs: []domain.MountPointParam{
 							{
 								Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "training data"},
 									{Key: "format", Value: "mask"},
 								}),
 							},
 						},
-						Log: &kdb.LogParam{
-							Tags: kdb.NewTagSet([]kdb.Tag{
+						Log: &domain.LogParam{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							}),
 						},
-						OnNode: []kdb.OnNode{
-							{Mode: kdb.MayOnNode, Key: "vram", Value: "xlarge"},
-							{Mode: kdb.PreferOnNode, Key: "vram", Value: "large"},
-							{Mode: kdb.PreferOnNode, Key: "accelerator", Value: "tpu"},
-							{Mode: kdb.MustOnNode, Key: "accelerator", Value: "gpu"},
+						OnNode: []domain.OnNode{
+							{Mode: domain.MayOnNode, Key: "vram", Value: "xlarge"},
+							{Mode: domain.PreferOnNode, Key: "vram", Value: "large"},
+							{Mode: domain.PreferOnNode, Key: "accelerator", Value: "tpu"},
+							{Mode: domain.MustOnNode, Key: "accelerator", Value: "gpu"},
 						},
 						Resources: map[string]resource.Quantity{
 							"cpu":    resource.MustParse("500m"),
@@ -394,28 +409,34 @@ func TestRegisterPlan(t *testing.T) {
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{
-								{Key: "type", Value: "log"},
-								{Key: "format", Value: "jsonl"},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{
+									{Key: "type", Value: "log"},
+									{Key: "format", Value: "jsonl"},
+								},
 							},
 						},
 						Resources: map[string]resource.Quantity{
@@ -457,10 +478,10 @@ func TestRegisterPlan(t *testing.T) {
 }`,
 				},
 				registerResult{
-					plan: &kdb.Plan{
-						PlanBody: kdb.PlanBody{
+					plan: &domain.Plan{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-1", Active: false, Hash: "plan-hash",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo.invalid/image-1", Version: "0.1.0",
 							},
 							Resources: map[string]resource.Quantity{
@@ -469,27 +490,31 @@ func TestRegisterPlan(t *testing.T) {
 								"memory": resource.MustParse("1Gi"),
 							},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
-						Log: &kdb.LogPoint{
+						Log: &domain.LogPoint{
 							Id: 3,
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							}),
@@ -498,29 +523,29 @@ func TestRegisterPlan(t *testing.T) {
 				},
 			},
 			then{
-				Query: allValidated[*kdb.PlanSpec](t, []kdb.PlanParam{
+				Query: allValidated[*domain.PlanSpec](t, []domain.PlanParam{
 					{
 						Image: "repo.invalid/image-1", Version: "0.1.0", Active: false,
-						Inputs: []kdb.MountPointParam{
+						Inputs: []domain.MountPointParam{
 							{
 								Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "raw data"},
 									{Key: "format", Value: "rgb image"},
 								}),
 							},
 						},
-						Outputs: []kdb.MountPointParam{
+						Outputs: []domain.MountPointParam{
 							{
 								Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "training data"},
 									{Key: "format", Value: "mask"},
 								}),
 							},
 						},
-						Log: &kdb.LogParam{
-							Tags: kdb.NewTagSet([]kdb.Tag{
+						Log: &domain.LogParam{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							}),
@@ -543,28 +568,34 @@ func TestRegisterPlan(t *testing.T) {
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: false,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{
-								{Key: "type", Value: "log"},
-								{Key: "format", Value: "jsonl"},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{
+									{Key: "type", Value: "log"},
+									{Key: "format", Value: "jsonl"},
+								},
 							},
 						},
 						Resources: map[string]resource.Quantity{
@@ -594,10 +625,10 @@ func TestRegisterPlan(t *testing.T) {
 }`,
 				},
 				registerResult{
-					plan: &kdb.Plan{
-						PlanBody: kdb.PlanBody{
+					plan: &domain.Plan{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-1", Active: true, Hash: "plan-hash",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo.invalid/image-1", Version: "0.1.0",
 							},
 							Resources: map[string]resource.Quantity{
@@ -606,27 +637,31 @@ func TestRegisterPlan(t *testing.T) {
 								"memory": resource.MustParse("1Gi"),
 							},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
-						Log: &kdb.LogPoint{
+						Log: &domain.LogPoint{
 							Id: 3,
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							}),
@@ -635,29 +670,29 @@ func TestRegisterPlan(t *testing.T) {
 				},
 			},
 			then{
-				Query: allValidated[*kdb.PlanSpec](t, []kdb.PlanParam{
+				Query: allValidated[*domain.PlanSpec](t, []domain.PlanParam{
 					{
 						Image: "repo.invalid/image-1", Version: "0.1.0", Active: true,
-						Inputs: []kdb.MountPointParam{
+						Inputs: []domain.MountPointParam{
 							{
 								Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "raw data"},
 									{Key: "format", Value: "rgb image"},
 								}),
 							},
 						},
-						Outputs: []kdb.MountPointParam{
+						Outputs: []domain.MountPointParam{
 							{
 								Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "training data"},
 									{Key: "format", Value: "mask"},
 								}),
 							},
 						},
-						Log: &kdb.LogParam{
-							Tags: kdb.NewTagSet([]kdb.Tag{
+						Log: &domain.LogParam{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "log"},
 								{Key: "format", Value: "jsonl"},
 							}),
@@ -680,28 +715,34 @@ func TestRegisterPlan(t *testing.T) {
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{
-								{Key: "type", Value: "log"},
-								{Key: "format", Value: "jsonl"},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{
+									{Key: "type", Value: "log"},
+									{Key: "format", Value: "jsonl"},
+								},
 							},
 						},
 						Resources: map[string]resource.Quantity{
@@ -727,10 +768,10 @@ func TestRegisterPlan(t *testing.T) {
 }`,
 				},
 				registerResult{
-					plan: &kdb.Plan{
-						PlanBody: kdb.PlanBody{
+					plan: &domain.Plan{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-1", Active: true, Hash: "plan-hash",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo.invalid/image-1", Version: "0.1.0",
 							},
 							Resources: map[string]resource.Quantity{
@@ -739,44 +780,48 @@ func TestRegisterPlan(t *testing.T) {
 								"memory": resource.MustParse("1Gi"),
 							},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "/in/1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									}),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "/out/2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									}),
+								},
 							},
 						},
 					},
 				},
 			},
 			then{
-				Query: allValidated[*kdb.PlanSpec](t, []kdb.PlanParam{
+				Query: allValidated[*domain.PlanSpec](t, []domain.PlanParam{
 					{
 						Image: "repo.invalid/image-1", Version: "0.1.0", Active: true,
-						Inputs: []kdb.MountPointParam{
+						Inputs: []domain.MountPointParam{
 							{
 								Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "raw data"},
 									{Key: "format", Value: "rgb image"},
 								}),
 							},
 						},
-						Outputs: []kdb.MountPointParam{
+						Outputs: []domain.MountPointParam{
 							{
 								Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "type", Value: "training data"},
 									{Key: "format", Value: "mask"},
 								}),
@@ -800,21 +845,25 @@ func TestRegisterPlan(t *testing.T) {
 							Image:  &plans.Image{Repository: "repo.invalid/image-1", Tag: "0.1.0"},
 						},
 						Active: true,
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "/in/1",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "raw data"},
-									{Key: "format", Value: "rgb image"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/in/1",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "raw data"},
+										{Key: "format", Value: "rgb image"},
+									},
 								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "/out/2",
-								Tags: []apitag.Tag{
-									{Key: "type", Value: "training data"},
-									{Key: "format", Value: "mask"},
+								Mountpoint: plans.Mountpoint{
+									Path: "/out/2",
+									Tags: []apitag.Tag{
+										{Key: "type", Value: "training data"},
+										{Key: "format", Value: "mask"},
+									},
 								},
 							},
 						},
@@ -843,7 +892,7 @@ func TestRegisterPlan(t *testing.T) {
 				},
 			},
 			then{
-				Query: []*kdb.PlanSpec{}, // empty.
+				Query: []*domain.PlanSpec{}, // empty.
 				Err: &resultErr{
 					Match: Status(http.StatusBadRequest),
 				},
@@ -865,7 +914,7 @@ func TestRegisterPlan(t *testing.T) {
 				},
 			},
 			then{
-				Query: []*kdb.PlanSpec{}, // empty.
+				Query: []*domain.PlanSpec{}, // empty.
 				Err: &resultErr{
 					Match: Status(http.StatusBadRequest),
 				},
@@ -877,17 +926,17 @@ func TestRegisterPlan(t *testing.T) {
 				when, then := testcase.when, testcase.then
 
 				mockPlan := mockdb.NewPlanInteraface()
-				mockPlan.Impl.Register = func(ctx context.Context, ps *kdb.PlanSpec) (string, error) {
+				mockPlan.Impl.Register = func(ctx context.Context, ps *domain.PlanSpec) (string, error) {
 					return when.registerResult.plan.PlanId, when.registerResult.err
 				}
 
-				mockPlan.Impl.Get = func(ctx context.Context, s []string) (map[string]*kdb.Plan, error) {
+				mockPlan.Impl.Get = func(ctx context.Context, s []string) (map[string]*domain.Plan, error) {
 					if when.registerResult.err != nil {
 						t.Fatal("unexpected call!")
 					}
 
 					plan := when.registerResult.plan
-					return map[string]*kdb.Plan{plan.PlanId: plan}, nil
+					return map[string]*domain.Plan{plan.PlanId: plan}, nil
 				}
 
 				testee := handlers.PlanRegisterHandler(mockPlan)
@@ -899,10 +948,10 @@ func TestRegisterPlan(t *testing.T) {
 				)
 				err := testee(c)
 
-				if !cmp.SliceEqWith(then.Query, mockPlan.Calls.Register, (*kdb.PlanSpec).Equal) {
+				if !cmp.SliceEqWith(then.Query, mockPlan.Calls.Register, (*domain.PlanSpec).Equal) {
 					t.Errorf(
 						"unmatch:\n- actual   : %+v\n- expected : %+v",
-						utils.DerefOf(mockPlan.Calls.Register), then.Query,
+						slices.DerefOf(mockPlan.Calls.Register), then.Query,
 					)
 				}
 
@@ -954,8 +1003,8 @@ func TestRegisterPlan(t *testing.T) {
 		when error
 		then int
 	}{
-		"ErrInvalidPlan":     {when: kdb.ErrInvalidPlan, then: http.StatusBadRequest},
-		"ErrConflictingPlan": {when: kdb.ErrConflictingPlan, then: http.StatusConflict},
+		"ErrInvalidPlan":     {when: domain.ErrInvalidPlan, then: http.StatusBadRequest},
+		"ErrConflictingPlan": {when: domain.ErrConflictingPlan, then: http.StatusConflict},
 
 		"unexpected error": {when: errors.New("unexpected error"), then: http.StatusInternalServerError},
 	} {
@@ -967,7 +1016,7 @@ func TestRegisterPlan(t *testing.T) {
 			when, then := testcase.when, testcase.then
 
 			mockPlan := mockdb.NewPlanInteraface()
-			mockPlan.Impl.Register = func(ctx context.Context, ps *kdb.PlanSpec) (string, error) {
+			mockPlan.Impl.Register = func(ctx context.Context, ps *domain.PlanSpec) (string, error) {
 				return "", when
 			}
 			testee := handlers.PlanRegisterHandler(mockPlan)
@@ -1095,7 +1144,7 @@ func TestRegisterPlan(t *testing.T) {
 			when, then := testcase.when, testcase.then
 
 			mockPlan := mockdb.NewPlanInteraface()
-			mockPlan.Impl.Register = func(ctx context.Context, ps *kdb.PlanSpec) (string, error) {
+			mockPlan.Impl.Register = func(ctx context.Context, ps *domain.PlanSpec) (string, error) {
 				return "", errors.New("should not be reached")
 			}
 			testee := handlers.PlanRegisterHandler(mockPlan)
@@ -1122,7 +1171,7 @@ func TestFind(t *testing.T) {
 
 	type when struct {
 		request     string
-		queryResult []*kdb.Plan
+		queryResult []*domain.Plan
 		err         error
 	}
 
@@ -1141,45 +1190,51 @@ func TestFind(t *testing.T) {
 		"When PlanInterface.Find returns query result, it should convert it to JSON format": {
 			when: when{
 				request: "/api/plans?",
-				queryResult: []*kdb.Plan{
+				queryResult: []*domain.Plan{
 					{
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-1", Active: true, Hash: "hash-1",
-							Image: &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+							Image: &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "path-1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
-								),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "path-1",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+									),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "path-2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"},
-								}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "path-2",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"},
+									}),
+								},
 							},
 						},
 					},
 					{
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-2", Active: false, Hash: "hash-2",
-							Image: &kdb.ImageIdentifier{Image: "image-2", Version: "ver-2"},
+							Image: &domain.ImageIdentifier{Image: "image-2", Version: "ver-2"},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 3, Path: "path-3",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
-								),
+								MountPoint: domain.MountPoint{
+									Id: 3, Path: "path-3",
+									Tags: domain.NewTagSet([]domain.Tag{
+										{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
+									),
+								},
 							},
 						},
-						Log: &kdb.LogPoint{
+						Log: &domain.LogPoint{
 							Id: 4,
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"},
 							}),
 						},
@@ -1190,9 +1245,9 @@ func TestFind(t *testing.T) {
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
-					InTag:    []kdb.Tag{},
-					OutTag:   []kdb.Tag{},
+					ImageVer: domain.ImageIdentifier{Image: "", Version: ""},
+					InTag:    []domain.Tag{},
+					OutTag:   []domain.Tag{},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK,
 				body: []plans.Detail{
@@ -1201,16 +1256,20 @@ func TestFind(t *testing.T) {
 							PlanId: "plan-1",
 							Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 						},
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "path-1",
-								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+								Mountpoint: plans.Mountpoint{
+									Path: "path-1",
+									Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+								},
 							},
 						},
-						Outputs: []plans.Mountpoint{
+						Outputs: []plans.Output{
 							{
-								Path: "path-2",
-								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+								Mountpoint: plans.Mountpoint{
+									Path: "path-2",
+									Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+								},
 							},
 						},
 						Log: nil, Active: true,
@@ -1220,14 +1279,18 @@ func TestFind(t *testing.T) {
 							PlanId: "plan-2",
 							Image:  &plans.Image{Repository: "image-2", Tag: "ver-2"},
 						},
-						Inputs: []plans.Mountpoint{
+						Inputs: []plans.Input{
 							{
-								Path: "path-3",
-								Tags: []apitag.Tag{{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
+								Mountpoint: plans.Mountpoint{
+									Path: "path-3",
+									Tags: []apitag.Tag{{Key: "key-3", Value: "val-1"}, {Key: "key-4", Value: "val-2"}},
+								},
 							},
 						},
-						Log: &plans.LogPoint{
-							Tags: []apitag.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+						Log: &plans.Log{
+							LogPoint: plans.LogPoint{
+								Tags: []apitag.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+							},
 						},
 						Active: false,
 					},
@@ -1235,31 +1298,31 @@ func TestFind(t *testing.T) {
 			},
 		},
 		"When PlanInterface.Find returns empty result, it returns an empty response without error": {
-			when: when{request: "/api/plans?", queryResult: []*kdb.Plan{}, err: nil},
+			when: when{request: "/api/plans?", queryResult: []*domain.Plan{}, err: nil},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
-					InTag:    []kdb.Tag{},
-					OutTag:   []kdb.Tag{},
+					ImageVer: domain.ImageIdentifier{Image: "", Version: ""},
+					InTag:    []domain.Tag{},
+					OutTag:   []domain.Tag{},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{}},
 		},
 		"when PlanInterface.Find cause error, it returns internal server error.": {
-			when: when{request: "/api/plans?", queryResult: []*kdb.Plan{}, err: errors.New("dummy error")},
+			when: when{request: "/api/plans?", queryResult: []*domain.Plan{}, err: errors.New("dummy error")},
 			then: then{contentType: "application/json", isErr: true, statusCode: http.StatusInternalServerError, body: []plans.Detail{}},
 		},
 		"When it receives query parameter, it converts it properly and passed it to PlanInterface.Find.": {
 			when: when{
 				request:     "/api/plans?active=true&image=image-1:ver-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.True,
-					ImageVer: kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-					InTag:    []kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
-					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+					ImageVer: domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+					InTag:    []domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+					OutTag:   []domain.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
@@ -1267,7 +1330,7 @@ func TestFind(t *testing.T) {
 		"When active is specified incorrectly in the query, it responses Bad Request.": {
 			when: when{
 				request:     "/api/plans?active=hoge&image=image-1:ver-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&in_tag=key-4:val-4",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult:  mockdb.PlanFindArgs{},
@@ -1277,14 +1340,14 @@ func TestFind(t *testing.T) {
 		"When active is not specified in the query, it calls PlanInterface.Find with active: Indeterminate.": {
 			when: when{
 				request:     "/api/plans?image=image-1:ver-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-					InTag:    []kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
-					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+					ImageVer: domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+					InTag:    []domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+					OutTag:   []domain.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
@@ -1292,14 +1355,14 @@ func TestFind(t *testing.T) {
 		"When version is not specified in the query,  it calls PlanInterface.Find with image only.": {
 			when: when{
 				request:     "/api/plans?image=image-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: kdb.ImageIdentifier{Image: "image-1", Version: ""},
-					InTag:    []kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
-					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+					ImageVer: domain.ImageIdentifier{Image: "image-1", Version: ""},
+					InTag:    []domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+					OutTag:   []domain.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
@@ -1307,14 +1370,14 @@ func TestFind(t *testing.T) {
 		"When both image and version are not specified in the query, it calls PlanInterface.Find both with an empty character.": {
 			when: when{
 				request:     "/api/plans?in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
-					InTag:    []kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
-					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+					ImageVer: domain.ImageIdentifier{Image: "", Version: ""},
+					InTag:    []domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+					OutTag:   []domain.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
@@ -1322,7 +1385,7 @@ func TestFind(t *testing.T) {
 		"When the query has version but does not have image, it responses Bad Request.": {
 			when: when{
 				request:     "/api/plans?image=:ver-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult:  mockdb.PlanFindArgs{},
@@ -1332,14 +1395,14 @@ func TestFind(t *testing.T) {
 		"When in_tag are not specified in the query, it calls PlanInterface.Find with empty InTag.": {
 			when: when{
 				request:     "/api/plans?out_tag=key-3:val-3&out_tag=key-4:val-4",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
-					InTag:    []kdb.Tag{},
-					OutTag:   []kdb.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
+					ImageVer: domain.ImageIdentifier{Image: "", Version: ""},
+					InTag:    []domain.Tag{},
+					OutTag:   []domain.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
@@ -1347,14 +1410,14 @@ func TestFind(t *testing.T) {
 		"When out_tag are not specified in the query, it calls PlanInterface.Find with empty OutTag.": {
 			when: when{
 				request:     "/api/plans?",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
-					InTag:    []kdb.Tag{},
-					OutTag:   []kdb.Tag{},
+					ImageVer: domain.ImageIdentifier{Image: "", Version: ""},
+					InTag:    []domain.Tag{},
+					OutTag:   []domain.Tag{},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
@@ -1362,7 +1425,7 @@ func TestFind(t *testing.T) {
 		"When tag without delimiter is specified, it responses Bad Request.": {
 			when: when{
 				request:     "/api/plans?out_tag=key-3&out_tag=val-4",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult:  mockdb.PlanFindArgs{},
@@ -1372,14 +1435,14 @@ func TestFind(t *testing.T) {
 		"when empty tag is specified in the query, it calls PlanInterface.Find without error": {
 			when: when{
 				request:     "/api/plans?out_tag=:val-3&out_tag=key-4:",
-				queryResult: []*kdb.Plan{}, err: nil,
+				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: kdb.ImageIdentifier{Image: "", Version: ""},
-					InTag:    []kdb.Tag{},
-					OutTag:   []kdb.Tag{{Key: "", Value: "val-3"}, {Key: "key-4", Value: ""}},
+					ImageVer: domain.ImageIdentifier{Image: "", Version: ""},
+					InTag:    []domain.Tag{},
+					OutTag:   []domain.Tag{{Key: "", Value: "val-3"}, {Key: "key-4", Value: ""}},
 				},
 				contentType: "application/json", isErr: false, statusCode: http.StatusOK, body: []plans.Detail{},
 			},
@@ -1388,17 +1451,17 @@ func TestFind(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			mockPlan := mockdb.NewPlanInteraface()
-			mockPlan.Impl.Find = func(ctx context.Context, active logic.Ternary, imageVer kdb.ImageIdentifier, inTag []kdb.Tag, outTag []kdb.Tag) ([]string, error) {
-				planIds := utils.Map(testcase.when.queryResult, func(p *kdb.Plan) string { return p.PlanId })
+			mockPlan.Impl.Find = func(ctx context.Context, active logic.Ternary, imageVer domain.ImageIdentifier, inTag []domain.Tag, outTag []domain.Tag) ([]string, error) {
+				planIds := slices.Map(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
 				return planIds, testcase.when.err
 			}
 
-			mockPlan.Impl.Get = func(ctx context.Context, s []string) (map[string]*kdb.Plan, error) {
-				expectedPlanIds := utils.Map(testcase.when.queryResult, func(p *kdb.Plan) string { return p.PlanId })
+			mockPlan.Impl.Get = func(ctx context.Context, s []string) (map[string]*domain.Plan, error) {
+				expectedPlanIds := slices.Map(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
 				if !cmp.SliceContentEq(s, expectedPlanIds) {
 					t.Errorf("unmatch: planIds: (actual, expected) = (%v, %v)", s, expectedPlanIds)
 				}
-				resp := map[string]*kdb.Plan{}
+				resp := map[string]*domain.Plan{}
 				for _, p := range testcase.when.queryResult {
 					resp[p.PlanId] = p
 				}
@@ -1471,7 +1534,7 @@ func TestGetPlanHandler(t *testing.T) {
 
 	type when struct {
 		planId      string
-		queryResult []*kdb.Plan
+		queryResult []*domain.Plan
 		err         error
 	}
 
@@ -1489,23 +1552,27 @@ func TestGetPlanHandler(t *testing.T) {
 		"When PlanInterface.Get returns query result, it should convert it to JSON format": {
 			when: when{
 				planId: "plan-1",
-				queryResult: []*kdb.Plan{
+				queryResult: []*domain.Plan{
 					{
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-1", Active: true, Hash: "hash-1",
-							Image:  &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-							Pseudo: &kdb.PseudoPlanDetail{},
+							Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+							Pseudo: &domain.PseudoPlanDetail{},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "path-1",
-								Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "path-1",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "path-2",
-								Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "path-2",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								},
 							},
 						},
 					},
@@ -1521,16 +1588,20 @@ func TestGetPlanHandler(t *testing.T) {
 						PlanId: "plan-1",
 						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []plans.Mountpoint{
+					Inputs: []plans.Input{
 						{
-							Path: "path-1",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-1",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							},
 						},
 					},
-					Outputs: []plans.Mountpoint{
+					Outputs: []plans.Output{
 						{
-							Path: "path-2",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-2",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							},
 						},
 					},
 					Log: nil, Active: true,
@@ -1553,8 +1624,8 @@ func TestGetPlanHandler(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			mockPlan := mockdb.NewPlanInteraface()
-			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
-				return utils.ToMap(testcase.when.queryResult, func(p *kdb.Plan) string { return p.PlanId }), testcase.when.err
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
+				return slices.ToMap(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId }), testcase.when.err
 			}
 
 			e := echo.New()
@@ -1610,7 +1681,7 @@ func TestGetPlanHandler(t *testing.T) {
 	t.Run("it passes planId in path parameter to PlanInterface", func(t *testing.T) {
 
 		mockPlan := mockdb.NewPlanInteraface()
-		mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
+		mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
 			return nil, nil
 		}
 
@@ -1638,7 +1709,7 @@ func TestActivatePlan(t *testing.T) {
 		planId      string
 		request     string
 		isActive    bool
-		queryResult []*kdb.Plan
+		queryResult []*domain.Plan
 		err         error
 	}
 
@@ -1658,23 +1729,27 @@ func TestActivatePlan(t *testing.T) {
 				planId:   "plan-1",
 				request:  "/api/plan/plan-1/active",
 				isActive: true,
-				queryResult: []*kdb.Plan{
+				queryResult: []*domain.Plan{
 					{
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-1", Active: true, Hash: "hash-1",
-							Image:  &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-							Pseudo: &kdb.PseudoPlanDetail{},
+							Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+							Pseudo: &domain.PseudoPlanDetail{},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "path-1",
-								Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "path-1",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "path-2",
-								Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "path-2",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								},
 							},
 						},
 					},
@@ -1688,16 +1763,20 @@ func TestActivatePlan(t *testing.T) {
 						PlanId: "plan-1",
 						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []plans.Mountpoint{
+					Inputs: []plans.Input{
 						{
-							Path: "path-1",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-1",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							},
 						},
 					},
-					Outputs: []plans.Mountpoint{
+					Outputs: []plans.Output{
 						{
-							Path: "path-2",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-2",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							},
 						},
 					},
 					Log: nil, Active: true,
@@ -1709,8 +1788,8 @@ func TestActivatePlan(t *testing.T) {
 				request:     "/api/plan/plan-1/active",
 				planId:      "plan-1",
 				isActive:    true,
-				queryResult: []*kdb.Plan{},
-				err:         kdb.ErrMissing,
+				queryResult: []*domain.Plan{},
+				err:         kerr.ErrMissing,
 			},
 			then: then{
 				contentType: "application/json",
@@ -1723,23 +1802,27 @@ func TestActivatePlan(t *testing.T) {
 				request:  "/api/plan/plan-1/active",
 				planId:   "plan-1",
 				isActive: false,
-				queryResult: []*kdb.Plan{
+				queryResult: []*domain.Plan{
 					{
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-1", Active: false, Hash: "hash-1",
-							Image:  &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-							Pseudo: &kdb.PseudoPlanDetail{},
+							Image:  &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+							Pseudo: &domain.PseudoPlanDetail{},
 						},
-						Inputs: []kdb.MountPoint{
+						Inputs: []domain.Input{
 							{
-								Id: 1, Path: "path-1",
-								Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								MountPoint: domain.MountPoint{
+									Id: 1, Path: "path-1",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+								},
 							},
 						},
-						Outputs: []kdb.MountPoint{
+						Outputs: []domain.Output{
 							{
-								Id: 2, Path: "path-2",
-								Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								MountPoint: domain.MountPoint{
+									Id: 2, Path: "path-2",
+									Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+								},
 							},
 						},
 					},
@@ -1753,16 +1836,20 @@ func TestActivatePlan(t *testing.T) {
 						PlanId: "plan-1",
 						Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 					},
-					Inputs: []plans.Mountpoint{
+					Inputs: []plans.Input{
 						{
-							Path: "path-1",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-1",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
+							},
 						},
 					},
-					Outputs: []plans.Mountpoint{
+					Outputs: []plans.Output{
 						{
-							Path: "path-2",
-							Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							Mountpoint: plans.Mountpoint{
+								Path: "path-2",
+								Tags: []apitag.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}},
+							},
 						},
 					},
 					Log: nil, Active: false,
@@ -1774,8 +1861,8 @@ func TestActivatePlan(t *testing.T) {
 				request:     "/api/plan/plan-1/active",
 				planId:      "plan-1",
 				isActive:    false,
-				queryResult: []*kdb.Plan{},
-				err:         kdb.ErrMissing,
+				queryResult: []*domain.Plan{},
+				err:         kerr.ErrMissing,
 			},
 			then: then{
 				contentType: "application/json",
@@ -1790,8 +1877,8 @@ func TestActivatePlan(t *testing.T) {
 			mockPlan.Impl.Activate = func(ctx context.Context, planId string, isActive bool) error {
 				return testcase.when.err
 			}
-			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
-				plans := utils.ToMap(testcase.when.queryResult, func(p *kdb.Plan) string { return p.PlanId })
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
+				plans := slices.ToMap(testcase.when.queryResult, func(p *domain.Plan) string { return p.PlanId })
 				return plans, testcase.when.err
 			}
 
@@ -1870,7 +1957,7 @@ func TestPutPlanResource(t *testing.T) {
 		request     string
 		contentType string
 
-		queryResult             []*kdb.Plan
+		queryResult             []*domain.Plan
 		getError                error
 		setResourceLimitError   error
 		unsetResourceLimitError error
@@ -1890,8 +1977,8 @@ func TestPutPlanResource(t *testing.T) {
 	theory := func(when When, then Then) func(*testing.T) {
 		return func(t *testing.T) {
 			mockPlan := mockdb.NewPlanInteraface()
-			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
-				plans := utils.ToMap(when.queryResult, func(p *kdb.Plan) string { return p.PlanId })
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
+				plans := slices.ToMap(when.queryResult, func(p *domain.Plan) string { return p.PlanId })
 				return plans, when.getError
 			}
 			mockPlan.Impl.SetResourceLimit = func(ctx context.Context, planId string, resources map[string]resource.Quantity) error {
@@ -1967,29 +2054,33 @@ func TestPutPlanResource(t *testing.T) {
 		}
 	}
 
-	planResult := kdb.Plan{
-		PlanBody: kdb.PlanBody{
+	planResult := domain.Plan{
+		PlanBody: domain.PlanBody{
 			PlanId: "plan-1", Active: true, Hash: "hash-1",
-			Image: &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+			Image: &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 			Resources: map[string]resource.Quantity{
 				"cpu":    resource.MustParse("100m"),
 				"memory": resource.MustParse("100Mi"),
 			},
 		},
-		Inputs: []kdb.MountPoint{
+		Inputs: []domain.Input{
 			{
-				Id: 1, Path: "/in/1",
-				Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+				MountPoint: domain.MountPoint{
+					Id: 1, Path: "/in/1",
+					Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}}),
+				},
 			},
 		},
-		Outputs: []kdb.MountPoint{
+		Outputs: []domain.Output{
 			{
-				Id: 2, Path: "/out/1",
-				Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+				MountPoint: domain.MountPoint{
+					Id: 2, Path: "/out/1",
+					Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-3"}, {Key: "key-2", Value: "val-4"}}),
+				},
 			},
 		},
-		Log: &kdb.LogPoint{
-			Tags: kdb.NewTagSet([]kdb.Tag{{Key: "key-1", Value: "val-4"}, {Key: "key-2", Value: "val-3"}}),
+		Log: &domain.LogPoint{
+			Tags: domain.NewTagSet([]domain.Tag{{Key: "key-1", Value: "val-4"}, {Key: "key-2", Value: "val-3"}}),
 		},
 	}
 
@@ -2007,7 +2098,7 @@ func TestPutPlanResource(t *testing.T) {
 			).OrFatal(t)),
 			contentType: "application/json",
 
-			queryResult:             []*kdb.Plan{&planResult},
+			queryResult:             []*domain.Plan{&planResult},
 			getError:                nil,
 			setResourceLimitError:   nil,
 			unsetResourceLimitError: nil,
@@ -2036,7 +2127,7 @@ func TestPutPlanResource(t *testing.T) {
 			).OrFatal(t)),
 			contentType: "application/json",
 
-			queryResult:             []*kdb.Plan{&planResult},
+			queryResult:             []*domain.Plan{&planResult},
 			getError:                nil,
 			setResourceLimitError:   nil,
 			unsetResourceLimitError: nil,
@@ -2062,7 +2153,7 @@ func TestPutPlanResource(t *testing.T) {
 			).OrFatal(t)),
 			contentType: "application/json",
 
-			queryResult:             []*kdb.Plan{&planResult},
+			queryResult:             []*domain.Plan{&planResult},
 			getError:                nil,
 			setResourceLimitError:   nil,
 			unsetResourceLimitError: nil,
@@ -2088,9 +2179,9 @@ func TestPutPlanResource(t *testing.T) {
 			).OrFatal(t)),
 			contentType: "application/json",
 
-			queryResult:             []*kdb.Plan{},
+			queryResult:             []*domain.Plan{},
 			getError:                nil,
-			setResourceLimitError:   kdb.ErrMissing,
+			setResourceLimitError:   kerr.ErrMissing,
 			unsetResourceLimitError: nil,
 		},
 		Then{
@@ -2112,7 +2203,7 @@ func TestPutPlanResource(t *testing.T) {
 			).OrFatal(t)),
 			contentType: "application/json",
 
-			queryResult:             []*kdb.Plan{&planResult},
+			queryResult:             []*domain.Plan{&planResult},
 			getError:                nil,
 			setResourceLimitError:   errors.New("dummy error"),
 			unsetResourceLimitError: nil,
@@ -2136,10 +2227,10 @@ func TestPutPlanResource(t *testing.T) {
 			).OrFatal(t)),
 			contentType: "application/json",
 
-			queryResult:             []*kdb.Plan{&planResult},
+			queryResult:             []*domain.Plan{&planResult},
 			getError:                nil,
 			setResourceLimitError:   nil,
-			unsetResourceLimitError: kdb.ErrMissing,
+			unsetResourceLimitError: kerr.ErrMissing,
 		},
 		Then{
 			contentType:   "application/json",
@@ -2161,7 +2252,7 @@ func TestPutPlanResource(t *testing.T) {
 			).OrFatal(t)),
 			contentType: "application/json",
 
-			queryResult:             []*kdb.Plan{&planResult},
+			queryResult:             []*domain.Plan{&planResult},
 			getError:                nil,
 			setResourceLimitError:   nil,
 			unsetResourceLimitError: errors.New("dummy error"),
@@ -2185,7 +2276,7 @@ func TestPutPlanResource(t *testing.T) {
 				}),
 			).OrFatal(t)),
 			contentType: "application/json",
-			getError:    kdb.ErrMissing,
+			getError:    kerr.ErrMissing,
 		},
 		Then{
 			contentType:   "application/json",
@@ -2236,13 +2327,13 @@ func TestPutAnnotations(t *testing.T) {
 		request     string
 		contentType string
 
-		queryResult            map[string]*kdb.Plan
+		queryResult            map[string]*domain.Plan
 		getError               error
 		updateAnnotationsError error
 	}
 
 	type Then struct {
-		requestedDelta kdb.AnnotationDelta
+		requestedDelta domain.AnnotationDelta
 
 		contentType string
 		statusCode  int
@@ -2254,7 +2345,7 @@ func TestPutAnnotations(t *testing.T) {
 		return func(t *testing.T) {
 			mockPlan := mockdb.NewPlanInteraface()
 
-			mockPlan.Impl.UpdateAnnotations = func(ctx context.Context, planId string, annotations kdb.AnnotationDelta) error {
+			mockPlan.Impl.UpdateAnnotations = func(ctx context.Context, planId string, annotations domain.AnnotationDelta) error {
 				if planId != when.planId {
 					t.Errorf("unmatch: planId: (actual, expected) = (%s, %s)", planId, when.planId)
 				}
@@ -2270,7 +2361,7 @@ func TestPutAnnotations(t *testing.T) {
 				return when.updateAnnotationsError
 			}
 
-			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
 				return when.queryResult, when.getError
 			}
 
@@ -2335,41 +2426,45 @@ func TestPutAnnotations(t *testing.T) {
 				}),
 			).OrFatal(t)),
 			contentType: "application/json",
-			queryResult: map[string]*kdb.Plan{
+			queryResult: map[string]*domain.Plan{
 				"plan-1": {
-					PlanBody: kdb.PlanBody{
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-1", Active: true, Hash: "hash-1",
-						Image: &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
-						Annotations: []kdb.Annotation{
+						Image: &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+						Annotations: []domain.Annotation{
 							{Key: "annot-1", Value: "val-1"},
 							{Key: "annot-2", Value: "val-2"},
 						},
 					},
-					Inputs: []kdb.MountPoint{
+					Inputs: []domain.Input{
 						{
-							Id: 1, Path: "/in/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
-								{Key: "key-1", Value: "val-1"},
-								{Key: "key-2", Value: "val-2"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 1, Path: "/in/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-1"},
+									{Key: "key-2", Value: "val-2"},
+								}),
+							},
 						},
 					},
-					Outputs: []kdb.MountPoint{
+					Outputs: []domain.Output{
 						{
-							Id: 2, Path: "/out/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
-								{Key: "key-1", Value: "val-3"},
-								{Key: "key-3", Value: "val-4"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 2, Path: "/out/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-3"},
+									{Key: "key-3", Value: "val-4"},
+								}),
+							},
 						},
 					},
 				},
 			},
 		},
 		Then{
-			requestedDelta: kdb.AnnotationDelta{
-				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
-				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
+			requestedDelta: domain.AnnotationDelta{
+				Add:    []domain.Annotation{{Key: "annot-1", Value: "val-1"}},
+				Remove: []domain.Annotation{{Key: "annot-2", Value: "val-2"}},
 			},
 			contentType: "application/json",
 			statusCode:  http.StatusOK,
@@ -2383,21 +2478,25 @@ func TestPutAnnotations(t *testing.T) {
 					},
 				},
 				Active: true,
-				Inputs: []plans.Mountpoint{
+				Inputs: []plans.Input{
 					{
-						Path: "/in/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-1"},
-							{Key: "key-2", Value: "val-2"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-1"},
+								{Key: "key-2", Value: "val-2"},
+							},
 						},
 					},
 				},
-				Outputs: []plans.Mountpoint{
+				Outputs: []plans.Output{
 					{
-						Path: "/out/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-3"},
-							{Key: "key-3", Value: "val-4"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/out/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-3"},
+								{Key: "key-3", Value: "val-4"},
+							},
 						},
 					},
 				},
@@ -2427,13 +2526,13 @@ func TestPutAnnotations(t *testing.T) {
 				}),
 			).OrFatal(t)),
 			contentType:            "application/json",
-			queryResult:            map[string]*kdb.Plan{},
-			updateAnnotationsError: kdb.ErrMissing,
+			queryResult:            map[string]*domain.Plan{},
+			updateAnnotationsError: kerr.ErrMissing,
 		},
 		Then{
-			requestedDelta: kdb.AnnotationDelta{
-				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
-				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
+			requestedDelta: domain.AnnotationDelta{
+				Add:    []domain.Annotation{{Key: "annot-1", Value: "val-1"}},
+				Remove: []domain.Annotation{{Key: "annot-2", Value: "val-2"}},
 			},
 			statusCode: http.StatusNotFound,
 			wantError:  true,
@@ -2450,13 +2549,13 @@ func TestPutAnnotations(t *testing.T) {
 				}),
 			).OrFatal(t)),
 			contentType:            "application/json",
-			queryResult:            map[string]*kdb.Plan{},
+			queryResult:            map[string]*domain.Plan{},
 			updateAnnotationsError: errors.New("dummy error"),
 		},
 		Then{
-			requestedDelta: kdb.AnnotationDelta{
-				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
-				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
+			requestedDelta: domain.AnnotationDelta{
+				Add:    []domain.Annotation{{Key: "annot-1", Value: "val-1"}},
+				Remove: []domain.Annotation{{Key: "annot-2", Value: "val-2"}},
 			},
 			statusCode: http.StatusInternalServerError,
 			wantError:  true,
@@ -2476,9 +2575,9 @@ func TestPutAnnotations(t *testing.T) {
 			getError:    errors.New("dummy error"),
 		},
 		Then{
-			requestedDelta: kdb.AnnotationDelta{
-				Add:    []kdb.Annotation{{Key: "annot-1", Value: "val-1"}},
-				Remove: []kdb.Annotation{{Key: "annot-2", Value: "val-2"}},
+			requestedDelta: domain.AnnotationDelta{
+				Add:    []domain.Annotation{{Key: "annot-1", Value: "val-1"}},
+				Remove: []domain.Annotation{{Key: "annot-2", Value: "val-2"}},
 			},
 			statusCode: http.StatusInternalServerError,
 			wantError:  true,
@@ -2492,7 +2591,7 @@ func TestPutPlanServiceAccount(t *testing.T) {
 		serviceAccount string
 		contentType    string
 
-		queryResult               map[string]*kdb.Plan
+		queryResult               map[string]*domain.Plan
 		getError                  error
 		updateServiceAccountError error
 	}
@@ -2518,7 +2617,7 @@ func TestPutPlanServiceAccount(t *testing.T) {
 				return when.updateServiceAccountError
 			}
 
-			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
 				return when.queryResult, when.getError
 			}
 
@@ -2581,27 +2680,31 @@ func TestPutPlanServiceAccount(t *testing.T) {
 			serviceAccount: "service-account-1",
 			contentType:    "application/json",
 
-			queryResult: map[string]*kdb.Plan{
+			queryResult: map[string]*domain.Plan{
 				"plan-1": {
-					PlanBody: kdb.PlanBody{
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-1", Active: true, Hash: "hash-1",
-						Image:          &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+						Image:          &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 						ServiceAccount: "service-account-1",
 					},
-					Inputs: []kdb.MountPoint{
+					Inputs: []domain.Input{
 						{
-							Id: 1, Path: "/in/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
-								{Key: "key-1", Value: "val-1"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 1, Path: "/in/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-1"},
+								}),
+							},
 						},
 					},
-					Outputs: []kdb.MountPoint{
+					Outputs: []domain.Output{
 						{
-							Id: 2, Path: "/out/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
-								{Key: "key-1", Value: "val-3"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 2, Path: "/out/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-3"},
+								}),
+							},
 						},
 					},
 				},
@@ -2617,19 +2720,23 @@ func TestPutPlanServiceAccount(t *testing.T) {
 				},
 				Active:         true,
 				ServiceAccount: "service-account-1",
-				Inputs: []plans.Mountpoint{
+				Inputs: []plans.Input{
 					{
-						Path: "/in/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-1"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-1"},
+							},
 						},
 					},
 				},
-				Outputs: []plans.Mountpoint{
+				Outputs: []plans.Output{
 					{
-						Path: "/out/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-3"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/out/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-3"},
+							},
 						},
 					},
 				},
@@ -2643,10 +2750,10 @@ func TestPutPlanServiceAccount(t *testing.T) {
 			serviceAccount: "service-account-1",
 			contentType:    "application/json",
 
-			queryResult: map[string]*kdb.Plan{},
+			queryResult: map[string]*domain.Plan{},
 			getError:    nil,
 
-			updateServiceAccountError: kdb.ErrMissing,
+			updateServiceAccountError: kerr.ErrMissing,
 		},
 		Then{
 			statusCode: http.StatusNotFound,
@@ -2660,7 +2767,7 @@ func TestPutPlanServiceAccount(t *testing.T) {
 			serviceAccount: "service-account-1",
 			contentType:    "application/json",
 
-			queryResult: map[string]*kdb.Plan{},
+			queryResult: map[string]*domain.Plan{},
 
 			updateServiceAccountError: errors.New("dummy error"),
 		},
@@ -2702,7 +2809,7 @@ func TestDeletePlanServiceAccount(t *testing.T) {
 	type When struct {
 		planId string
 
-		queryResult               map[string]*kdb.Plan
+		queryResult               map[string]*domain.Plan
 		getError                  error
 		updateServiceAccountError error
 	}
@@ -2725,7 +2832,7 @@ func TestDeletePlanServiceAccount(t *testing.T) {
 				return when.updateServiceAccountError
 			}
 
-			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*kdb.Plan, error) {
+			mockPlan.Impl.Get = func(ctx context.Context, planId []string) (map[string]*domain.Plan, error) {
 				return when.queryResult, when.getError
 			}
 
@@ -2783,26 +2890,30 @@ func TestDeletePlanServiceAccount(t *testing.T) {
 		When{
 			planId: "plan-1",
 
-			queryResult: map[string]*kdb.Plan{
+			queryResult: map[string]*domain.Plan{
 				"plan-1": {
-					PlanBody: kdb.PlanBody{
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-1", Active: true, Hash: "hash-1",
-						Image: &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+						Image: &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 					},
-					Inputs: []kdb.MountPoint{
+					Inputs: []domain.Input{
 						{
-							Id: 1, Path: "/in/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
-								{Key: "key-1", Value: "val-1"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 1, Path: "/in/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-1"},
+								}),
+							},
 						},
 					},
-					Outputs: []kdb.MountPoint{
+					Outputs: []domain.Output{
 						{
-							Id: 2, Path: "/out/1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
-								{Key: "key-1", Value: "val-3"},
-							}),
+							MountPoint: domain.MountPoint{
+								Id: 2, Path: "/out/1",
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: "key-1", Value: "val-3"},
+								}),
+							},
 						},
 					},
 				},
@@ -2817,19 +2928,23 @@ func TestDeletePlanServiceAccount(t *testing.T) {
 					Image:  &plans.Image{Repository: "image-1", Tag: "ver-1"},
 				},
 				Active: true,
-				Inputs: []plans.Mountpoint{
+				Inputs: []plans.Input{
 					{
-						Path: "/in/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-1"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/in/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-1"},
+							},
 						},
 					},
 				},
-				Outputs: []plans.Mountpoint{
+				Outputs: []plans.Output{
 					{
-						Path: "/out/1",
-						Tags: []apitag.Tag{
-							{Key: "key-1", Value: "val-3"},
+						Mountpoint: plans.Mountpoint{
+							Path: "/out/1",
+							Tags: []apitag.Tag{
+								{Key: "key-1", Value: "val-3"},
+							},
 						},
 					},
 				},
@@ -2841,10 +2956,10 @@ func TestDeletePlanServiceAccount(t *testing.T) {
 		When{
 			planId: "plan-1",
 
-			queryResult: map[string]*kdb.Plan{},
+			queryResult: map[string]*domain.Plan{},
 			getError:    nil,
 
-			updateServiceAccountError: kdb.ErrMissing,
+			updateServiceAccountError: kerr.ErrMissing,
 		},
 		Then{
 			statusCode: http.StatusNotFound,
@@ -2856,7 +2971,7 @@ func TestDeletePlanServiceAccount(t *testing.T) {
 		When{
 			planId: "plan-1",
 
-			queryResult:               map[string]*kdb.Plan{},
+			queryResult:               map[string]*domain.Plan{},
 			updateServiceAccountError: errors.New("dummy error"),
 		},
 		Then{

@@ -1,3 +1,463 @@
+v1.5.0
+============
+
+- Date: 2024-11-20
+
+The v1.5.0 release includes
+
+- `knit plan show` and `knit plan find` display direct upstreams/downstreams of each Plan
+- New command `knit plan graph`
+- Fix ambiguity of Data's upstream (breaking change)
+- Fix case inconsistency in JSON (breaking change)
+
+## Important Changes
+
+### `knit plan show`and `knit plan find` display direct upstreams/downstreams of each Plan
+
+These commands show upstream/downstream neighboring Plans of a Plan. As shown below:
+
+```json
+{
+    "planId": ...
+    ...
+    "inputs": [
+        {
+            "path": "/in/1",
+            "tags": [ ... ],
+            "upstreams": [  // NEW!
+              {
+                  "plan": {
+                      "planId": "...",
+                      "image": "...",
+                      "entrypoint": [ ... ],
+                      "args": [ ... ],
+                      "annotations": [ ... ]
+                  },
+                  "mountpoint": {  // this upstream is a normal output.
+                      "path": "/out/1",
+                      "tags": [ ... ]
+                  }
+              },
+              {
+                  "plan": {
+                      "planId": "...",
+                      "image": "...",
+                      "entrypoint": [ ... ],
+                      "args": [ ... ],
+                      "annotations": [ ... ]
+                  },
+                  "log": {  // this upstream is a log.
+                      "tags": [ ... ]
+                  }
+              },
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "path": "/out/1",
+            "tags": [ ... ],
+            "downstreams": [  // NEW!
+                {
+                    "plan": {
+                        "planId": "...",
+                        "image": "...",
+                        "entrypoint": [ ... ],
+                        "args": [ ... ],
+                        "annotations": [ ... ]
+                    },
+                    "mountpoint": {
+                        "path": "/in/2",
+                        "tags": [ ... ]
+                    }
+                },
+            ]
+        }
+    ],
+    ...
+}
+```
+
+Upstreams of a Plan Input are Plan Outputs or a Logs with matching Tags. If an Output (or Log) which has all Tags of the Input of another Plan, the Output is considered as Upstream of the Input. In other words, when Output or Log of a Plan A generates Data which can be assigned to an Input of Plan B, the Output/Log is upstream of the Input.
+
+### `knit plan graph`
+
+The new command `knit plan graph` generates Plan Graph, which is an overview of your Plans, in dot format.
+
+`knit plan graph` traverse Plans upstream and/or downstream Plans recursively and visualize the "pipeline" made by Plans.
+
+See `knit plan graph --help` for more details.
+
+### Fix ambiguity of Data's upstream (breaking change)
+
+Before this change, `"upstream"` of Data had not distinguished normal outputs and logs.
+If the upstream of Data is a log, `knit data find` tells you the upstream has "path" (as `/log`).
+However, the expression is identical to a that of normal output with the path `/log`, so with only `knit data find`, we could not know the upstream of Data is whether output or log.
+
+By now, `knit data find` tells explicitly the upstream of Data is output or is log.
+
+To do that, **breaking changes** are introduced. In JSON format of Data, `"path"` and `"tags"` are moved to a new field `"mountpoint"` (for normal outputs) or `"log"` (for log) .
+
+```json
+{
+    "knitId": "...",
+    "tags": [ ... ],
+    "upstream": {
+        "mountpoint": {  // NEW!
+            "path": "/upload",
+            "tags": []
+        },
+        "run": {
+            "runId": " ... ",
+            "status": "done",
+            "updatedAt": "2024-11-18T04:25:32.076+00:00",
+            "plan": { ... }
+        }
+    },
+    "downstreams": [
+        {
+            "mountpoint": {  // NEW!
+                "path": "/in/dataset",
+                "tags": [
+                    "mode:training",
+                    "project:first-knitfab",
+                    "type:dataset"
+                ]
+            },
+            "run": {
+                "runId": "b7ed ... ",
+                "status": "running",
+                "updatedAt": "2024-11-18T04:44:06.008+00:00",
+                "plan": { ... }
+            }
+        }
+    ],
+    "nomination": [ ... ]
+}
+```
+
+```json
+{
+    "knitId": "de17825d-16f3-4a5d-b3cb-16ef95379c0c",
+    "tags": [
+        "knit#id:de17825d-16f3-4a5d-b3cb-16ef95379c0c",
+        "knit#timestamp:2024-11-18T05:12:32.075+00:00",
+        "project:first-knitfab",
+        "type:log"
+    ],
+    "upstream": {
+        "log": {  // NEW!
+            "tags": [
+                "project:first-knitfab",
+                "type:log"
+            ]
+        },
+        "run": {
+            "runId": "b7ed106b-cb49-4671-8979-4e85e249f15c",
+            "status": "done",
+            "updatedAt": "2024-11-18T05:12:32.075+00:00",
+            "exit": {
+                "code": 0,
+                "message": ""
+            },
+            "plan": {
+                "planId": "5770077f-e7a2-4b0f-8e8e-4d73d4b14144",
+                "image": "localhost:30503/knitfab-first-train:v1.0",
+                "entrypoint": [
+                    "python",
+                    "-u",
+                    "train.py"
+                ],
+                "args": [
+                    "--dataset",
+                    "/in/dataset",
+                    "--save-to",
+                    "/out/model"
+                ]
+            }
+        }
+    },
+    "downstreams": [],
+    "nomination": []
+}
+```
+
+Data with an `"upstream"` containing `"mountpoint"` represents a normal output, while one containing `"log"` represents a log.
+
+### Fix case inconsistency in JSON (breaking change)
+
+Plan had `log.Tag` field. Differently than other fields, the first letter of the filed name is capitalized.
+
+This inconcistency is not intended, so it has been fixed to `log.tag`.
+
+```json
+{
+    "planId": " ... ",
+    "image": " ... ",
+    // ...
+    "log": {
+        "tags": [  // renamed from "Tags".
+            "project:first-knitfab",
+            "type:log"
+        ],
+        "downstreams": []
+    },
+    // ...
+}
+```
+
+## License
+
+Knitfab v1.5.0 is released under BSL 1.1, as written in the LICENSE file.
+
+CHANGE DATE for `v1.5.x` is 2028-11-20.
+
+Previous releases, `v1.4.x` or brefore, are not changed in their CHANGE DATE.
+
+## Upgrade Path
+
+This release has breaking change, so upgrade both Knitfab system and CLI.
+
+### Knitfab System
+
+Download the installer, and run
+
+```
+installer.sh --install
+```
+
+in the directory where you have installed Knitfab.
+
+### CLI `knit`
+
+Download from assets of this release.
+
+v1.5.0-beta
+============
+
+- Date: 2024-11-18
+
+The v1.5.0-beta release includes
+
+- `knit plan show` and `knit plan find` display direct upstreams/downstreams of each Plan
+- New command `knit plan graph`
+- Fix ambiguity of Data's upstream (breaking change)
+- Fix case inconsistency in JSON (breaking change)
+
+## Important Changes
+
+### `knit plan show`and `knit plan find` display direct upstreams/downstreams of each Plan
+
+These commands show upstream/downstream neighboring Plans of a Plan. As shown below:
+
+```json
+{
+    "planId": ...
+    ...
+    "inputs": [
+        {
+            "path": "/in/1",
+            "tags": [ ... ],
+            "upstreams": [  // NEW!
+              {
+                  "plan": {
+                      "planId": "...",
+                      "image": "...",
+                      "entrypoint": [ ... ],
+                      "args": [ ... ],
+                      "annotations": [ ... ]
+                  },
+                  "mountpoint": {  // this upstream is a normal output.
+                      "path": "/out/1",
+                      "tags": [ ... ]
+                  }
+              },
+              {
+                  "plan": {
+                      "planId": "...",
+                      "image": "...",
+                      "entrypoint": [ ... ],
+                      "args": [ ... ],
+                      "annotations": [ ... ]
+                  },
+                  "log": {  // this upstream is a log.
+                      "tags": [ ... ]
+                  }
+              },
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "path": "/out/1",
+            "tags": [ ... ],
+            "downstreams": [  // NEW!
+                {
+                    "plan": {
+                        "planId": "...",
+                        "image": "...",
+                        "entrypoint": [ ... ],
+                        "args": [ ... ],
+                        "annotations": [ ... ]
+                    },
+                    "mountpoint": {
+                        "path": "/in/2",
+                        "tags": [ ... ]
+                    }
+                },
+            ]
+        }
+    ],
+    ...
+}
+```
+
+Upstreams of a Plan Input are Plan Outputs or a Logs with matching Tags. If an Output (or Log) which has all Tags of the Input of another Plan, the Output is considered as Upstream of the Input. In other words, when Output or Log of a Plan A generates Data which can be assigned to an Input of Plan B, the Output/Log is upstream of the Input.
+
+### `knit plan graph`
+
+The new command `knit plan graph` generates Plan Graph, which is an overview of your Plans, in dot format.
+
+`knit plan graph` traverse Plans upstream and/or downstream Plans recursively and visualize the "pipeline" made by Plans.
+
+See `knit plan graph --help` for more details.
+
+### Fix ambiguity of Data's upstream (breaking change)
+
+Before this change, `"upstream"` of Data had not distinguished normal outputs and logs.
+If the upstream of Data is a log, `knit data find` tells you the upstream has "path" (as `/log`).
+However, the expression is identical to a that of normal output with the path `/log`, so with only `knit data find`, we could not know the upstream of Data is whether output or log.
+
+By now, `knit data find` tells explicitly the upstream of Data is output or is log.
+
+To do that, **breaking changes** are introduced. In JSON format of Data, `"path"` and `"tags"` are moved to a new field `"mountpoint"` (for normal outputs) or `"log"` (for log) .
+
+```json
+{
+    "knitId": "...",
+    "tags": [ ... ],
+    "upstream": {
+        "mountpoint": {  // NEW!
+            "path": "/upload",
+            "tags": []
+        },
+        "run": {
+            "runId": " ... ",
+            "status": "done",
+            "updatedAt": "2024-11-18T04:25:32.076+00:00",
+            "plan": { ... }
+        }
+    },
+    "downstreams": [
+        {
+            "mountpoint": {  // NEW!
+                "path": "/in/dataset",
+                "tags": [
+                    "mode:training",
+                    "project:first-knitfab",
+                    "type:dataset"
+                ]
+            },
+            "run": {
+                "runId": "b7ed ... ",
+                "status": "running",
+                "updatedAt": "2024-11-18T04:44:06.008+00:00",
+                "plan": { ... }
+            }
+        }
+    ],
+    "nomination": [ ... ]
+}
+```
+
+```json
+{
+    "knitId": "de17825d-16f3-4a5d-b3cb-16ef95379c0c",
+    "tags": [
+        "knit#id:de17825d-16f3-4a5d-b3cb-16ef95379c0c",
+        "knit#timestamp:2024-11-18T05:12:32.075+00:00",
+        "project:first-knitfab",
+        "type:log"
+    ],
+    "upstream": {
+        "log": {  // NEW!
+            "tags": [
+                "project:first-knitfab",
+                "type:log"
+            ]
+        },
+        "run": {
+            "runId": "b7ed106b-cb49-4671-8979-4e85e249f15c",
+            "status": "done",
+            "updatedAt": "2024-11-18T05:12:32.075+00:00",
+            "exit": {
+                "code": 0,
+                "message": ""
+            },
+            "plan": {
+                "planId": "5770077f-e7a2-4b0f-8e8e-4d73d4b14144",
+                "image": "localhost:30503/knitfab-first-train:v1.0",
+                "entrypoint": [
+                    "python",
+                    "-u",
+                    "train.py"
+                ],
+                "args": [
+                    "--dataset",
+                    "/in/dataset",
+                    "--save-to",
+                    "/out/model"
+                ]
+            }
+        }
+    },
+    "downstreams": [],
+    "nomination": []
+}
+```
+
+Data with an `"upstream"` containing `"mountpoint"` represents a normal output, while one containing `"log"` represents a log.
+
+### Fix case inconsistency in JSON (breaking change)
+
+Plan had `log.Tag` field. Differently than other fields, the first letter of the filed name is capitalized.
+
+This inconcistency is not intended, so it has been fixed to `log.tag`.
+
+```json
+{
+    "planId": " ... ",
+    "image": " ... ",
+    // ...
+    "log": {
+        "tags": [  // renamed from "Tags".
+            "project:first-knitfab",
+            "type:log"
+        ],
+        "downstreams": []
+    },
+    // ...
+}
+```
+
+## How to try
+
+This release containing breaking changes, so please be sure to update both the Knitfab system AND CLI to try.
+
+### Knitfab System
+
+Download the installer from branch [develop/v1.5.0](https://github.com/opst/knitfab/tree/develop/v1.5.0), and run
+
+```
+BRANCH=develop/v1.5.0 CHART_VERSION=v1.5.0-beta installer.sh --install
+```
+
+in the directory where you have installed Knitfab.
+
+### CLI knit
+
+Download from assets of this release.
+
 v1.4.0
 ===========
 

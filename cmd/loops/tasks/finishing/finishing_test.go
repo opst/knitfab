@@ -10,28 +10,29 @@ import (
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/finishing"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
-	kdbmock "github.com/opst/knitfab/pkg/db/mocks"
-	"github.com/opst/knitfab/pkg/workloads"
-	"github.com/opst/knitfab/pkg/workloads/k8s"
-	"github.com/opst/knitfab/pkg/workloads/worker"
+	"github.com/opst/knitfab/pkg/domain"
+	workloads "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
+	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	kdbmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
+	mockK8sRun "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
+	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 )
 
 func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 	type When struct {
-		givenCursor kdb.RunCursor
+		givenCursor domain.RunCursor
 
-		newCursor     kdb.RunCursor
+		newCursor     domain.RunCursor
 		statusChanged bool
 		err           error
 
-		pickedRun          kdb.Run
+		pickedRun          domain.Run
 		iDbRunGetReturnNil bool
 	}
 
 	type Then struct {
-		wantedCursor           kdb.RunCursor
+		wantedCursor           domain.RunCursor
 		wantedOk               bool
 		wantedErr              error
 		hookAfterHasBeenCalled bool
@@ -45,25 +46,25 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 			pickAndSetStatusCalled := false
 			iDbRun.Impl.PickAndSetStatus = func(
-				ctx context.Context, cursor kdb.RunCursor,
-				_ func(kdb.Run) (kdb.KnitRunStatus, error), // ignore
-			) (kdb.RunCursor, bool, error) {
+				ctx context.Context, cursor domain.RunCursor,
+				_ func(domain.Run) (domain.KnitRunStatus, error), // ignore
+			) (domain.RunCursor, bool, error) {
 				pickAndSetStatusCalled = true
 				return when.newCursor, when.statusChanged, when.err
 			}
-			iDbRun.Impl.Get = func(ctx context.Context, runIds []string) (map[string]kdb.Run, error) {
+			iDbRun.Impl.Get = func(ctx context.Context, runIds []string) (map[string]domain.Run, error) {
 				if len(runIds) != 1 || runIds[0] != when.newCursor.Head {
 					t.Errorf("runIds: actual=%+v, expect=%+v", runIds, []string{when.newCursor.Head})
 				}
 				if when.iDbRunGetReturnNil {
 					return nil, errors.New("iDbRun.Get: should be ignored")
 				}
-				return map[string]kdb.Run{when.newCursor.Head: when.pickedRun}, nil
+				return map[string]domain.Run{when.newCursor.Head: when.pickedRun}, nil
 			}
 
 			// Testee
 			hookAfterHasBeenCalled := false
-			testee := finishing.Task(iDbRun, nil, nil, hook.Func[apiruns.Detail, struct{}]{
+			testee := finishing.Task(iDbRun, nil, hook.Func[apiruns.Detail, struct{}]{
 				AfterFn: func(hookValue apiruns.Detail) error {
 					hookAfterHasBeenCalled = true
 					if want := bindruns.ComposeDetail(when.pickedRun); !want.Equal(hookValue) {
@@ -103,75 +104,75 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("when PickAndSetStatus do not cause error, the task should return no error (status changed)", theory(
 		When{
-			givenCursor: kdb.RunCursor{
+			givenCursor: domain.RunCursor{
 				Head:   "run-id-0",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
-			newCursor: kdb.RunCursor{
+			newCursor: domain.RunCursor{
 				Head:   "run-id-1",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
 			statusChanged: true,
 			err:           nil,
-			pickedRun: kdb.Run{
-				RunBody: kdb.RunBody{
+			pickedRun: domain.Run{
+				RunBody: domain.RunBody{
 					Id:         "run-id-1",
 					WorkerName: "worker-name-1",
-					Status:     kdb.Completing,
-					PlanBody: kdb.PlanBody{
+					Status:     domain.Completing,
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-id-1",
 						Hash:   "hash-1",
 						Active: true,
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image: "repo-1", Version: "tag-1",
 						},
 					},
 				},
-				Inputs: []kdb.Assignment{
+				Inputs: []domain.Assignment{
 					{
-						MountPoint: kdb.MountPoint{
+						MountPoint: domain.MountPoint{
 							Id:   100_100,
 							Path: "/path/to/input",
-							Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "csv"}}),
+							Tags: domain.NewTagSet([]domain.Tag{{Key: "type", Value: "csv"}}),
 						},
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "knit-id-1",
 							VolumeRef: "#knit-id-1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "csv"},
 								{Key: "input", Value: "1"},
 							}),
 						},
 					},
 				},
-				Outputs: []kdb.Assignment{
+				Outputs: []domain.Assignment{
 					{
-						MountPoint: kdb.MountPoint{
+						MountPoint: domain.MountPoint{
 							Id:   100_110,
 							Path: "/path/to/output",
-							Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "model"}}),
+							Tags: domain.NewTagSet([]domain.Tag{{Key: "type", Value: "model"}}),
 						},
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "knit-id-2",
 							VolumeRef: "#knit-id-2",
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "model"},
 								{Key: "output", Value: "1"},
 							}),
 						},
 					},
 				},
-				Log: &kdb.Log{
+				Log: &domain.Log{
 					Id: 100_001,
-					Tags: kdb.NewTagSet([]kdb.Tag{
+					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "type", Value: "log"},
 					}),
-					KnitDataBody: kdb.KnitDataBody{
+					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "knit-id-log",
 						VolumeRef: "#knit-id-log",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "text"},
 							{Key: "log", Value: "1"},
 						}),
@@ -180,10 +181,10 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 			},
 		},
 		Then{
-			wantedCursor: kdb.RunCursor{
+			wantedCursor: domain.RunCursor{
 				Head:   "run-id-1",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
 			wantedOk:               true,
 			wantedErr:              nil,
@@ -193,75 +194,75 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("when PickAndSetStatus do not cause error, the task should return no error (status not changed)", theory(
 		When{
-			givenCursor: kdb.RunCursor{
+			givenCursor: domain.RunCursor{
 				Head:   "run-id-0",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
-			newCursor: kdb.RunCursor{
+			newCursor: domain.RunCursor{
 				Head:   "run-id-1",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
 			statusChanged: false,
 			err:           nil,
-			pickedRun: kdb.Run{
-				RunBody: kdb.RunBody{
+			pickedRun: domain.Run{
+				RunBody: domain.RunBody{
 					Id:         "run-id-1",
 					WorkerName: "worker-name-1",
-					Status:     kdb.Completing,
-					PlanBody: kdb.PlanBody{
+					Status:     domain.Completing,
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-id-1",
 						Hash:   "hash-1",
 						Active: true,
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image: "repo-1", Version: "tag-1",
 						},
 					},
 				},
-				Inputs: []kdb.Assignment{
+				Inputs: []domain.Assignment{
 					{
-						MountPoint: kdb.MountPoint{
+						MountPoint: domain.MountPoint{
 							Id:   100_100,
 							Path: "/path/to/input",
-							Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "csv"}}),
+							Tags: domain.NewTagSet([]domain.Tag{{Key: "type", Value: "csv"}}),
 						},
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "knit-id-1",
 							VolumeRef: "#knit-id-1",
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "csv"},
 								{Key: "input", Value: "1"},
 							}),
 						},
 					},
 				},
-				Outputs: []kdb.Assignment{
+				Outputs: []domain.Assignment{
 					{
-						MountPoint: kdb.MountPoint{
+						MountPoint: domain.MountPoint{
 							Id:   100_110,
 							Path: "/path/to/output",
-							Tags: kdb.NewTagSet([]kdb.Tag{{Key: "type", Value: "model"}}),
+							Tags: domain.NewTagSet([]domain.Tag{{Key: "type", Value: "model"}}),
 						},
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "knit-id-2",
 							VolumeRef: "#knit-id-2",
-							Tags: kdb.NewTagSet([]kdb.Tag{
+							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "model"},
 								{Key: "output", Value: "1"},
 							}),
 						},
 					},
 				},
-				Log: &kdb.Log{
+				Log: &domain.Log{
 					Id: 100_001,
-					Tags: kdb.NewTagSet([]kdb.Tag{
+					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "type", Value: "log"},
 					}),
-					KnitDataBody: kdb.KnitDataBody{
+					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "knit-id-log",
 						VolumeRef: "#knit-id-log",
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "text"},
 							{Key: "log", Value: "1"},
 						}),
@@ -270,10 +271,10 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 			},
 		},
 		Then{
-			wantedCursor: kdb.RunCursor{
+			wantedCursor: domain.RunCursor{
 				Head:   "run-id-1",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
 			wantedOk:               true,
 			wantedErr:              nil,
@@ -283,24 +284,24 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("when PickAndSetStatus is not effected, the task should return non-ok", theory(
 		When{
-			givenCursor: kdb.RunCursor{
+			givenCursor: domain.RunCursor{
 				Head:   "run-id-0",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
-			newCursor: kdb.RunCursor{
+			newCursor: domain.RunCursor{
 				Head:   "run-id-0",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
 			statusChanged: false,
 			err:           nil,
 		},
 		Then{
-			wantedCursor: kdb.RunCursor{
+			wantedCursor: domain.RunCursor{
 				Head:   "run-id-0",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{},
 			},
 			wantedErr:              nil,
 			hookAfterHasBeenCalled: false,
@@ -311,24 +312,24 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 		expectedErr := errors.New("fake error")
 		t.Run("when PickAndSetStatus returns error, the task should return the error", theory(
 			When{
-				givenCursor: kdb.RunCursor{
+				givenCursor: domain.RunCursor{
 					Head:   "run-id-0",
-					Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-					Pseudo: []kdb.PseudoPlanName{},
+					Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+					Pseudo: []domain.PseudoPlanName{},
 				},
-				newCursor: kdb.RunCursor{
+				newCursor: domain.RunCursor{
 					Head:   "run-id-1",
-					Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-					Pseudo: []kdb.PseudoPlanName{},
+					Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+					Pseudo: []domain.PseudoPlanName{},
 				},
 				statusChanged: false,
 				err:           expectedErr,
 			},
 			Then{
-				wantedCursor: kdb.RunCursor{
+				wantedCursor: domain.RunCursor{
 					Head:   "run-id-1",
-					Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-					Pseudo: []kdb.PseudoPlanName{},
+					Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+					Pseudo: []domain.PseudoPlanName{},
 				},
 				wantedOk:               true,
 				wantedErr:              expectedErr,
@@ -340,7 +341,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 
 type FakeWorker struct {
 	runId     string
-	jobStatus k8s.JobStatus
+	jobStatus cluster.JobStatus
 	closed    bool
 	closeErr  error
 
@@ -353,7 +354,7 @@ func (fw *FakeWorker) RunId() string {
 	return fw.runId
 }
 
-func (fw *FakeWorker) JobStatus(context.Context) k8s.JobStatus {
+func (fw *FakeWorker) JobStatus(context.Context) cluster.JobStatus {
 	return fw.jobStatus
 }
 
@@ -375,7 +376,7 @@ var _ worker.Worker = &FakeWorker{}
 func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 	type When struct {
-		runPassedToCallback kdb.Run
+		runPassedToCallback domain.Run
 		workerFromFind      *FakeWorker
 		errBefore           error
 		errFromFind         error
@@ -383,7 +384,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 	}
 
 	type Then struct {
-		runStatus             kdb.KnitRunStatus
+		runStatus             domain.KnitRunStatus
 		wantHookBeforeCalled  bool
 		wantFindHasBeenCalled bool
 		wantError             error
@@ -398,9 +399,9 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			// build mock of PickAndSetStatus
 
 			iDbRun.Impl.PickAndSetStatus = func(
-				ctx context.Context, cursor kdb.RunCursor,
-				callback func(kdb.Run) (kdb.KnitRunStatus, error), // ignore
-			) (kdb.RunCursor, bool, error) {
+				ctx context.Context, cursor domain.RunCursor,
+				callback func(domain.Run) (domain.KnitRunStatus, error), // ignore
+			) (domain.RunCursor, bool, error) {
 				newStatus, err := callback(when.runPassedToCallback)
 
 				if then.wantAnyError && (err == nil) {
@@ -421,12 +422,13 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 				}
 				return when.errFromDeleteWorker
 			}
-			iDbRun.Impl.Get = func(ctx context.Context, runIds []string) (map[string]kdb.Run, error) {
-				return map[string]kdb.Run{}, nil
+			iDbRun.Impl.Get = func(ctx context.Context, runIds []string) (map[string]domain.Run, error) {
+				return map[string]domain.Run{}, nil
 			}
 
 			findHasBeenCalled := false
-			fakeFind := func(ctx context.Context, cluster k8s.Cluster, runBody kdb.RunBody) (worker.Worker, error) {
+			fakeRunInterfafce := mockK8sRun.New(t)
+			fakeRunInterfafce.Impl.FindWorker = func(ctx context.Context, runBody domain.RunBody) (worker.Worker, error) {
 				findHasBeenCalled = true
 				if !runBody.Equal(&when.runPassedToCallback.RunBody) {
 					t.Errorf("find: runBody: actual=%+v, expect=%+v", runBody, when.runPassedToCallback.RunBody)
@@ -436,7 +438,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 			// Testee
 			beforeHasBeenCalled := false
-			testee := finishing.Task(iDbRun, fakeFind, nil, hook.Func[apiruns.Detail, struct{}]{
+			testee := finishing.Task(iDbRun, fakeRunInterfafce, hook.Func[apiruns.Detail, struct{}]{
 				BeforeFn: func(hookValue apiruns.Detail) (struct{}, error) {
 					beforeHasBeenCalled = true
 					if want := bindruns.ComposeDetail(when.runPassedToCallback); !want.Equal(hookValue) {
@@ -445,10 +447,10 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 					return struct{}{}, when.errBefore
 				},
 			})
-			testee(context.Background(), kdb.RunCursor{
+			testee(context.Background(), domain.RunCursor{
 				Head:   "run-id-0",
-				Status: []kdb.KnitRunStatus{kdb.Completing, kdb.Aborting},
-				Pseudo: []kdb.PseudoPlanName{kdb.Uploaded},
+				Status: []domain.KnitRunStatus{domain.Completing, domain.Aborting},
+				Pseudo: []domain.PseudoPlanName{domain.Uploaded},
 			})
 
 			// assertion
@@ -485,16 +487,16 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("for completeing run with worker name, it returns Done as new status", theory(
 		When{
-			runPassedToCallback: kdb.Run{
-				RunBody: kdb.RunBody{
+			runPassedToCallback: domain.Run{
+				RunBody: domain.RunBody{
 					Id:         "run-id-0",
 					WorkerName: "worker-name-0",
-					Status:     kdb.Completing,
-					PlanBody: kdb.PlanBody{
+					Status:     domain.Completing,
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-id-0",
 						Hash:   "hash-0",
 						Active: true,
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image: "repo-0", Version: "tag-0",
 						},
 					},
@@ -502,14 +504,14 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			},
 			workerFromFind: &FakeWorker{
 				runId: "run-id-0",
-				jobStatus: k8s.JobStatus{
-					Type: k8s.Succeeded,
+				jobStatus: cluster.JobStatus{
+					Type: cluster.Succeeded,
 				},
 				closed: false,
 			},
 		},
 		Then{
-			runStatus:             kdb.Done,
+			runStatus:             domain.Done,
 			wantHookBeforeCalled:  true,
 			wantWorkerClosed:      true,
 			wantFindHasBeenCalled: true,
@@ -519,16 +521,16 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("for aborting run with worker name, it returns Failed as new status", theory(
 		When{
-			runPassedToCallback: kdb.Run{
-				RunBody: kdb.RunBody{
+			runPassedToCallback: domain.Run{
+				RunBody: domain.RunBody{
 					Id:         "run-id-0",
 					WorkerName: "worker-name-0",
-					Status:     kdb.Aborting,
-					PlanBody: kdb.PlanBody{
+					Status:     domain.Aborting,
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-id-0",
 						Hash:   "hash-0",
 						Active: true,
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image: "repo-0", Version: "tag-0",
 						},
 					},
@@ -536,12 +538,12 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			},
 			workerFromFind: &FakeWorker{
 				runId:     "run-id-0",
-				jobStatus: k8s.JobStatus{Type: k8s.Failed, Code: 1},
+				jobStatus: cluster.JobStatus{Type: cluster.Failed, Code: 1},
 				closed:    false,
 			},
 		},
 		Then{
-			runStatus:             kdb.Failed,
+			runStatus:             domain.Failed,
 			wantHookBeforeCalled:  true,
 			wantFindHasBeenCalled: true,
 			wantWorkerClosed:      true,
@@ -551,15 +553,15 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("for completeing run without worker name, it returns Done as new status", theory(
 		When{
-			runPassedToCallback: kdb.Run{
-				RunBody: kdb.RunBody{
+			runPassedToCallback: domain.Run{
+				RunBody: domain.RunBody{
 					Id:     "run-id-0",
-					Status: kdb.Completing,
-					PlanBody: kdb.PlanBody{
+					Status: domain.Completing,
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-id-0",
 						Hash:   "hash-0",
 						Active: true,
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image: "repo-0", Version: "tag-0",
 						},
 					},
@@ -568,7 +570,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			workerFromFind: &FakeWorker{},
 		},
 		Then{
-			runStatus:             kdb.Done,
+			runStatus:             domain.Done,
 			wantHookBeforeCalled:  true,
 			wantFindHasBeenCalled: false,
 			wantWorkerClosed:      false,
@@ -578,15 +580,15 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("for aborting run without worker name, it returns Failed as new status", theory(
 		When{
-			runPassedToCallback: kdb.Run{
-				RunBody: kdb.RunBody{
+			runPassedToCallback: domain.Run{
+				RunBody: domain.RunBody{
 					Id:     "run-id-0",
-					Status: kdb.Aborting,
-					PlanBody: kdb.PlanBody{
+					Status: domain.Aborting,
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-id-0",
 						Hash:   "hash-0",
 						Active: true,
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image: "repo-0", Version: "tag-0",
 						},
 					},
@@ -595,7 +597,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			workerFromFind: &FakeWorker{},
 		},
 		Then{
-			runStatus:             kdb.Failed,
+			runStatus:             domain.Failed,
 			wantHookBeforeCalled:  true,
 			wantFindHasBeenCalled: false,
 			wantWorkerClosed:      false,
@@ -607,16 +609,16 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 		fakeError := errors.New("fake error")
 		t.Run("when before hook returns error, it returns the error and stay its state", theory(
 			When{
-				runPassedToCallback: kdb.Run{
-					RunBody: kdb.RunBody{
+				runPassedToCallback: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run-id-0",
 						WorkerName: "worker-name-0",
-						Status:     kdb.Completing,
-						PlanBody: kdb.PlanBody{
+						Status:     domain.Completing,
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-0",
 							Hash:   "hash-0",
 							Active: true,
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo-0", Version: "tag-0",
 							},
 						},
@@ -625,7 +627,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 				errBefore: fakeError,
 			},
 			Then{
-				runStatus:             kdb.Completing,
+				runStatus:             domain.Completing,
 				wantHookBeforeCalled:  true,
 				wantFindHasBeenCalled: false,
 				wantWorkerClosed:      false,
@@ -637,16 +639,16 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("when find returns ErrMissing, it returns no error and update state", theory(
 		When{
-			runPassedToCallback: kdb.Run{
-				RunBody: kdb.RunBody{
+			runPassedToCallback: domain.Run{
+				RunBody: domain.RunBody{
 					Id:         "run-id-0",
 					WorkerName: "worker-name-0",
-					Status:     kdb.Completing,
-					PlanBody: kdb.PlanBody{
+					Status:     domain.Completing,
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-id-0",
 						Hash:   "hash-0",
 						Active: true,
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image: "repo-0", Version: "tag-0",
 						},
 					},
@@ -655,7 +657,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			errFromFind: workloads.NewMissing("fake missing error"),
 		},
 		Then{
-			runStatus:             kdb.Done,
+			runStatus:             domain.Done,
 			wantHookBeforeCalled:  true,
 			wantFindHasBeenCalled: true,
 			wantWorkerClosed:      false,
@@ -667,16 +669,16 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 		fakeError := errors.New("fake error")
 		t.Run("when find returns other error, it returns the error and stay its state", theory(
 			When{
-				runPassedToCallback: kdb.Run{
-					RunBody: kdb.RunBody{
+				runPassedToCallback: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run-id-0",
 						WorkerName: "worker-name-0",
-						Status:     kdb.Completing,
-						PlanBody: kdb.PlanBody{
+						Status:     domain.Completing,
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-0",
 							Hash:   "hash-0",
 							Active: true,
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo-0", Version: "tag-0",
 							},
 						},
@@ -685,7 +687,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 				errFromFind: fakeError,
 			},
 			Then{
-				runStatus:             kdb.Completing,
+				runStatus:             domain.Completing,
 				wantHookBeforeCalled:  true,
 				wantFindHasBeenCalled: true,
 				wantWorkerClosed:      false,
@@ -699,16 +701,16 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 		fakeError := errors.New("fake error")
 		t.Run("when worker.Close returns error, it returns the error and stay its state", theory(
 			When{
-				runPassedToCallback: kdb.Run{
-					RunBody: kdb.RunBody{
+				runPassedToCallback: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run-id-0",
 						WorkerName: "worker-name-0",
-						Status:     kdb.Completing,
-						PlanBody: kdb.PlanBody{
+						Status:     domain.Completing,
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-0",
 							Hash:   "hash-0",
 							Active: true,
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo-0", Version: "tag-0",
 							},
 						},
@@ -716,12 +718,12 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 				},
 				workerFromFind: &FakeWorker{
 					runId:     "run-id-0",
-					jobStatus: k8s.JobStatus{Type: k8s.Succeeded},
+					jobStatus: cluster.JobStatus{Type: cluster.Succeeded},
 					closeErr:  fakeError,
 				},
 			},
 			Then{
-				runStatus:             kdb.Completing,
+				runStatus:             domain.Completing,
 				wantHookBeforeCalled:  true,
 				wantFindHasBeenCalled: true,
 				wantWorkerClosed:      true,
@@ -735,16 +737,16 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 		fakeError := errors.New("fake error")
 		t.Run("when iDbRun.DeleteWorker returns error, it returns the error and stay its state", theory(
 			When{
-				runPassedToCallback: kdb.Run{
-					RunBody: kdb.RunBody{
+				runPassedToCallback: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run-id-0",
 						WorkerName: "worker-name-0",
-						Status:     kdb.Completing,
-						PlanBody: kdb.PlanBody{
+						Status:     domain.Completing,
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-id-0",
 							Hash:   "hash-0",
 							Active: true,
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image: "repo-0", Version: "tag-0",
 							},
 						},
@@ -754,7 +756,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 				errFromDeleteWorker: fakeError,
 			},
 			Then{
-				runStatus:             kdb.Completing,
+				runStatus:             domain.Completing,
 				wantHookBeforeCalled:  true,
 				wantFindHasBeenCalled: true,
 				wantWorkerClosed:      true,
@@ -766,16 +768,16 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 
 	t.Run("when run status is unexpected, it returns error", theory(
 		When{
-			runPassedToCallback: kdb.Run{
-				RunBody: kdb.RunBody{
+			runPassedToCallback: domain.Run{
+				RunBody: domain.RunBody{
 					Id:         "run-id-0",
 					WorkerName: "worker-name-0",
-					Status:     kdb.Running,
-					PlanBody: kdb.PlanBody{
+					Status:     domain.Running,
+					PlanBody: domain.PlanBody{
 						PlanId: "plan-id-0",
 						Hash:   "hash-0",
 						Active: true,
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image: "repo-0", Version: "tag-0",
 						},
 					},
@@ -784,7 +786,7 @@ func TestTaskFinishing_Inside_PickAndSetStatus(t *testing.T) {
 			workerFromFind: &FakeWorker{},
 		},
 		Then{
-			runStatus:             kdb.Running,
+			runStatus:             domain.Running,
 			wantHookBeforeCalled:  false,
 			wantFindHasBeenCalled: false,
 			wantAnyError:          true,

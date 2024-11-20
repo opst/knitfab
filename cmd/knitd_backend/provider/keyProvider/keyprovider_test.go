@@ -7,11 +7,11 @@ import (
 	"time"
 
 	keyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider"
-	"github.com/opst/knitfab/pkg/db/mocks"
+	mocks "github.com/opst/knitfab/pkg/domain/keychain/db/mock"
+	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
+	mockkeychain "github.com/opst/knitfab/pkg/domain/keychain/k8s/mock"
 	"github.com/opst/knitfab/pkg/utils/try"
-	"github.com/opst/knitfab/pkg/workloads/keychain"
-	"github.com/opst/knitfab/pkg/workloads/keychain/key"
-	mockkeychain "github.com/opst/knitfab/pkg/workloads/keychain/mockKeychain"
 )
 
 func TestKeyLocker(t *testing.T) {

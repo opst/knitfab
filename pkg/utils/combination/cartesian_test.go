@@ -3,7 +3,7 @@ package combination_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	combo "github.com/opst/knitfab/pkg/utils/combination"
 )
 

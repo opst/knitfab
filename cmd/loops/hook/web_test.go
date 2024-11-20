@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 

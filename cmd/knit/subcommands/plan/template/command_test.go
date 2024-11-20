@@ -7,15 +7,13 @@ import (
 	"log"
 	"testing"
 
-	gcrname "github.com/google/go-containerregistry/pkg/name"
-	gcr "github.com/google/go-containerregistry/pkg/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab-api-types/tags"
 	"github.com/opst/knitfab/cmd/knit/env"
 	plan_template "github.com/opst/knitfab/cmd/knit/subcommands/plan/template"
-	"github.com/opst/knitfab/pkg/images/analyzer"
+	"github.com/opst/knitfab/pkg/utils/images/analyzer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -67,12 +65,12 @@ func TestNewPlanFromScratch(t *testing.T) {
 }
 
 type mockedAnalyzer struct {
-	Config analyzer.TaggedConfig
-	Err    error
+	Configs []analyzer.TaggedConfig
+	Err     error
 }
 
-func (m mockedAnalyzer) Analyze(s io.Reader, _ ...analyzer.Option) (*analyzer.TaggedConfig, error) {
-	return &m.Config, m.Err
+func (m mockedAnalyzer) Analyze(ctx context.Context, s io.Reader) ([]analyzer.TaggedConfig, error) {
+	return m.Configs, m.Err
 }
 
 type namedReader struct {
@@ -157,53 +155,53 @@ func TestNewPlanFromImage(t *testing.T) {
 		t.Run("when the analyzer returns a config, it returns a plan", theory(
 			When{
 				analyzer: mockedAnalyzer{
-					Config: analyzer.TaggedConfig{
-						Tag: try.To(
-							gcrname.NewTag("image:tag", gcrname.WithDefaultRegistry("")),
-						).OrFatal(t),
-						Config: gcr.Config{
-							WorkingDir: "/work",
-							Entrypoint: []string{
-								"/entrypoint.sh",
-								"in/1",
-								"/in/2",
-								"3/in",
-								"/4/in",
-								"...",
-								"/out/1",
-								"./out/2",
-								"/3/out",
-								"/4/out",
-								"...",
-							},
-							Cmd: []string{
-								"command-a",
-								"in/1",
-								"./in/5",
-								"/in/6",
-								"command-b",
-								"/7/in",
-								"/8/in",
-								"/out/1",
-								"out/5",
-								"/out/6",
-								"command-c",
-								"/7/out",
-								"8/out",
-							},
-							Volumes: map[string]struct{}{
-								"/in/2":   {},
-								"/in/9":   {},
-								"/in/10":  {},
-								"/11/in":  {},
-								"/12/in":  {},
-								"/cahce":  {},
-								"./out/2": {},
-								"/out/9":  {},
-								"/out/10": {},
-								"/11/out": {},
-								"/12/out": {},
-								"/temp":   {},
+					Configs: []analyzer.TaggedConfig{
+						{
+							Tags: []string{"image:tag"},
+							Config: analyzer.Config{
+								WorkingDir: "/work",
+								Entrypoint: []string{
+									"/entrypoint.sh",
+									"in/1",
+									"/in/2",
+									"3/in",
+									"/4/in",
+									"...",
+									"/out/1",
+									"./out/2",
+									"/3/out",
+									"/4/out",
+									"...",
+								},
+								Cmd: []string{
+									"command-a",
+									"in/1",
+									"./in/5",
+									"/in/6",
+									"command-b",
+									"/7/in",
+									"/8/in",
+									"/out/1",
+									"out/5",
+									"/out/6",
+									"command-c",
+									"/7/out",
+									"8/out",
+								},
+								Volumes: map[string]struct{}{
+									"/in/2":   {},
+									"/in/9":   {},
+									"/in/10":  {},
+									"/11/in":  {},
+									"/12/in":  {},
+									"/cahce":  {},
+									"./out/2": {},
+									"/out/9":  {},
+									"/out/10": {},
+									"/11/out": {},
+									"/12/out": {},
+									"/temp":   {},
+								},
 							},
 						},
 					},
@@ -464,20 +462,20 @@ func TestNewPlanFromImage(t *testing.T) {
 		t.Run("when env has no resource config, it generates as default", theory(
 			When{
 				analyzer: mockedAnalyzer{
-					Config: analyzer.TaggedConfig{
-						Tag: try.To(
-							gcrname.NewTag("image:tag", gcrname.WithDefaultRegistry("")),
-						).OrFatal(t),
-						Config: gcr.Config{
-							WorkingDir: "/work",
-							Entrypoint: []string{
-								"/entrypoint.sh",
-								"in/1",
-							},
-							Cmd: []string{
-								"command-a",
-								"in/1",
-								"out/1",
+					Configs: []analyzer.TaggedConfig{
+						{
+							Tags: []string{"image:tag"},
+							Config: analyzer.Config{
+								WorkingDir: "/work",
+								Entrypoint: []string{
+									"/entrypoint.sh",
+									"in/1",
+								},
+								Cmd: []string{
+									"command-a",
+									"in/1",
+									"out/1",
+								},
 							},
 						},
 					},

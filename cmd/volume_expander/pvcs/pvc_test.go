@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opst/knitfab/pkg/conn/k8s/testenv"
 	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
-	"github.com/opst/knitfab/pkg/workloads/k8s/testenv"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"

@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	kflag "github.com/opst/knitfab/pkg/commandline/flag"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/youta-t/flarc"
 
 	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
@@ -25,9 +26,8 @@ import (
 	data_find "github.com/opst/knitfab/cmd/knit/subcommands/data/find"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -55,9 +55,9 @@ func TestFindDataCommand(t *testing.T) {
 				{Key: "foo", Value: "bar"},
 				{Key: "baz", Value: "quux"},
 			},
-			Upstream: data.AssignedTo{
+			Upstream: data.CreatedFrom{
 				Run: runs.Summary{
-					RunId: "sample-run-id", Status: string(kdb.Running),
+					RunId: "sample-run-id", Status: string(domain.Running),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 						"2022-01-08T00:12:34+00:00",
 					)).OrFatal(t),
@@ -65,7 +65,7 @@ func TestFindDataCommand(t *testing.T) {
 						PlanId: "sample-plan-id", Name: "knit#upload",
 					},
 				},
-				Mountpoint: plans.Mountpoint{Path: "/out"},
+				Mountpoint: &plans.Mountpoint{Path: "/out"},
 			},
 			Downstreams: []data.AssignedTo{},
 		},
@@ -170,7 +170,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags are passed, it should call task with all tags", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -219,7 +219,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when '--transient no' is passed, it should call task with TransientExclude", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -253,7 +253,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags and --transient yes are passed, it should call task with all tags and TransientOnly", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -273,7 +273,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags and --transient true are passed, it should call task with all tags and TransientOnly", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "baz", Value: "quux"},
 				},
@@ -295,7 +295,7 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags and --transient no are passed, it should call task with all tags and TransientExclude", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
 					{Key: "example", Value: "tag"},
 				},
@@ -315,9 +315,9 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when tags and --transient false are passed, it should call task with all tags and TransientExclude", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
-					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+					{Key: domain.KeyKnitId, Value: "some-knit-id"},
 				},
 				Transient: "false",
 			},
@@ -327,7 +327,7 @@ func TestFindDataCommand(t *testing.T) {
 			err: nil,
 			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
-				{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+				{Key: domain.KeyKnitId, Value: "some-knit-id"},
 			},
 			transient: data_find.TransientExclude,
 		},
@@ -336,11 +336,11 @@ func TestFindDataCommand(t *testing.T) {
 	{
 		timestamp := try.To(rfctime.ParseRFC3339DateTime("2024-04-22T00:00:00.000+09:00")).OrFatal(t).Time()
 		d := 2 * time.Hour
-		duration := new(kflag.OptionalDuration)
+		duration := new(kargs.OptionalDuration)
 		duration.Set(d.String())
 
-		s := kflag.LooseRFC3339(timestamp)
-		since := &kflag.OptionalLooseRFC3339{}
+		s := kargs.LooseRFC3339(timestamp)
+		since := &kargs.OptionalLooseRFC3339{}
 		since.Set(s.String())
 		t.Run("when since and duration are passed, it should call task with since and duration", theory(
 			when{
@@ -377,9 +377,9 @@ func TestFindDataCommand(t *testing.T) {
 	t.Run("when task returns no data, it should be done", theory(
 		when{
 			flag: data_find.Flag{
-				Tags: &kflag.Tags{
+				Tags: &kargs.Tags{
 					{Key: "foo", Value: "bar"},
-					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+					{Key: domain.KeyKnitId, Value: "some-knit-id"},
 				},
 				Transient: "both",
 			},
@@ -389,7 +389,7 @@ func TestFindDataCommand(t *testing.T) {
 			err: nil,
 			tags: []tags.Tag{
 				{Key: "foo", Value: "bar"},
-				{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+				{Key: domain.KeyKnitId, Value: "some-knit-id"},
 			},
 			transient: data_find.TransientAny,
 		},
@@ -400,9 +400,9 @@ func TestFindDataCommand(t *testing.T) {
 		t.Run("when task returns error, it should return with error", theory(
 			when{
 				flag: data_find.Flag{
-					Tags: &kflag.Tags{
+					Tags: &kargs.Tags{
 						{Key: "foo", Value: "bar"},
-						{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+						{Key: domain.KeyKnitId, Value: "some-knit-id"},
 					},
 					Transient: "both",
 				},
@@ -412,7 +412,7 @@ func TestFindDataCommand(t *testing.T) {
 				err: err,
 				tags: []tags.Tag{
 					{Key: "foo", Value: "bar"},
-					{Key: kdb.KeyKnitId, Value: "some-knit-id"},
+					{Key: domain.KeyKnitId, Value: "some-knit-id"},
 				},
 				transient: data_find.TransientAny,
 			},
@@ -442,15 +442,15 @@ func TestFindData(t *testing.T) {
 			{Key: "knit#id", Value: "item-1"},
 			{Key: "knit#timestamp", Value: "2022-08-01T12:34:56+00:00"},
 		},
-		Upstream: data.AssignedTo{
+		Upstream: data.CreatedFrom{
 			Run: runs.Summary{
-				RunId: "run-1", Status: string(kdb.Done),
+				RunId: "run-1", Status: string(domain.Done),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),
 				Plan: plans.Summary{PlanId: "plan-1", Name: "knit#upload"},
 			},
-			Mountpoint: plans.Mountpoint{Path: "/out"},
+			Mountpoint: &plans.Mountpoint{Path: "/out"},
 		},
 		Downstreams: []data.AssignedTo{},
 		Nomination: []data.NominatedBy{
@@ -469,9 +469,9 @@ func TestFindData(t *testing.T) {
 			{Key: "knit#id", Value: "item-2"},
 			{Key: "knit#timestamp", Value: "2022-08-02T12:34:56+00:00"},
 		},
-		Upstream: data.AssignedTo{
+		Upstream: data.CreatedFrom{
 			Run: runs.Summary{
-				RunId: "run-2", Status: string(kdb.Done),
+				RunId: "run-2", Status: string(domain.Done),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),
@@ -480,12 +480,12 @@ func TestFindData(t *testing.T) {
 					Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
 				},
 			},
-			Mountpoint: plans.Mountpoint{Path: "/out"},
+			Mountpoint: &plans.Mountpoint{Path: "/out"},
 		},
 		Downstreams: []data.AssignedTo{
 			{
 				Run: runs.Summary{
-					RunId: "run-3", Status: string(kdb.Running),
+					RunId: "run-3", Status: string(domain.Running),
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 						"2022-08-01T12:34:56+00:00",
 					)).OrFatal(t),
@@ -513,18 +513,18 @@ func TestFindData(t *testing.T) {
 		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
-			{Key: kdb.KeyKnitId, Value: "item-1"},
-			{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientProcessing},
+			{Key: domain.KeyKnitId, Value: "item-1"},
+			{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
 		},
-		Upstream: data.AssignedTo{
+		Upstream: data.CreatedFrom{
 			Run: runs.Summary{
-				RunId: "run-3", Status: string(kdb.Running),
+				RunId: "run-3", Status: string(domain.Running),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:43:56+00:00",
 				)).OrFatal(t),
 				Plan: plans.Summary{PlanId: "plan-1", Name: "knit#upload"},
 			},
-			Mountpoint: plans.Mountpoint{Path: "/out"},
+			Mountpoint: &plans.Mountpoint{Path: "/out"},
 		},
 		Downstreams: []data.AssignedTo{},
 		Nomination:  []data.NominatedBy{},
@@ -534,12 +534,12 @@ func TestFindData(t *testing.T) {
 		Tags: []tags.Tag{
 			{Key: "foo", Value: "bar"},
 			{Key: "fizz", Value: "bazz"},
-			{Key: kdb.KeyKnitId, Value: "item-4"},
-			{Key: kdb.KeyKnitTransient, Value: kdb.ValueKnitTransientFailed},
+			{Key: domain.KeyKnitId, Value: "item-4"},
+			{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientFailed},
 		},
-		Upstream: data.AssignedTo{
+		Upstream: data.CreatedFrom{
 			Run: runs.Summary{
-				RunId: "run-4", Status: string(kdb.Failed),
+				RunId: "run-4", Status: string(domain.Failed),
 				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 					"2022-08-01T12:34:56+00:00",
 				)).OrFatal(t),
@@ -548,7 +548,7 @@ func TestFindData(t *testing.T) {
 					Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
 				},
 			},
-			Mountpoint: plans.Mountpoint{Path: "/out"},
+			Mountpoint: &plans.Mountpoint{Path: "/out"},
 		},
 		Downstreams: []data.AssignedTo{},
 		Nomination: []data.NominatedBy{
@@ -761,16 +761,16 @@ func TestFindData(t *testing.T) {
 			)).OrFatal(t)
 
 			{
-				given := utils.ToMap(testcase.given, func(d data.Detail) string { return d.KnitId })
-				actual := utils.ToMap(actual, func(d data.Detail) string { return d.KnitId })
+				given := slices.ToMap(testcase.given, func(d data.Detail) string { return d.KnitId })
+				actual := slices.ToMap(actual, func(d data.Detail) string { return d.KnitId })
 
 				// are requied ids satisfied?
 				if !cmp.SliceContentEq(
-					utils.KeysOf(actual), testcase.then,
+					slices.KeysOf(actual), testcase.then,
 				) {
 					t.Errorf(
 						"unmatch: unexpected knit ids are remained: (actual, expeted) = (%+v, %+v)",
-						utils.KeysOf(actual), testcase.then,
+						slices.KeysOf(actual), testcase.then,
 					)
 				}
 

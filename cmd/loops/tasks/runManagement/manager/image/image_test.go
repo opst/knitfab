@@ -11,17 +11,19 @@ import (
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/image"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/workloads/k8s"
-	kw "github.com/opst/knitfab/pkg/workloads/worker"
+	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/pkg/domain/run/db/mock"
+	k8sRunMocks "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
+	kw "github.com/opst/knitfab/pkg/domain/run/k8s/worker"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	kubeshm "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type FakeWorker struct {
 	runId     string
-	jobStatus k8s.JobStatus
+	jobStatus cluster.JobStatus
 }
 
 var _ kw.Worker = (*FakeWorker)(nil)
@@ -30,7 +32,7 @@ func (w *FakeWorker) RunId() string {
 	return w.runId
 }
 
-func (w *FakeWorker) JobStatus(context.Context) k8s.JobStatus {
+func (w *FakeWorker) JobStatus(context.Context) cluster.JobStatus {
 	return w.jobStatus
 }
 
@@ -49,7 +51,7 @@ func (w *FakeWorker) Close() error {
 func TestManager_GetWorkerHasFailed(t *testing.T) {
 
 	type When struct {
-		run            kdb.Run
+		run            domain.Run
 		errSetExit     error
 		errGetWorker   error
 		errStartWorker error
@@ -61,7 +63,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 	type Then struct {
 		wantBeforeHookInvoked bool
 
-		wantStatus kdb.KnitRunStatus
+		wantStatus domain.KnitRunStatus
 		wantError  error
 
 		wantSetExitInvoked     bool
@@ -72,25 +74,30 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 		return func(t *testing.T) {
 			ctx := context.Background()
 
-			getWorker := func(context.Context, kdb.Run) (kw.Worker, error) {
+			iK8sRunMock := k8sRunMocks.New(t)
+
+			iK8sRunMock.Impl.FindWorker = func(context.Context, domain.RunBody) (kw.Worker, error) {
 				return nil, when.errGetWorker
 			}
+
 			startWorkerInvoked := false
-			startWorker := func(_ context.Context, _ kdb.Run, env map[string]string) error {
+			iK8sRunMock.Impl.SpawnWorker = func(ctx context.Context, r domain.Run, env map[string]string) (kw.Worker, error) {
 				startWorkerInvoked = true
 				if !cmp.MapEq(env, when.respBeforeToStartingHook.KnitfabExtension.Env) {
 					t.Errorf("got env %v, want %v", env, when.respBeforeToStartingHook.KnitfabExtension.Env)
 				}
-				return when.errStartWorker
+				// first return value is not interested
+				return nil, when.errStartWorker
 			}
 
+			iDBRunMock := mock.NewRunInterface()
 			setExitInvoked := false
-			setExit := func(_ context.Context, runId string, exit kdb.RunExit) error {
+			iDBRunMock.Impl.SetExit = func(_ context.Context, runId string, exit domain.RunExit) error {
 				setExitInvoked = true
 				if runId != when.run.Id {
 					t.Errorf("got runId %v, want %v", runId, when.run.Id)
 				}
-				want := kdb.RunExit{
+				want := domain.RunExit{
 					Code:    254,
 					Message: "worker for the run is not found",
 				}
@@ -100,7 +107,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				return when.errSetExit
 			}
 
-			testee := image.New(getWorker, startWorker, setExit)
+			testee := image.New(iK8sRunMock, iDBRunMock)
 
 			beforeToStartingHookInvoked := false
 			beforeToRunningHookInvoked := false
@@ -169,14 +176,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 
 			if then.wantBeforeHookInvoked {
 				switch when.run.Status {
-				case kdb.Ready:
+				case domain.Ready:
 					if !beforeToStartingHookInvoked {
 						t.Errorf("ToStarting before hook should be invoked")
 					}
 					if beforeToRunningHookInvoked || beforeToCompletingHookInvoked || beforeToAbortingHookInvoked {
 						t.Errorf("before hooks except ToStarting should not be invoked")
 					}
-				case kdb.Starting, kdb.Running, kdb.Completing:
+				case domain.Starting, domain.Running, domain.Completing:
 					if !beforeToAbortingHookInvoked {
 						t.Errorf("ToAborting before hook should be invoked")
 					}
@@ -208,14 +215,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 		wantErr := errors.New("unexpected error")
 		t.Run("when getWorker returns unexpected error, it should return the error", theory(
 			When{
-				run: kdb.Run{
-					RunBody: kdb.RunBody{
+				run: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run/ready",
-						Status:     kdb.Ready,
+						Status:     domain.Ready,
 						WorkerName: "worker/ready",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan/ready",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image:   "example.repo.invalid/ready",
 								Version: "v1.0.0",
 							},
@@ -226,7 +233,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				errStartWorker: nil,
 			},
 			Then{
-				wantStatus:             kdb.Ready,
+				wantStatus:             domain.Ready,
 				wantError:              wantErr,
 				wantBeforeHookInvoked:  false,
 				wantSetExitInvoked:     false,
@@ -238,14 +245,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 	{
 		t.Run("when getWorker for Ready Run returns NotFound error, it should start the worker for run in ready status", theory(
 			When{
-				run: kdb.Run{
-					RunBody: kdb.RunBody{
+				run: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run/ready",
-						Status:     kdb.Ready,
+						Status:     domain.Ready,
 						WorkerName: "worker/ready",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan/ready",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image:   "example.repo.invalid/ready",
 								Version: "v1.0.0",
 							},
@@ -267,7 +274,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				},
 			},
 			Then{
-				wantStatus:             kdb.Starting,
+				wantStatus:             domain.Starting,
 				wantError:              nil,
 				wantBeforeHookInvoked:  true,
 				wantSetExitInvoked:     false,
@@ -280,14 +287,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 		wantErr := errors.New("unexpected error")
 		t.Run("when setExit returns unexpected error, it should return the error", theory(
 			When{
-				run: kdb.Run{
-					RunBody: kdb.RunBody{
+				run: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run/starting",
-						Status:     kdb.Starting,
+						Status:     domain.Starting,
 						WorkerName: "worker/starting",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan/starting",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image:   "example.repo.invalid/starting",
 								Version: "v1.0.0",
 							},
@@ -301,7 +308,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				errStartWorker: nil,
 			},
 			Then{
-				wantStatus:            kdb.Starting,
+				wantStatus:            domain.Starting,
 				wantError:             wantErr,
 				wantBeforeHookInvoked: true,
 				wantSetExitInvoked:    true,
@@ -313,14 +320,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 		wantErr := errors.New("unexpected error")
 		t.Run("when getWorker returns NotFound error for a non-Ready Run but Before hook caused an error, it should return the error", theory(
 			When{
-				run: kdb.Run{
-					RunBody: kdb.RunBody{
+				run: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run/starting",
-						Status:     kdb.Starting,
+						Status:     domain.Starting,
 						WorkerName: "worker/starting",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan/ready",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image:   "example.repo.invalid/starting",
 								Version: "v1.0.0",
 							},
@@ -335,7 +342,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				errStartWorker: nil,
 			},
 			Then{
-				wantStatus:             kdb.Starting,
+				wantStatus:             domain.Starting,
 				wantError:              wantErr,
 				wantBeforeHookInvoked:  true,
 				wantSetExitInvoked:     false,
@@ -347,14 +354,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 	{
 		t.Run("when getWorker returns NotFound error for a non-Ready Run, it should translate from non-ready status to aborting", theory(
 			When{
-				run: kdb.Run{
-					RunBody: kdb.RunBody{
+				run: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run/starting",
-						Status:     kdb.Starting,
+						Status:     domain.Starting,
 						WorkerName: "worker/starting",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan/starting",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image:   "example.repo.invalid/starting",
 								Version: "v1.0.0",
 							},
@@ -369,7 +376,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				errStartWorker: nil,
 			},
 			Then{
-				wantStatus:             kdb.Aborting,
+				wantStatus:             domain.Aborting,
 				wantError:              nil,
 				wantBeforeHookInvoked:  true,
 				wantSetExitInvoked:     true,
@@ -381,14 +388,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 	{
 		t.Run("when getWorker returns NotFound error for a Ready Run and startWorker returns already exists error, it should translate state from ready to starting", theory(
 			When{
-				run: kdb.Run{
-					RunBody: kdb.RunBody{
+				run: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run/ready",
-						Status:     kdb.Ready,
+						Status:     domain.Ready,
 						WorkerName: "worker/ready",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan/ready",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image:   "example.repo.invalid/ready",
 								Version: "v1.0.0",
 							},
@@ -404,7 +411,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				errBeforeHook: nil,
 			},
 			Then{
-				wantStatus:             kdb.Starting,
+				wantStatus:             domain.Starting,
 				wantError:              nil,
 				wantBeforeHookInvoked:  true,
 				wantSetExitInvoked:     false,
@@ -417,14 +424,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 		wantErr := errors.New("unexpected error")
 		t.Run("when getWorker returns NotFound error and start worker returns unexpected error, it should return the error", theory(
 			When{
-				run: kdb.Run{
-					RunBody: kdb.RunBody{
+				run: domain.Run{
+					RunBody: domain.RunBody{
 						Id:         "run/ready",
-						Status:     kdb.Ready,
+						Status:     domain.Ready,
 						WorkerName: "worker/ready",
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan/ready",
-							Image: &kdb.ImageIdentifier{
+							Image: &domain.ImageIdentifier{
 								Image:   "example.repo.invalid/ready",
 								Version: "v1.0.0",
 							},
@@ -438,7 +445,7 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 				errBeforeHook:  nil,
 			},
 			Then{
-				wantStatus:             kdb.Ready,
+				wantStatus:             domain.Ready,
 				wantError:              wantErr,
 				wantBeforeHookInvoked:  true,
 				wantSetExitInvoked:     false,
@@ -451,14 +458,14 @@ func TestManager_GetWorkerHasFailed(t *testing.T) {
 func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 	type When struct {
-		runStatus     kdb.KnitRunStatus
-		jobStatus     k8s.JobStatus
+		runStatus     domain.KnitRunStatus
+		jobStatus     cluster.JobStatus
 		errBeforeHook error
 		errSetExit    error
 	}
 
 	type Then struct {
-		wantStatus            kdb.KnitRunStatus
+		wantStatus            domain.KnitRunStatus
 		wantErr               error
 		wantSetExitInvoked    bool
 		wantBeforeHookInvoked bool
@@ -468,14 +475,14 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		return func(t *testing.T) {
 			ctx := context.Background()
 
-			run := kdb.Run{
-				RunBody: kdb.RunBody{
+			run := domain.Run{
+				RunBody: domain.RunBody{
 					Id:         "run/example",
 					Status:     when.runStatus,
 					WorkerName: "worker/example",
-					PlanBody: kdb.PlanBody{
+					PlanBody: domain.PlanBody{
 						PlanId: "plan/example",
-						Image: &kdb.ImageIdentifier{
+						Image: &domain.ImageIdentifier{
 							Image:   "example.repo.invalid/running",
 							Version: "v1.0.0",
 						},
@@ -483,20 +490,23 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 				},
 			}
 
-			getWorker := func(context.Context, kdb.Run) (kw.Worker, error) {
+			iK8sRunMock := k8sRunMocks.New(t)
+
+			iK8sRunMock.Impl.FindWorker = func(context.Context, domain.RunBody) (kw.Worker, error) {
 				return &FakeWorker{
 					runId:     run.Id,
 					jobStatus: when.jobStatus,
 				}, nil
 			}
 
+			iDBRunMock := mock.NewRunInterface()
 			setExitInvoked := false
-			setExit := func(_ context.Context, runId string, exit kdb.RunExit) error {
+			iDBRunMock.Impl.SetExit = func(_ context.Context, runId string, exit domain.RunExit) error {
 				setExitInvoked = true
 				if runId != run.Id {
 					t.Errorf("got runId %v, want %v", runId, run.Id)
 				}
-				want := kdb.RunExit{
+				want := domain.RunExit{
 					Code:    when.jobStatus.Code,
 					Message: when.jobStatus.Message,
 				}
@@ -569,7 +579,7 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 				},
 			}
 
-			testee := image.New(getWorker, nil, setExit)
+			testee := image.New(iK8sRunMock, iDBRunMock)
 			gotStatus, gotError := testee(ctx, hooks, run)
 
 			if setExitInvoked != then.wantSetExitInvoked {
@@ -578,25 +588,25 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 			if then.wantBeforeHookInvoked {
 				switch when.jobStatus.Type {
-				case k8s.Pending:
+				case cluster.Pending:
 					if beforeToStartingHookInvoked || beforeToRunningHookInvoked || beforeToCompletingHookInvoked || beforeToAbortingHookInvoked {
 						t.Errorf("before hooks should not be invoked")
 					}
-				case k8s.Running:
+				case cluster.Running:
 					if !beforeToRunningHookInvoked {
 						t.Errorf("ToRunning before hook should be invoked")
 					}
 					if beforeToStartingHookInvoked || beforeToCompletingHookInvoked || beforeToAbortingHookInvoked {
 						t.Errorf("before hooks except ToRunning should not be invoked")
 					}
-				case k8s.Succeeded:
+				case cluster.Succeeded:
 					if !beforeToCompletingHookInvoked {
 						t.Errorf("ToCompleting before hook should be invoked")
 					}
 					if beforeToStartingHookInvoked || beforeToRunningHookInvoked || beforeToAbortingHookInvoked {
 						t.Errorf("before hooks except ToCompleting should not be invoked")
 					}
-				case k8s.Failed, k8s.Stucking:
+				case cluster.Failed, cluster.Stucking:
 					if !beforeToAbortingHookInvoked {
 						t.Errorf("ToAborting before hook should be invoked")
 					}
@@ -618,36 +628,36 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 	t.Run("When worker for Starting Run is Pending, it stays Starting", theory(
 		When{
-			runStatus: kdb.Starting,
-			jobStatus: k8s.JobStatus{Type: k8s.Pending, Message: "Pending"},
+			runStatus: domain.Starting,
+			jobStatus: cluster.JobStatus{Type: cluster.Pending, Message: "Pending"},
 		},
 		Then{
 			wantBeforeHookInvoked: false,
 			wantSetExitInvoked:    false,
-			wantStatus:            kdb.Starting,
+			wantStatus:            domain.Starting,
 		},
 	))
 
 	t.Run("When worker for a Running Run is also Running, it stays Running", theory(
 		When{
-			runStatus: kdb.Running,
-			jobStatus: k8s.JobStatus{Type: k8s.Running},
+			runStatus: domain.Running,
+			jobStatus: cluster.JobStatus{Type: cluster.Running},
 		},
 		Then{
 			wantBeforeHookInvoked: false,
 			wantSetExitInvoked:    false,
-			wantStatus:            kdb.Running,
+			wantStatus:            domain.Running,
 		},
 	))
 
 	t.Run("When worker for Starting Run is Running, it translate run status to Running", theory(
 		When{
-			runStatus: kdb.Starting,
-			jobStatus: k8s.JobStatus{Type: k8s.Running},
+			runStatus: domain.Starting,
+			jobStatus: cluster.JobStatus{Type: cluster.Running},
 		},
 		Then{
 			wantBeforeHookInvoked: true,
-			wantStatus:            kdb.Running,
+			wantStatus:            domain.Running,
 		},
 	))
 
@@ -656,13 +666,13 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		t.Run("When worker for Starting Run is Running and Before hook returns an error, it should return the error", theory(
 			When{
 				errBeforeHook: wantErr,
-				runStatus:     kdb.Starting,
-				jobStatus:     k8s.JobStatus{Type: k8s.Running},
+				runStatus:     domain.Starting,
+				jobStatus:     cluster.JobStatus{Type: cluster.Running},
 			},
 			Then{
 				wantBeforeHookInvoked: true,
 				wantSetExitInvoked:    false,
-				wantStatus:            kdb.Starting,
+				wantStatus:            domain.Starting,
 				wantErr:               wantErr,
 			},
 		))
@@ -673,13 +683,13 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		t.Run("When worker for Running Run is Done and Before hook returns an error, it should return the error", theory(
 			When{
 				errBeforeHook: wantErr,
-				runStatus:     kdb.Running,
-				jobStatus:     k8s.JobStatus{Type: k8s.Succeeded, Code: 0, Message: "Completed"},
+				runStatus:     domain.Running,
+				jobStatus:     cluster.JobStatus{Type: cluster.Succeeded, Code: 0, Message: "Completed"},
 			},
 			Then{
 				wantBeforeHookInvoked: true,
 				wantSetExitInvoked:    false,
-				wantStatus:            kdb.Running,
+				wantStatus:            domain.Running,
 				wantErr:               wantErr,
 			},
 		))
@@ -690,13 +700,13 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		t.Run("When worker for Running Run is Failed and Before hook returns an error, it should return the error", theory(
 			When{
 				errBeforeHook: wantErr,
-				runStatus:     kdb.Running,
-				jobStatus:     k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "Error"},
+				runStatus:     domain.Running,
+				jobStatus:     cluster.JobStatus{Type: cluster.Failed, Code: 1, Message: "Error"},
 			},
 			Then{
 				wantBeforeHookInvoked: true,
 				wantSetExitInvoked:    false,
-				wantStatus:            kdb.Running,
+				wantStatus:            domain.Running,
 				wantErr:               wantErr,
 			},
 		))
@@ -704,13 +714,13 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 	t.Run("When worker is done, it translate run status to completing", theory(
 		When{
-			runStatus: kdb.Running,
-			jobStatus: k8s.JobStatus{Type: k8s.Succeeded, Code: 0, Message: "Completed"},
+			runStatus: domain.Running,
+			jobStatus: cluster.JobStatus{Type: cluster.Succeeded, Code: 0, Message: "Completed"},
 		},
 		Then{
 			wantBeforeHookInvoked: true,
 			wantSetExitInvoked:    true,
-			wantStatus:            kdb.Completing,
+			wantStatus:            domain.Completing,
 		},
 	))
 
@@ -718,15 +728,15 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		wantError := errors.New("unexpected error")
 		t.Run("When worker is done and setExit returnd an error, it should return the error", theory(
 			When{
-				runStatus:  kdb.Running,
-				jobStatus:  k8s.JobStatus{Type: k8s.Succeeded, Code: 0, Message: "Completed"},
+				runStatus:  domain.Running,
+				jobStatus:  cluster.JobStatus{Type: cluster.Succeeded, Code: 0, Message: "Completed"},
 				errSetExit: wantError,
 			},
 			Then{
 				wantBeforeHookInvoked: true,
 				wantSetExitInvoked:    true,
 
-				wantStatus: kdb.Running,
+				wantStatus: domain.Running,
 				wantErr:    wantError,
 			},
 		))
@@ -734,14 +744,14 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 	t.Run("When worker is failed, it translate run status to aborting", theory(
 		When{
-			runStatus: kdb.Running,
-			jobStatus: k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "Error"},
+			runStatus: domain.Running,
+			jobStatus: cluster.JobStatus{Type: cluster.Failed, Code: 1, Message: "Error"},
 		},
 		Then{
 			wantBeforeHookInvoked: true,
 			wantSetExitInvoked:    true,
 
-			wantStatus: kdb.Aborting,
+			wantStatus: domain.Aborting,
 			wantErr:    nil,
 		},
 	))
@@ -750,15 +760,15 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		fakeErr := errors.New("fake error")
 		t.Run("When worker is failed and setExit returns an error, it should return the error", theory(
 			When{
-				runStatus:  kdb.Running,
-				jobStatus:  k8s.JobStatus{Type: k8s.Failed, Code: 1, Message: "Error"},
+				runStatus:  domain.Running,
+				jobStatus:  cluster.JobStatus{Type: cluster.Failed, Code: 1, Message: "Error"},
 				errSetExit: fakeErr,
 			},
 			Then{
 				wantBeforeHookInvoked: true,
 				wantSetExitInvoked:    true,
 
-				wantStatus: kdb.Running,
+				wantStatus: domain.Running,
 				wantErr:    fakeErr,
 			},
 		))
@@ -770,13 +780,13 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		t.Run("When worker for Starting Run is Stucked and Before hook returns an error, it should return the error", theory(
 			When{
 				errBeforeHook: wantErr,
-				runStatus:     kdb.Starting,
-				jobStatus:     k8s.JobStatus{Type: k8s.Stucking, Code: 255, Message: "Stucking"},
+				runStatus:     domain.Starting,
+				jobStatus:     cluster.JobStatus{Type: cluster.Stucking, Code: 255, Message: "Stucking"},
 			},
 			Then{
 				wantBeforeHookInvoked: true,
 				wantSetExitInvoked:    false,
-				wantStatus:            kdb.Starting,
+				wantStatus:            domain.Starting,
 				wantErr:               wantErr,
 			},
 		))
@@ -784,14 +794,14 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 
 	t.Run("When worker is stucking, it translate run status to aborting", theory(
 		When{
-			runStatus: kdb.Starting,
-			jobStatus: k8s.JobStatus{Type: k8s.Stucking, Code: 255, Message: "Stucking"},
+			runStatus: domain.Starting,
+			jobStatus: cluster.JobStatus{Type: cluster.Stucking, Code: 255, Message: "Stucking"},
 		},
 		Then{
 			wantBeforeHookInvoked: true,
 			wantSetExitInvoked:    true,
 
-			wantStatus: kdb.Aborting,
+			wantStatus: domain.Aborting,
 			wantErr:    nil,
 		},
 	))
@@ -800,15 +810,15 @@ func TestManager_GetWorkerSucceeded(t *testing.T) {
 		wantError := errors.New("unexpected error")
 		t.Run("When worker is stucking and setExit returnd an error, it should return the error", theory(
 			When{
-				runStatus:  kdb.Starting,
-				jobStatus:  k8s.JobStatus{Type: k8s.Stucking, Code: 255, Message: "Stucking"},
+				runStatus:  domain.Starting,
+				jobStatus:  cluster.JobStatus{Type: cluster.Stucking, Code: 255, Message: "Stucking"},
 				errSetExit: wantError,
 			},
 			Then{
 				wantBeforeHookInvoked: true,
 				wantSetExitInvoked:    true,
 
-				wantStatus: kdb.Starting,
+				wantStatus: domain.Starting,
 				wantErr:    wantError,
 			},
 		))

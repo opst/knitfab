@@ -20,7 +20,7 @@ import (
 	data_pull "github.com/opst/knitfab/cmd/knit/subcommands/data/pull"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
 type MockFileEntry struct {

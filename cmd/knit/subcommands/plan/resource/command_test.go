@@ -15,7 +15,7 @@ import (
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
 	plan_resource "github.com/opst/knitfab/cmd/knit/subcommands/plan/resource"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -177,25 +177,31 @@ func TestCommand(t *testing.T) {
 			"cpu":    resource.MustParse("1"),
 			"memory": resource.MustParse("1Gi"),
 		},
-		Inputs: []plans.Mountpoint{
+		Inputs: []plans.Input{
 			{
-				Path: "/in/1",
-				Tags: []tags.Tag{
-					{Key: "tag", Value: "value"},
+				Mountpoint: plans.Mountpoint{
+					Path: "/in/1",
+					Tags: []tags.Tag{
+						{Key: "tag", Value: "value"},
+					},
 				},
 			},
 		},
-		Outputs: []plans.Mountpoint{
+		Outputs: []plans.Output{
 			{
-				Path: "/out/1",
-				Tags: []tags.Tag{
-					{Key: "tag", Value: "value"},
+				Mountpoint: plans.Mountpoint{
+					Path: "/out/1",
+					Tags: []tags.Tag{
+						{Key: "tag", Value: "value"},
+					},
 				},
 			},
 		},
-		Log: &plans.LogPoint{
-			Tags: []tags.Tag{
-				{Key: "tag", Value: "value"},
+		Log: &plans.Log{
+			LogPoint: plans.LogPoint{
+				Tags: []tags.Tag{
+					{Key: "tag", Value: "value"},
+				},
 			},
 		},
 	}

@@ -3,7 +3,6 @@ package handlers
 import (
 	"archive/tar"
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,19 +11,22 @@ import (
 
 	"github.com/labstack/echo/v4"
 	apierr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	"github.com/opst/knitfab/pkg/archive"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/echoutil"
-	"github.com/opst/knitfab/pkg/workloads"
-	"github.com/opst/knitfab/pkg/workloads/dataagt"
-	"github.com/opst/knitfab/pkg/workloads/worker"
+	"github.com/opst/knitfab/pkg/domain"
+	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
+	k8sdata "github.com/opst/knitfab/pkg/domain/data/k8s"
+	kerr "github.com/opst/knitfab/pkg/domain/errors"
+	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
+	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
+	k8srun "github.com/opst/knitfab/pkg/domain/run/k8s"
+	"github.com/opst/knitfab/pkg/utils/archive"
+	"github.com/opst/knitfab/pkg/utils/echoutil"
 )
 
 func GetRunLogHandler(
-	run kdb.RunInterface,
-	dbData kdb.DataInterface,
-	spawnDataAgent func(context.Context, kdb.DataAgent, time.Time) (dataagt.Dataagt, error),
-	getWorker func(context.Context, kdb.Run) (worker.Worker, error),
+	iRunDB kdbrun.Interface,
+	iDataDB kdbdata.DataInterface,
+	iDataK8s k8sdata.Interface,
+	iRunK8s k8srun.Interface,
 	runIdKey string,
 ) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -32,8 +34,8 @@ func GetRunLogHandler(
 
 		runId := c.Param(runIdKey)
 
-		var runInfo kdb.Run
-		if rs, err := run.Get(ctx, []string{runId}); err != nil {
+		var runInfo domain.Run
+		if rs, err := iRunDB.Get(ctx, []string{runId}); err != nil {
 			return apierr.InternalServerError(err)
 		} else if r, ok := rs[runId]; !ok || r.Status.Invalidated() {
 			return apierr.NotFound()
@@ -45,18 +47,18 @@ func GetRunLogHandler(
 			return apierr.NotFound()
 		}
 
-		var data kdb.KnitDataBody
+		var data domain.KnitDataBody
 		switch runInfo.Status {
-		case kdb.Deactivated, kdb.Waiting, kdb.Ready:
+		case domain.Deactivated, domain.Waiting, domain.Ready:
 			// = before create container. started means "contaienr runs",
 			// but there are contaienrs a bit before that.
 			return apierr.ServiceUnavailable("please retry later.", nil)
-		case kdb.Starting, kdb.Running:
+		case domain.Starting, domain.Running:
 			if !c.QueryParams().Has("follow") {
 				data = runInfo.Log.KnitDataBody
 			} else {
 				// follow mode!
-				worker, err := getWorker(ctx, runInfo)
+				worker, err := iRunK8s.FindWorker(ctx, runInfo.RunBody)
 				if err != nil {
 					return apierr.InternalServerError(err)
 				}
@@ -75,23 +77,23 @@ func GetRunLogHandler(
 				}
 				return c.Stream(http.StatusOK, "text/plain", lr)
 			}
-		case kdb.Completing, kdb.Aborting, kdb.Done, kdb.Failed:
+		case domain.Completing, domain.Aborting, domain.Done, domain.Failed:
 			data = runInfo.Log.KnitDataBody
 		}
 
 		timeout := 30 * time.Second
 		deadline := time.Now().Add(timeout)
-		daRecord, err := dbData.NewAgent(ctx, data.KnitId, kdb.DataAgentRead, timeout)
+		daRecord, err := iDataDB.NewAgent(ctx, data.KnitId, domain.DataAgentRead, timeout)
 		if err != nil {
-			if errors.Is(err, kdb.ErrMissing) {
+			if errors.Is(err, kerr.ErrMissing) {
 				return apierr.NotFound()
 			}
 			return apierr.InternalServerError(err)
 		}
 
-		dagt, err := spawnDataAgent(ctx, daRecord, deadline)
+		dagt, err := iDataK8s.SpawnDataAgent(ctx, daRecord, deadline)
 		if err != nil {
-			if errors.Is(err, workloads.ErrDeadlineExceeded) {
+			if errors.Is(err, k8serrors.ErrDeadlineExceeded) {
 				return apierr.ServiceUnavailable("please retry later", err)
 			}
 			return apierr.InternalServerError(err)
@@ -100,7 +102,7 @@ func GetRunLogHandler(
 			if err := dagt.Close(); err != nil {
 				return
 			}
-			dbData.RemoveAgent(ctx, daRecord.Name)
+			iDataDB.RemoveAgent(ctx, daRecord.Name)
 		}()
 
 		bresp, err := echoutil.CopyRequest(ctx, dagt.URL(), c.Request())

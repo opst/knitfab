@@ -15,8 +15,8 @@ import (
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	"github.com/opst/knitfab/pkg/images/analyzer"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/utils/images/analyzer"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	y "github.com/opst/knitfab/pkg/utils/yamler"
 	"github.com/youta-t/flarc"
 	"gopkg.in/yaml.v3"
@@ -159,8 +159,8 @@ func Task(
 			Image:      image(plan.Image),
 			Entrypoint: plan.Entrypoint,
 			Args:       plan.Args,
-			Inputs:     utils.Map(plan.Inputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
-			Outputs:    utils.Map(plan.Outputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Inputs:     slices.Map(plan.Inputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
+			Outputs:    slices.Map(plan.Outputs, func(i plans.Mountpoint) mountpoint { return mountpoint(i) }),
 			Log:        (*logpoint)(plan.Log),
 			Resource:   res,
 			Active:     active,
@@ -229,7 +229,7 @@ func FromScratch() func(context.Context, *log.Logger, string, env.KnitEnv) (plan
 }
 
 func FromImage(
-	analyze func(io.Reader, ...analyzer.Option) (*analyzer.TaggedConfig, error),
+	analyze func(context.Context, io.Reader) ([]analyzer.TaggedConfig, error),
 ) func(context.Context, *log.Logger, namedReader, string, env.KnitEnv) (plans.PlanSpec, error) {
 	return func(
 		ctx context.Context,
@@ -238,19 +238,40 @@ func FromImage(
 		tag string,
 		env env.KnitEnv,
 	) (plans.PlanSpec, error) {
-		options := []analyzer.Option{}
-		if tag != "" {
-			options = append(options, analyzer.WithTag(tag))
-		}
 
 		l.Printf(`...analyzing image from "%s"`, source.Name())
-		cfg, err := analyze(source, options...)
+		foundConfigs, err := analyze(ctx, source)
 		if err != nil {
 			return plans.PlanSpec{}, err
 		}
 
 		inputs := map[string]struct{}{}
 		outputs := map[string]struct{}{}
+
+		var cfg analyzer.TaggedConfig
+		if tag == "" {
+			if l := len(foundConfigs); 1 < l {
+				return plans.PlanSpec{}, fmt.Errorf("multiple images found, specify the image tag")
+			} else if l == 0 {
+				return plans.PlanSpec{}, fmt.Errorf("no image found")
+			}
+			cfg = foundConfigs[0]
+		} else {
+			found := false
+		CONFIGS:
+			for _, c := range foundConfigs {
+				for _, t := range c.Tags {
+					if t == tag {
+						cfg = c
+						found = true
+						break CONFIGS
+					}
+				}
+			}
+			if !found {
+				return plans.PlanSpec{}, fmt.Errorf("specified image tag '%s' is not found", tag)
+			}
+		}
 
 		wd := cfg.Config.WorkingDir
 		if wd == "" {
@@ -311,18 +332,41 @@ func FromImage(
 			ress["memory"] = resource.MustParse("1Gi")
 		}
 
+		var repository string
+		var imagetag string
+		if i, t, ok := cutImageTag(tag); ok {
+			repository = i
+			imagetag = t
+		}
+
+		if repository == "" && imagetag == "" {
+			if 0 < len(cfg.Tags) {
+				if i, t, ok := cutImageTag(cfg.Tags[0]); ok {
+					repository = i
+					imagetag = t
+				}
+			}
+		}
+
+		if repository == "" {
+			repository = "IMAGE"
+		}
+		if imagetag == "" {
+			imagetag = "TAG"
+		}
+
 		result := plans.PlanSpec{
 			Image: plans.Image{
-				Repository: cfg.Tag.Repository.Name(),
-				Tag:        cfg.Tag.TagStr(),
+				Repository: repository,
+				Tag:        imagetag,
 			},
 			Entrypoint: cfg.Config.Entrypoint,
 			Args:       cfg.Config.Cmd,
-			Inputs: utils.Map(
-				utils.KeysOf(inputs), mountpointBuilder("in", env.Tags()),
+			Inputs: slices.Map(
+				slices.KeysOf(inputs), mountpointBuilder("in", env.Tags()),
 			),
-			Outputs: utils.Map(
-				utils.KeysOf(outputs), mountpointBuilder("out", env.Tags()),
+			Outputs: slices.Map(
+				slices.KeysOf(outputs), mountpointBuilder("out", env.Tags()),
 			),
 			Resources: ress,
 			Log: &plans.LogPoint{
@@ -336,6 +380,13 @@ func FromImage(
 		return result, nil
 
 	}
+}
+
+func cutImageTag(imageName string) (repo string, tag string, ok bool) {
+	if i := strings.LastIndexByte(imageName, ':'); 0 < i {
+		return imageName[:i], imageName[i+1:], true
+	}
+	return imageName, "", false
 }
 
 func mountpointBuilder(ignore string, defaultTags []tags.Tag) func(p string) plans.Mountpoint {
@@ -402,7 +453,7 @@ func (m mountpoint) yamlNode() *yaml.Node {
 	return y.Map(
 		y.Entry(y.Text("path"), y.Text(m.Path, y.WithStyle(yaml.DoubleQuotedStyle))),
 		y.Entry(y.Text("tags"), y.Seq(
-			utils.Map(
+			slices.Map(
 				base.Tags, func(t tags.Tag) *yaml.Node {
 					return y.Text(t.String(), y.WithStyle(yaml.DoubleQuotedStyle))
 				},
@@ -422,7 +473,7 @@ func (l *logpoint) yamlNode() *yaml.Node {
 
 	return y.Map(
 		y.Entry(y.Text("tags"), y.Seq(
-			utils.Map(
+			slices.Map(
 				base.Tags,
 				func(t tags.Tag) *yaml.Node { return y.Text(t.String(), y.WithStyle(yaml.DoubleQuotedStyle)) },
 			)...,
@@ -485,7 +536,7 @@ entrypoint:
   Command to be executed as this Plan image.
   This array overrides the ENTRYPOINT of the image.
 `)),
-			y.CompactSeq(utils.Map(p.Entrypoint, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
+			y.CompactSeq(slices.Map(p.Entrypoint, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
 		),
 		y.Entry(
 			y.Text("args", y.WithHeadComment(`
@@ -493,7 +544,7 @@ args:
   Arguments to be passed to this Plan image.
   This array overrides the CMD of the image.
 `)),
-			y.CompactSeq(utils.Map(p.Args, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
+			y.CompactSeq(slices.Map(p.Args, func(s string) *yaml.Node { return y.Text(s, y.WithStyle(yaml.DoubleQuotedStyle)) })...),
 		),
 		y.Entry(
 			y.Text("inputs", y.WithHeadComment(`
@@ -503,7 +554,7 @@ inputs:
   Each filepath should be absolute. Tags should be formatted in "key:value"-style.
 `)),
 			y.Seq(
-				utils.Map(p.Inputs, mountpoint.yamlNode)...,
+				slices.Map(p.Inputs, mountpoint.yamlNode)...,
 			),
 		),
 		y.Entry(
@@ -513,7 +564,7 @@ outputs:
   See "inputs" for detail.
 `)),
 			y.Seq(
-				utils.Map(p.Outputs, mountpoint.yamlNode)...,
+				slices.Map(p.Outputs, mountpoint.yamlNode)...,
 			),
 		),
 		y.Entry(

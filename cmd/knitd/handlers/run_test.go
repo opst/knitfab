@@ -17,10 +17,11 @@ import (
 	apitags "github.com/opst/knitfab-api-types/tags"
 	handlers "github.com/opst/knitfab/cmd/knitd/handlers"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	"github.com/opst/knitfab/pkg/cmp"
-	kdb "github.com/opst/knitfab/pkg/db"
-	mockdb "github.com/opst/knitfab/pkg/db/mocks"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/domain"
+	kerr "github.com/opst/knitfab/pkg/domain/errors"
+	mockdb "github.com/opst/knitfab/pkg/domain/run/db/mock"
+	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -29,11 +30,11 @@ func TestRunFindHandler(t *testing.T) {
 	t.Run("it returns OK with runs ", func(t *testing.T) {
 		type when struct {
 			request string
-			Runs    []kdb.Run
+			Runs    []domain.Run
 		}
 
 		type then struct {
-			query kdb.RunFindQuery
+			query domain.RunFindQuery
 			body  []apiruns.Detail
 		}
 
@@ -51,14 +52,14 @@ func TestRunFindHandler(t *testing.T) {
 			"as empty when no runs are found": {
 				when{
 					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						PlanId:       []string{"plan-x", "plan-y"},
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
-						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						Status:       []domain.KnitRunStatus{domain.Waiting, domain.Running, domain.Done},
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
@@ -68,159 +69,159 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried all runs": {
 				when{
 					request: "/api/runs",
-					Runs: []kdb.Run{
+					Runs: []domain.Run{
 						{
-							RunBody: kdb.RunBody{
-								Id: "run-1", Status: kdb.Done,
+							RunBody: domain.RunBody{
+								Id: "run-1", Status: domain.Done,
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-11-15T01:00:00.123+09:00",
 								)).OrFatal(t).Time(),
-								PlanBody: kdb.PlanBody{
+								PlanBody: domain.PlanBody{
 									PlanId: "plan-1", Active: true,
-									Image: &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+									Image: &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 								},
-								Exit: &kdb.RunExit{
+								Exit: &domain.RunExit{
 									Code:    0,
 									Message: "success",
 								},
 							},
-							Inputs: []kdb.Assignment{
+							Inputs: []domain.Assignment{
 								{
-									KnitDataBody: kdb.KnitDataBody{
+									KnitDataBody: domain.KnitDataBody{
 										KnitId: "knitin1", VolumeRef: "pvc-knitin1",
 									},
-									MountPoint: kdb.MountPoint{
+									MountPoint: domain.MountPoint{
 										Id: 1, Path: "C:\\mp-1",
-										Tags: kdb.NewTagSet([]kdb.Tag{
+										Tags: domain.NewTagSet([]domain.Tag{
 											{Key: "key1", Value: "tag-value"},
 											{Key: "key2", Value: "value"},
 										}),
 									},
 								},
 								{
-									KnitDataBody: kdb.KnitDataBody{
+									KnitDataBody: domain.KnitDataBody{
 										KnitId: "knitin2", VolumeRef: "pvc-knitin2",
 									},
-									MountPoint: kdb.MountPoint{
+									MountPoint: domain.MountPoint{
 										Id: 2, Path: "C:\\mp-2",
-										Tags: kdb.NewTagSet([]kdb.Tag{
+										Tags: domain.NewTagSet([]domain.Tag{
 											{Key: "key1", Value: "tag-value"},
 											{Key: "key2", Value: "value"},
 										}),
 									},
 								},
 								{
-									KnitDataBody: kdb.KnitDataBody{
+									KnitDataBody: domain.KnitDataBody{
 										KnitId: "knitin3", VolumeRef: "pvc-knitin3",
 									},
-									MountPoint: kdb.MountPoint{
+									MountPoint: domain.MountPoint{
 										Id: 3, Path: "C:\\mp-3",
-										Tags: kdb.NewTagSet([]kdb.Tag{
+										Tags: domain.NewTagSet([]domain.Tag{
 											{Key: "key1", Value: "tag-value"},
 											{Key: "key2", Value: "value"},
 										}),
 									},
 								},
 							},
-							Outputs: []kdb.Assignment{
+							Outputs: []domain.Assignment{
 								{
-									KnitDataBody: kdb.KnitDataBody{
+									KnitDataBody: domain.KnitDataBody{
 										KnitId: "knitout1", VolumeRef: "pvc-knitout1",
 									},
-									MountPoint: kdb.MountPoint{
+									MountPoint: domain.MountPoint{
 										Id: 4, Path: "C:\\mp-4",
-										Tags: kdb.NewTagSet([]kdb.Tag{
+										Tags: domain.NewTagSet([]domain.Tag{
 											{Key: "key1", Value: "tag-value"},
 											{Key: "key2", Value: "value"},
 										}),
 									},
 								},
 							},
-							Log: &kdb.Log{
+							Log: &domain.Log{
 								Id: 5,
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "key1", Value: "tag-value"},
 									{Key: "key2", Value: "value"},
 								}),
-								KnitDataBody: kdb.KnitDataBody{
+								KnitDataBody: domain.KnitDataBody{
 									KnitId: "knitlog1", VolumeRef: "pvc-knitlog1",
 								},
 							},
 						},
 						{
-							RunBody: kdb.RunBody{
+							RunBody: domain.RunBody{
 
-								Id: "run-2", Status: kdb.Running,
+								Id: "run-2", Status: domain.Running,
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-11-15T02:00:00.123+09:00",
 								)).OrFatal(t).Time(),
-								PlanBody: kdb.PlanBody{
+								PlanBody: domain.PlanBody{
 									PlanId: "plan-1", Active: true,
-									Image: &kdb.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+									Image: &domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
 								},
 							},
-							Inputs: []kdb.Assignment{
+							Inputs: []domain.Assignment{
 								{
-									KnitDataBody: kdb.KnitDataBody{KnitId: "knitin1", VolumeRef: "ref-knitin1"},
-									MountPoint:   kdb.MountPoint{Id: 1, Path: "C:\\mp-1"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin1", VolumeRef: "ref-knitin1"},
+									MountPoint:   domain.MountPoint{Id: 1, Path: "C:\\mp-1"},
 								},
 								{
-									KnitDataBody: kdb.KnitDataBody{KnitId: "knitin2", VolumeRef: "ref-knitin2"},
-									MountPoint:   kdb.MountPoint{Id: 2, Path: "C:\\mp-2"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin2", VolumeRef: "ref-knitin2"},
+									MountPoint:   domain.MountPoint{Id: 2, Path: "C:\\mp-2"},
 								},
 								{
-									KnitDataBody: kdb.KnitDataBody{KnitId: "knitin4", VolumeRef: "ref-knitin4"},
-									MountPoint:   kdb.MountPoint{Id: 3, Path: "C:\\mp-3"},
-								},
-							},
-							Outputs: []kdb.Assignment{
-								{
-									KnitDataBody: kdb.KnitDataBody{KnitId: "knitout2", VolumeRef: "ref-knitout2"},
-									MountPoint:   kdb.MountPoint{Id: 4, Path: "C:\\mp-4"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin4", VolumeRef: "ref-knitin4"},
+									MountPoint:   domain.MountPoint{Id: 3, Path: "C:\\mp-3"},
 								},
 							},
-							Log: &kdb.Log{
+							Outputs: []domain.Assignment{
+								{
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitout2", VolumeRef: "ref-knitout2"},
+									MountPoint:   domain.MountPoint{Id: 4, Path: "C:\\mp-4"},
+								},
+							},
+							Log: &domain.Log{
 								Id:           5,
-								KnitDataBody: kdb.KnitDataBody{KnitId: "knitlog2", VolumeRef: "ref-knitlog2"},
+								KnitDataBody: domain.KnitDataBody{KnitId: "knitlog2", VolumeRef: "ref-knitlog2"},
 							},
 						},
 						{
-							RunBody: kdb.RunBody{
-								Id: "run-3", Status: kdb.Waiting,
+							RunBody: domain.RunBody{
+								Id: "run-3", Status: domain.Waiting,
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 									"2022-11-15T03:00:00.123+09:00",
 								)).OrFatal(t).Time(),
-								PlanBody: kdb.PlanBody{
+								PlanBody: domain.PlanBody{
 									PlanId: "plan-2", Active: true,
-									Pseudo: &kdb.PseudoPlanDetail{Name: "name-2"},
+									Pseudo: &domain.PseudoPlanDetail{Name: "name-2"},
 								},
 							},
-							Inputs: []kdb.Assignment{
+							Inputs: []domain.Assignment{
 								{
-									KnitDataBody: kdb.KnitDataBody{KnitId: "knitin5", VolumeRef: "ref-knitin5"},
-									MountPoint:   kdb.MountPoint{Id: 6, Path: "C:\\mp-6"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin5", VolumeRef: "ref-knitin5"},
+									MountPoint:   domain.MountPoint{Id: 6, Path: "C:\\mp-6"},
 								},
 								{
-									KnitDataBody: kdb.KnitDataBody{KnitId: "knitin6", VolumeRef: "ref-knitin6"},
-									MountPoint:   kdb.MountPoint{Id: 7, Path: "C:\\mp-7"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin6", VolumeRef: "ref-knitin6"},
+									MountPoint:   domain.MountPoint{Id: 7, Path: "C:\\mp-7"},
 								},
 							},
-							Outputs: []kdb.Assignment{
+							Outputs: []domain.Assignment{
 								{
-									KnitDataBody: kdb.KnitDataBody{KnitId: "knitout3", VolumeRef: "ref-knitout3"},
-									MountPoint:   kdb.MountPoint{Id: 8, Path: "C:\\mp-8"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitout3", VolumeRef: "ref-knitout3"},
+									MountPoint:   domain.MountPoint{Id: 8, Path: "C:\\mp-8"},
 								},
 							},
 						},
 					},
 				},
 				then{
-					query: kdb.RunFindQuery{}, // empty, means "match everything".
+					query: domain.RunFindQuery{}, // empty, means "match everything".
 					body: []apiruns.Detail{
 						{
 							Summary: apiruns.Summary{
 								RunId:     "run-1",
-								Status:    string(kdb.Done),
+								Status:    string(domain.Done),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-11-15T01:00:00.123+09:00")).OrFatal(t),
 								Plan: apiplans.Summary{
 									PlanId: "plan-1",
@@ -289,7 +290,7 @@ func TestRunFindHandler(t *testing.T) {
 						{
 							Summary: apiruns.Summary{
 								RunId:     "run-2",
-								Status:    string(kdb.Running),
+								Status:    string(domain.Running),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-11-15T02:00:00.123+09:00")).OrFatal(t),
 								Plan: apiplans.Summary{
 									PlanId: "plan-1",
@@ -322,7 +323,7 @@ func TestRunFindHandler(t *testing.T) {
 						{
 							Summary: apiruns.Summary{
 								RunId:     "run-3",
-								Status:    string(kdb.Waiting),
+								Status:    string(domain.Waiting),
 								UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-11-15T03:00:00.123+09:00")).OrFatal(t),
 								Plan: apiplans.Summary{
 									PlanId: "plan-2",
@@ -354,20 +355,20 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried all dimensions with empty value": {
 				when{
 					request: "/api/runs?plan=&knitIdInput=&knitIdOutput=&status=&since=&duration=",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{},
+					query: domain.RunFindQuery{},
 					body:  []apiruns.Detail{},
 				},
 			},
 			"when it is queried about planIds": {
 				when{
 					request: "/api/runs?plan=plan-1,plan-2",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						PlanId: []string{"plan-1", "plan-2"},
 					},
 					body: []apiruns.Detail{},
@@ -376,10 +377,10 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about input data": {
 				when{
 					request: "/api/runs?knitIdInput=knitin1,knitin2",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						InputKnitId: []string{"knitin1", "knitin2"},
 					},
 					body: []apiruns.Detail{},
@@ -388,10 +389,10 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about output data": {
 				when{
 					request: "/api/runs?knitIdOutput=knitout3,knitlog1",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						OutputKnitId: []string{"knitout3", "knitlog1"},
 					},
 					body: []apiruns.Detail{},
@@ -400,11 +401,11 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about status": {
 				when{
 					request: "/api/runs?status=done,running",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
-						Status: []kdb.KnitRunStatus{kdb.Running, kdb.Done},
+					query: domain.RunFindQuery{
+						Status: []domain.KnitRunStatus{domain.Running, domain.Done},
 					},
 					body: []apiruns.Detail{},
 				},
@@ -412,11 +413,11 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about since": {
 				when{
 					request: "/api/runs?since=2024-04-01T12%3A00%3A00%2B00%3A00",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
-						Status:       []kdb.KnitRunStatus{},
+					query: domain.RunFindQuery{
+						Status:       []domain.KnitRunStatus{},
 						UpdatedSince: &dummyUpdatedSince,
 					},
 					body: []apiruns.Detail{},
@@ -426,11 +427,11 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about since and duration": {
 				when{
 					request: "/api/runs?since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
-						Status:       []kdb.KnitRunStatus{},
+					query: domain.RunFindQuery{
+						Status:       []domain.KnitRunStatus{},
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
@@ -440,13 +441,13 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about all dimensions except planId": {
 				when{
 					request: "/api/runs?knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
-						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						Status:       []domain.KnitRunStatus{domain.Waiting, domain.Running, domain.Done},
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
@@ -456,13 +457,13 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about all dimensions except input knit id": {
 				when{
 					request: "/api/runs?plan=plan-x,plan-y&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						PlanId:       []string{"plan-x", "plan-y"},
 						OutputKnitId: []string{"out3", "out4"},
-						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						Status:       []domain.KnitRunStatus{domain.Waiting, domain.Running, domain.Done},
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
@@ -472,13 +473,13 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about all dimensions except output knit id": {
 				when{
 					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						PlanId:       []string{"plan-x", "plan-y"},
 						InputKnitId:  []string{"in1", "in2"},
-						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						Status:       []domain.KnitRunStatus{domain.Waiting, domain.Running, domain.Done},
 						UpdatedSince: &dummyUpdatedSince,
 						UpdatedUntil: &dummyUpdatedUntil,
 					},
@@ -488,10 +489,10 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about all dimensions except status": {
 				when{
 					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&since=2024-04-01T12%3A00%3A00%2B00%3A00&duration=2h30m45s",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						PlanId:       []string{"plan-x", "plan-y"},
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
@@ -504,14 +505,14 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about all dimensions except since": {
 				when{
 					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						PlanId:       []string{"plan-x", "plan-y"},
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
-						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						Status:       []domain.KnitRunStatus{domain.Waiting, domain.Running, domain.Done},
 					},
 					body: []apiruns.Detail{},
 				},
@@ -519,14 +520,14 @@ func TestRunFindHandler(t *testing.T) {
 			"when it is queried about all dimensions except duration": {
 				when{
 					request: "/api/runs?plan=plan-x,plan-y&knitIdInput=in1,in2&knitIdOutput=out3,out4&status=waiting,running,done&since=2024-04-01T12%3A00%3A00%2B00%3A00",
-					Runs:    []kdb.Run{},
+					Runs:    []domain.Run{},
 				},
 				then{
-					query: kdb.RunFindQuery{
+					query: domain.RunFindQuery{
 						PlanId:       []string{"plan-x", "plan-y"},
 						InputKnitId:  []string{"in1", "in2"},
 						OutputKnitId: []string{"out3", "out4"},
-						Status:       []kdb.KnitRunStatus{kdb.Waiting, kdb.Running, kdb.Done},
+						Status:       []domain.KnitRunStatus{domain.Waiting, domain.Running, domain.Done},
 						UpdatedSince: &dummyUpdatedSince,
 					},
 					body: []apiruns.Detail{},
@@ -537,12 +538,12 @@ func TestRunFindHandler(t *testing.T) {
 
 				mockRun := mockdb.NewRunInterface()
 
-				mockRun.Impl.Find = func(ctx context.Context, q kdb.RunFindQuery) ([]string, error) {
-					runIds := utils.Map(testcase.when.Runs, func(r kdb.Run) string { return r.Id })
+				mockRun.Impl.Find = func(ctx context.Context, q domain.RunFindQuery) ([]string, error) {
+					runIds := slices.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })
 					return runIds, nil
 				}
-				mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]kdb.Run, error) {
-					runs := utils.ToMap(testcase.when.Runs, func(r kdb.Run) string { return r.Id })
+				mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
+					runs := slices.ToMap(testcase.when.Runs, func(r domain.Run) string { return r.Id })
 					return runs, nil
 				}
 
@@ -556,24 +557,24 @@ func TestRunFindHandler(t *testing.T) {
 				}
 
 				if !cmp.SliceEqWith(
-					mockRun.Calls.Find, []kdb.RunFindQuery{testcase.query},
-					kdb.RunFindQuery.Equal,
+					mockRun.Calls.Find, []domain.RunFindQuery{testcase.query},
+					domain.RunFindQuery.Equal,
 				) {
 					t.Errorf(
 						"unmatch: params for RunInterface.Find:\n- actual:\n%+v\n- expected:\n%+v",
-						mockRun.Calls.Find, []kdb.RunFindQuery{testcase.query},
+						mockRun.Calls.Find, []domain.RunFindQuery{testcase.query},
 					)
 				}
 
 				if !cmp.SliceEqWith(
 					mockRun.Calls.Get,
-					[][]string{utils.Map(testcase.when.Runs, func(r kdb.Run) string { return r.Id })},
+					[][]string{slices.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })},
 					cmp.SliceContentEq[string],
 				) {
 					t.Errorf(
 						"unmatch: params for RunInterface.Get\n- actual:\n%+v\n\n- expected:%+v",
 						mockRun.Calls.Get,
-						[][]string{utils.Map(testcase.when.Runs, func(r kdb.Run) string { return r.Id })},
+						[][]string{slices.Map(testcase.when.Runs, func(r domain.Run) string { return r.Id })},
 					)
 				}
 
@@ -654,7 +655,7 @@ func TestRunFindHandler(t *testing.T) {
 			},
 			"(Bad Request) when statuses in query is invalidated": {
 				when{
-					request: "/api/runs?status=" + strings.ToLower(string(kdb.Invalidated)), // this is known value, but...
+					request: "/api/runs?status=" + strings.ToLower(string(domain.Invalidated)), // this is known value, but...
 				},
 				then{
 					statusCode: http.StatusBadRequest,
@@ -665,10 +666,10 @@ func TestRunFindHandler(t *testing.T) {
 
 				mockRun := mockdb.NewRunInterface()
 
-				mockRun.Impl.Find = func(ctx context.Context, q kdb.RunFindQuery) ([]string, error) {
+				mockRun.Impl.Find = func(ctx context.Context, q domain.RunFindQuery) ([]string, error) {
 					return nil, testcase.when.errorOnFind
 				}
-				mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]kdb.Run, error) {
+				mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 					return nil, testcase.when.errorOnGet
 				}
 
@@ -706,30 +707,30 @@ func TestGetRunHandler(t *testing.T) {
 
 	t.Run("it responses OK with runs in json, when no errors have caused: ", func(t *testing.T) {
 		for runId, testcase := range map[string]struct {
-			when kdb.Run
+			when domain.Run
 			then apiruns.Detail
 		}{
 			"run-1/input-only": {
-				when: kdb.Run{
-					RunBody: kdb.RunBody{
+				when: domain.Run{
+					RunBody: domain.RunBody{
 						Id:     "run-1/input-only",
-						Status: kdb.Done,
+						Status: domain.Done,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-08T01:10:25.111+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-1", Active: true,
-							Image: &kdb.ImageIdentifier{Image: "repo.invalid/image", Version: "v1.1"},
+							Image: &domain.ImageIdentifier{Image: "repo.invalid/image", Version: "v1.1"},
 						},
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-1@/in/1", VolumeRef: "pvc-run-1@/in/1",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 1100, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-1#in/1"},
 								}),
@@ -740,7 +741,7 @@ func TestGetRunHandler(t *testing.T) {
 				then: apiruns.Detail{
 					Summary: apiruns.Summary{
 						RunId:  "run-1/input-only",
-						Status: string(kdb.Done),
+						Status: string(domain.Done),
 						Plan: apiplans.Summary{
 							PlanId: "plan-1",
 							Image:  &apiplans.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
@@ -764,25 +765,25 @@ func TestGetRunHandler(t *testing.T) {
 				},
 			},
 			"run-2/output-only": {
-				when: kdb.Run{
-					RunBody: kdb.RunBody{
-						Id: "run-2/output-only", Status: kdb.Running,
+				when: domain.Run{
+					RunBody: domain.RunBody{
+						Id: "run-2/output-only", Status: domain.Running,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-08T01:10:26.111+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-2", Active: true,
-							Pseudo: &kdb.PseudoPlanDetail{Name: "pseudo-2"},
+							Pseudo: &domain.PseudoPlanDetail{Name: "pseudo-2"},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-2@/out/1", VolumeRef: "pvc-run-2@/out/1",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 2010, Path: "/out/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for pseudo-2#/out/1"},
 								}),
@@ -792,7 +793,7 @@ func TestGetRunHandler(t *testing.T) {
 				},
 				then: apiruns.Detail{
 					Summary: apiruns.Summary{
-						RunId: "run-2/output-only", Status: string(kdb.Running),
+						RunId: "run-2/output-only", Status: string(domain.Running),
 						Plan: apiplans.Summary{PlanId: "plan-2", Name: "pseudo-2"},
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:26.111+09:00"),
@@ -813,39 +814,39 @@ func TestGetRunHandler(t *testing.T) {
 				},
 			},
 			"run-3/in+out": {
-				when: kdb.Run{
-					RunBody: kdb.RunBody{
-						Id: "run-3/in+out", Status: kdb.Failed,
+				when: domain.Run{
+					RunBody: domain.RunBody{
+						Id: "run-3/in+out", Status: domain.Failed,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-08T01:10:27.111+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-3", Active: true,
-							Image: &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "v0.0"},
+							Image: &domain.ImageIdentifier{Image: "repo.invalid/image-x", Version: "v0.0"},
 						},
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-3@/in/1", VolumeRef: "pvc-run-3@/in/1",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 3100, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-3#/in/1"},
 								}),
 							},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-3@/out/1", VolumeRef: "pvc-run-3@/out/1",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 3010, Path: "/out/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-3#/out/1"},
 								}),
@@ -856,7 +857,7 @@ func TestGetRunHandler(t *testing.T) {
 				then: apiruns.Detail{
 					Summary: apiruns.Summary{
 						RunId:  "run-3/in+out",
-						Status: string(kdb.Failed),
+						Status: string(domain.Failed),
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:27.111+09:00"),
 						).OrFatal(t),
@@ -892,75 +893,75 @@ func TestGetRunHandler(t *testing.T) {
 				},
 			},
 			"run-4/in+out+log": {
-				when: kdb.Run{
-					RunBody: kdb.RunBody{
-						Id: "run-4/in+out+log", Status: kdb.Failed,
+				when: domain.Run{
+					RunBody: domain.RunBody{
+						Id: "run-4/in+out+log", Status: domain.Failed,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-08T01:10:28.111+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-4", Active: true,
-							Image: &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "v4.0"},
+							Image: &domain.ImageIdentifier{Image: "repo.invalid/image-x", Version: "v4.0"},
 						},
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-4@/in/1", VolumeRef: "ref-run-4@/in/1",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 4100, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-4#/in/1"},
 								}),
 							},
 						},
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-4@/in/2", VolumeRef: "ref-run-4@/in/2",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 4200, Path: "/in/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-4#/in/2"},
 								}),
 							},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-3@/out/1", VolumeRef: "ref-run-3@/out/1",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 4010, Path: "/out/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-4#/out/1"},
 								}),
 							},
 						},
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-3@/out/2", VolumeRef: "ref-run-3@/out/2",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 4020, Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-4#/out/2"},
 								}),
 							},
 						},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 4001,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId: "run-3@/log", VolumeRef: "ref-run-3@/log",
 						},
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "shared", Value: "val1"},
 							{Key: "special", Value: "for plan-4#/log"},
 						}),
@@ -969,7 +970,7 @@ func TestGetRunHandler(t *testing.T) {
 				then: apiruns.Detail{
 					Summary: apiruns.Summary{
 						RunId:  "run-4/in+out+log",
-						Status: string(kdb.Failed),
+						Status: string(domain.Failed),
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:28.111+09:00"),
 						).OrFatal(t),
@@ -1034,47 +1035,47 @@ func TestGetRunHandler(t *testing.T) {
 				},
 			},
 			"run-5/waiting": {
-				when: kdb.Run{
-					RunBody: kdb.RunBody{
-						Id: "run-5/waiting", Status: kdb.Waiting,
+				when: domain.Run{
+					RunBody: domain.RunBody{
+						Id: "run-5/waiting", Status: domain.Waiting,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-08T01:10:28.111+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-5", Active: true,
-							Image: &kdb.ImageIdentifier{Image: "repo.invalid/image-x", Version: "v5.0"},
+							Image: &domain.ImageIdentifier{Image: "repo.invalid/image-x", Version: "v5.0"},
 						},
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-4@/in/1", VolumeRef: "ref-run-4@/in/1",
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 4100, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-4#/in/1"},
 								}),
 							},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
 							// KnitId: not set = will be assigned. but not now
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 4020, Path: "/out/2",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-4#/out/2"},
 								}),
 							},
 						},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						// KnitId: not set = will be assigned. but not now
 						Id: 4001,
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "shared", Value: "val1"},
 							{Key: "special", Value: "for plan-4#/log"},
 						}),
@@ -1083,7 +1084,7 @@ func TestGetRunHandler(t *testing.T) {
 				then: apiruns.Detail{
 					Summary: apiruns.Summary{
 						RunId:  "run-5/waiting",
-						Status: string(kdb.Waiting),
+						Status: string(domain.Waiting),
 						UpdatedAt: try.To(
 							rfctime.ParseRFC3339DateTime("2022-11-08T01:10:28.111+09:00"),
 						).OrFatal(t),
@@ -1129,8 +1130,8 @@ func TestGetRunHandler(t *testing.T) {
 		} {
 			t.Run(runId, func(t *testing.T) {
 				mockRun := mockdb.NewRunInterface()
-				mockRun.Impl.Get = func(context.Context, []string) (map[string]kdb.Run, error) {
-					return map[string]kdb.Run{runId: testcase.when}, nil
+				mockRun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
+					return map[string]domain.Run{runId: testcase.when}, nil
 				}
 
 				e := echo.New()
@@ -1192,7 +1193,7 @@ func TestGetRunHandler(t *testing.T) {
 	t.Run("it responses error ", func(t *testing.T) {
 		type when struct {
 			runId     string
-			returnGet map[string]kdb.Run
+			returnGet map[string]domain.Run
 			errorGet  error
 		}
 
@@ -1207,7 +1208,7 @@ func TestGetRunHandler(t *testing.T) {
 			"Not Found: when found runs do not have specified run id": {
 				when{
 					runId:     "run-1",
-					returnGet: map[string]kdb.Run{}, // empty does not have any runId.
+					returnGet: map[string]domain.Run{}, // empty does not have any runId.
 				},
 				then{
 					statusCode: http.StatusNotFound,
@@ -1225,7 +1226,7 @@ func TestGetRunHandler(t *testing.T) {
 		} {
 			t.Run(name, func(t *testing.T) {
 				mockRun := mockdb.NewRunInterface()
-				mockRun.Impl.Get = func(context.Context, []string) (map[string]kdb.Run, error) {
+				mockRun.Impl.Get = func(context.Context, []string) (map[string]domain.Run, error) {
 					return testcase.when.returnGet, testcase.when.errorGet
 				}
 
@@ -1268,7 +1269,7 @@ func TestAbortRun(t *testing.T) {
 		RunId           string
 		SetStatusResult error
 		SetExitResult   error
-		GetResult       map[string]kdb.Run
+		GetResult       map[string]domain.Run
 		GetError        error
 	}
 
@@ -1281,30 +1282,30 @@ func TestAbortRun(t *testing.T) {
 		return func(t *testing.T) {
 			mockRun := mockdb.NewRunInterface()
 
-			mockRun.Impl.SetStatus = func(ctx context.Context, runId string, status kdb.KnitRunStatus) error {
+			mockRun.Impl.SetStatus = func(ctx context.Context, runId string, status domain.KnitRunStatus) error {
 				if when.RunId != runId {
 					t.Errorf(
 						"Get called with unexpected runId: %s (want: %s)",
 						runId, when.RunId,
 					)
 				}
-				if status != kdb.Aborting {
+				if status != domain.Aborting {
 					t.Errorf(
 						"SetStatus called with unexpected status: %s (want: %s)",
-						status, kdb.Aborting,
+						status, domain.Aborting,
 					)
 				}
 				return when.SetStatusResult
 			}
 
-			mockRun.Impl.SetExit = func(ctx context.Context, runId string, exit kdb.RunExit) error {
+			mockRun.Impl.SetExit = func(ctx context.Context, runId string, exit domain.RunExit) error {
 				if when.RunId != runId {
 					t.Errorf(
 						"Get called with unexpected runId: %s (want: %s)",
 						runId, when.RunId,
 					)
 				}
-				want := kdb.RunExit{Code: 253, Message: "aborted by user"}
+				want := domain.RunExit{Code: 253, Message: "aborted by user"}
 				if exit != want {
 					t.Errorf(
 						"SetExit called with unexpected exit: %+v (want: %+v)",
@@ -1314,7 +1315,7 @@ func TestAbortRun(t *testing.T) {
 				return when.SetExitResult
 			}
 
-			mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]kdb.Run, error) {
+			mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 				if !cmp.SliceContentEq([]string{when.RunId}, runId) {
 					t.Errorf(
 						"Get called with unexpected runId: %s (want: %s)",
@@ -1385,64 +1386,64 @@ func TestAbortRun(t *testing.T) {
 		When{
 			RunId:           "run-1",
 			SetStatusResult: nil,
-			GetResult: map[string]kdb.Run{
+			GetResult: map[string]domain.Run{
 				"run-1": {
-					RunBody: kdb.RunBody{
-						Id: "run-1", Status: kdb.Aborting,
+					RunBody: domain.RunBody{
+						Id: "run-1", Status: domain.Aborting,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-08T01:10:25.111+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-1", Active: true,
-							Image: &kdb.ImageIdentifier{Image: "repo.invalid/image", Version: "v1.1"},
+							Image: &domain.ImageIdentifier{Image: "repo.invalid/image", Version: "v1.1"},
 						},
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-1@/in/1", VolumeRef: "pvc-run-1@/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: kdb.KeyKnitId, Value: "run-1@/in/1"},
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: domain.KeyKnitId, Value: "run-1@/in/1"},
 									{Key: "shared", Value: "val1"},
 								}),
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 1100, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-1#in/1"},
 								}),
 							},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-1@/out/1", VolumeRef: "pvc-run-1@/out/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: kdb.KeyKnitId, Value: "run-1@/out/1"},
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: domain.KeyKnitId, Value: "run-1@/out/1"},
 									{Key: "shared", Value: "val1"},
 								}),
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 1010, Path: "/out/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-1#out/1"},
 								}),
 							},
 						},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 1001,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId: "run-1@/log", VolumeRef: "pvc-run-1@/log",
-							Tags: kdb.NewTagSet([]kdb.Tag{
-								{Key: kdb.KeyKnitId, Value: "run-1@/log"},
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: domain.KeyKnitId, Value: "run-1@/log"},
 								{Key: "shared", Value: "val1"},
 							}),
 						},
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "shared", Value: "val1"},
 							{Key: "special", Value: "for plan-1#log"},
 						}),
@@ -1455,7 +1456,7 @@ func TestAbortRun(t *testing.T) {
 			Response: apiruns.Detail{
 				Summary: apiruns.Summary{
 					RunId:  "run-1",
-					Status: string(kdb.Aborting),
+					Status: string(domain.Aborting),
 					Plan: apiplans.Summary{
 						PlanId: "plan-1",
 						Image:  &apiplans.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
@@ -1541,7 +1542,7 @@ func TestAbortRun(t *testing.T) {
 	t.Run("it responses error (NotFound), when RunInterface.SetStatus returns ErrMissing", theory(
 		When{
 			RunId:           "run-1",
-			SetStatusResult: kdb.ErrMissing,
+			SetStatusResult: kerr.ErrMissing,
 			GetResult:       nil,
 			GetError:        nil,
 		},
@@ -1554,7 +1555,7 @@ func TestAbortRun(t *testing.T) {
 		When{
 			RunId:           "run-1",
 			SetStatusResult: nil,
-			GetResult:       map[string]kdb.Run{},
+			GetResult:       map[string]domain.Run{},
 			GetError:        nil,
 		},
 		Then{
@@ -1565,8 +1566,8 @@ func TestAbortRun(t *testing.T) {
 	t.Run("it responses error (Conflict), when RunInterface.SetStatus returns ErrInvalidRunStateChanging", theory(
 		When{
 			RunId:           "run-1",
-			SetStatusResult: kdb.ErrInvalidRunStateChanging,
-			GetResult:       map[string]kdb.Run{},
+			SetStatusResult: domain.ErrInvalidRunStateChanging,
+			GetResult:       map[string]domain.Run{},
 			GetError:        nil,
 		},
 		Then{
@@ -1581,7 +1582,7 @@ func TestTearoffRun(t *testing.T) {
 		RunId           string
 		SetStatusResult error
 		SetExitResult   error
-		GetResult       map[string]kdb.Run
+		GetResult       map[string]domain.Run
 		GetError        error
 	}
 
@@ -1594,29 +1595,29 @@ func TestTearoffRun(t *testing.T) {
 		return func(t *testing.T) {
 			mockRun := mockdb.NewRunInterface()
 
-			mockRun.Impl.SetStatus = func(ctx context.Context, runId string, status kdb.KnitRunStatus) error {
+			mockRun.Impl.SetStatus = func(ctx context.Context, runId string, status domain.KnitRunStatus) error {
 				if when.RunId != runId {
 					t.Errorf(
 						"Get called with unexpected runId: %s (want: %s)",
 						runId, when.RunId,
 					)
 				}
-				if status != kdb.Completing {
+				if status != domain.Completing {
 					t.Errorf(
 						"SetStatus called with unexpected status: %s (want: %s)",
-						status, kdb.Completing,
+						status, domain.Completing,
 					)
 				}
 				return when.SetStatusResult
 			}
-			mockRun.Impl.SetExit = func(ctx context.Context, runId string, exit kdb.RunExit) error {
+			mockRun.Impl.SetExit = func(ctx context.Context, runId string, exit domain.RunExit) error {
 				if when.RunId != runId {
 					t.Errorf(
 						"Get called with unexpected runId: %s (want: %s)",
 						runId, when.RunId,
 					)
 				}
-				want := kdb.RunExit{Code: 0, Message: "stopped by user"}
+				want := domain.RunExit{Code: 0, Message: "stopped by user"}
 				if exit != want {
 					t.Errorf(
 						"SetExit called with unexpected exit: %+v (want: %+v)",
@@ -1626,7 +1627,7 @@ func TestTearoffRun(t *testing.T) {
 				return when.SetExitResult
 			}
 
-			mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]kdb.Run, error) {
+			mockRun.Impl.Get = func(ctx context.Context, runId []string) (map[string]domain.Run, error) {
 				if !cmp.SliceContentEq([]string{when.RunId}, runId) {
 					t.Errorf(
 						"Get called with unexpected runId: %s (want: %s)",
@@ -1697,64 +1698,64 @@ func TestTearoffRun(t *testing.T) {
 		When{
 			RunId:           "run-1",
 			SetStatusResult: nil,
-			GetResult: map[string]kdb.Run{
+			GetResult: map[string]domain.Run{
 				"run-1": {
-					RunBody: kdb.RunBody{
-						Id: "run-1", Status: kdb.Aborting,
+					RunBody: domain.RunBody{
+						Id: "run-1", Status: domain.Aborting,
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-08T01:10:25.111+09:00",
 						)).OrFatal(t).Time(),
-						PlanBody: kdb.PlanBody{
+						PlanBody: domain.PlanBody{
 							PlanId: "plan-1", Active: true,
-							Image: &kdb.ImageIdentifier{Image: "repo.invalid/image", Version: "v1.1"},
+							Image: &domain.ImageIdentifier{Image: "repo.invalid/image", Version: "v1.1"},
 						},
 					},
-					Inputs: []kdb.Assignment{
+					Inputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-1@/in/1", VolumeRef: "pvc-run-1@/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: kdb.KeyKnitId, Value: "run-1@/in/1"},
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: domain.KeyKnitId, Value: "run-1@/in/1"},
 									{Key: "shared", Value: "val1"},
 								}),
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 1100, Path: "/in/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-1#in/1"},
 								}),
 							},
 						},
 					},
-					Outputs: []kdb.Assignment{
+					Outputs: []domain.Assignment{
 						{
-							KnitDataBody: kdb.KnitDataBody{
+							KnitDataBody: domain.KnitDataBody{
 								KnitId: "run-1@/out/1", VolumeRef: "pvc-run-1@/out/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
-									{Key: kdb.KeyKnitId, Value: "run-1@/out/1"},
+								Tags: domain.NewTagSet([]domain.Tag{
+									{Key: domain.KeyKnitId, Value: "run-1@/out/1"},
 									{Key: "shared", Value: "val1"},
 								}),
 							},
-							MountPoint: kdb.MountPoint{
+							MountPoint: domain.MountPoint{
 								Id: 1010, Path: "/out/1",
-								Tags: kdb.NewTagSet([]kdb.Tag{
+								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "shared", Value: "val1"},
 									{Key: "special", Value: "for plan-1#out/1"},
 								}),
 							},
 						},
 					},
-					Log: &kdb.Log{
+					Log: &domain.Log{
 						Id: 1001,
-						KnitDataBody: kdb.KnitDataBody{
+						KnitDataBody: domain.KnitDataBody{
 							KnitId: "run-1@/log", VolumeRef: "pvc-run-1@/log",
-							Tags: kdb.NewTagSet([]kdb.Tag{
-								{Key: kdb.KeyKnitId, Value: "run-1@/log"},
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: domain.KeyKnitId, Value: "run-1@/log"},
 								{Key: "shared", Value: "val1"},
 							}),
 						},
-						Tags: kdb.NewTagSet([]kdb.Tag{
+						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "shared", Value: "val1"},
 							{Key: "special", Value: "for plan-1#log"},
 						}),
@@ -1767,7 +1768,7 @@ func TestTearoffRun(t *testing.T) {
 			Response: apiruns.Detail{
 				Summary: apiruns.Summary{
 					RunId:  "run-1",
-					Status: string(kdb.Aborting),
+					Status: string(domain.Aborting),
 					Plan: apiplans.Summary{
 						PlanId: "plan-1",
 						Image:  &apiplans.Image{Repository: "repo.invalid/image", Tag: "v1.1"},
@@ -1853,7 +1854,7 @@ func TestTearoffRun(t *testing.T) {
 	t.Run("it responses error (NotFound), when RunInterface.SetStatus returns ErrMissing", theory(
 		When{
 			RunId:           "run-1",
-			SetStatusResult: kdb.ErrMissing,
+			SetStatusResult: kerr.ErrMissing,
 			GetResult:       nil,
 			GetError:        nil,
 		},
@@ -1866,7 +1867,7 @@ func TestTearoffRun(t *testing.T) {
 		When{
 			RunId:           "run-1",
 			SetStatusResult: nil,
-			GetResult:       map[string]kdb.Run{},
+			GetResult:       map[string]domain.Run{},
 			GetError:        nil,
 		},
 		Then{
@@ -1877,8 +1878,8 @@ func TestTearoffRun(t *testing.T) {
 	t.Run("it responses error (Conflict), when RunInterface.SetStatus returns ErrInvalidRunStateChanging", theory(
 		When{
 			RunId:           "run-1",
-			SetStatusResult: kdb.ErrInvalidRunStateChanging,
-			GetResult:       map[string]kdb.Run{},
+			SetStatusResult: domain.ErrInvalidRunStateChanging,
+			GetResult:       map[string]domain.Run{},
 			GetError:        nil,
 		},
 		Then{
@@ -1916,7 +1917,7 @@ func TestDeleteRun(t *testing.T) {
 		},
 		"When RunInterface.Delete returns RunIdNotFound Err, it should return http.StatusNotFound": {
 			when: when{
-				QueryResult: kdb.ErrMissing,
+				QueryResult: kerr.ErrMissing,
 			},
 			then: then{
 				isErr:       true,
@@ -1926,7 +1927,7 @@ func TestDeleteRun(t *testing.T) {
 		},
 		"When RunInterface.Delete returns ErrRunIdProtected Err, it should return http.StatusConflict": {
 			when: when{
-				QueryResult: kdb.ErrRunIsProtected,
+				QueryResult: domain.ErrRunIsProtected,
 			},
 			then: then{
 				isErr:       true,
@@ -2100,7 +2101,7 @@ func TestRetryRun(t *testing.T) {
 	t.Run("it responses error (NotFound), when RunInterface.Retry returns ErrMissing", theory(
 		When{
 			RunId:    "run-1",
-			ErrRetry: kdb.ErrMissing,
+			ErrRetry: kerr.ErrMissing,
 		},
 		Then{
 			StatusCode: http.StatusNotFound,
@@ -2110,7 +2111,7 @@ func TestRetryRun(t *testing.T) {
 	t.Run("it responses error (Conflict), when RunInterface.Retry returns ErrRunIsProtected", theory(
 		When{
 			RunId:    "run-1",
-			ErrRetry: kdb.ErrRunIsProtected,
+			ErrRetry: domain.ErrRunIsProtected,
 		},
 		Then{
 			StatusCode: http.StatusConflict,
@@ -2119,7 +2120,7 @@ func TestRetryRun(t *testing.T) {
 	t.Run("it responses error (Conflict), when RunInterface.Retry returns ErrInvalidRunStateChanging", theory(
 		When{
 			RunId:    "run-1",
-			ErrRetry: kdb.ErrInvalidRunStateChanging,
+			ErrRetry: domain.ErrInvalidRunStateChanging,
 		},
 		Then{
 			StatusCode: http.StatusConflict,

@@ -2,10 +2,10 @@ module github.com/opst/knitfab/cmd/volume_expander
 
 go 1.23.1
 
-replace github.com/opst/knitfab v1.4.0-beta => ../..
+replace github.com/opst/knitfab => ../..
 
 require (
-	github.com/opst/knitfab v1.4.0-beta
+	github.com/opst/knitfab v1.5.0
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.59.1
 	github.com/youta-t/flarc v0.0.3

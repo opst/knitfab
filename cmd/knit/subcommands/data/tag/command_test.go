@@ -14,7 +14,7 @@ import (
 	rmock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	data_tag "github.com/opst/knitfab/cmd/knit/subcommands/data/tag"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/cmp"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -68,7 +68,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: dara.AssignedTo{
+				Upstream: dara.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -204,7 +204,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: dara.AssignedTo{
+				Upstream: dara.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -333,7 +333,7 @@ func TestDataTag(t *testing.T) {
 					{Key: apitag.KeyKnitId, Value: knitId},
 					{Key: apitag.KeyKnitTimestamp, Value: ""},
 				},
-				Upstream: dara.AssignedTo{
+				Upstream: dara.CreatedFrom{
 					Run: runs.Summary{
 						RunId: "run#1", Status: "done",
 						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(

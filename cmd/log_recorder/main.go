@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/opst/knitfab/pkg/kubeutil"
-	"github.com/opst/knitfab/pkg/utils"
+	connk8s "github.com/opst/knitfab/pkg/conn/k8s"
+	"github.com/opst/knitfab/pkg/utils/slices"
 	kubecore "k8s.io/api/core/v1"
 	kubeapierr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -108,7 +108,7 @@ func main() {
 	)
 	defer cancel()
 
-	k8sclient := kubeutil.ConnectToK8s()
+	k8sclient := connk8s.ConnectToK8s()
 
 	// wait for target container getting up...
 	lastWaitingMessage := time.Now()
@@ -121,7 +121,7 @@ func main() {
 			log.Fatalf("cannot get pod: \"%s\": %s", pod, err)
 		}
 
-		cs, ok := utils.First(p.Status.ContainerStatuses, func(cs kubecore.ContainerStatus) bool {
+		cs, ok := slices.First(p.Status.ContainerStatuses, func(cs kubecore.ContainerStatus) bool {
 			return cs.Name == container
 		})
 

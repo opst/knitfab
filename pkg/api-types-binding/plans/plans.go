@@ -5,21 +5,64 @@ import (
 
 	apiplans "github.com/opst/knitfab-api-types/plans"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/utils"
+	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
-func ComposeMountpoint(mp kdb.MountPoint) apiplans.Mountpoint {
+func ComposeMountpoint(mp domain.MountPoint) apiplans.Mountpoint {
 	return apiplans.Mountpoint{
 		Path: mp.Path,
-		Tags: utils.Map(mp.Tags.Slice(), bindtags.Compose),
+		Tags: slices.Map(mp.Tags.Slice(), bindtags.Compose),
 	}
 }
 
-func ComposeDetail(plan kdb.Plan) apiplans.Detail {
-	var log *apiplans.LogPoint
-	if plan.Log != nil {
-		log = &apiplans.LogPoint{Tags: utils.Map(plan.Log.Tags.Slice(), bindtags.Compose)}
+func ComposeLogPoint(log *domain.LogPoint) *apiplans.LogPoint {
+	if log == nil {
+		return nil
+	}
+	return &apiplans.LogPoint{Tags: slices.Map(log.Tags.Slice(), bindtags.Compose)}
+}
+
+func ComposeDownstream(d domain.PlanDownstream) apiplans.Downstream {
+	return apiplans.Downstream{
+		Plan:       ComposeSummary(d.PlanBody),
+		Mountpoint: ComposeMountpoint(d.Mountpoint),
+	}
+}
+
+func ComposeInputs(i domain.Input) apiplans.Input {
+	return apiplans.Input{
+		Mountpoint: ComposeMountpoint(i.MountPoint),
+		Upstreams: slices.Map(i.Upstreams, func(u domain.PlanUpstream) apiplans.Upstream {
+			var mp *apiplans.Mountpoint = nil
+			if u.Mountpoint != nil {
+				_mp := ComposeMountpoint(*u.Mountpoint)
+				mp = &_mp
+			}
+
+			return apiplans.Upstream{
+				Plan:       ComposeSummary(u.PlanBody),
+				Mountpoint: mp,
+				Log:        ComposeLogPoint(u.Log),
+			}
+		}),
+	}
+}
+
+func ComposeOutputs(o domain.Output) apiplans.Output {
+	return apiplans.Output{
+		Mountpoint:  ComposeMountpoint(o.MountPoint),
+		Downstreams: slices.Map(o.Downstreams, ComposeDownstream),
+	}
+}
+
+func ComposeDetail(plan domain.Plan) apiplans.Detail {
+	var log *apiplans.Log
+	if lp := ComposeLogPoint(plan.Log); lp != nil {
+		log = &apiplans.Log{
+			LogPoint:    *lp,
+			Downstreams: slices.Map(plan.Log.Downstreams, ComposeDownstream),
+		}
 	}
 
 	var onNode *apiplans.OnNode
@@ -27,11 +70,11 @@ func ComposeDetail(plan kdb.Plan) apiplans.Detail {
 		onNode = &apiplans.OnNode{}
 		for _, on := range plan.OnNode {
 			switch on.Mode {
-			case kdb.MayOnNode:
+			case domain.MayOnNode:
 				onNode.May = append(onNode.May, apiplans.OnSpecLabel{Key: on.Key, Value: on.Value})
-			case kdb.PreferOnNode:
+			case domain.PreferOnNode:
 				onNode.Prefer = append(onNode.Prefer, apiplans.OnSpecLabel{Key: on.Key, Value: on.Value})
-			case kdb.MustOnNode:
+			case domain.MustOnNode:
 				onNode.Must = append(onNode.Must, apiplans.OnSpecLabel{Key: on.Key, Value: on.Value})
 			}
 		}
@@ -40,8 +83,8 @@ func ComposeDetail(plan kdb.Plan) apiplans.Detail {
 	return apiplans.Detail{
 		Summary:        ComposeSummary(plan.PlanBody),
 		Active:         plan.Active,
-		Inputs:         utils.Map(plan.Inputs, ComposeMountpoint),
-		Outputs:        utils.Map(plan.Outputs, ComposeMountpoint),
+		Inputs:         slices.Map(plan.Inputs, ComposeInputs),
+		Outputs:        slices.Map(plan.Outputs, ComposeOutputs),
 		Resources:      apiplans.Resources(plan.Resources),
 		Log:            log,
 		OnNode:         onNode,
@@ -49,7 +92,7 @@ func ComposeDetail(plan kdb.Plan) apiplans.Detail {
 	}
 }
 
-func ComposeSummary(planBody kdb.PlanBody) apiplans.Summary {
+func ComposeSummary(planBody domain.PlanBody) apiplans.Summary {
 	rst := apiplans.Summary{
 		PlanId:     planBody.PlanId,
 		Entrypoint: planBody.Entrypoint,
@@ -62,7 +105,7 @@ func ComposeSummary(planBody kdb.PlanBody) apiplans.Summary {
 		rst.Name = p.Name.String()
 	}
 
-	rst.Annotations = utils.Map(planBody.Annotations, func(a kdb.Annotation) apiplans.Annotation {
+	rst.Annotations = slices.Map(planBody.Annotations, func(a domain.Annotation) apiplans.Annotation {
 		return apiplans.Annotation{Key: a.Key, Value: a.Value}
 	})
 

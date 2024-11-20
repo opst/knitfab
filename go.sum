@@ -179,8 +179,8 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=
 github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
-github.com/opst/knitfab-api-types v1.4.0 h1:sHBIhRgd86mRU56cxvH6abeP2h2fTbY44gCYEkuIwgs=
-github.com/opst/knitfab-api-types v1.4.0/go.mod h1:JRwA8q957LpdKCJOmpJokMawZAMrxkq2epl9BksZVZk=
+github.com/opst/knitfab-api-types v1.5.0 h1:HNEXHl62lPDZEdnRaJjaEwTL1ZN4hXyrap0/zLy1w5U=
+github.com/opst/knitfab-api-types v1.5.0/go.mod h1:JRwA8q957LpdKCJOmpJokMawZAMrxkq2epl9BksZVZk=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

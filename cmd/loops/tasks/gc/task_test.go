@@ -6,32 +6,27 @@ import (
 	"fmt"
 	"testing"
 
-	kdb "github.com/opst/knitfab/pkg/db"
-	dbmock "github.com/opst/knitfab/pkg/db/mocks"
-	k8smock "github.com/opst/knitfab/pkg/workloads/k8s/mock"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"github.com/opst/knitfab/pkg/domain"
+	dbmock "github.com/opst/knitfab/pkg/domain/garbage/db/mock"
+	k8smock "github.com/opst/knitfab/pkg/domain/garbage/k8s/mock"
 )
 
 func TestGarbageCollectionTask(t *testing.T) {
 	t.Run("if a record is poped, it executes", func(t *testing.T) {
-		client := k8smock.NewMockClient()
-		client.Impl.DeletePVC = func(ctx context.Context, namespace string, pvcname string) error {
+		mockK8sInterface := k8smock.New(t)
+		mockK8sInterface.Impl.DestroyGarbage = func(ctx context.Context, g domain.Garbage) error {
 			return nil
 		}
-		GarbageInterface := dbmock.NewMockGarbageInterface()
-		GarbageInterface.Impl.Pop = func(ctx context.Context, callback func(kdb.Garbage) error) (bool, error) {
+
+		mockDbInterface := dbmock.NewMockGarbageInterface()
+		mockDbInterface.Impl.Pop = func(ctx context.Context, callback func(domain.Garbage) error) (bool, error) {
 			// does not implement callback function because the results of the pop method
 			// according to the behavior of the callback function have been verified
 			return true, nil
 		}
 
-		namespace := "test-space"
-		testee := Task
+		testee := Task(mockK8sInterface, mockDbInterface)
 		_, pop, err := testee(
-			client,
-			namespace,
-			GarbageInterface)(
 			context.Background(),
 			Seed(), // first return value is not used in Garbage Collection.
 		)
@@ -42,23 +37,19 @@ func TestGarbageCollectionTask(t *testing.T) {
 	})
 
 	t.Run("if an error occurs while a record is popped, it makes error", func(t *testing.T) {
-		client := k8smock.NewMockClient()
-		client.Impl.DeletePVC = func(ctx context.Context, namespace string, pvcname string) error {
+		mockK8sInterface := k8smock.New(t)
+		mockK8sInterface.Impl.DestroyGarbage = func(ctx context.Context, g domain.Garbage) error {
 			return nil
 		}
-		GarbageInterface := dbmock.NewMockGarbageInterface()
+
+		mockDbInterface := dbmock.NewMockGarbageInterface()
 		expectedError := fmt.Errorf("expected error")
-		GarbageInterface.Impl.Pop = func(ctx context.Context, f func(kdb.Garbage) error) (bool, error) {
+		mockDbInterface.Impl.Pop = func(ctx context.Context, f func(domain.Garbage) error) (bool, error) {
 			return false, expectedError
 		}
 
-		namespace := "test-space"
-		testee := Task
+		testee := Task(mockK8sInterface, mockDbInterface)
 		_, pop, err := testee(
-			client,
-			namespace,
-			GarbageInterface,
-		)(
 			context.Background(),
 			Seed(),
 		)
@@ -68,49 +59,18 @@ func TestGarbageCollectionTask(t *testing.T) {
 		}
 	})
 
-	t.Run("if an missing error occurs while a delete PVC, it does not makes error", func(t *testing.T) {
-		client := k8smock.NewMockClient()
-		client.Impl.DeletePVC = func(ctx context.Context, namespace string, pvcname string) error {
-			return kubeerr.NewNotFound(schema.GroupResource{}, "not found")
-		}
-		GarbageInterface := dbmock.NewMockGarbageInterface()
-		GarbageInterface.Impl.Pop = func(ctx context.Context, f func(kdb.Garbage) error) (bool, error) {
-			return true, nil
-		}
-
-		namespace := "test-space"
-		testee := Task
-		_, pop, err := testee(
-			client,
-			namespace,
-			GarbageInterface,
-		)(
-			context.Background(),
-			Seed(),
-		)
-
-		if pop != true || err != nil {
-			t.Errorf("(pop,err) = (%v, %v), want (%v, %v)", pop, err, true, nil)
-		}
-	})
-
 	t.Run("if nothing is poped, it executes", func(t *testing.T) {
-		client := k8smock.NewMockClient()
-		client.Impl.DeletePVC = func(ctx context.Context, namespace string, pvcname string) error {
+		mockK8sInterface := k8smock.New(t)
+		mockK8sInterface.Impl.DestroyGarbage = func(ctx context.Context, g domain.Garbage) error {
 			return nil
 		}
 		GarbageInterface := dbmock.NewMockGarbageInterface()
-		GarbageInterface.Impl.Pop = func(ctx context.Context, f func(kdb.Garbage) error) (bool, error) {
+		GarbageInterface.Impl.Pop = func(ctx context.Context, f func(domain.Garbage) error) (bool, error) {
 			return false, nil
 		}
 
-		namespace := "test-space"
-		testee := Task
+		testee := Task(mockK8sInterface, GarbageInterface)
 		_, pop, err := testee(
-			client,
-			namespace,
-			GarbageInterface,
-		)(
 			context.Background(),
 			Seed(),
 		)
@@ -118,6 +78,32 @@ func TestGarbageCollectionTask(t *testing.T) {
 		if pop || err != nil {
 			t.Errorf("(pop,err) = (%v, %v), want (%v, %v)", pop, err, false, nil)
 		}
+	})
 
+	t.Run("if an error occurs while a DestroyGabage, it returns the error", func(t *testing.T) {
+		mockK8sInterface := k8smock.New(t)
+		expectedError := fmt.Errorf("expected error")
+		mockK8sInterface.Impl.DestroyGarbage = func(ctx context.Context, g domain.Garbage) error {
+			return expectedError
+		}
+
+		mockDbInterface := dbmock.NewMockGarbageInterface()
+		mockDbInterface.Impl.Pop = func(ctx context.Context, f func(domain.Garbage) error) (bool, error) {
+			err := f(domain.Garbage{})
+			if !errors.Is(err, expectedError) {
+				t.Errorf("err = %v, want %v", err, expectedError)
+			}
+			return false, err
+		}
+
+		testee := Task(mockK8sInterface, mockDbInterface)
+		_, pop, err := testee(
+			context.Background(),
+			Seed(),
+		)
+
+		if pop || !errors.Is(err, expectedError) {
+			t.Errorf("(pop,err) = (%v, %v), want (%v, %v)", pop, err, false, expectedError)
+		}
 	})
 }

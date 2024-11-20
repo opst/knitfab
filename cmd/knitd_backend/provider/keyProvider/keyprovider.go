@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	kdb "github.com/opst/knitfab/pkg/db"
-	"github.com/opst/knitfab/pkg/workloads/keychain"
-	"github.com/opst/knitfab/pkg/workloads/keychain/key"
+	kdb "github.com/opst/knitfab/pkg/domain/keychain/db"
+	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
 )
 
 var ErrBadNewKey = errors.New("new key is bad. It does not satisfy the requirements")

@@ -22,8 +22,8 @@ import (
 	data_push "github.com/opst/knitfab/cmd/knit/subcommands/data/push"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
 	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/cmp"
-	kflg "github.com/opst/knitfab/pkg/commandline/flag"
+	kargs "github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -62,7 +62,7 @@ func TestPush(t *testing.T) {
 						{Key: tags.KeyKnitId, Value: "1234"},
 						{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 					},
-					Upstream: data.AssignedTo{
+					Upstream: data.CreatedFrom{
 						Run: runs.Summary{
 							RunId: "run#1", Status: "done",
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -72,7 +72,7 @@ func TestPush(t *testing.T) {
 								PlanId: "uploaded", Name: "knit#uploaded",
 							},
 						},
-						Mountpoint: plans.Mountpoint{Path: "/out"},
+						Mountpoint: &plans.Mountpoint{Path: "/out"},
 					},
 				},
 				ResultOk_: true,
@@ -90,7 +90,7 @@ func TestPush(t *testing.T) {
 				{Key: "type", Value: "image"},
 				{Key: "format", Value: "png"},
 			},
-			Upstream: data.AssignedTo{
+			Upstream: data.CreatedFrom{
 				Run: runs.Summary{
 					RunId: "run#1", Status: "done",
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -100,7 +100,7 @@ func TestPush(t *testing.T) {
 						PlanId: "uploaded", Name: "knit#uploaded",
 					},
 				},
-				Mountpoint: plans.Mountpoint{Path: "/out"},
+				Mountpoint: &plans.Mountpoint{Path: "/out"},
 			},
 		}
 		mock.Impl.PutTagsForData = func(knitId string, argtags tags.Change) (*data.Detail, error) {
@@ -117,7 +117,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   stdout,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
@@ -220,7 +220,7 @@ func TestPush(t *testing.T) {
 						{Key: tags.KeyKnitId, Value: "1234"},
 						{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 					},
-					Upstream: data.AssignedTo{
+					Upstream: data.CreatedFrom{
 						Run: runs.Summary{
 							RunId: "run#1", Status: "done",
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -230,7 +230,7 @@ func TestPush(t *testing.T) {
 								PlanId: "uploaded", Name: "knit#uploaded",
 							},
 						},
-						Mountpoint: plans.Mountpoint{Path: "/out"},
+						Mountpoint: &plans.Mountpoint{Path: "/out"},
 					},
 				},
 				ResultOk_: true,
@@ -248,7 +248,7 @@ func TestPush(t *testing.T) {
 				{Key: "type", Value: "image"},
 				{Key: "format", Value: "png"},
 			},
-			Upstream: data.AssignedTo{
+			Upstream: data.CreatedFrom{
 				Run: runs.Summary{
 					RunId: "run#1", Status: "done",
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -258,7 +258,7 @@ func TestPush(t *testing.T) {
 						PlanId: "uploaded", Name: "knit#uploaded",
 					},
 				},
-				Mountpoint: plans.Mountpoint{Path: "/out"},
+				Mountpoint: &plans.Mountpoint{Path: "/out"},
 			},
 		}
 		mock.Impl.PutTagsForData = func(knitId string, argtags tags.Change) (*data.Detail, error) {
@@ -275,7 +275,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   stdout,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
@@ -373,7 +373,7 @@ func TestPush(t *testing.T) {
 						{Key: tags.KeyKnitId, Value: "1234"},
 						{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 					},
-					Upstream: data.AssignedTo{
+					Upstream: data.CreatedFrom{
 						Run: runs.Summary{
 							RunId: "run#1", Status: "done",
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -383,7 +383,7 @@ func TestPush(t *testing.T) {
 								PlanId: "uploaded", Name: "knit#uploaded",
 							},
 						},
-						Mountpoint: plans.Mountpoint{Path: "/out"},
+						Mountpoint: &plans.Mountpoint{Path: "/out"},
 					},
 				},
 				ResultOk_: true,
@@ -401,7 +401,7 @@ func TestPush(t *testing.T) {
 				{Key: "type", Value: "image"},
 				{Key: "format", Value: "png"},
 			},
-			Upstream: data.AssignedTo{
+			Upstream: data.CreatedFrom{
 				Run: runs.Summary{
 					RunId: "run#1", Status: "done",
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -411,7 +411,7 @@ func TestPush(t *testing.T) {
 						PlanId: "uploaded", Name: "knit#uploaded",
 					},
 				},
-				Mountpoint: plans.Mountpoint{Path: "/out"},
+				Mountpoint: &plans.Mountpoint{Path: "/out"},
 			},
 		}
 		mock.Impl.PutTagsForData = func(knitId string, argtags tags.Change) (*data.Detail, error) {
@@ -428,7 +428,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   stdout,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
@@ -530,7 +530,7 @@ func TestPush(t *testing.T) {
 						{Key: tags.KeyKnitId, Value: "1234"},
 						{Key: tags.KeyKnitTimestamp, Value: "2022-10-11T12:13:14+00:00"},
 					},
-					Upstream: data.AssignedTo{
+					Upstream: data.CreatedFrom{
 						Run: runs.Summary{
 							RunId: "run#1", Status: "done",
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -540,7 +540,7 @@ func TestPush(t *testing.T) {
 								PlanId: "uploaded", Name: "knit#uploaded",
 							},
 						},
-						Mountpoint: plans.Mountpoint{Path: "/out"},
+						Mountpoint: &plans.Mountpoint{Path: "/out"},
 					},
 				},
 				ResultOk_: true,
@@ -558,7 +558,7 @@ func TestPush(t *testing.T) {
 				{Key: "type", Value: "image"},
 				{Key: "format", Value: "png"},
 			},
-			Upstream: data.AssignedTo{
+			Upstream: data.CreatedFrom{
 				Run: runs.Summary{
 					RunId: "run#1", Status: "done",
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -568,7 +568,7 @@ func TestPush(t *testing.T) {
 						PlanId: "uploaded", Name: "knit#uploaded",
 					},
 				},
-				Mountpoint: plans.Mountpoint{Path: "/out"},
+				Mountpoint: &plans.Mountpoint{Path: "/out"},
 			},
 		}
 		mock.Impl.PutTagsForData = func(knitId string, argtags tags.Change) (*data.Detail, error) {
@@ -585,7 +585,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   stdout,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},
@@ -673,7 +673,7 @@ func TestPush(t *testing.T) {
 				Stdout_:   io.Discard,
 				Stderr_:   io.Discard,
 				Flags_: data_push.Flags{
-					Tag: &kflg.Tags{
+					Tag: &kargs.Tags{
 						{Key: "type", Value: "image"},
 						{Key: "format", Value: "png"},
 					},

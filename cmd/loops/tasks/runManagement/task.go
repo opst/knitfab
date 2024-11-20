@@ -5,18 +5,19 @@ import (
 	"errors"
 	"time"
 
-	"github.com/opst/knitfab/cmd/loops/recurring"
+	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	kdb "github.com/opst/knitfab/pkg/db"
+	"github.com/opst/knitfab/pkg/domain"
+	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
 )
 
 // Return initial RunCursor value for task
-func Seed(pseudoPlans []kdb.PseudoPlanName) kdb.RunCursor {
-	return kdb.RunCursor{
+func Seed(pseudoPlans []domain.PseudoPlanName) domain.RunCursor {
+	return domain.RunCursor{
 		// Status of the runs to be monitored
-		Status:   []kdb.KnitRunStatus{kdb.Ready, kdb.Starting, kdb.Running},
+		Status:   []domain.KnitRunStatus{domain.Ready, domain.Starting, domain.Running},
 		Pseudo:   pseudoPlans,
 		Debounce: 30 * time.Second,
 	}
@@ -27,18 +28,18 @@ func Seed(pseudoPlans []kdb.PseudoPlanName) kdb.RunCursor {
 // - task: detect status changes of runs (starting -> running -> completing/aborting) and
 // update run status.
 func Task(
-	irun kdb.RunInterface,
+	irun kdbrun.Interface,
 	imageManager manager.Manager,
-	pseudoManagers map[kdb.PseudoPlanName]manager.Manager,
+	pseudoManagers map[domain.PseudoPlanName]manager.Manager,
 	hooks runManagementHook.Hooks,
-) recurring.Task[kdb.RunCursor] {
-	return func(ctx context.Context, value kdb.RunCursor) (kdb.RunCursor, bool, error) {
+) recurring.Task[domain.RunCursor] {
+	return func(ctx context.Context, value domain.RunCursor) (domain.RunCursor, bool, error) {
 		nextCursor, statusChanged, err := irun.PickAndSetStatus(
 			ctx, value,
 			// The last Status set by PickAndSetStatus() is the return value of func() below.
-			func(r kdb.Run) (kdb.KnitRunStatus, error) {
+			func(r domain.Run) (domain.KnitRunStatus, error) {
 
-				var newStatus kdb.KnitRunStatus
+				var newStatus domain.KnitRunStatus
 				var err error
 				if r.PlanBody.Pseudo == nil {
 					newStatus, err = imageManager(ctx, hooks, r)
@@ -59,13 +60,13 @@ func Task(
 				if r, ok := newRuns[nextCursor.Head]; ok {
 					hookValue := bindruns.ComposeDetail(r)
 					switch r.Status {
-					case kdb.Starting:
+					case domain.Starting:
 						hooks.ToStarting.After(hookValue)
-					case kdb.Running:
+					case domain.Running:
 						hooks.ToRunning.After(hookValue)
-					case kdb.Completing:
+					case domain.Completing:
 						hooks.ToCompleting.After(hookValue)
-					case kdb.Aborting:
+					case domain.Aborting:
 						hooks.ToAborting.After(hookValue)
 					}
 				}
@@ -78,7 +79,7 @@ func Task(
 		if err == nil ||
 			errors.Is(err, context.Canceled) ||
 			errors.Is(err, context.DeadlineExceeded) ||
-			errors.Is(err, kdb.ErrInvalidRunStateChanging) {
+			errors.Is(err, domain.ErrInvalidRunStateChanging) {
 			return nextCursor, curoseMoved, nil
 		}
 		return nextCursor, curoseMoved, err
