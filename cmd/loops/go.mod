@@ -5,8 +5,8 @@ go 1.23.1
 replace github.com/opst/knitfab => ../..
 
 require (
-	github.com/opst/knitfab v1.5.0-beta
-	github.com/opst/knitfab-api-types v1.5.0-beta.2
+	github.com/opst/knitfab v1.5.0
+	github.com/opst/knitfab-api-types v1.5.0
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 )
