@@ -6,7 +6,7 @@ replace github.com/opst/knitfab => ../..
 
 require (
 	github.com/labstack/echo/v4 v4.12.0
-	github.com/opst/knitfab v1.5.0
+	github.com/opst/knitfab v1.5.1-beta
 	github.com/opst/knitfab-api-types v1.5.0
 	k8s.io/apimachinery v0.31.1
 )
