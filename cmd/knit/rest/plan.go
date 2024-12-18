@@ -90,7 +90,7 @@ func (c *client) RegisterPlan(ctx context.Context, spec plans.PlanSpec) (plans.D
 func (c *client) FindPlan(
 	ctx context.Context,
 	active logic.Ternary,
-	imageVer domain.ImageIdentifier,
+	imageVer *domain.ImageIdentifier,
 	inTags []tags.Tag,
 	outTags []tags.Tag,
 ) ([]plans.Detail, error) {
@@ -110,10 +110,8 @@ func (c *client) FindPlan(
 		// add nothing
 	}
 
-	if imageVer.Image != "" {
-		q.Add("image", fmt.Sprintf("%s:%s", imageVer.Image, imageVer.Version))
-	} else if imageVer.Version != "" {
-		return nil, err
+	if imageVer != nil {
+		q.Add("image", imageVer.String())
 	}
 
 	inTagCount := len(inTags)

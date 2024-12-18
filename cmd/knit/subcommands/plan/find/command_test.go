@@ -37,7 +37,7 @@ func TestFindCommand(t *testing.T) {
 	type Then struct {
 		err      error
 		active   logic.Ternary
-		imageVer domain.ImageIdentifier
+		imageVer *domain.ImageIdentifier
 	}
 
 	presentationItems := []plans.Detail{
@@ -121,7 +121,7 @@ func TestFindCommand(t *testing.T) {
 			task := func(
 				_ context.Context, _ *log.Logger, _ krst.KnitClient,
 				active logic.Ternary,
-				image domain.ImageIdentifier,
+				image *domain.ImageIdentifier,
 				inTags []tags.Tag,
 				outTags []tags.Tag,
 			) ([]plans.Detail, error) {
@@ -132,7 +132,7 @@ func TestFindCommand(t *testing.T) {
 					)
 				}
 
-				if image != then.imageVer {
+				if !image.Equal(then.imageVer) {
 					t.Errorf(
 						"wrong image: (actual, expected) != (%+v, %+v)",
 						image, then.imageVer,
@@ -280,7 +280,7 @@ func TestFindCommand(t *testing.T) {
 		},
 		Then{
 			active: logic.Indeterminate,
-			imageVer: domain.ImageIdentifier{
+			imageVer: &domain.ImageIdentifier{
 				Image: "image-test", Version: "version-test",
 			},
 			err: nil,
@@ -297,7 +297,7 @@ func TestFindCommand(t *testing.T) {
 		},
 		Then{
 			active: logic.Indeterminate,
-			imageVer: domain.ImageIdentifier{
+			imageVer: &domain.ImageIdentifier{
 				Image: "image-test", Version: "",
 			},
 		},
@@ -333,7 +333,7 @@ func TestFindCommand(t *testing.T) {
 		},
 		Then{
 			active:   logic.Indeterminate,
-			imageVer: domain.ImageIdentifier{},
+			imageVer: nil,
 		},
 	))
 
@@ -356,7 +356,7 @@ func TestFindCommand(t *testing.T) {
 			Then{
 				err:      err,
 				active:   logic.Indeterminate,
-				imageVer: domain.ImageIdentifier{},
+				imageVer: nil,
 			},
 		))
 	}
@@ -445,14 +445,14 @@ func TestRunFindPlan(t *testing.T) {
 		log := logger.Null()
 		mock := mock.New(t)
 		mock.Impl.FindPlan = func(
-			ctx context.Context, active logic.Ternary, imageVer domain.ImageIdentifier,
+			ctx context.Context, active logic.Ternary, imageVer *domain.ImageIdentifier,
 			inTags []tags.Tag, outTags []tags.Tag,
 		) ([]plans.Detail, error) {
 			return expectedValue, nil
 		}
 
 		// arguments set up
-		imageVer := domain.ImageIdentifier{
+		imageVer := &domain.ImageIdentifier{
 			Image: "test-image", Version: "test-version",
 		}
 		input := []tags.Tag{{Key: "foo", Value: "bar"}}
@@ -478,14 +478,14 @@ func TestRunFindPlan(t *testing.T) {
 
 		mock := mock.New(t)
 		mock.Impl.FindPlan = func(
-			ctx context.Context, active logic.Ternary, imageVer domain.ImageIdentifier,
+			ctx context.Context, active logic.Ternary, imageVer *domain.ImageIdentifier,
 			inTags []tags.Tag, outTags []tags.Tag,
 		) ([]plans.Detail, error) {
 			return nil, expectedError
 		}
 
 		// argements set up
-		imageVer := domain.ImageIdentifier{
+		imageVer := &domain.ImageIdentifier{
 			Image: "test-image", Version: "test-version",
 		}
 		input := []tags.Tag{{Key: "foo", Value: "bar"}}
