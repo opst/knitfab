@@ -238,6 +238,55 @@ func (ii *ImageIdentifier) Equal(other *ImageIdentifier) bool {
 	return ii.Image == other.Image && ii.Version == other.Version
 }
 
+func (ii *ImageIdentifier) Parse(s string) error {
+	// parse image and version
+	//
+	// image can be formatted in...
+	//
+	//  [REGISTRY:[PORT]][/NAMESPACE[/...]/]IMAGE_NAME[:TAG]
+	//
+	// We would like to split this into two parts:
+	//
+	// - image: REGISTRY/NAMESPACE/.../IMAGE_NAME
+	// - tag: TAG
+	//
+
+	if s == "" {
+		return fmt.Errorf("%w: empty string", ErrInvalidImageIdentifier)
+	}
+
+	// 1. split namespace and image name
+	namespace := ""
+	_image := ""
+	{
+		ss := strings.Split(s, "/")
+		if l := len(ss); l == 0 {
+			_image = ss[0]
+		} else {
+			namespace = strings.Join(ss[:l-1], "/")
+			_image = ss[l-1]
+		}
+	}
+
+	// 2. split image name and tag
+	img, tag, _ := strings.Cut(_image, ":")
+	if img == "" {
+		return fmt.Errorf("%w: image name is empty", ErrInvalidImageIdentifier)
+	}
+	image := img
+	if len(namespace) != 0 {
+		image = strings.Join([]string{namespace, img}, "/")
+	}
+
+	*ii = ImageIdentifier{
+		Image:   image,
+		Version: tag,
+	}
+	return nil
+}
+
+var ErrInvalidImageIdentifier = errors.New("invalid image name")
+
 type PseudoPlanDetail struct {
 	Name PseudoPlanName
 }

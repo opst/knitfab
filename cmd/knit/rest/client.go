@@ -147,7 +147,8 @@ type KnitClient interface {
 	//                  false if plan to be found is deactivated,
 	//                  indeterminate if plan to be found is either activated or deactivated.
 	//
-	// - kdb.ImageIdentifier: image which plan to be found has
+	// - kdb.ImageIdentifier: image which plan to be found has.
+	// Pass nil when ImageIdentifier is not specified.
 	//
 	// - []apitag.Tag: tags which plan to be found has as input
 	//
@@ -159,7 +160,7 @@ type KnitClient interface {
 	//
 	// - error
 	FindPlan(
-		ctx context.Context, active logic.Ternary, imageVer domain.ImageIdentifier,
+		ctx context.Context, active logic.Ternary, imageVer *domain.ImageIdentifier,
 		inTags []tags.Tag, outTags []tags.Tag,
 	) ([]plans.Detail, error)
 

@@ -26,7 +26,7 @@ type PutTagsForDataArgs struct {
 
 type FindPlanArgs struct {
 	Active   logic.Ternary
-	ImageVer domain.ImageIdentifier
+	ImageVer *domain.ImageIdentifier
 	InTags   []apitags.Tag
 	OutTags  []apitags.Tag
 }
@@ -112,7 +112,7 @@ type mockKnitClient struct {
 
 		GetPlans func(ctx context.Context, planId string) (plans.Detail, error)
 		FindPlan func(
-			ctx context.Context, active logic.Ternary, imageVer domain.ImageIdentifier,
+			ctx context.Context, active logic.Ternary, imageVer *domain.ImageIdentifier,
 			inTags []apitags.Tag, outTags []apitags.Tag,
 		) ([]plans.Detail, error)
 		PutPlanForActivate  func(ctx context.Context, planId string, isActive bool) (plans.Detail, error)
@@ -235,7 +235,7 @@ func (m *mockKnitClient) GetPlans(ctx context.Context, planId string) (plans.Det
 func (m *mockKnitClient) FindPlan(
 	ctx context.Context,
 	active logic.Ternary,
-	imageVer domain.ImageIdentifier,
+	imageVer *domain.ImageIdentifier,
 	inTags []apitags.Tag,
 	outTags []apitags.Tag,
 ) ([]plans.Detail, error) {

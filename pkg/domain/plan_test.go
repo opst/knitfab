@@ -11,6 +11,98 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+func TestImageIdentifier(t *testing.T) {
+	t.Run("Parse", func(t *testing.T) {
+		type When struct {
+			Image string
+		}
+
+		type Then struct {
+			ImageIdentfier domain.ImageIdentifier
+			Err            error
+		}
+
+		theory := func(when When, then Then) func(*testing.T) {
+			return func(t *testing.T) {
+				got := new(domain.ImageIdentifier)
+				err := got.Parse(when.Image)
+				if !errors.Is(err, then.Err) {
+					t.Fatalf("error is not expected type (actual, expected) = (%+v, %+v)", err, then.Err)
+				}
+				if !got.Equal(&then.ImageIdentfier) {
+					t.Errorf("not match:\n- actual   : %+v\n- expecetd : %+v", got, then.ImageIdentfier)
+				}
+			}
+		}
+
+		t.Run("when it is passed valid image identifier, it parses it", theory(
+			When{Image: "repo.invalid/image-name:v0.0-alpha"},
+			Then{
+				ImageIdentfier: domain.ImageIdentifier{
+					Image:   "repo.invalid/image-name",
+					Version: "v0.0-alpha",
+				},
+			},
+		))
+
+		t.Run("when it is passed valid image identifier (no repo), it parses it", theory(
+			When{Image: "image-name:v0.0-alpha"},
+			Then{
+				ImageIdentfier: domain.ImageIdentifier{
+					Image:   "image-name",
+					Version: "v0.0-alpha",
+				},
+			},
+		))
+
+		t.Run("when it is passed valid image identifier (no tag), it parses it", theory(
+			When{Image: "repo.invalid/image-name"},
+			Then{
+				ImageIdentfier: domain.ImageIdentifier{
+					Image:   "repo.invalid/image-name",
+					Version: "",
+				},
+			},
+		))
+
+		t.Run("when it is passed valid image identifier (with port number on repository), it parses it", theory(
+			When{Image: "repo.invalid:5000/image-name:v0.0-alpha"},
+			Then{
+				ImageIdentfier: domain.ImageIdentifier{
+					Image:   "repo.invalid:5000/image-name",
+					Version: "v0.0-alpha",
+				},
+			},
+		))
+
+		t.Run("when it is passed valid image identifier (with port number on repository, no tag), it parses it", theory(
+			When{Image: "repo.invalid:5000/image-name"},
+			Then{
+				ImageIdentfier: domain.ImageIdentifier{
+					Image:   "repo.invalid:5000/image-name",
+					Version: "",
+				},
+			},
+		))
+
+		t.Run("when it is passed invalid image identifier (there are repo but no image name), it returns error", theory(
+			When{Image: "repo/:v0.0-alpha"},
+			Then{Err: domain.ErrInvalidImageIdentifier},
+		))
+
+		t.Run("when it is passed invalid image identifier (no image name), it returns error", theory(
+			When{Image: ":v0.0-alpha"},
+			Then{Err: domain.ErrInvalidImageIdentifier},
+		))
+
+		t.Run("when it is passed invalid image identifier (no image name, no version), it returns error", theory(
+			When{Image: ":"},
+			Then{Err: domain.ErrInvalidImageIdentifier},
+		))
+
+	})
+}
+
 func TestPlanParam_Validation(t *testing.T) {
 
 	sha256hash := func(source ...string) string {
