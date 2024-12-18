@@ -2,3 +2,4 @@
 .sync
 knitfab-install-settings
 docker-certs
+.venv
