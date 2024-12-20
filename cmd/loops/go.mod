@@ -6,7 +6,7 @@ replace github.com/opst/knitfab => ../..
 
 require (
 	github.com/opst/knitfab v1.5.1-beta
-	github.com/opst/knitfab-api-types v1.5.0
+	github.com/opst/knitfab-api-types v1.5.1
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 )
