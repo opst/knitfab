@@ -1,0 +1,68 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.schemaUpgrader.component }}-{{ randAlphaNum 6 | lower }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.schemaUpgrader.component }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: schema-upgrader
+    app.kubernetes.io/part-of: knitfab
+spec:
+  ttlSecondsAfterFinished: {{ .Values.schemaUpgrader.ttlSecondsAfterFinished }}
+  template:
+    spec:
+      containers:
+        - name: schema-upgrader
+          image:  "{{ .Values.imageRepository }}{{ ternary "" "/" (empty .Values.imageRepository) }}{{ .Values.schemaUpgrader.image }}:{{ .Chart.AppVersion }}"
+          args: [
+            "--host", "{{ .Values.database.service }}",
+            "--port", "5432",
+            "--database",  "knit",
+            "/publish/schema-repo",
+          ]
+          volumeMounts:
+            - name: schema-repo
+              mountPath: /publish/schema-repo
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.credential.secret }}
+                  key: password
+      restartPolicy: OnFailure
+      volumes:
+        - name: schema-repo
+          persistentVolumeClaim:
+            claimName: {{ .Values.schemaUpgrader.component }}-schema-repo
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.schemaUpgrader.component }}-schema-repo
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.schemaUpgrader.component }}-schema-repo
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/part-of: knitfab
+    app.kubernetes.io/component: schema-repo
+  annotations:
+    vex.knitfab/managed: "false"
+spec:
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 16Mi
+  storageClassName: {{ .Values.storage.class.system }}
