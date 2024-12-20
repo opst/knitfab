@@ -13,7 +13,7 @@ The v1.5.1-beta introduces the following updates:
 ### Security Update
 
 Knitfab depends on [echo](https://github.com/labstack/echo),
-and echo releases v4.13.2 addressing https://pkg.go.dev/vuln/GO-2024-3321 / https://www.cve.org/CVERecord?id=CVE-2024-45337 .
+and echo releases v4.13.3 addressing https://pkg.go.dev/vuln/GO-2024-3321 / https://www.cve.org/CVERecord?id=CVE-2024-45337 and https://pkg.go.dev/vuln/GO-2024-3333 / https://www.cve.org/CVERecord?id=CVE-2024-45338.
 
 We upgraded echo.
 
