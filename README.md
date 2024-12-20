@@ -9,6 +9,27 @@ MLOps system & tool. Release AI/ML engineers from trivial routines.
 - Dynamic workflow based on 'tags'
 - Use of k8s and container to isolate ML tasks
 
+Documentations
+===================
+
+Our documentations are at https://github.com/opst/knitfab-docs .
+
+### Getting Started
+
+Read [docs/01.getting-started](https://github.com/opst/knitfab-docs/tree/main/01.getting-started).
+
+For more detail, see [docs/02.user-guide](https://github.com/opst/knitfab-docs/tree/main/02.user-guide).
+
+### How to Install and Operate
+
+Read [docs/03.admin-guide](https://github.com/opst/knitfab-docs/tree/main/03.admin-guide).
+
+Related Repository
+===================
+
+- https://github.com/opst/knitfab-docs : Documentations are here.
+- https://github.com/opst/knitfab-api-types : Go module exports types for Knitfab WebAPI input/output.
+
 Directory layout
 ===================
 
@@ -35,24 +56,6 @@ Directory layout
 - `README.md` : This file.
 - `LICENSE`: BSL-1.1.
 - `testctl.sh` : A test environment provisioner and test runner.
-
-Related Repository
-===================
-
-- https://github.com/opst/knitfab-docs : Documentations are here.
-- https://github.com/opst/knitfab-api-types : Go module exports types for Knitfab WebAPI input/output.
-
-Getting Started
-================
-
-Read [docs/01.getting-started](https://github.com/opst/knitfab-docs/tree/main/01.getting-started).
-
-For more detail, see [docs/02.user-guide](https://github.com/opst/knitfab-docs/tree/main/02.user-guide).
-
-How to Install and Operate
-==============
-
-Read [docs/03.admin-guide](https://github.com/opst/knitfab-docs/tree/main/03.admin-guide).
 
 Build Knitfab
 ==============
