@@ -584,7 +584,7 @@ active (optional, mutable):
 			y.Bool(p.Active),
 		),
 		y.Entry(
-			y.Text("resouces", y.WithHeadComment(`
+			y.Text("resources", y.WithHeadComment(`
 resource (optional, mutable):
 Specify the resource , cpu or memory for example, requirements for this Plan.
 This value can be changed after the Plan is applied.

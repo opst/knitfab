@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab-api-types/tags"
@@ -31,7 +30,7 @@ type Option struct {
 		log *log.Logger,
 		client krst.KnitClient,
 		active logic.Ternary,
-		imageVer domain.ImageIdentifier,
+		imageVer *domain.ImageIdentifier,
 		inTags []tags.Tag,
 		outTags []tags.Tag,
 	) ([]plans.Detail, error)
@@ -43,7 +42,7 @@ func WithFind(
 		log *log.Logger,
 		client krst.KnitClient,
 		active logic.Ternary,
-		imageVer domain.ImageIdentifier,
+		imageVer *domain.ImageIdentifier,
 		inTags []tags.Tag,
 		outTags []tags.Tag,
 	) ([]plans.Detail, error),
@@ -113,7 +112,7 @@ func Task(
 		log *log.Logger,
 		client krst.KnitClient,
 		active logic.Ternary,
-		imageVer domain.ImageIdentifier,
+		imageVer *domain.ImageIdentifier,
 		inTags []tags.Tag,
 		outTags []tags.Tag,
 	) ([]plans.Detail, error),
@@ -143,13 +142,12 @@ func Task(
 			)
 		}
 
-		image, version, ok := strings.Cut(flags.Image, ":")
-		if ok && image == "" {
-			return fmt.Errorf("%w: --image: only tag is passed", flarc.ErrUsage)
-		}
-		imageVer := domain.ImageIdentifier{
-			Image:   image,
-			Version: version,
+		var imageVer *domain.ImageIdentifier
+		if flags.Image != "" {
+			imageVer = new(domain.ImageIdentifier)
+			if err := imageVer.Parse(flags.Image); err != nil {
+				return fmt.Errorf("%w: --image: %s", flarc.ErrUsage, err)
+			}
 		}
 
 		inTags := []tags.Tag{}
@@ -182,7 +180,7 @@ func RunFindPlan(
 	log *log.Logger,
 	client krst.KnitClient,
 	active logic.Ternary,
-	imageVer domain.ImageIdentifier,
+	imageVer *domain.ImageIdentifier,
 	inTags []tags.Tag,
 	outTags []tags.Tag,
 ) ([]plans.Detail, error) {

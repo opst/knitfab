@@ -7,8 +7,8 @@ replace github.com/opst/knitfab => ../..
 require (
 	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
-	github.com/opst/knitfab v1.5.0
-	github.com/opst/knitfab-api-types v1.5.0
+	github.com/opst/knitfab v1.5.1
+	github.com/opst/knitfab-api-types v1.5.1
 	github.com/youta-t/flarc v0.0.3
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.31.1
@@ -26,6 +26,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 )

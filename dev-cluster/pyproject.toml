@@ -5,8 +5,8 @@ description = ""
 authors = ["knit dev team."]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-ansible = "^10.0.0"
+python = "^3.12"
+ansible = "^11.0.0"
 pyyaml = ">=6.0.1"
 
 [tool.poetry.dev-dependencies]

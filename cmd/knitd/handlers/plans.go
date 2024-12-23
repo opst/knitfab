@@ -207,13 +207,12 @@ func FindPlanHandler(dbplan kdbplan.PlanInterface) echo.HandlerFunc {
 			result.OutTag = outTag
 
 			if paramImage != "" {
-				image, version, _ := strings.Cut(paramImage, ":")
-
-				if image == "" {
-					return nil, errIncorrectQueryImageVersion
+				imid := new(domain.ImageIdentifier)
+				err := imid.Parse(paramImage)
+				if err != nil {
+					return nil, err
 				}
-				result.ImageVer.Image = image
-				result.ImageVer.Version = version
+				result.ImageVer = *imid
 			}
 
 			return &result, nil

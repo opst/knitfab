@@ -1314,13 +1314,13 @@ func TestFind(t *testing.T) {
 		},
 		"When it receives query parameter, it converts it properly and passed it to PlanInterface.Find.": {
 			when: when{
-				request:     "/api/plans?active=true&image=image-1:ver-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
+				request:     "/api/plans?active=true&image=repo:5000/image-1:ver-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
 				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.True,
-					ImageVer: domain.ImageIdentifier{Image: "image-1", Version: "ver-1"},
+					ImageVer: domain.ImageIdentifier{Image: "repo:5000/image-1", Version: "ver-1"},
 					InTag:    []domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 					OutTag:   []domain.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
@@ -1354,13 +1354,13 @@ func TestFind(t *testing.T) {
 		},
 		"When version is not specified in the query,  it calls PlanInterface.Find with image only.": {
 			when: when{
-				request:     "/api/plans?image=image-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
+				request:     "/api/plans?image=repo:5000/image-1&in_tag=key-1:val-1&in_tag=key-2:val-2&out_tag=key-3:val-3&out_tag=key-4:val-4",
 				queryResult: []*domain.Plan{}, err: nil,
 			},
 			then: then{
 				callResult: mockdb.PlanFindArgs{
 					Active:   logic.Indeterminate,
-					ImageVer: domain.ImageIdentifier{Image: "image-1", Version: ""},
+					ImageVer: domain.ImageIdentifier{Image: "repo:5000/image-1", Version: ""},
 					InTag:    []domain.Tag{{Key: "key-1", Value: "val-1"}, {Key: "key-2", Value: "val-2"}},
 					OutTag:   []domain.Tag{{Key: "key-3", Value: "val-3"}, {Key: "key-4", Value: "val-4"}},
 				},
