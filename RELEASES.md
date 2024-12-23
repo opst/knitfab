@@ -1,3 +1,60 @@
+v1.5.1
+===========
+
+- Date: 2024-12-23
+
+The v1.5.1 introduces the following updates:
+
+- Security Update
+- Bug Fixes
+
+## Important Changes
+
+### Security Update
+
+Knitfab depends on [echo](https://github.com/labstack/echo),
+and echo releases v4.13.3 addressing https://pkg.go.dev/vuln/GO-2024-3321 / https://www.cve.org/CVERecord?id=CVE-2024-45337 and https://pkg.go.dev/vuln/GO-2024-3333 / https://www.cve.org/CVERecord?id=CVE-2024-45338.
+
+We upgraded echo.
+
+### Bug Fixes
+
+#### `knit plan template` contained typo
+
+Plan Definition file template generated from `knit plan template` contained typo.
+
+The key `resources` was mistakenly written as `resouce` (missing the `r`).
+
+This issue has been fixed.
+
+#### `knit plan find`: There are cases in which `--image` flag did not work
+
+The `--image` flag of the `knit plan find` command, which filters results based on the image of Plans, did not work correctly in some cases.
+
+When an image with a port (e.g., `example.com:5000/image:1.0`) was provided, both the command and the Knitfab server (`knitd`) incorrectly parsed the image name as `example.com` with the tag `5000/image:1.0`. As a result, no plans matching the specified image could be found.
+
+This issue has been fixed.
+
+Note: `knit plan apply` was unaffected, and registered Plans retained the correct image names and tags.
+
+## Upgrade Path
+
+This release has breaking change, so upgrade both Knitfab system and CLI.
+
+### Knitfab System
+
+Download the installer, and run
+
+```
+installer.sh --install
+```
+
+in the directory where you have installed Knitfab.
+
+### CLI `knit`
+
+Download from assets of this release.
+
 v1.5.1-beta
 ===========
 
