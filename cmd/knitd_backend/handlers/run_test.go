@@ -64,7 +64,7 @@ func TestGetRunLogHandler(t *testing.T) {
 				response: responseDescriptor{
 					code: 200,
 					header: map[string][]string{
-						"Content-Type":           {"plain/text"},
+						"Content-Type":           {"application/octet-stream"},
 						"X-Some-Header-For-Test": {"aaa", "bbb"},
 					},
 					body: []byte("quick brown fox jumps over a lazy dog"),
@@ -957,7 +957,7 @@ lin3 3
 					code: 200,
 					header: map[string][]string{
 						"Transfer-Encoding": {"chunked"},
-						"Content-Type":      {"text/plain"},
+						"Content-Type":      {"application/octet-stream"},
 					},
 					body: []byte(
 						`line 1
@@ -978,7 +978,7 @@ lin3 3
 					code: 200,
 					header: map[string][]string{
 						"Transfer-Encoding": {"chunked"},
-						"Content-Type":      {"text/plain"},
+						"Content-Type":      {"application/octet-stream"},
 					},
 					body: []byte(
 						`line 1
@@ -1056,7 +1056,7 @@ lin3 3
 					code: 200,
 					header: map[string][]string{
 						"Transfer-Encoding": {"chunked"},
-						"Content-Type":      {"text/plain"},
+						"Content-Type":      {"application/octet-stream"},
 					},
 					body: []byte(
 						`line 1
@@ -1089,7 +1089,7 @@ lin3 3
 					code: 200,
 					header: map[string][]string{
 						"Transfer-Encoding": {"chunked"},
-						"Content-Type":      {"text/plain"},
+						"Content-Type":      {"application/octet-stream"},
 					},
 					body: []byte(
 						`line 1
@@ -1122,7 +1122,7 @@ lin3 3
 					code: 200,
 					header: map[string][]string{
 						"Transfer-Encoding": {"chunked"},
-						"Content-Type":      {"text/plain"},
+						"Content-Type":      {"application/octet-stream"},
 					},
 					body: []byte(
 						`line 1
@@ -1155,7 +1155,7 @@ lin3 3
 					code: 200,
 					header: map[string][]string{
 						"Transfer-Encoding": {"chunked"},
-						"Content-Type":      {"text/plain"},
+						"Content-Type":      {"application/octet-stream"},
 					},
 					body: []byte(
 						`line 1

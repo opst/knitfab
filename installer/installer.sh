@@ -112,7 +112,7 @@ basicConstraints=CA:FALSE
 [ v3_ext ]
 authorityKeyIdentifier=keyid,issuer:always
 basicConstraints=CA:FALSE
-keyUsage=keyEncipherment,dataEncipherment
+keyUsage=keyEncipherment,dataEncipherment,digitalSignature
 extendedKeyUsage=serverAuth,clientAuth
 subjectAltName=@alt_names
 
