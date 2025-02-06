@@ -19,7 +19,7 @@ if [ -z "${CHART_VERSION}" ] ; then
 fi
 
 function message() {
-	echo "$@" >&2
+	echo -e "$@" >&2
 }
 
 function run() {
@@ -45,104 +45,8 @@ function get_node_ip() {
 }
 
 function prepare_install() {
-	mkdir -p ${SETTINGS}/{values,certs}
-	chmod -R go-rwx ${SETTINGS}
-
-	cd ${SETTINGS}
-
-
-	if [ -n "${NO_TLS}" ] ; then
-		message "skipping TLS certificate generation."
-		message ""
-	else
-		if [ -z "${TLSCACERT}" ] && [ -z "${TLSCAKEY}" ] ; then
-			message "generating self-signed CA certificate & key..."
-			# create self-signed CA certificate/key pair
-			# ... key
-			${OPENSSL} genrsa -out certs/ca.key 4096
-
-			# ... certificate
-			${OPENSSL} req -new -x509 -nodes \
-				-key certs/ca.key \
-				-sha256 -days 3650 \
-				-out certs/ca.crt \
-				-subj "/CN=knitfab/O=knitfab/OU=knitfab"
-
-		elif [ -r "${TLSCACERT}" ] && [ -f "${TLSCACERT}" ] && [ -r "${TLSCAKEY}" ] && [ -f "${TLSCAKEY}" ] ; then
-			cp "${TLSCACERT}" certs/ca.crt
-			echo " (CACERT copied from ${TLSCACERT})"
-			cp "${TLSCAKEY}" certs/ca.key
-			echo " (CAKEY copied from ${TLSCAKEY})"
-
-		else
-			message "ERROR: TLS CA certificate/key pair needs both. Or not set to generate new self-signed one."
-			exit 1
-		fi
-
-		if [ -z "${TLSCERT}" ] && [ -z "${TLSKEY}" ] ; then
-
-			message "generating server certificate & key..."
-			# create server key
-			${OPENSSL} genrsa -out certs/server.key 4096
-
-			function alt_names() {
-				local DNS=()
-				for NAME in $(get_node_ip) ; do
-					COUNT=$((COUNT + 1))
-					echo "IP.${COUNT} = ${NAME}"
-				done
-			}
-
-			cat <<EOF > certs/san.extfile
-[req]
-distinguished_name = req_distinguished_name
-req_extensions = req_ext
-prompt = no
-
-[req_distinguished_name]
-CN = knitfab
-
-[ req_ext ]
-subjectAltName = @alt_names
-
-[ SAN ]
-subjectAltName = @alt_names
-basicConstraints=CA:FALSE
-
-[ v3_ext ]
-authorityKeyIdentifier=keyid,issuer:always
-basicConstraints=CA:FALSE
-keyUsage=keyEncipherment,dataEncipherment
-extendedKeyUsage=serverAuth,clientAuth
-subjectAltName=@alt_names
-
-[alt_names]
-$(alt_names)
-EOF
-
-			# create server CSR
-			${OPENSSL} req -new \
-				-key certs/server.key -out certs/server.csr -config certs/san.extfile
-
-			# create server certificate
-			${OPENSSL} x509 -req -in certs/server.csr \
-				-CA certs/ca.crt -CAkey certs/ca.key -CAcreateserial \
-				-out certs/server.crt \
-				-extensions v3_ext -extfile certs/san.extfile \
-				-days 3650 -sha256
-
-			message "cetificates generated."
-			message ""
-		elif [ -r "${TLSCERT}" ] && [ -f "${TLSCERT}" ] && [ -r "${TLSKEY}" ] && [ -f "${TLSKEY}" ] ; then
-			cp "${TLSCERT}" certs/server.crt
-			message " (CERT copied from ${TLSCERT})"
-			cp "${TLSKEY}" certs/server.key
-			message " (KEY copied from ${TLSKEY})"
-		else
-			message "ERROR: TLS certificate/key pair needs both. Or not set to generate new one."
-			exit 1
-		fi
-	fi
+	mkdir -p "${SETTINGS}/values"
+	cd "${SETTINGS}"
 
 	cat <<EOF > ./README.md
 knitfab-install-settings/README.md
@@ -177,11 +81,6 @@ Next Step
 2. ${THIS} --install ... : to install knitfab with your setting.
     - To know options, run "${THIS}" without arguments.
 EOF
-
-	cp ${KUBECONFIG:-~/.kube/config} ./kubeconfig
-	chmod go-rwx ./kubeconfig
-
-	echo ${NAMESPACE:-knitfab} > ./namespace
 
 	cat <<EOF > values/knit-app.yaml
 # # # values/knit-app.yaml # # #
@@ -245,27 +144,6 @@ external: false
 port: 30503
 
 EOF
-
-	: > values/knit-certs.yaml
-	chmod go-rwx values/knit-certs.yaml
-
-	cat <<EOF > values/knit-certs.yaml
-# # # values/knit-certs.yaml # # #
-EOF
-
-	if [ -f ./certs/ca.crt ] && [ -f ./certs/ca.key ] ; then
-		cat <<EOF >> values/knit-certs.yaml
-cacert: $(cat ./certs/ca.crt | base64 | tr -d '\r\n')
-cakey: $(cat ./certs/ca.key | base64 | tr -d '\r\n')
-EOF
-fi
-
-	if [ -f ./certs/server.crt ] && [ -f ./certs/server.key ] ; then
-		cat <<EOF >> values/knit-certs.yaml
-cert: $(cat ./certs/server.crt | base64 | tr -d '\r\n')
-key: $(cat ./certs/server.key | base64 | tr -d '\r\n')
-EOF
-	fi
 
 	cat <<EOF > values/knit-storage-nfs.yaml
 # # # values/knit-storage-nfs.yaml # # #
@@ -385,242 +263,273 @@ EOF
 			--type=kubernetes.io/dockerconfigjson --from-file "${PULL_SECRET}" \
 			--dry-run=client -o yaml > ./knit-image-registry-secret.yaml
 	fi
-
-	cat <<EOF >&2
-Prepareng for knitfab installation is done.
-
-✔ 1. ${THIS} --prepare : to generate templates of knitfab install parameters.
-
-Nest Steps
------
-
-  2. inspect ${SETTINGS}/values/ directory and set values for your environment.
-    - Follow README.
-    - There are settings for your data to be persistent.
-        - Please inspect and set them. Or, you may loss your data by restarting knitfab pods.
-  3. ${THIS} --install ... : to install knitfab with your setting.
-    - To know options, run "${THIS}" without arguments.
-
-NOTE
------
-
-The directory "${SETTINGS}" contains kubeconfig, RDB password ${NO_TLS:-, CA key pair}.
-**KEEP THE DIRECTORY SECURE**, please be careful to handle this directory.
-Permission is set to be read/write by the owner only.
-
-EOF
-
 }
 
-while [ 0 -lt ${#} ] ; do
-	ARG=${1}; shift || :
-	case ${ARG} in
-		--settings|-s)
-			SETTINGS=${1}; shift || :
-			;;
+function drop_certs() {
+	rm -f "${SETTINGS}/certs/ca.crt"
+	rm -f "${SETTINGS}/certs/ca.key"
+	rm -f "${SETTINGS}/certs/server.crt"
+	rm -f "${SETTINGS}/certs/server.key"
+	message "(TLS certificates are removed)"
+}
 
-		--prepare)
-			PREPARE=1
-			;;
-		--install)
-			INSTALL=1
-			UNINSTALLER=1
-			;;
-		--uninstaller)
-			UNINSTALLER=1
-			;;
 
-		# knitfab chart version
-		--chart-version)
-			CHART_VERSION=${1}; shift || :
-			;;
-		--tls-ca-cert)
-			TLSCACERT=${1}; shift || :
-			;;
-		--tls-ca-key)
-			TLSCAKEY=${1}; shift || :
-			;;
-		--ca-cert)
-			CACERT=${1}; shift || :
-			;;
-		--ca-key)
-			CAKEY=${1}; shift || :
-			;;
-		--no-tls)
-			NO_TLS=1
-			;;
+function renew_certs() {
+	mkdir -p ${SETTINGS}/{values,certs}
 
-		# kubernetes related options
-		--kubeconfig)
-			KUBECONFIG=${1}; shift || :
-			;;
-		--namespace|-n)
-			NAMESPACE=${1}; shift || :
-			;;
-		--verbose)
-			VERBOSE=1
-			;;
-		*)
-			;;
-	esac
-done
+	CA_CERT_DEST=${SETTINGS}/certs/ca.crt
+	CA_KEY_DEST=${SETTINGS}/certs/ca.key
+	TLS_CERT_DEST=${SETTINGS}/certs/server.crt
+	TLS_KEY_DEST=${SETTINGS}/certs/server.key
 
-if [ -z "${SETTINGS}" ] ; then
-	SETTINGS=${HERE}/knitfab-install-settings
-fi
-export SETTINGS=$(abspath ${SETTINGS})
-
-if [ -z "${NAMESPACE}" ] ; then
-	if [ -r "${SETTINGS}/namespace" ] ; then
-		NAMESPACE=$(cat ${SETTINGS}/namespace)
+	if [ -n "${RENEW_CA}" ] || [ -n "${TLS_CA_KEY}" ] || ! [ -r "${CA_KEY_DEST}" ] ; then
+		if [ -n "${TLS_CA_KEY}" ] && [ -r "${TLS_CA_KEY}" ] ; then
+			cp "${TLS_CA_KEY}" "${CA_KEY_DEST}"
+			message "(CA key copied from ${TLS_CA_KEY})"
+		else
+			${OPENSSL} genrsa -out "${CA_KEY_DEST}" 4096
+			message "(CA key generated)"
+		fi
+		RENEW_CERTS=1
 	fi
-fi
-NAMESPACE=${NAMESPACE:-knitfab}
 
-if [ -z "${KUBECONFIG}" ] ; then
-	_KUBECONFIG=${SETTINGS}/kubeconfig
-	if [ -r ${_KUBECONFIG} ] ; then
-		KUBECONFIG=${_KUBECONFIG}
+	if [ -n "${RENEW_CA}" ] || [ -n "${TLS_CA_CERT}" ] || ! [ -r "${CA_CERT_DEST}" ] ; then
+		if [ -n "${TLS_CA_CERT}" ] && [ -r "${TLS_CA_CERT}" ] ; then
+			cp "${TLS_CA_CERT}" "${CA_CERT_DEST}"
+			message "(CA certificate copied from ${TLS_CA_CERT})"
+		else
+			${OPENSSL} req -new -x509 -nodes \
+				-key "${CA_KEY_DEST}" \
+				-sha256 -days 3650 \
+				-out "${CA_CERT_DEST}" \
+				-subj "/CN=knitfab/O=knitfab/OU=knitfab"
+			message "(Self-signed CA certificate generated)"
+		fi
+		RENEW_CERTS=1
 	fi
-fi
-if [ -n "${KUBECONFIG}" ] ; then
-	KUBECONFIG=$(abspath ${KUBECONFIG})
+
+	if [ -n "${RENEW_CERTS}" ] || [ -n "${TLS_KEY}" ]|| ! [ -r "${TLS_KEY_DEST}" ] ; then
+		if [ -n "${TLS_KEY}" ] && [ -r "${TLS_KEY}" ] ; then
+			cp "${TLS_KEY}" "${TLS_KEY_DEST}"
+			message "(Server key copied from ${TLS_KEY})"
+		else
+			${OPENSSL} genrsa -out "${TLS_KEY_DEST}" 4096
+			message "(Server key generated)"
+		fi
+	fi
+
+	if [ -n "${RENEW_CERTS}" ] || [ -n "${TLS_CERT}" ] || ! [ -r "${TLS_CERT_DEST}" ] ; then
+
+		if [ -n "${TLS_CERT}" ] && [ -r "${TLS_CERT}" ] ; then
+			cp "${TLS_CERT}" "${TLS_CERT_DEST}"
+			message "(Server certificate copied from ${TLS_CERT})"
+		else
+
+			function alt_names() {
+				local DNS=()
+				for NAME in $(get_node_ip) ; do
+					COUNT=$((COUNT + 1))
+					echo "IP.${COUNT} = ${NAME}"
+				done
+			}
+
+			cat <<EOF > "${SETTINGS}/certs/san.extfile"
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = req_ext
+prompt = no
+
+[req_distinguished_name]
+CN = knitfab
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ SAN ]
+subjectAltName = @alt_names
+basicConstraints=CA:FALSE
+
+[ v3_ext ]
+authorityKeyIdentifier=keyid,issuer:always
+basicConstraints=CA:FALSE
+keyUsage=keyEncipherment,dataEncipherment,digitalSignature
+extendedKeyUsage=serverAuth,clientAuth
+subjectAltName=@alt_names
+
+[alt_names]
+$(alt_names)
+EOF
+
+			# create server CSR
+			${OPENSSL} req -new \
+				-key ${TLS_KEY_DEST} -out "${SETTINGS}/certs/server.csr" -config "${SETTINGS}/certs/san.extfile"
+
+			# create server certificate
+			${OPENSSL} x509 -req -in "${SETTINGS}/certs/server.csr" \
+				-CA "${CA_CERT_DEST}" -CAkey "${CA_KEY_DEST}" -CAcreateserial \
+				-out "${SETTINGS}/certs/server.crt" \
+				-extensions v3_ext -extfile "${SETTINGS}/certs/san.extfile" \
+				-days 3650 -sha256
+
+			message "Server Cetificates is generated."
+			message ""
+		fi
+	fi
+}
+
+function update_cert_values() {
+	: > "${SETTINGS}/values/knit-certs.yaml"
+	chmod go-rwx "${SETTINGS}/values/knit-certs.yaml"
+
+	cat <<EOF > "${SETTINGS}/values/knit-certs.yaml"
+# # # values/knit-certs.yaml # # #
+EOF
+
+	if [ -f "${SETTINGS}/certs/ca.crt" ] && [ -f "${SETTINGS}/certs/ca.key" ] ; then
+		cat <<EOF >> "${SETTINGS}/values/knit-certs.yaml"
+cacert: $(cat "${SETTINGS}/certs/ca.crt" | base64 | tr -d '\r\n')
+cakey: $(cat "${SETTINGS}/certs/ca.key" | base64 | tr -d '\r\n')
+EOF
 fi
 
-if [ -n "${TLSCACERT}" ] ; then
-	export TLSCACERT=$(abspath ${TLSCACERT})
-fi
-if [ -n "${TLSCAKEY}" ] ; then
-	export TLSCAKEY=$(abspath ${TLSCAKEY})
-fi
-if [ -n "${TLSCERT}" ] ; then
-	export TLSCERT=$(abspath ${TLSCERT})
-fi
-if [ -n "${TLSKEY}" ] ; then
-	export TLSKEY=$(abspath ${TLSKEY})
-fi
+	if [ -f "${SETTINGS}/certs/server.crt" ] && [ -f "${SETTINGS}/certs/server.key" ] ; then
+		cat <<EOF >> "${SETTINGS}/values/knit-certs.yaml"
+cert: $(cat "${SETTINGS}/certs/server.crt" | base64 | tr -d '\r\n')
+key: $(cat "${SETTINGS}/certs/server.key" | base64 | tr -d '\r\n')
+EOF
+	fi
+}
 
-if [ -z "${PREPARE}" ] && [ -z "${INSTALL}" ] && [ -z "${UNINSTALLER}" ] ; then
-	cat <<EOF >&2
-knitfab installer
+function generate_handouts() {
+
+	mkdir -p "${SETTINGS}/handouts"
+	cat <<EOF > "${SETTINGS}/handouts/README.md"
+handouts/README.md
 =================
 
-Usage
--------
+This directory contains resources to connect your knitfab.
 
-\`\`\`
-# prepare install settings
-${THIS} --prepare \\
-    [--tls-ca-cert <CA_CERT>] [--tls-ca-key <CA_KEY>] \\
-    [--tls-cert <CA_CERT>] [--tls-key <CA_KEY>] \\
-    [--kubeconfig <KUBECONFIG>] [--namespace|-n <NAMESPACE>] \\
-    [--settings|-s <SETTINGS_DIR=${HERE}/knitfab-install-settings>]
-\`\`\`
-* --tls-ca-cert and --tls-ca-key are the CA certificate and key for the Knitfab.
-    * Optional. If missing, it generates self-signed CA certificate & key.
-* --tls-cert and --tls-key are the server certificate and key for the Knitfab.
-    * Optional. If missing, it generates certificate & key by CA.
-* --no-tls is a flag to skip generating TLS certificates.
-    * Optional. If set, other TLS related flags are ignored.
-* --settings is the directory where install settings are saved.
-    * Optional. Default is \`./knitfab-install-settings\`.
-* --kubeconfig is the path to the kubeconfig file.
-    * Optional. Default is ~/.kube/config.
-    * This file is copied as \$\{--settings\}/kubeconfig.
-* --namespace is the namespace where knitfab is installed.
-    * Optional. Default is "knitfab".
-    * This value is saved in \$\{--settings\}/namespace.
+  - README.md
+    - This file.
 
-\`\`\`
-# install Knitfab
-${THIS} --install \\
-    [--settings|-s <SETTINGS_DIR=>] \\
-    [--chart-version <VERSION>] \\
-    [--namespace|-n <NAMESPACE>] \\
-    [--kubeconfig <KUBECONFIG>]
-\`\`\`
+  - knitprofile
+    - knit profile file.
+    - pass this file to your knit client in your project directory: \`knit init knitprofile\`
 
-* --chart-version is the version of knitfab chart.
-    * Optional. Default is the latest version.
-* --settings is the directory where install settings are saved.
-    * Optional. Default is \`./knitfab-install-settings\`.
-* --namespace is the namespace where Knitfab is installed.
-    * Optinal. Default is content of \`\$\{--settings\}/namespace\`.
-    * This value is saved in the settings directory.
-* --kubeconfig is the path to the kubeconfig file.
-    * Optional. Default is \`\$\{--settings\}/kubeconfig\`.
-    * This file is copied to the settings directory.
-
-Each flags can be set by environment variables.
-For example, you can export envitonmental valriable
-    \`KUBECONFIG=...\` instead of \`--kubeconfig ...\`, or
-    \`TLS_CA_CERT=...\` instead of \`--tls-ca-cert ...\`
-and so on.
-
-This mode implies \`--uninstaller\`.
-
-\`\`\`
-# generate uninstaller for Knitfab
-${THIS} --uninstaller \\
-    [--settings|-s <SETTINGS_DIR=>]
-\`\`\`
-
-* --settings is the directory where uninstaller (\`uninstaller.sh\`) are saved.
-	* Optional. Default is \`./knitfab-install-settings\`.
-
-Steps
------
-
-1. \`./installer.sh --prepare ...\`: to generate templates of knitfab install parameters.
-2. inspect \`--settings\` directory and update files for your environment.
-    - default is \`./knitfab-install-settings\`
-3. \`./installer.sh --install ...\`  to install knitfab with your setting.
-
-### Next Step
-
-Do \`./installer.sh --prepare ...\`. It generates configuration files of knitfab installing
+  - docker/certs.d/*
+    - CA certificate of the in-cluster image registry.
+    - copy this directory to your docker configure directory (\`/etc/docker/certs.d\`, for example)
+    - for more detail, see https://docs.docker.com/engine/security/certificates/
 EOF
-	exit 1
-fi
 
+	for IP in $(get_node_ip) ; do
+		if [ -f "${SETTINGS}/certs/ca.crt" ] ; then
+			cat <<EOF > "${SETTINGS}/handouts/knitprofile"
+# knit profile file
+# pass this file to your knit client in your project directory: \`knit init knitprofile\`
+apiRoot: https://${IP}:$(${KUBECTL} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
+cert:
+  ca: $(cat "${SETTINGS}/certs/ca.crt" | base64 | tr -d '\r\n')
+EOF
+		else
+			cat <<EOF > "${SETTINGS}/handouts/knitprofile"
+# knit profile file
+# pass this file to your knit client in your project directory: \`knit init knitprofile\`
+apiRoot: http://${IP}:$(${KUBECTL} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
+cert: {}
+EOF
+		fi
 
-if [ -n "${PREPARE}" ] ; then
-	if [ -n "${INSTALL}" ] ; then
-		message "ERROR: --prepare and --install are exclusive."
-		exit 1
-	fi
-	if [ -n "${UNINSTALLER}" ] ; then
-		message "ERROR: --prepare and --uninstaller are exclusive."
-		exit 1
-	fi
+		DOCKER_CERT_D="${SETTINGS}/handouts/docker/certs.d/${IP}:"$(${KUBECTL} -n ${NAMESPACE} get service/image-registry -o jsonpath="{.spec.ports[?(@.name==\"image-registry\")].nodePort}")
+		mkdir -p "${DOCKER_CERT_D}"
+		if [ -f "${SETTINGS}/certs/ca.crt" ] ; then
+			cp "${SETTINGS}/certs/ca.crt" "${DOCKER_CERT_D}/ca.crt"
+		fi
 
-	KUBECONFIG=${KUBECONFIG:-~/.kube/config}
+		break  # pick one IP
+	done
+}
+
+function install() {
+
+	VALUES=${SETTINGS}/values
+
 	if ! [ -r "${KUBECONFIG}" ] ; then
 		message "ERROR: KUBECONFIG file not found: ${KUBECONFIG}"
 		exit 1
 	fi
-	KUBECONFIG=$(abspath ${KUBECONFIG})
-	export KUBECONFIG
+	echo kubeconfig = ${KUBECONFIG}
 
-	prepare_install
-	exit 0
-fi
+	if [ -r "${SETTINGS}/knit-image-registry-secret.yaml" ] ; then
+		${KUBECTL} apply -n ${NAMESPACE} -f "${SETTINGS}/knit-image-registry-secret.yaml"
+		SET_PULL_SECRET='--set imagePullSecret=knitfab-regcred'
+	fi
 
+	message "[1 / 3] addding helm repositories..."
 
-#
-#
-#       INSTALL KNITFAB
-#
-#
+	run ${HELM} repo add --force-update knitfab ${CHART_REPOSITORY_ROOT}
 
-if [ -z "${INSTALL}" ] ; then
-	exit 0
-fi
+	message "[2 / 3] install knit middlewares..."
 
-# save actual namespace
-echo ${NAMESPACE} > ${SETTINGS}/namespace
+	message "[2 / 3] #1 install storage driver"
+	run ${HELM} upgrade -i --dependency-update --wait \
+		-n ${NAMESPACE} --create-namespace \
+		--version ${CHART_VERSION} \
+		-f "${VALUES}/knit-storage-nfs.yaml" \
+	knit-storage-nfs knitfab/knit-storage-nfs
+	sleep 5
 
-cat <<EOF > ${SETTINGS}/uninstaller.sh
+	message "[2 / 3] #2 install tls certificates"
+	run ${HELM} upgrade -i --dependency-update --wait \
+		-n ${NAMESPACE} --create-namespace \
+		--version ${CHART_VERSION} \
+		-f "${VALUES}/knit-certs.yaml" \
+		knit-certs knitfab/knit-certs
+
+	message "[2 / 3] #3 install database"
+	run ${HELM} upgrade -i --dependency-update --wait \
+		-n ${NAMESPACE} --create-namespace \
+		--version ${CHART_VERSION} \
+		--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
+		-f "${VALUES}/knit-db-postgres.yaml" \
+		knit-db-postgres knitfab/knit-db-postgres
+
+	message "[2 / 3] #4 install image registry"
+	run ${HELM} upgrade -i --dependency-update --wait \
+		-n ${NAMESPACE} --create-namespace \
+		--version ${CHART_VERSION} \
+		--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
+		--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
+		-f "${VALUES}/knit-image-registry.yaml" \
+		knit-image-registry knitfab/knit-image-registry
+
+	message "[3 / 3] install Knitfab app"
+	message "[3 / 3] #1 run database upgrade job"
+	run ${HELM} upgrade -i --wait \
+		-n ${NAMESPACE} --create-namespace \
+		--version ${CHART_VERSION} \
+		--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
+		--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
+		--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
+		knit-schema-upgrader knitfab/knit-schema-upgrader
+
+	message "[3 / 3] #2 install knit app"
+	run ${HELM} upgrade -i --dependency-update --wait \
+		-n ${NAMESPACE} --create-namespace \
+		--version ${CHART_VERSION} \
+		--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
+		--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
+		--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
+		-f <(${HELM} get values knit-schema-upgrader -n ${NAMESPACE} -o json --all) \
+		--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
+		-f "${VALUES}/knit-app.yaml" \
+		-f "${VALUES}/hooks.yaml" \
+		-f "${VALUES}/extra-api.yaml" \
+		${SET_PULL_SECRET} knit-app knitfab/knit-app
+}
+
+function uninstaller() {
+	cat <<EOF > "${SETTINGS}/uninstaller.sh"
 #! /bin/bash
 set -e
 
@@ -685,157 +594,373 @@ done
 ${HELM} uninstall -n ${NAMESPACE} knit-storage-nfs || :
 EOF
 
-chmod +x ${SETTINGS}/uninstaller.sh
+chmod +x "${SETTINGS}/uninstaller.sh"
 
-CERTS=${SETTINGS}/certs
-VALUES=${SETTINGS}/values
+}
 
-if [ -z "${KUBECONFIG}" ] ; then
-	KUBECONFIG=${HERE}/knitfab-install-settings/kubeconfig
-fi
-export KUBECONFIG=$(abspath ${KUBECONFIG})
 
-if ! [ -r "${KUBECONFIG}" ] ; then
-	message "ERROR: KUBECONFIG file not found: ${KUBECONFIG}"
-	exit 1
-fi
-export KUBECONFIG=$(abspath ${KUBECONFIG})
-echo kubeconfig = ${KUBECONFIG}
+#
+#
+# main routine
+#
+#
 
-if [ -z "${NAMESPACE}" ] ; then
-	NAMESPACE=$(cat ${SETTINGS}/namespace)
-fi
-NAMESPACE=${NAMESPACE:-knitfab}
-echo ${NAMESPACE} > ${SETTINGS}/namespace  # write back
+USAGE=1
+while [ 0 -lt ${#} ] ; do
+	ARG=${1}; shift || :
+	case ${ARG} in
+		--settings|-s)
+			SETTINGS=${1}; shift || :
+			;;
 
-if [ -r "${SETTINGS}/knit-image-registry-secret.yaml" ] ; then
-	${KUBECTL} apply -n ${NAMESPACE} -f ${SETTINGS}/knit-image-registry-secret.yaml
-	SET_PULL_SECRET='--set imagePullSecret=knitfab-regcred'
-fi
+		--prepare)
+			ACTION_PREPARE=1
+			ACTION_RENEW_CERTS=1
+			ACTION_UPDATE_CERT_VALUES=1
 
-message "[1 / 3] addding helm repositories..."
+			USAGE=
+			;;
+		--renew-certs)
+			ACTION_RENEW_CERTS=1
+			ACTION_UPDATE_CERT_VALUES=1
 
-run ${HELM} repo add --force-update knitfab ${CHART_REPOSITORY_ROOT}
+			RENEW_CERTS=1
+			USAGE=
+			;;
+		--install)
+			ACTION_INSTALL=1
+			ACTION_UNINSTALLER=1
+			USAGE=
+			;;
+		--uninstaller)
+			ACTION_UNINSTALLER=1
+			USAGE=
+			;;
 
-message "[2 / 3] install knit middlewares..."
+		# knitfab chart version
+		--chart-version)
+			CHART_VERSION=${1}; shift || :
+			;;
+		# CA Certificates
+		--tls-ca-cert)
+			TLS_CA_CERT=${1}; shift || :
+			;;
+		--tls-ca-key)
+			TLS_CA_KEY=${1}; shift || :
+			;;
+		# Server Certificates
+		--tls-cert)
+			TLS_CERT=${1}; shift || :
+			;;
+		--tls-key)
+			TLS_KEY=${1}; shift || :
+			;;
+		# Renew Self-signed CA Certificates
+		# This works only with --renew-certs.
+		--renew-ca)
+			RENEW_CA=1
+			;;
+		--no-tls)
+			ACTION_UPDATE_CERT_VALUES=1
 
-message "[2 / 3] #1 install storage driver"
-run ${HELM} upgrade -i --dependency-update --wait \
-	-n ${NAMESPACE} --create-namespace \
-	--version ${CHART_VERSION} \
-	-f ${VALUES}/knit-storage-nfs.yaml \
-knit-storage-nfs knitfab/knit-storage-nfs
-sleep 5
+			NO_TLS=1
+			;;
 
-message "[2 / 3] #2 install tls certificates"
-run ${HELM} upgrade -i --dependency-update --wait \
-	-n ${NAMESPACE} --create-namespace \
-	--version ${CHART_VERSION} \
-	-f ${VALUES}/knit-certs.yaml \
-	knit-certs knitfab/knit-certs
-
-message "[2 / 3] #3 install database"
-if ${HELM} status knit-db-postgres -n ${NAMESPACE} > /dev/null 2> /dev/null ; then
-	MODE=upgrade
-fi
-run ${HELM} upgrade -i --dependency-update --wait \
-	-n ${NAMESPACE} --create-namespace \
-	--version ${CHART_VERSION} \
-	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-	-f ${VALUES}/knit-db-postgres.yaml \
-	knit-db-postgres knitfab/knit-db-postgres
-
-message "[2 / 3] #4 install image registry"
-run ${HELM} upgrade -i --dependency-update --wait \
-	-n ${NAMESPACE} --create-namespace \
-	--version ${CHART_VERSION} \
-	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-	--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
-	-f ${VALUES}/knit-image-registry.yaml \
-	knit-image-registry knitfab/knit-image-registry
-
-message "[3 / 3] install Knitfab app"
-message "[3 / 3] #1 run database upgrade job"
-run ${HELM} upgrade -i --wait \
-	-n ${NAMESPACE} --create-namespace \
-	--version ${CHART_VERSION} \
-	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-	--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
-	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
-	knit-schema-upgrader knitfab/knit-schema-upgrader
-
-message "[3 / 3] #2 install knit app"
-run ${HELM} upgrade -i --dependency-update --wait \
-	-n ${NAMESPACE} --create-namespace \
-	--version ${CHART_VERSION} \
-	--set-json "storage=$(${HELM} get values knit-storage-nfs -n ${NAMESPACE} -o json --all)" \
-	--set-json "database=$(${HELM} get values knit-db-postgres -n ${NAMESPACE} -o json --all)" \
-	--set-json "certs=$(${HELM} get values knit-certs -n ${NAMESPACE} -o json --all)" \
-	-f <(${HELM} get values knit-schema-upgrader -n ${NAMESPACE} -o json --all) \
-	--set "imageRepository=${IMAGE_REPOSITORY_HOST}/${REPOSITORY}" \
-	-f ${VALUES}/knit-app.yaml \
-	-f ${VALUES}/hooks.yaml \
-	-f ${VALUES}/extra-api.yaml \
-	${SET_PULL_SECRET} knit-app knitfab/knit-app
-
-mkdir -p ${SETTINGS}/handouts
-cat <<EOF > ${SETTINGS}/handouts/README.md
-handouts/README.md
-=================
-
-This directory contains resources to connect your knitfab.
-
-  - README.md
-    - This file.
-
-  - knitprofile
-    - knit profile file.
-    - pass this file to your knit client in your project directory: \`knit init knitprofile\`
-
-  - docker/certs.d/*
-    - CA certificate of the in-cluster image registry.
-    - copy this directory to your docker configure directory (\`/etc/docker/certs.d\`, for example)
-    - for more detail, see https://docs.docker.com/engine/security/certificates/
-EOF
-
-for IP in $(get_node_ip) ; do
-	if [ -f ${CERTS}/ca.crt ] ; then
-		cat <<EOF > ${SETTINGS}/handouts/knitprofile
-# knit profile file
-# pass this file to your knit client in your project directory: \`knit init knitprofile\`
-apiRoot: https://${IP}:$(${KUBECTL} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
-cert:
-  ca: $(cat ${CERTS}/ca.crt | base64 | tr -d '\r\n')
-EOF
-	else
-		cat <<EOF > ${SETTINGS}/handouts/knitprofile
-# knit profile file
-# pass this file to your knit client in your project directory: \`knit init knitprofile\`
-apiRoot: http://${IP}:$(${KUBECTL} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
-cert: {}
-EOF
-	fi
-
-	DOCKER_CERT_D=${SETTINGS}/handouts/docker/certs.d/${IP}:$(${KUBECTL} -n ${NAMESPACE} get service/image-registry -o jsonpath="{.spec.ports[?(@.name==\"image-registry\")].nodePort}")
-	mkdir -p ${DOCKER_CERT_D}
-	if [ -f ${CERTS}/ca.crt ] ; then
-		cp ${CERTS}/ca.crt ${DOCKER_CERT_D}/ca.crt
-	fi
-
-	break  # pick one IP
+		# kubernetes related options
+		--kubeconfig)
+			KUBECONFIG=${1}; shift || :
+			;;
+		--namespace|-n)
+			NAMESPACE=${1}; shift || :
+			;;
+		--verbose)
+			VERBOSE=1
+			;;
+		*)
+			;;
+	esac
 done
 
-cat <<EOF >&2
+if [ -n "${USAGE}" ] ; then
+	cat <<EOF >&2
+knitfab installer
+=================
 
-Install is done.
+Usage
+-------
 
-Next Step
-----------
+\`\`\`
+# prepare install settings
+${THIS} --prepare \\
+    [--tls-ca-cert <CA_CERT>] [--tls-ca-key <CA_KEY>] \\
+    [--tls-cert <TLS_CERT>] [--tls-key <TLS_KEY>] \\
+	[--namespace|-n <NAMESPACE>] \\
+    [--kubeconfig <KUBECONFIG>] \\
+    [--settings|-s <SETTINGS=${HERE}/knitfab-install-settings>] \\
+	[--no-tls]
+\`\`\`
 
-* Handouts for your user is generated at ${SETTINGS}/handouts .
-  - Please pass the files to your user.
+* --tls-ca-cert and --tls-ca-key are the CA certificate and key for the Knitfab.
+  Optional. If missing, it generates self-signed CA certificate & key.
+* --tls-cert and --tls-key are the server certificate and key for the Knitfab.
+  Optional. If missing, it generates certificate & key by CA.
+* --no-tls is a flag to skip (and remove) generating TLS certificates.
+  Optional. If set, other TLS related flags are ignored.
+* --settings is the directory where install settings are saved.
+  Optional. Default is \`${HERE}/knitfab-install-settings\`.
+* --kubeconfig is the path to the kubeconfig file.
+  Optional. Default is ~/.kube/config.
+  This file is copied as \$\{--settings\}/kubeconfig.
+* --namespace is the namespace where knitfab is installed.
+  Optional. Default is "knitfab".
+  This value is saved in \$\{--settings\}/namespace.
+* --no-tls is a flag to skip generating TLS certificates and remove existing certificates.
+  Optional.
 
+\`\`\`
+# install or upgrade Knitfab
+${THIS} --install \\
+    [--settings|-s <SETTINGS>] \\
+    [--chart-version <VERSION>] \\
+    [--namespace|-n <NAMESPACE>] \\
+    [--kubeconfig <KUBECONFIG>]
+\`\`\`
+
+* --chart-version is the version of Knitfab chart.
+  Optional. Default is the latest version.
+* --settings is the directory where install settings are saved.
+  Optional. Default is \`${HERE}/knitfab-install-settings\`.
+* --namespace is the namespace where Knitfab is installed.
+  Optinal. Default is content of \`\$\{--settings\}/namespace\`.
+  This value is saved in the settings directory.
+* --kubeconfig is the path to the kubeconfig file.
+  Optional. Default is \`\$\{--settings\}/kubeconfig\`.
+  This file is copied to the settings directory.
+
+This mode implies \`--uninstaller\`.
+
+\`\`\`
+# generate uninstaller for Knitfab
+${THIS} --uninstaller \\
+    [--settings|-s <SETTINGS>]
+\`\`\`
+
+* --settings is the directory where uninstaller (\`uninstaller.sh\`) are saved.
+  Optional. Default is \`./knitfab-install-settings\`.
+
+\`\`\`
+# renew TLS certificates
+${THIS} --renew-certs \\
+    [--settings|-s <SETTINGS>] \\
+    [--renew-ca] \\
+	[--no-tls] \\
+    [--tls-ca-cert <CA_CERT>] [--tls-ca-key <CA_KEY>] \\
+    [--tls-cert <TLS_CERT>] [--tls-key <TLS_KEY>]
+\`\`\`
+
+This mode renews TLS (server) certificates.
+
+* --settings is the directory where install settings are saved.
+  Optional. Default is \`${HERE}/knitfab-install-settings\`.
+* --tls-ca-cert and --tls-ca-key are the CA certificate and key for the Knitfab.
+  Optional. If missing, it generates self-signed CA certificate & key.
+* --tls-cert and --tls-key are the server certificate and key for the Knitfab.
+  Optional. If missing, it generates certificate & key by CA.
+* --renew-ca is a flag to force renewing CA certificate & key.
+  Optional. If set, CA certificate & key are also renewed (newly generated).
+* --no-tls is a flag to skip generating TLS certificates and remove existing certificates.
+  Optional.
+
+This mode may be useful when your (CA) certificates are expired.
+This mode DOES NOT imply \`--install\`. To apply the renewed certificates, run \`--install\`.
+
+Steps
+-----
+
+1. \`./installer.sh --prepare ...\`: to generate templates of knitfab install parameters.
+2. inspect \`--settings\` directory and update files for your environment.
+  - default is \`./knitfab-install-settings\`
+3. \`./installer.sh --install ...\`  to install Knitfab with your setting.
+
+### Next Step
+
+Do \`./installer.sh --prepare ...\`. It generates configuration files of Knitfab installing
+EOF
+	exit 1
+fi
+
+
+if [ -z "${SETTINGS}" ] ; then
+	SETTINGS=${HERE}/knitfab-install-settings
+fi
+export SETTINGS=$(abspath "${SETTINGS}")
+mkdir -p ${SETTINGS}
+
+
+if [ -z "${NAMESPACE}" ] ; then
+	if [ -r "${SETTINGS}/namespace" ] ; then
+		NAMESPACE=$(cat "${SETTINGS}/namespace")
+	fi
+fi
+export NAMESPACE=${NAMESPACE:-knitfab}
+echo ${NAMESPACE} > "${SETTINGS}/namespace"
+
+
+if [ -n "${KUBECONFIG}" ] ; then
+	cp "${KUBECONFIG}" "${SETTINGS}/kubeconfig"
+elif [ -r "${SETTINGS}/kubeconfig" ] ; then
+	:
+elif [ -r ~/.kube/config ] ; then
+	cp ~/.kube/config "${SETTINGS}/kubeconfig"
+else
+	message "ERROR: KUBECONFIG file not found."
+	exit 1
+fi
+export KUBECONFIG="${SETTINGS}/kubeconfig"
+
+# # # Parameter Validation & Normalization # # #
+
+if [ -n "${TLS_CA_CERT}" ] ; then
+	if [ -n "${NO_TLS}" ] ; then
+		message "ERROR: --no-tls and --tls-ca-cert are exclusive."
+		exit 1
+	fi
+	export TLS_CA_CERT=$(abspath "${TLS_CA_CERT}")
+fi
+if [ -n "${TLS_CA_KEY}" ] ; then
+	if [ -n "${NO_TLS}" ] ; then
+		message "ERROR: --no-tls and --tls-ca-key are exclusive."
+		exit 1
+	fi
+	export TLS_CA_KEY=$(abspath "${TLS_CA_KEY}")
+fi
+if [ -n "${TLS_CERT}" ] ; then
+	if [ -n "${NO_TLS}" ] ; then
+		message "ERROR: --no-tls and --tls-cert are exclusive."
+		exit 1
+	fi
+	export TLS_CERT=$(abspath "${TLS_CERT}")
+fi
+if [ -n "${TLS_KEY}" ] ; then
+	if [ -n "${NO_TLS}" ] ; then
+		message "ERROR: --no-tls and --tls-key are exclusive."
+		exit 1
+	fi
+	export TLS_KEY=$(abspath "${TLS_KEY}")
+fi
+
+if [ -n "${NO_TLS}" ] && [ -z "${ACTION_RENEW_CERTS}" ] ; then
+	message "ERROR: --no-tls requires --prepare or --renew-certs."
+	exit 1
+fi
+
+if [ -n "${ACTION_PREPARE}" ] && [ -n "${ACTION_INSTALL}" ] ; then
+	message "ERROR: --prepare and --install are exclusive."
+	exit 1
+fi
+
+if [ -n "${ACTION_UNINSTALLER}" ] && [ -n "${ACTION_PREPARE}" ] ; then
+	message "ERROR: --prepare and --uninstaller are exclusive."
+	exit 1
+fi
+
+# # # Run Installer Actions # # #
+
+if [ -z "${NO_TLS}" ] && [ -n "${ACTION_RENEW_CERTS}" ] ; then
+	renew_certs
+
+	if [ -z "${ACTION_INSTALL}" ] && [ -z "${ACTION_PREPARE}" ] ; then
+		LAST_MESSAGE=$(cat <<EOF
+${LAST_MESSAGE}
+* TLS Certifications are renewed in ${SETTINGS}/certs directory.
+EOF
+)
+	fi
+fi
+
+if [ -n "${NO_TLS}" ] ; then
+	drop_certs
+
+	if [ -z "${ACTION_INSTALL}" ] && [ -z "${ACTION_PREPARE}" ] ; then
+		LAST_MESSAGE=$(cat <<EOF
+${LAST_MESSAGE}
+* TLS Certifications are removed from ${SETTINGS}/certs directory.
+EOF
+)
+	fi
+fi
+
+if [ -n "${ACTION_PREPARE}" ] ; then
+	prepare_install
+
+	LAST_MESSAGE=$(cat <<EOF
+Prepareng for knitfab installation is done.
+
+✔ 1. ${THIS} --prepare : to generate templates of knitfab install parameters.
+
+Nest Steps
+-----
+
+  2. inspect ${SETTINGS}/values/ directory and set values for your environment.
+    - Follow README.
+    - There are settings for your data to be persistent.
+      - Please inspect and set them. Or, you may loss your data by restarting knitfab pods.
+  3. ${THIS} --install ... : to install knitfab with your setting.
+    - To know options, run "${THIS}" without arguments.
+
+NOTE
+-----
+
+* The directory "${SETTINGS}" contains kubeconfig, RDB password ${NO_TLS:-, CA key pair}.
+  **KEEP THE DIRECTORY SECURE**, please be careful to handle this directory.
+  Permission is set to be read/write by the owner only.
+
+${LAST_MESSAGE}
+EOF
+)
+fi
+
+if [ -n "${ACTION_UPDATE_CERT_VALUES}" ] ; then
+	update_cert_values
+
+	if [ -z "${ACTION_INSTALL}" ] && [ -z "${ACTION_PREPARE}" ] ; then
+		LAST_MESSAGE=$(cat <<EOF
+${LAST_MESSAGE}
+* TLS Certifications are updated in ${SETTINGS}/values/knit-certs.yaml .
+  - To apply the renewed certificates, run ${THIS} --install ... .
+EOF
+		)
+	fi
+fi
+
+if [ -n "${ACTION_UNINSTALLER}" ] ; then
+	uninstaller
+
+	LAST_MESSAGE=$(cat <<EOF
+${LAST_MESSAGE}
 * Uninstaller is generated at ${SETTINGS}/uninstaller.sh .
   - To uninstall knitfab, run this script.
+EOF
+)
+fi
 
+if [ -n "${ACTION_INSTALL}" ] ; then
+	install
+	generate_handouts
+
+	LAST_MESSAGE=$(cat <<EOF
+
+Install has been done!
+
+---
+* Handouts for your user is generated at ${SETTINGS}/handouts .
+  - For the initial installation or if CA Certificaion is renewed, distribute new handouts for your user.
+${LAST_MESSAGE}
+EOF
+	)
+fi
+
+
+cat <<EOF >&2
+${LAST_MESSAGE}
 EOF

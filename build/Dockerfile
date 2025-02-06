@@ -40,6 +40,11 @@ WORKDIR /knit
 ENV XDG_CONFIG_HOME=/knit/debugger
 COPY --from=dlv-installer --chown=nobody:nobody /go/bin/dlv /go/bin/dlv
 
+FROM node:22 as web
+WORKDIR /work
+COPY ./web-console .
+RUN npm install && npm run build
+
 #
 # package!
 #
@@ -48,12 +53,16 @@ ARG REPOSITORY
 LABEL org.opencontainers.image.source="https://github.com/${REPOSITORY}"
 VOLUME /knit/configs
 ENTRYPOINT ["/knit/knitd"]
+ENV KNIT_PUBLIC=/knit/public
 COPY --from=builder --chown=nobody:nobody /dest/knitd /knit/knitd
+COPY --from=web --chown=nobody:nobody /work/dist /knit/public
 
 FROM --platform=${TARGETPLATFORM} debugger as knitd-debug
 VOLUME /knit/configs
 ENTRYPOINT ["/go/bin/dlv", "exec", "--continue", "--accept-multiclient", "--log", "--headless", "-l", ":19999", "--api-version", "2", "/knit/knitd", "--"]
+ENV KNIT_PUBLIC=/knit/public
 COPY --from=builder --chown=nobody:nobody /dest/knitd /knit/knitd
+COPY --from=web --chown=nobody:nobody /work/dist /knit/public
 
 
 FROM --platform=${TARGETPLATFORM} base as knitd-backend

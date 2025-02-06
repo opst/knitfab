@@ -36,6 +36,7 @@ func main() {
 	loglevel := flag.String("loglevel", "info", "log level. debug|info|warn|error|off")
 	pcert := flag.String("cert", "", "certification file for TLS")
 	pkey := flag.String("certkey", "", "key of certification file for TLS")
+	ppub := flag.String("public", os.Getenv("KNIT_PUBLIC"), "expose public directory. default is $KNIT_PUBLIC")
 	plic := flag.Bool("license", false, "show licenses of dependencies")
 	flag.Parse()
 
@@ -85,6 +86,17 @@ func main() {
 				log.Printf("error on shutdown by extra API config update: %s", err)
 			}
 		})
+	}
+
+	// set public directory
+	if *ppub != "" {
+		pub := *ppub
+		e.Static("/", pub)
+
+		index := path.Join(pub, "index.html")
+		if _, err := os.Stat(index); err == nil {
+			e.File("/", index)
+		}
 	}
 
 	api, err := root("/api")
