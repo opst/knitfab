@@ -198,8 +198,29 @@ func main() {
 
 	quitch := make(chan error, 1)
 	defer close(quitch)
+
+	cert, key := *pcert, *pkey
+
+	// watch certs. When cert or key is updated, stop server. (and k8s will restart it)
+	if cert != "" {
+		_ctx, _cancel, err := filewatch.UntilModifyContext(ctx, cert)
+		if err != nil {
+			log.Fatalf("can not watch cert file: %s", err)
+		}
+		ctx = _ctx
+		defer _cancel()
+	}
+
+	if key != "" {
+		_ctx, _cancel, err := filewatch.UntilModifyContext(ctx, key)
+		if err != nil {
+			log.Fatalf("can not watch key file: %s", err)
+		}
+		ctx = _ctx
+		defer _cancel()
+	}
+
 	go func() {
-		cert, key := *pcert, *pkey
 		var err error
 		if cert != "" && key != "" {
 			err = e.StartTLS(":"+conf.ServerPort, cert, key)
