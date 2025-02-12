@@ -1,13 +1,16 @@
 component: database
 
+# external: use external database, not in cluster.
+external: false
+
 # service: name of service for database.
+#
+# For internal mode: service name for database.
+# For external mode: hostname or IP address of database.
 service: database
 
 # port: port number for database.
 port: 5432
-
-# secret: name of Secret for database credential.
-secret: database-credential
 
 # initialCapacity: initial capcity of PVC for database storage(PGDATA)
 initialCapacity: 1Gi
@@ -17,10 +20,27 @@ ephemeral: false
 
 # credential: credential for database.
 credential:
+  # secret: name of secret for database credential.
+  #
+  # For *internal* mode: name of secret for in-cluster database credential.
+  #
+  #   The secret is created by this chart.
+  #
+  # For *external* mode: secret name maneged outside of Knitfab.
+  #
+  #   The secret must have the following keys:
+  #   - username: username for login to the database.
+  #   - password: password for login to the database.
   secret: database-credential
 
   # username: for login to the database.
+  #
+  # This is effective in internal mode only.
+  # RDB is set up by with this username on the initial install.
   username: knit
 
   # password: for login to the database.
+  #
+  # This is effective in internal mode only.
+  # RDB is set up by with this password on the initial install.
   # password: # mandatory.

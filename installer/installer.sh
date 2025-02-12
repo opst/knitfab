@@ -115,20 +115,49 @@ EOF
 
 # # this file declares install paramaters for Database of Knitfab.
 
-# # ephemeral:
-# #   If true, Storage Backend of Database is not pereistent.
-ephemeral: false
-
 # # external:
-# #   If true, use external database and In-cluster Database is not installed.
+# #   If true (external mode), use external database and In-cluster Database is not installed.
+# #   Otherwise (internal mode; default), knitfab employs in-cluster database.
 external: false
 
+# # ephemeral:
+# #   If true, Storage Backend of Database is not pereistent (located in the database container).
+# #   This is useful for testing.
+# #   It is effective in internal mode only.
+ephemeral: false
+
+# # service: name of the service for the database.
+# #
+# #   For internal mode, the service named the value is created by this chart. Optional. (default is "database")
+# #   For external mode, it should be IP or hostname of the database.
+# #
+# service: database
+
 credential:
+  # # secret: name of secret for database credential.
+  # #
+  # # For *internal* mode: name of secret for in-cluster database credential.
+  # #
+  # #   The secret is created by this chart. Optional. (default is "database-credential")
+  # #
+  # # For *external* mode: secret name maneged outside of Knitfab.
+  # #
+  # #   The secret must have the following keys:
+  # #   - username: username for login to the database.
+  # #   - password: password for login to the database.
+  # secret: database-credential
+
   # # username: (optional) Username for the database.
+  # #
+  # #   It is effective in internal mode only.
+  # #   RDB is set up by with this username on the initial install.
   # #   By default, "knit" is used.
   # username: "knit"
 
   # # password: Password for the database.
+  # #
+  # #   It is effective in internal mode only.
+  # #   RDB is set up by with this password on the initial install.
   # #   This template has random password. Use it as is, or you can use your own password.
   password: "$(head -c 32 /dev/urandom | base64 | tr -d '\r\n')"
 
@@ -563,14 +592,23 @@ if [ -z "\${HARD}" ] ; then
 fi
 
 if ${HELM} status -n ${NAMESPACE} knit-db-postgres > /dev/null 2> /dev/null ; then
-	DATABASE_COMPONENT=\$(${HELM} get values -n ${NAMESPACE} knit-db-postgres -o json --all | \${JQ} -r '.component')
-	PVC="\${DATABASE_COMPONENT}-pgdata"
-	PV=\$(${KUBECTL} -n ${NAMESPACE} get pvc \${PVC} -o json | \${JQ} -r '.spec.volumeName')
+	EXTERNAL=
+	if [ "true" = \$(${HELM} get values -n ${NAMESPACE} knit-db-postgres -o json --all | \${JQ} -r '.external') ] ; then
+		EXTERNAL=1
+	fi
+
+	if [ -z "\${EXTERNAL}" ] ; then
+		DATABASE_COMPONENT=\$(${HELM} get values -n ${NAMESPACE} knit-db-postgres -o json --all | \${JQ} -r '.component')
+		PVC="\${DATABASE_COMPONENT}-pgdata"
+		PV=\$(${KUBECTL} -n ${NAMESPACE} get pvc \${PVC} -o json | \${JQ} -r '.spec.volumeName')
+	fi
 
 	${HELM} uninstall -n ${NAMESPACE} knit-db-postgres || :
 
-	${KUBECTL} wait -n ${NAMESPACE} --for=delete pvc \${PVC} --timeout=-1s
-	${KUBECTL} wait -n ${NAMESPACE} --for=delete pv \${PV} --timeout=-1s
+	if [ -z "\${EXTERNAL}" ] ; then
+		${KUBECTL} wait -n ${NAMESPACE} --for=delete pvc \${PVC} --timeout=-1s
+		${KUBECTL} wait -n ${NAMESPACE} --for=delete pv \${PV} --timeout=-1s
+	fi
 fi
 
 if ${HELM} status -n ${NAMESPACE} knit-image-registry > /dev/null 2> /dev/null ; then
