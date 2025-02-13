@@ -21,7 +21,7 @@ export function toDataDetail(data: RawDataDetail): DataDetail {
 
     return {
         knitId: data.knitId,
-        tags: data.tags.map(parseTag),
+        tags: (data.tags ?? []).map(parseTag),
         upstream: {
             run: toRunSummary(data.upstream.run),
             mountpoint: data.upstream.mountpoint && {

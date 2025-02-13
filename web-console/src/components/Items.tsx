@@ -79,7 +79,11 @@ const TagSet = ({ tags }: { tags: Tag[] }) => {
     );
 }
 
-const DataCard = ({ data, children }: { data: DataSummary, children?: React.ReactNode }) => {
+const DataCard = ({ data, action, children }: {
+    data: DataSummary,
+    action?: React.ReactNode,
+    children?: React.ReactNode,
+}) => {
     const allch = React.Children.toArray(children);
 
     const content: React.ReactNode[] = [];
@@ -98,6 +102,7 @@ const DataCard = ({ data, children }: { data: DataSummary, children?: React.Reac
             <CardHeader
                 avatar={<Tooltip title="Data"><StorageIcon /></Tooltip>}
                 title={`Knit ID: ${data.knitId}`}
+                action={action}
             />
             <CardContent>
                 <TagSet tags={data.tags} />
@@ -108,19 +113,15 @@ const DataCard = ({ data, children }: { data: DataSummary, children?: React.Reac
     )
 }
 
-/** Card to display DataSummary */
-const DataSummaryCard: React.FC<{ data: DataSummary }> = ({ data }) => (
-    <DataCard data={data} />
-);
-
 /** Component to display DataDetail as a Card */
 const DataItem: React.FC<{
     data: DataDetail
+    action?: React.ReactNode,
     expanded: boolean
     setExpanded: (knitId: string, mode: boolean) => void
-}> = ({ data, expanded, setExpanded }) => {
+}> = ({ data, action, expanded, setExpanded }) => {
     return (
-        <DataCard data={data} >
+        <DataCard data={data} action={action}>
             <Collapse in={expanded} timeout="auto" unmountOnExit>
                 <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
                     Upstream:
@@ -183,8 +184,9 @@ const DataItem: React.FC<{
     );
 };
 
-const PlanCard = ({ plan, children, subheader }: {
+const PlanCard = ({ plan, action, children, subheader }: {
     plan: PlanSummary,
+    action?: React.ReactNode,
     children?: React.ReactNode,
     subheader?: string,
 }) => {
@@ -207,6 +209,7 @@ const PlanCard = ({ plan, children, subheader }: {
                 avatar={<Tooltip title="Plan"><InsertDriveFileIcon /></Tooltip>}
                 title={`Plan ID: ${plan.planId}`}
                 subheader={subheader}
+                action={action}
             />
             <CardContent>
                 <TableContainer>
@@ -272,10 +275,11 @@ const PlanSummaryCard: React.FC<{ plan: PlanSummary }> = ({ plan }) => (
 const PlanItem: React.FC<{
     plan: PlanDetail,
     expanded: boolean,
+    action?: React.ReactNode,
     setExpanded: (planId: string, mode: boolean) => void,
-}> = ({ plan, expanded, setExpanded }) => {
+}> = ({ plan, expanded, action, setExpanded }) => {
     return (
-        <PlanCard subheader={plan.active ? "active" : "deactivated"} plan={plan}>
+        <PlanCard subheader={plan.active ? "active" : "deactivated"} plan={plan} action={action}>
             <Collapse in={expanded} timeout="auto" unmountOnExit>
                 <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
                     Inputs:
@@ -423,7 +427,7 @@ const LogPointCard: React.FC<{
     );
 }
 
-const RunCard = ({ run, children }: { run: RunSummary, children?: React.ReactNode }) => {
+const RunCard = ({ run, children, action }: { run: RunSummary, children?: React.ReactNode, action?: React.ReactNode }) => {
     const allch = React.Children.toArray(children);
 
     const content: React.ReactNode[] = [];
@@ -462,6 +466,7 @@ const RunCard = ({ run, children }: { run: RunSummary, children?: React.ReactNod
                 avatar={<Tooltip title="Run">{icon}</Tooltip>}
                 title={`Run ID: ${run.runId}`}
                 subheader={`status: ${run.status}`}
+                action={action}
             />
             <CardContent>
                 <TableContainer>
@@ -502,14 +507,15 @@ const RunCard = ({ run, children }: { run: RunSummary, children?: React.ReactNod
 
 const RunItem: React.FC<{
     run: RunDetail,
+    action?: React.ReactNode,
     expanded: boolean,
     setExpanded: (runId: string, mode: boolean) => void,
     logExpanded: boolean,
     setLogExpanded: (runId: string, mode: boolean) => void,
     runService: RunService,
-}> = ({ run, expanded, setExpanded, runService, logExpanded, setLogExpanded }) => {
+}> = ({ run, action, expanded, setExpanded, runService, logExpanded, setLogExpanded }) => {
     return (
-        <RunCard run={run}>
+        <RunCard run={run} action={action}>
             <Collapse in={expanded} timeout="auto" unmountOnExit>
                 <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
                     Inputs:
@@ -648,4 +654,4 @@ const RunLogViewer: React.FC<RunLogViewerProps> = ({ runId, runService }) => {
 
 export default RunLogViewer;
 
-export { DataItem, PlanItem, RunItem };
+export { DataItem, DataCard, PlanItem, PlanCard, RunItem, RunCard };

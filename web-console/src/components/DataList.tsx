@@ -4,6 +4,7 @@ import CheckboxBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ClearIcon from "@mui/icons-material/Clear";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TagIcon from "@mui/icons-material/Tag";
 import TodayIcon from "@mui/icons-material/Today";
@@ -15,6 +16,7 @@ import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
+import Grid2 from "@mui/material/Grid2";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -24,15 +26,15 @@ import { DataService } from "../api/services/dataService";
 import { Duration } from "../api/services/types/time";
 import { isTagString, parseTag, toTagString } from "../api/services/types/types";
 import { DataDetail, Tag, tagsEqual } from "../types/types";
-import { DataItem, TagChip } from "./Items";
 import { DurationFilter } from "./Filter";
-import { Grid2 } from "@mui/material";
+import { DataItem, TagChip } from "./Items";
 
 export type DataListProps = {
     dataService: DataService;
+    setLineageGraphRoot: (knitId: string) => void;
 };
 
-const DataList: React.FC<DataListProps> = ({ dataService }) => {
+const DataList: React.FC<DataListProps> = ({ dataService, setLineageGraphRoot }) => {
     const [dataList, setDataList] = useState<DataDetail[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -143,6 +145,15 @@ const DataList: React.FC<DataListProps> = ({ dataService }) => {
                         {dataList.map((data) => (
                             <DataItem
                                 key={data.knitId}
+                                action={
+                                    <Button
+                                        variant="contained"
+                                        endIcon={<OpenInNewIcon />}
+                                        onClick={() => { setLineageGraphRoot(data.knitId) }}
+                                    >
+                                        Lineage
+                                    </Button>
+                                }
                                 data={data}
                                 expanded={expanded.has(data.knitId)}
                                 setExpanded={updateExpanded}
