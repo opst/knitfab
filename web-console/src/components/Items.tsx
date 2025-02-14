@@ -654,4 +654,14 @@ const RunLogViewer: React.FC<RunLogViewerProps> = ({ runId, runService }) => {
 
 export default RunLogViewer;
 
-export { DataItem, DataCard, PlanItem, PlanCard, RunItem, RunCard };
+export {
+    DataItem,
+    DataCard,
+    PlanItem,
+    PlanCard,
+    InputPointCard,
+    OutputPointCard,
+    LogPointCard,
+    RunItem,
+    RunCard,
+};

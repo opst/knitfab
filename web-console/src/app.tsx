@@ -19,6 +19,7 @@ import DataList from "./components/DataList";
 import LineageGraph from "./components/LineageGraph";
 import PlanList from "./components/PlanList";
 import RunList from "./components/RunList";
+import PlanGraph from "./components/PlanGraph";
 
 
 const AppTabs: React.FC<{
@@ -34,6 +35,7 @@ const AppTabs: React.FC<{
         const navigate = useNavigate();
 
         const [lineageGraphRoot, setLineageGraphRoot] = useState<{ type: "run" | "data", id: string } | null>(null);
+        const [plangraphRoot, setPlanGraphRoot] = useState<string | null>(null);
 
         const getTabIndex = () => {
             switch (location.pathname) {
@@ -85,9 +87,42 @@ const AppTabs: React.FC<{
                 </Box>
                 <Stack direction="column" spacing={2}>
                     <Routes>
-                        <Route path="/data" element={<DataList dataService={dataService} setLineageGraphRoot={(knitId) => { setLineageGraphRoot({ type: "data", id: knitId }) }} />} />
-                        <Route path="/plans" element={<PlanList planService={planService} />} />
-                        <Route path="/runs" element={<RunList runService={runService} setLineageGraphRoot={(runId) => { setLineageGraphRoot({ type: "run", id: runId }) }} />} />
+                        <Route
+                            path="/data"
+                            element={
+                                <DataList
+                                    dataService={dataService}
+                                    setLineageGraphRoot={(knitId) => {
+                                        setLineageGraphRoot({ type: "data", id: knitId });
+                                        setPlanGraphRoot(null);
+                                    }}
+                                />
+                            }
+                        />
+                        <Route
+                            path="/plans"
+                            element={
+                                <PlanList
+                                    planService={planService}
+                                    setPlanGraphRoot={(planId) => {
+                                        setPlanGraphRoot(planId);
+                                        setLineageGraphRoot(null);
+                                    }}
+                                />
+                            }
+                        />
+                        <Route
+                            path="/runs"
+                            element={
+                                <RunList
+                                    runService={runService}
+                                    setLineageGraphRoot={(runId) => {
+                                        setLineageGraphRoot({ type: "run", id: runId });
+                                        setPlanGraphRoot(null);
+                                    }}
+                                />
+                            }
+                        />
                         <Route path="/" element={<Navigate to="/data" />} />
                     </Routes>
                 </Stack>
@@ -105,6 +140,24 @@ const AppTabs: React.FC<{
                                         runService={runService}
                                         rootDataId={lineageGraphRoot.type === "data" ? lineageGraphRoot.id : undefined}
                                         rootRunId={lineageGraphRoot.type === "run" ? lineageGraphRoot.id : undefined}
+                                    />
+                                </Box>
+                            </Stack>
+                        </Paper>
+                    </Backdrop>
+                }
+                {
+                    plangraphRoot &&
+                    <Backdrop open={true}>
+                        <Paper sx={{ width: "80vw", height: "80vh", overflow: "hidden" }}>
+                            <Stack direction="column" sx={{ height: "100%" }}>
+                                <Box>
+                                    <Button startIcon={<CloseIcon />} onClick={() => setPlanGraphRoot(null)}>Close</Button>
+                                </Box>
+                                <Box flexGrow={1} position="relative" overflow="auto">
+                                    <PlanGraph
+                                        planService={planService}
+                                        rootPlanId={plangraphRoot}
                                     />
                                 </Box>
                             </Stack>

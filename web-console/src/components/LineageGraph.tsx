@@ -19,18 +19,13 @@ import { getLayoutedNodes } from "../dag";
 import { DataDetail, RunDetail } from "../types/types";
 import { DataCard, DataItem, RunCard, RunItem } from "./Items";
 
-type DataNodeProps = NodeProps<
-    Node<
-        {
-            data: DataDetail,
-            onResize: (knitId: string, size: { width: number, height: number }) => void,
-            onClick: (data: DataDetail) => void,
-        },
-        "dataNode"
-    >
->
+type DataNodeValues = {
+    data: DataDetail,
+    onResize: (knitId: string, size: { width: number, height: number }) => void,
+    onClick: (data: DataDetail) => void,
+};
 
-const DataNode: React.FC<DataNodeProps> = ({
+const DataNode: React.FC<NodeProps<Node<DataNodeValues, "dataNode">>> = ({
     data,
 }) => {
     const ref = useRef<HTMLElement>(null);
@@ -64,18 +59,13 @@ const DataNode: React.FC<DataNodeProps> = ({
     )
 };
 
-type RunNodeProps = NodeProps<
-    Node<
-        {
-            run: RunDetail,
-            onResize: (runId: string, size: { width: number, height: number }) => void,
-            onClick: (run: RunDetail) => void,
-        },
-        "runNode"
-    >
->
+type RunNodeValues = {
+    run: RunDetail,
+    onResize: (runId: string, size: { width: number, height: number }) => void,
+    onClick: (run: RunDetail) => void,
+};
 
-const RunNode: React.FC<RunNodeProps> = ({ data }) => {
+const RunNode: React.FC<NodeProps<Node<RunNodeValues, "runNode">>> = ({ data }) => {
     const ref = useRef<HTMLElement>(null);
     useEffect(() => {
         const observer = new ResizeObserver((entries) => {
@@ -232,22 +222,8 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
     });
 
     type NodeParams = (
-        {
-            type: "runNode",
-            data: {
-                run: RunDetail,
-                onResize: (runId: string, size: { width: number, height: number }) => void,
-                onClick: (run: RunDetail) => void,
-            }
-        }
-        | {
-            type: "dataNode",
-            data: {
-                data: DataDetail,
-                onResize: (knitId: string, size: { width: number, height: number }) => void,
-                onClick: (data: DataDetail) => void,
-            }
-        }
+        { type: "runNode", data: RunNodeValues, }
+        | { type: "dataNode", data: DataNodeValues, }
     );
     const layoutedNodes = getLayoutedNodes<NodeParams>(
         [
