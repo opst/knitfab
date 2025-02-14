@@ -1,29 +1,30 @@
-import React, { useEffect, useRef, useState } from "react";
+import { Collapse } from "@mui/material";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
 import {
-    ReactFlow,
-    ReactFlowProvider,
     Background,
     Controls,
-    Node,
-    Edge,
     Handle,
-    Position,
+    Node,
     NodeProps,
-} from "@xyflow/react"
-import dagre from "@dagrejs/dagre";
+    Position,
+    ReactFlow,
+    ReactFlowProvider,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import React, { useEffect, useRef, useState } from "react";
 import { DataService } from "../api/services/dataService";
 import { RunService } from "../api/services/runService";
-import { DataCard, RunCard } from "./Items";
-import Stack from "@mui/material/Stack";
-import Box from "@mui/material/Box";
+import { getLayoutedNodes } from "../dag";
 import { DataDetail, RunDetail } from "../types/types";
+import { DataCard, DataItem, RunCard, RunItem } from "./Items";
 
 type DataNodeProps = NodeProps<
     Node<
         {
             data: DataDetail,
             onResize: (knitId: string, size: { width: number, height: number }) => void,
+            onClick: (data: DataDetail) => void,
         },
         "dataNode"
     >
@@ -49,7 +50,10 @@ const DataNode: React.FC<DataNodeProps> = ({
     return (
         <>
             <Handle type="target" position={Position.Top} isConnectable={false} />
-            <Box maxWidth="33vw" ref={ref}>
+            <Box maxWidth="33vw" ref={ref} onClick={(ev) => {
+                ev.stopPropagation();
+                data.onClick(data.data);
+            }}>
                 <DataCard data={data.data} />
             </Box>
             {
@@ -65,6 +69,7 @@ type RunNodeProps = NodeProps<
         {
             run: RunDetail,
             onResize: (runId: string, size: { width: number, height: number }) => void,
+            onClick: (run: RunDetail) => void,
         },
         "runNode"
     >
@@ -91,7 +96,10 @@ const RunNode: React.FC<RunNodeProps> = ({ data }) => {
                 0 < data.run.inputs.length &&
                 <Handle type="target" position={Position.Top} isConnectable={false} />
             }
-            <Box maxWidth="33vw" ref={ref}>
+            <Box maxWidth="33vw" ref={ref} onClick={(ev) => {
+                ev.stopPropagation();
+                data.onClick(data.run);
+            }}>
                 <RunCard run={data.run} />
             </Box>
             {
@@ -107,64 +115,15 @@ const nodeTypes = {
     runNode: RunNode,
 };
 
-const nodeWidth = 500;
-const nodeHeight = 500;
-
-type NodeToBeLayouted = ({ id: string, size?: { width: number, height: number } }
-    & (
-        {
-            type: "runNode",
-            data: {
-                run: RunDetail,
-                onResize: (runId: string, size: { width: number, height: number }) => void,
-            }
-        }
-        | {
-            type: "dataNode",
-            data: {
-                data: DataDetail,
-                onResize: (knitId: string, size: { width: number, height: number }) => void,
-            }
-        }
-    )
-);
-type NodeLayouted = NodeToBeLayouted & { position: { x: number, y: number } };
-
-const getLayoutedNodes = (
-    nodes: NodeToBeLayouted[],
-    edges: { source: string, target: string }[],
-): NodeLayouted[] => {
-    const minHeight = Math.min(nodeHeight, ...nodes.map((node) => node.size?.height ?? nodeHeight));
-
-    const dagreGraph = new dagre.graphlib.Graph();
-    dagreGraph.setDefaultEdgeLabel(() => ({}));
-    dagreGraph.setGraph({
-        rankdir: "TB",
-        ranksep: minHeight / 2,
-    });
-    nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: node.size?.width ?? nodeWidth, height: node.size?.height ?? nodeHeight });
-    });
-    edges.forEach((edge) => {
-        dagreGraph.setEdge(edge.source, edge.target);
-    });
-    dagre.layout(dagreGraph);
-
-    return nodes.map((node) => {
-        const nodeWithPosition = dagreGraph.node(node.id);
-        return {
-            ...node,
-            position: {
-                x: nodeWithPosition.x - nodeWithPosition.width / 2,
-                y: nodeWithPosition.y - nodeWithPosition.height / 2,
-            },
-        };
-    });
-};
 
 const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { dataService: DataService; runService: RunService; rootDataId?: string; rootRunId?: string }) => {
     const [foundData, setFoundData] = useState<{ data: DataDetail, size?: { width: number, height: number } }[]>([]);
     const [foundRun, setFoundRun] = useState<{ run: RunDetail, size?: { width: number, height: number } }[]>([]);
+    const [selectedData, setSelectedData] = useState<DataDetail | null>(null);
+    const [selectedDataIsExpanded, setSelectedDataIsExpanded] = useState(false);
+    const [selectedRun, setSelectedRun] = useState<RunDetail | null>(null);
+    const [selectedRunIsExpanded, setSelectedRunIsExpanded] = useState(false);
+    const [selectedRunLogIsExpanded, setSelectedRunLogIsExpanded] = useState(false);
 
     type Link = { type: "input" | "output", source: string, target: string, label: string };
     const [links, setLinks] = useState<Link[]>([]);
@@ -272,7 +231,25 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
         }
     });
 
-    const layoutedNodes = getLayoutedNodes(
+    type NodeParams = (
+        {
+            type: "runNode",
+            data: {
+                run: RunDetail,
+                onResize: (runId: string, size: { width: number, height: number }) => void,
+                onClick: (run: RunDetail) => void,
+            }
+        }
+        | {
+            type: "dataNode",
+            data: {
+                data: DataDetail,
+                onResize: (knitId: string, size: { width: number, height: number }) => void,
+                onClick: (data: DataDetail) => void,
+            }
+        }
+    );
+    const layoutedNodes = getLayoutedNodes<NodeParams>(
         [
             ...(foundData.map((data) => ({
                 id: `data-${data.data.knitId}`,
@@ -291,6 +268,13 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
                             newData[index] = { ...data, size, };
                             return newData;
                         })
+                    },
+                    onClick: (data: DataDetail) => {
+                        setSelectedData(data);
+                        setSelectedDataIsExpanded(false);
+                        setSelectedRun(null);
+                        setSelectedRunIsExpanded(false);
+                        setSelectedRunLogIsExpanded(false);
                     },
                 },
             }))),
@@ -312,6 +296,13 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
                             return newRun;
                         })
                     },
+                    onClick: (run: RunDetail) => {
+                        setSelectedData(null);
+                        setSelectedDataIsExpanded(false);
+                        setSelectedRun(run);
+                        setSelectedRunIsExpanded(false);
+                        setSelectedRunLogIsExpanded(false);
+                    },
                 },
             }))),
         ],
@@ -319,13 +310,52 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
     );
 
     return (
-        <Stack height="100%" >
+        <Stack height="100%" direction="row" overflow="hidden">
             <ReactFlowProvider>
-                <ReactFlow nodes={layoutedNodes} edges={edges} nodeTypes={nodeTypes} fitView>
+                <ReactFlow
+                    nodes={layoutedNodes}
+                    edges={edges}
+                    nodeTypes={nodeTypes}
+                    fitView
+                    onClick={() => {
+                        setSelectedData(null);
+                        setSelectedDataIsExpanded(false);
+                        setSelectedRun(null);
+                        setSelectedRunIsExpanded(false);
+                        setSelectedRunLogIsExpanded(false);
+                    }}
+                >
                     <Background color="#aaa" gap={16} />
                     <Controls />
                 </ReactFlow>
             </ReactFlowProvider>
+            <Collapse
+                in={selectedData !== null || selectedRun !== null}
+                orientation="horizontal"
+                sx={{ width: selectedData !== null || selectedRun !== null ? "25vw" : undefined }}
+            >
+                <Box overflow="auto" height="100%">
+                    {
+                        selectedData &&
+                        <DataItem
+                            data={selectedData}
+                            expanded={selectedDataIsExpanded}
+                            setExpanded={(_, mode) => { setSelectedDataIsExpanded(mode) }}
+                        />
+                    }
+                    {
+                        selectedRun &&
+                        <RunItem
+                            run={selectedRun}
+                            expanded={selectedRunIsExpanded}
+                            setExpanded={(_, mode) => { setSelectedRunIsExpanded(mode) }}
+                            logExpanded={selectedRunLogIsExpanded}
+                            setLogExpanded={(_, mode) => { setSelectedRunLogIsExpanded(mode) }}
+                            runService={runService}
+                        />
+                    }
+                </Box>
+            </Collapse>
         </Stack>
     );
 };

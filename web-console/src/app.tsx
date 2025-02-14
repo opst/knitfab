@@ -1,7 +1,9 @@
+import CloseIcon from "@mui/icons-material/Close";
 import Backdrop from "@mui/material/Backdrop";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Container from "@mui/material/Container";
+import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -17,8 +19,6 @@ import DataList from "./components/DataList";
 import LineageGraph from "./components/LineageGraph";
 import PlanList from "./components/PlanList";
 import RunList from "./components/RunList";
-import CloseIcon from "@mui/icons-material/Close";
-import { Paper } from "@mui/material";
 
 
 const AppTabs: React.FC<{
@@ -94,12 +94,12 @@ const AppTabs: React.FC<{
                 {
                     lineageGraphRoot &&
                     <Backdrop open={true}>
-                        <Paper sx={{ width: "80vw", height: "80vh" }}>
+                        <Paper sx={{ width: "80vw", height: "80vh", overflow: "hidden" }}>
                             <Stack direction="column" sx={{ height: "100%" }}>
                                 <Box>
                                     <Button startIcon={<CloseIcon />} onClick={() => setLineageGraphRoot(null)}>Close</Button>
                                 </Box>
-                                <Box flexGrow={1}>
+                                <Box flexGrow={1} position="relative" overflow="auto">
                                     <LineageGraph
                                         dataService={dataService}
                                         runService={runService}
