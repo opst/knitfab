@@ -31,14 +31,24 @@ type DataNodeValues = {
 const DataNode: React.FC<NodeProps<Node<DataNodeValues, "dataNode">>> = ({
     data,
 }) => {
+    const [hovered, setHovered] = useState(false);
     return (
         <>
             <Handle type="target" position={Position.Top} isConnectable={false} />
-            <Box maxWidth="33vw" onClick={(ev) => {
-                ev.stopPropagation();
-                data.onClick(data.data);
-            }}>
-                <DataCard data={data.data} />
+            <Box
+                maxWidth="33vw"
+                onClick={(ev) => {
+                    ev.stopPropagation();
+                    data.onClick(data.data);
+                }}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+            >
+                <DataCard
+                    data={data.data}
+                    variant={hovered ? "elevation" : "outlined"}
+                    elevation={8}
+                />
             </Box>
             {
                 0 < data.data.downstreams.length &&
@@ -54,17 +64,27 @@ type RunNodeValues = {
 };
 
 const RunNode: React.FC<NodeProps<Node<RunNodeValues, "runNode">>> = ({ data }) => {
+    const [hovered, setHovered] = useState(false);
     return (
         <>
             {
                 0 < data.run.inputs.length &&
                 <Handle type="target" position={Position.Top} isConnectable={false} />
             }
-            <Box maxWidth="33vw" onClick={(ev) => {
-                ev.stopPropagation();
-                data.onClick(data.run);
-            }}>
-                <RunCard run={data.run} />
+            <Box
+                maxWidth="33vw"
+                onClick={(ev) => {
+                    ev.stopPropagation();
+                    data.onClick(data.run);
+                }}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+            >
+                <RunCard
+                    run={data.run}
+                    variant={hovered ? "elevation" : "outlined"}
+                    elevation={8}
+                />
             </Box>
             {
                 0 < data.run.outputs.length &&
@@ -177,6 +197,7 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
                                 source: `data-${link.source}`,
                                 target: `run-${link.target}`,
                                 animated: true,
+                                selectable: false,
                                 label: link.label,
                             };
                         case "output":
@@ -185,6 +206,7 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
                                 source: `run-${link.source}`,
                                 target: `data-${link.target}`,
                                 animated: true,
+                                selectable: false,
                                 label: link.label,
                             };
                     }
@@ -241,7 +263,7 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
     const reactflow = useReactFlow();
 
     // this is need to avoid that selecting node invokes fitView
-    const [fireFitView, setFireFitView] = React.useState({});
+    const [fireFitView, setFireFitView] = React.useState(false);
     useEffect(() => { reactflow.fitView(); }, [fireFitView])
 
     return (
@@ -266,7 +288,7 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
                         if (!updated) {
                             return prev
                         }
-                        setFireFitView({});
+                        setFireFitView(true);
                         return getLayoutedNodes(edges, prev, (node) => ({
                             width: node.measured?.width,
                             height: node.measured?.height,

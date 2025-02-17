@@ -20,13 +20,18 @@ import { getLayoutedNodes } from "../dag";
 import { Collapse, Stack } from "@mui/material";
 import { PlanService } from "../api/services/planService";
 
-type PlanNodeValues = {
+type NodeValues = {
     plan: PlanDetail,
+    variant?: "outlined" | "elevation",
     onClick: (plan: PlanDetail) => void,
+    onEnter: (planId: string) => void,
+    onLeave: (planId: string) => void,
 }
 
+type PlanNodeValues = NodeValues;
+
 const PlanNode: React.FC<NodeProps<Node<PlanNodeValues, "planNode">>> = ({ data }) => {
-    const { plan, onClick } = data;
+    const { plan, variant = "outlined", } = data;
 
     return (
         <>
@@ -38,10 +43,12 @@ const PlanNode: React.FC<NodeProps<Node<PlanNodeValues, "planNode">>> = ({ data 
                 maxWidth="33vw"
                 onClick={(ev) => {
                     ev.stopPropagation();
-                    onClick(plan);
+                    data.onClick(plan);
                 }}
+                onMouseEnter={() => data.onEnter(plan.planId)}
+                onMouseLeave={() => data.onLeave(plan.planId)}
             >
-                <PlanCard plan={plan} />
+                <PlanCard variant={variant} plan={plan} elevation={8} />
             </Box>
             {
                 (0 < plan.outputs.length || plan.log) &&
@@ -51,11 +58,9 @@ const PlanNode: React.FC<NodeProps<Node<PlanNodeValues, "planNode">>> = ({ data 
     );
 }
 
-type InputNodeaValues = {
-    input: Input,
-}
+type InputNodeaValues = NodeValues & { input: Input }
 const InputNode: React.FC<NodeProps<Node<InputNodeaValues, "inputNode">>> = ({ data }) => {
-    const { input } = data;
+    const { plan, input, variant = "outlined" } = data;
 
     return (
         <>
@@ -63,26 +68,40 @@ const InputNode: React.FC<NodeProps<Node<InputNodeaValues, "inputNode">>> = ({ d
                 0 < input.upstreams.length &&
                 <Handle type="target" position={Position.Top} isConnectable={false} />
             }
-            <Box maxWidth="33vw">
-                <InputPointCard mountpoint={input} />
+            <Box
+                maxWidth="33vw"
+                onClick={(ev) => {
+                    ev.stopPropagation();
+                    data.onClick(plan);
+                }}
+                onMouseEnter={() => data.onEnter(plan.planId)}
+                onMouseLeave={() => data.onLeave(plan.planId)}
+            >
+                <InputPointCard variant={variant} mountpoint={input} elevation={8} />
             </Box>
             <Handle type="source" position={Position.Bottom} isConnectable={false} />
         </>
     );
 }
 
-type OutputNodeValues = {
-    output: Output,
-}
+type OutputNodeValues = NodeValues & { output: Output }
 
 const OutputNode: React.FC<NodeProps<Node<OutputNodeValues, "outputNode">>> = ({ data }) => {
-    const { output } = data;
+    const { plan, output, variant = "outlined" } = data;
 
     return (
         <>
             <Handle type="target" position={Position.Top} isConnectable={false} />
-            <Box maxWidth="33vw">
-                <OutputPointCard mountpoint={output} />
+            <Box
+                maxWidth="33vw"
+                onClick={(ev) => {
+                    ev.stopPropagation();
+                    data.onClick(plan);
+                }}
+                onMouseEnter={() => data.onEnter(plan.planId)}
+                onMouseLeave={() => data.onLeave(plan.planId)}
+            >
+                <OutputPointCard mountpoint={output} variant={variant} elevation={8} />
             </Box>
             {
                 0 < output.downstreams.length &&
@@ -92,19 +111,25 @@ const OutputNode: React.FC<NodeProps<Node<OutputNodeValues, "outputNode">>> = ({
     );
 }
 
-type LogNodeValues = {
-    log: Log,
-}
+type LogNodeValues = NodeValues & { log: Log }
 
 const LogNode: React.FC<NodeProps<Node<LogNodeValues, "logNode">>> = ({ data }) => {
-    const { log } = data;
+    const { plan, log, variant = "outlined" } = data;
 
     return (
         <>
             <Handle type="target" position={Position.Top} isConnectable={false} />
-            <Box maxWidth="33vw">
-                <LogPointCard log={log} />
-            </Box>
+            <Box
+                maxWidth="33vw"
+                onClick={(ev) => {
+                    ev.stopPropagation();
+                    data.onClick(plan);
+                }}
+                onMouseEnter={() => data.onEnter(plan.planId)}
+                onMouseLeave={() => data.onLeave(plan.planId)}
+            >
+                <LogPointCard variant={variant} log={log} elevation={8} />
+            </Box >
             {
                 0 < log.downstreams.length &&
                 <Handle type="source" position={Position.Bottom} isConnectable={false} />
@@ -149,9 +174,9 @@ const PlanGraphInner: React.FC<{
 
     useEffect(() => {
         const fetchedPlan: { plan: PlanDetail }[] = [];
-        const fetchedInputs: { planId: string, input: Input }[] = [];
-        const fetchedOutputs: { planId: string, output: Output }[] = [];
-        const fetchedLogs: { planId: string, log: Log }[] = [];
+        const fetchedInputs: { plan: PlanDetail, input: Input }[] = [];
+        const fetchedOutputs: { plan: PlanDetail, output: Output }[] = [];
+        const fetchedLogs: { plan: PlanDetail, log: Log }[] = [];
         const fetchedLinks: Link[] = [];
 
         const fetchPlan = async (planId: string) => {
@@ -161,17 +186,17 @@ const PlanGraphInner: React.FC<{
             fetchedPlan.push({ plan: plan });
 
             const inputs = plan.inputs.map((input) => {
-                return { planId: plan.planId, input: input };
+                return { plan: plan, input: input };
             });
             fetchedInputs.push(...inputs);
 
             const outputs = plan.outputs.map((output) => {
-                return { planId: plan.planId, output: output };
+                return { plan: plan, output: output };
             });
             fetchedOutputs.push(...outputs);
 
             if (plan.log) {
-                fetchedLogs.push({ planId: plan.planId, log: plan.log });
+                fetchedLogs.push({ plan: plan, log: plan.log });
             }
 
             const inputLinks: Link[] = plan.inputs.map((input) => {
@@ -263,6 +288,92 @@ const PlanGraphInner: React.FC<{
 
                 const _nodes: ({ id: string } & NodeVariants)[] = [];
 
+                const onEnterNode = (planId: string) => {
+                    setNodes((prev) => {
+                        return prev.map((node) => {
+                            switch (node.type) {
+                                case "planNode":
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            variant: node.data.plan.planId === planId ? "elevation" : "outlined",
+                                        },
+                                    } satisfies Node & { data: PlanNodeValues };
+                                case "inputNode":
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            variant: node.data.plan.planId === planId ? "elevation" : "outlined",
+                                        },
+                                    } satisfies Node & { data: InputNodeaValues };
+                                case "outputNode":
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            variant: node.data.plan.planId === planId ? "elevation" : "outlined",
+                                        },
+                                    } satisfies Node & { data: OutputNodeValues };
+                                case "logNode":
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            variant: node.data.plan.planId === planId ? "elevation" : "outlined",
+                                        },
+                                    } satisfies Node & { data: LogNodeValues };
+                                default:
+                                    throw new Error("Unexpected node type");
+                            }
+                        });
+                    });
+                }
+
+                const onLeaveNode = () => {
+                    setNodes((prev) => {
+                        return prev.map((node) => {
+                            switch (node.type) {
+                                case "planNode":
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            variant: "outlined",
+                                        },
+                                    } satisfies Node & { data: PlanNodeValues };
+                                case "inputNode":
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            variant: "outlined",
+                                        },
+                                    } satisfies Node & { data: InputNodeaValues };
+                                case "outputNode":
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            variant: "outlined",
+                                        },
+                                    } satisfies Node & { data: OutputNodeValues };
+                                case "logNode":
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            variant: "outlined",
+                                        },
+                                    } satisfies Node & { data: LogNodeValues };
+                                default:
+                                    throw new Error("Unexpected node type");
+                            }
+                        });
+                    });
+                };
+
                 for (const { plan } of fetchedPlan) {
                     _nodes.push({
                         id: plan.planId,
@@ -271,33 +382,59 @@ const PlanGraphInner: React.FC<{
                             plan: plan,
                             onClick: (plan: PlanDetail) => {
                                 setSelectedPlan(plan);
-                                setSelectedPlanIsExpanded(true);
-                            }
+                                setSelectedPlanIsExpanded(false);
+                            },
+                            onEnter: onEnterNode,
+                            onLeave: onLeaveNode,
                         },
                     });
                 }
 
-                for (const { planId, input } of fetchedInputs) {
+                for (const { plan, input } of fetchedInputs) {
                     _nodes.push({
-                        id: `${planId}:${input.path}`,
+                        id: `${plan.planId}:${input.path}`,
                         type: "inputNode",
-                        data: { input: input, },
+                        data: {
+                            plan, input,
+                            onClick: (plan: PlanDetail) => {
+                                setSelectedPlan(plan);
+                                setSelectedPlanIsExpanded(false);
+                            },
+                            onEnter: onEnterNode,
+                            onLeave: onLeaveNode,
+                        },
                     });
                 }
 
-                for (const { planId, output } of fetchedOutputs) {
+                for (const { plan, output } of fetchedOutputs) {
                     _nodes.push({
-                        id: `${planId}:${output.path}`,
+                        id: `${plan.planId}:${output.path}`,
                         type: "outputNode",
-                        data: { output: output, },
+                        data: {
+                            plan, output,
+                            onClick: (plan: PlanDetail) => {
+                                setSelectedPlan(plan);
+                                setSelectedPlanIsExpanded(false);
+                            },
+                            onEnter: onEnterNode,
+                            onLeave: onLeaveNode,
+                        },
                     });
                 }
 
-                for (const { planId, log } of fetchedLogs) {
+                for (const { plan, log } of fetchedLogs) {
                     _nodes.push({
-                        id: `${planId}:log`,
+                        id: `${plan.planId}:log`,
                         type: "logNode",
-                        data: { log: log, },
+                        data: {
+                            plan, log,
+                            onClick: (plan: PlanDetail) => {
+                                setSelectedPlan(plan);
+                                setSelectedPlanIsExpanded(false);
+                            },
+                            onEnter: onEnterNode,
+                            onLeave: onLeaveNode,
+                        },
                     });
                 }
 
@@ -305,6 +442,7 @@ const PlanGraphInner: React.FC<{
                     return {
                         id: `${link.source}-${link.target}`,
                         animated: true,
+                        selectable: false,
                         ...link
                     }
                 });
@@ -327,7 +465,7 @@ const PlanGraphInner: React.FC<{
     const reactflow = useReactFlow();
 
     // this is need to avoid that selecting node invokes fitView
-    const [fireFitView, setFireFitView] = React.useState({});
+    const [fireFitView, setFireFitView] = React.useState(false);
     useEffect(() => { reactflow.fitView(); }, [fireFitView])
 
     return (
@@ -343,7 +481,7 @@ const PlanGraphInner: React.FC<{
                         if (!updated) {
                             return prev
                         }
-                        setFireFitView({});
+                        setFireFitView(true);  // fire only once
                         return getLayoutedNodes(edges, prev, (node) => ({
                             width: node.measured?.width,
                             height: node.measured?.height,
