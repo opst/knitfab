@@ -2,54 +2,45 @@ import Box from "@mui/material/Box";
 import {
     Background,
     Controls,
+    Edge,
     Handle,
     Node,
     NodeProps,
     Position,
     ReactFlow,
     ReactFlowProvider,
+    useEdgesState,
+    useNodesState,
+    useReactFlow,
 } from "@xyflow/react";
 import React, { useEffect } from "react";
-import { Input, Log, LogPoint, Output, PlanDetail } from "../types/types";
+import { Input, Log, Output, PlanDetail } from "../types/types";
 import { InputPointCard, LogPointCard, OutputPointCard, PlanCard, PlanItem } from "./Items";
-import { getLayoutedNodes, NodeToBeLayouted } from "../dag";
+import { getLayoutedNodes } from "../dag";
 import { Collapse, Stack } from "@mui/material";
 import { PlanService } from "../api/services/planService";
 
 type PlanNodeValues = {
     plan: PlanDetail,
-    onResize: (planId: string, size: { width: number, height: number }) => void,
     onClick: (plan: PlanDetail) => void,
 }
 
 const PlanNode: React.FC<NodeProps<Node<PlanNodeValues, "planNode">>> = ({ data }) => {
-    const { plan, onResize, onClick } = data;
+    const { plan, onClick } = data;
 
-    const ref = React.useRef<HTMLElement>(null);
-
-    useEffect(() => {
-        const observer = new ResizeObserver((entries) => {
-            entries.forEach((entry) => {
-                const node = entry.target;
-                onResize(plan.planId, { width: node.clientWidth, height: node.clientHeight })
-            })
-        })
-        if (!ref.current) { return; }
-
-        observer.observe(ref.current, { box: "border-box" });
-
-        return () => { observer.disconnect(); }
-    })
     return (
         <>
             {
                 0 < plan.inputs.length &&
                 <Handle type="target" position={Position.Top} isConnectable={false} />
             }
-            <Box maxWidth="33vw" ref={ref} onClick={(ev) => {
-                ev.stopPropagation();
-                onClick(plan);
-            }}>
+            <Box
+                maxWidth="33vw"
+                onClick={(ev) => {
+                    ev.stopPropagation();
+                    onClick(plan);
+                }}
+            >
                 <PlanCard plan={plan} />
             </Box>
             {
@@ -61,28 +52,10 @@ const PlanNode: React.FC<NodeProps<Node<PlanNodeValues, "planNode">>> = ({ data 
 }
 
 type InputNodeaValues = {
-    planId: string,
     input: Input,
-    onResize: (planId: string, path: string, size: { width: number, height: number }) => void,
 }
 const InputNode: React.FC<NodeProps<Node<InputNodeaValues, "inputNode">>> = ({ data }) => {
-    const { planId, input, onResize } = data;
-
-    const ref = React.useRef<HTMLElement>(null);
-
-    useEffect(() => {
-        const observer = new ResizeObserver((entries) => {
-            entries.forEach((entry) => {
-                const node = entry.target;
-                onResize(planId, input.path, { width: node.clientWidth, height: node.clientHeight })
-            })
-        })
-        if (!ref.current) { return; }
-
-        observer.observe(ref.current, { box: "border-box" });
-
-        return () => { observer.disconnect(); }
-    })
+    const { input } = data;
 
     return (
         <>
@@ -90,7 +63,7 @@ const InputNode: React.FC<NodeProps<Node<InputNodeaValues, "inputNode">>> = ({ d
                 0 < input.upstreams.length &&
                 <Handle type="target" position={Position.Top} isConnectable={false} />
             }
-            <Box maxWidth="33vw" ref={ref}>
+            <Box maxWidth="33vw">
                 <InputPointCard mountpoint={input} />
             </Box>
             <Handle type="source" position={Position.Bottom} isConnectable={false} />
@@ -99,34 +72,16 @@ const InputNode: React.FC<NodeProps<Node<InputNodeaValues, "inputNode">>> = ({ d
 }
 
 type OutputNodeValues = {
-    planId: string,
     output: Output,
-    onResize: (planId: string, path: string, size: { width: number, height: number }) => void,
 }
 
 const OutputNode: React.FC<NodeProps<Node<OutputNodeValues, "outputNode">>> = ({ data }) => {
-    const { planId, output, onResize } = data;
-
-    const ref = React.useRef<HTMLElement>(null);
-
-    useEffect(() => {
-        const observer = new ResizeObserver((entries) => {
-            entries.forEach((entry) => {
-                const node = entry.target;
-                onResize(planId, output.path, { width: node.clientWidth, height: node.clientHeight })
-            })
-        })
-        if (!ref.current) { return; }
-
-        observer.observe(ref.current, { box: "border-box" });
-
-        return () => { observer.disconnect(); }
-    })
+    const { output } = data;
 
     return (
         <>
             <Handle type="target" position={Position.Top} isConnectable={false} />
-            <Box maxWidth="33vw" ref={ref}>
+            <Box maxWidth="33vw">
                 <OutputPointCard mountpoint={output} />
             </Box>
             {
@@ -138,34 +93,16 @@ const OutputNode: React.FC<NodeProps<Node<OutputNodeValues, "outputNode">>> = ({
 }
 
 type LogNodeValues = {
-    planId: string,
     log: Log,
-    onResize: (planId: string, size: { width: number, height: number }) => void,
 }
 
 const LogNode: React.FC<NodeProps<Node<LogNodeValues, "logNode">>> = ({ data }) => {
-    const { planId, log, onResize } = data;
-
-    const ref = React.useRef<HTMLElement>(null);
-
-    useEffect(() => {
-        const observer = new ResizeObserver((entries) => {
-            entries.forEach((entry) => {
-                const node = entry.target;
-                onResize(planId, { width: node.clientWidth, height: node.clientHeight })
-            })
-        })
-        if (!ref.current) { return; }
-
-        observer.observe(ref.current, { box: "border-box" });
-
-        return () => { observer.disconnect(); }
-    })
+    const { log } = data;
 
     return (
         <>
             <Handle type="target" position={Position.Top} isConnectable={false} />
-            <Box maxWidth="33vw" ref={ref}>
+            <Box maxWidth="33vw">
                 <LogPointCard log={log} />
             </Box>
             {
@@ -183,7 +120,7 @@ const nodeTypes = {
     logNode: LogNode,
 };
 
-const PlanGraph: React.FC<{
+const PlanGraphInner: React.FC<{
     rootPlanId: string,
     planService: PlanService,
 }> = ({ rootPlanId, planService }) => {
@@ -194,25 +131,28 @@ const PlanGraph: React.FC<{
         weight?: number,
         style?: React.CSSProperties,
     }
-    const [foundPlan, setFoundPlan] = React.useState<{ plan: PlanDetail, size?: { width: number, height: number } }[]>([]);
-    const [foundInputs, setFoundInputs] = React.useState<{ planId: string, input: Input, size?: { width: number, height: number } }[]>([]);
-    const [foundOutputs, setFoundOutputs] = React.useState<{ planId: string, output: Output, size?: { width: number, height: number } }[]>([]);
-    const [foundLogs, setFoundLogs] = React.useState<{ planId: string, log: Log, size?: { width: number, height: number } }[]>([]);
-    const [links, setLinks] = React.useState<Link[]>([]);
+
+    type NodeVariants = (
+        { type: "planNode", data: PlanNodeValues }
+        | { type: "inputNode", data: InputNodeaValues }
+        | { type: "outputNode", data: OutputNodeValues }
+        | { type: "logNode", data: LogNodeValues }
+    )
+    const [nodes, setNodes, onNodesChange] = useNodesState<Node & NodeVariants>([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [selectedPlan, setSelectedPlan] = React.useState<PlanDetail | null>(null);
     const [selectedPlanIsExpandedd, setSelectedPlanIsExpanded] = React.useState<boolean>(false);
-
 
     const sameLink = (a: Link, b: Link) => {
         return a.type === b.type && a.source === b.source && a.target === b.target;
     };
 
     useEffect(() => {
-        const fetchedPlan = [...foundPlan];
-        const fetchedInputs = [...foundInputs];
-        const fetchedOutputs = [...foundOutputs];
-        const fetchedLogs = [...foundLogs];
-        const fetchedLinks = [...links];
+        const fetchedPlan: { plan: PlanDetail }[] = [];
+        const fetchedInputs: { planId: string, input: Input }[] = [];
+        const fetchedOutputs: { planId: string, output: Output }[] = [];
+        const fetchedLogs: { planId: string, log: Log }[] = [];
+        const fetchedLinks: Link[] = [];
 
         const fetchPlan = async (planId: string) => {
             if (fetchedPlan.some((item) => item.plan.planId === planId)) { return; }
@@ -320,11 +260,62 @@ const PlanGraph: React.FC<{
         const fetchGraph = async () => {
             try {
                 await fetchPlan(rootPlanId);
-                setFoundPlan(fetchedPlan);
-                setFoundInputs(fetchedInputs);
-                setFoundOutputs(fetchedOutputs);
-                setFoundLogs(fetchedLogs);
-                setLinks(fetchedLinks);
+
+                const _nodes: ({ id: string } & NodeVariants)[] = [];
+
+                for (const { plan } of fetchedPlan) {
+                    _nodes.push({
+                        id: plan.planId,
+                        type: "planNode",
+                        data: {
+                            plan: plan,
+                            onClick: (plan: PlanDetail) => {
+                                setSelectedPlan(plan);
+                                setSelectedPlanIsExpanded(true);
+                            }
+                        },
+                    });
+                }
+
+                for (const { planId, input } of fetchedInputs) {
+                    _nodes.push({
+                        id: `${planId}:${input.path}`,
+                        type: "inputNode",
+                        data: { input: input, },
+                    });
+                }
+
+                for (const { planId, output } of fetchedOutputs) {
+                    _nodes.push({
+                        id: `${planId}:${output.path}`,
+                        type: "outputNode",
+                        data: { output: output, },
+                    });
+                }
+
+                for (const { planId, log } of fetchedLogs) {
+                    _nodes.push({
+                        id: `${planId}:log`,
+                        type: "logNode",
+                        data: { log: log, },
+                    });
+                }
+
+                const _edges = fetchedLinks.map((link) => {
+                    return {
+                        id: `${link.source}-${link.target}`,
+                        animated: true,
+                        ...link
+                    }
+                });
+                setEdges(_edges);
+
+                const layoutedNodes = getLayoutedNodes(_edges, _nodes, () => ({})); // default size
+                setNodes(layoutedNodes.map((node) => ({
+                    draggable: false,
+                    ...node,
+                })));
+
             } catch (e) {
                 console.error("Error fetching plan graph:", e);
             }
@@ -333,147 +324,42 @@ const PlanGraph: React.FC<{
         fetchGraph();
     }, [rootPlanId, planService]);
 
-    type NodeParams = (
-        | { type: "planNode", data: PlanNodeValues }
-        | { type: "inputNode", data: InputNodeaValues }
-        | { type: "outputNode", data: OutputNodeValues }
-        | { type: "logNode", data: LogNodeValues }
-    )
-    const nodes: (NodeToBeLayouted & NodeParams)[] = [];
+    const reactflow = useReactFlow();
 
-    for (const { plan, size } of foundPlan) {
-        nodes.push({
-            id: plan.planId,
-            type: "planNode",
-            size: size,
-            data: {
-                plan: plan,
-                onResize: (planId: string, size: { width: number, height: number }) => {
-                    setFoundPlan((prev) => {
-                        const index = prev.findIndex((item) => item.plan.planId === planId);
-                        if (index < 0) { return prev; }
-                        const item = prev[index];
-                        if (item.size?.width === size.width && item.size?.height === size.height) {
-                            return prev;
-                        }
-
-                        const newPlans = [...prev];
-                        newPlans[index] = { plan: item.plan, size: size };
-                        return newPlans;
-                    })
-                },
-                onClick: (plan: PlanDetail) => {
-                    setSelectedPlan(plan);
-                    setSelectedPlanIsExpanded(true);
-                }
-            }
-        });
-    }
-
-    for (const { planId, input, size } of foundInputs) {
-        nodes.push({
-            id: `${planId}:${input.path}`,
-            type: "inputNode",
-            size: size,
-            data: {
-                planId: planId,
-                input: input,
-                onResize: (planId: string, path: string, size: { width: number, height: number }) => {
-                    setFoundInputs((prev) => {
-                        const index = prev.findIndex((item) => item.planId === planId && item.input.path === path);
-                        if (index < 0) { return prev; }
-                        const item = prev[index];
-                        if (item.size?.width === size.width && item.size?.height === size.height) {
-                            return prev;
-                        }
-
-                        const newInputs = [...prev];
-                        newInputs[index] = { planId: item.planId, input: item.input, size: size };
-                        return newInputs;
-                    })
-                }
-            }
-        });
-    }
-
-    for (const { planId, output, size } of foundOutputs) {
-        nodes.push({
-            id: `${planId}:${output.path}`,
-            type: "outputNode",
-            size: size,
-            data: {
-                planId: planId,
-                output: output,
-                onResize: (planId: string, path: string, size: { width: number, height: number }) => {
-                    setFoundOutputs((prev) => {
-                        const index = prev.findIndex((item) => item.planId === planId && item.output.path === path);
-                        if (index < 0) { return prev; }
-                        const item = prev[index];
-                        if (item.size?.width === size.width && item.size?.height === size.height) {
-                            return prev;
-                        }
-
-                        const newOutputs = [...prev];
-                        newOutputs[index] = { planId: item.planId, output: item.output, size: size };
-                        return newOutputs;
-                    })
-                }
-            }
-        });
-    }
-
-    for (const { planId, log, size } of foundLogs) {
-        nodes.push({
-            id: `${planId}:log`,
-            type: "logNode",
-            size: size,
-            data: {
-                planId: planId,
-                log: log,
-                onResize: (planId: string, size: { width: number, height: number }) => {
-                    setFoundLogs((prev) => {
-                        const index = prev.findIndex((item) => item.planId === planId);
-                        if (index < 0) { return prev; }
-                        const item = prev[index];
-                        if (item.size?.width === size.width && item.size?.height === size.height) {
-                            return prev;
-                        }
-
-                        const newLogs = [...prev];
-                        newLogs[index] = { planId: item.planId, log: item.log, size: size };
-                        return newLogs;
-                    })
-                }
-            }
-        });
-    }
-
-    const layoutedNodes = getLayoutedNodes(nodes, links);
-    const edges = links.map((link) => {
-        return {
-            id: `${link.source}-${link.target}`,
-            animated: true,
-            ...link
-        }
-    });
+    // this is need to avoid that selecting node invokes fitView
+    const [fireFitView, setFireFitView] = React.useState({});
+    useEffect(() => { reactflow.fitView(); }, [fireFitView])
 
     return (
-        <Stack height="100%" direction="row" overflow="hidden">
-            <ReactFlowProvider>
-                <ReactFlow
-                    nodes={layoutedNodes}
-                    edges={edges}
-                    nodeTypes={nodeTypes}
-                    fitView
-                    onClick={() => {
-                        setSelectedPlan(null);
-                        setSelectedPlanIsExpanded(false);
-                    }}
-                >
-                    <Background color="#aaa" gap={16} />
-                    <Controls />
-                </ReactFlow>
-            </ReactFlowProvider>
+        <>
+            <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={(updatedNodes) => {
+                    onNodesChange(updatedNodes);
+                    setNodes((prev) => {
+                        const updated = updatedNodes.some((change) => (change.type === "dimensions"));
+                        if (!updated) {
+                            return prev
+                        }
+                        setFireFitView({});
+                        return getLayoutedNodes(edges, prev, (node) => ({
+                            width: node.measured?.width,
+                            height: node.measured?.height,
+                        }));
+                    });
+                }}
+                onEdgesChange={onEdgesChange}
+                fitView
+                onClick={() => {
+                    setSelectedPlan(null);
+                    setSelectedPlanIsExpanded(false);
+                }}
+            >
+                <Background color="#aaa" gap={16} />
+                <Controls />
+            </ReactFlow>
             <Collapse
                 in={selectedPlan !== null}
                 orientation="horizontal"
@@ -490,6 +376,22 @@ const PlanGraph: React.FC<{
                     }
                 </Box>
             </Collapse>
+        </>
+    );
+};
+
+const PlanGraph: React.FC<{
+    planService: PlanService,
+    rootPlanId: string,
+}> = ({ planService, rootPlanId }) => {
+    return (
+        <Stack height="100%" direction="row" overflow="hidden">
+            <ReactFlowProvider>
+                <PlanGraphInner
+                    planService={planService}
+                    rootPlanId={rootPlanId}
+                />
+            </ReactFlowProvider>
         </Stack>
     );
 };

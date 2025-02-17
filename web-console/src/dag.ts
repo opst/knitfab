@@ -1,12 +1,10 @@
 import dagre from "@dagrejs/dagre";
 
 
-const nodeWidth = 500;
-const nodeHeight = 500;
+const nodeWidth = 50;
+const nodeHeight = 50;
 
-export type NodeToBeLayouted = { id: string, size?: { width: number, height: number } };
-
-export type NodeLayouted = NodeToBeLayouted & { position: { x: number, y: number } };
+export type NodeLayouted = { position: { x: number, y: number } };
 
 export type EdgeDescriptor = {
     source: string,
@@ -14,11 +12,21 @@ export type EdgeDescriptor = {
     weight?: number
 };
 
-export const getLayoutedNodes = <T>(
-    nodes: (NodeToBeLayouted & T)[],
+export const getLayoutedNodes = <T extends { id: string }>(
     edges: EdgeDescriptor[],
+    nodes: T[],
+    getDimension: (node: T) => { width?: number, height?: number },
 ): (NodeLayouted & T)[] => {
-    const minHeight = Math.min(nodeHeight, ...nodes.map((node) => node.size?.height ?? nodeHeight));
+    const dims = nodes.map((n) => ({
+        id: n.id,
+        ...getDimension(n),
+    }));
+
+
+    let minHeight = nodeHeight
+    if (0 < dims.length) {
+        minHeight = Math.min(...dims.map((node) => node.height ?? nodeHeight));
+    }
 
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -26,8 +34,8 @@ export const getLayoutedNodes = <T>(
         rankdir: "TB",
         ranksep: minHeight / 2,
     });
-    nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: node.size?.width ?? nodeWidth, height: node.size?.height ?? nodeHeight });
+    dims.forEach((node) => {
+        dagreGraph.setNode(node.id, { width: node.width ?? nodeWidth, height: node.height ?? nodeHeight });
     });
     edges.forEach((edge) => {
         dagreGraph.setEdge(edge.source, edge.target, { weight: edge.weight });

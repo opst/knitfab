@@ -4,12 +4,16 @@ import Stack from "@mui/material/Stack";
 import {
     Background,
     Controls,
+    Edge,
     Handle,
     Node,
     NodeProps,
     Position,
     ReactFlow,
     ReactFlowProvider,
+    useEdgesState,
+    useNodesState,
+    useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import React, { useEffect, useRef, useState } from "react";
@@ -21,31 +25,16 @@ import { DataCard, DataItem, RunCard, RunItem } from "./Items";
 
 type DataNodeValues = {
     data: DataDetail,
-    onResize: (knitId: string, size: { width: number, height: number }) => void,
     onClick: (data: DataDetail) => void,
 };
 
 const DataNode: React.FC<NodeProps<Node<DataNodeValues, "dataNode">>> = ({
     data,
 }) => {
-    const ref = useRef<HTMLElement>(null);
-    useEffect(() => {
-        const observer = new ResizeObserver((entries) => {
-            entries.forEach((entry) => {
-                const node = entry.target;
-                data.onResize(data.data.knitId, { width: node.clientWidth, height: node.clientHeight })
-            })
-        })
-        if (!ref.current) { return; }
-
-        observer.observe(ref.current, { box: "border-box" });
-
-        return () => { observer.disconnect(); }
-    })
     return (
         <>
             <Handle type="target" position={Position.Top} isConnectable={false} />
-            <Box maxWidth="33vw" ref={ref} onClick={(ev) => {
+            <Box maxWidth="33vw" onClick={(ev) => {
                 ev.stopPropagation();
                 data.onClick(data.data);
             }}>
@@ -61,32 +50,17 @@ const DataNode: React.FC<NodeProps<Node<DataNodeValues, "dataNode">>> = ({
 
 type RunNodeValues = {
     run: RunDetail,
-    onResize: (runId: string, size: { width: number, height: number }) => void,
     onClick: (run: RunDetail) => void,
 };
 
 const RunNode: React.FC<NodeProps<Node<RunNodeValues, "runNode">>> = ({ data }) => {
-    const ref = useRef<HTMLElement>(null);
-    useEffect(() => {
-        const observer = new ResizeObserver((entries) => {
-            entries.forEach((entry) => {
-                const node = entry.target;
-                data.onResize(data.run.runId, { width: node.clientWidth, height: node.clientHeight })
-            })
-        })
-        if (!ref.current) { return; }
-
-        observer.observe(ref.current, { box: "border-box" });
-
-        return () => { observer.disconnect(); }
-    })
     return (
         <>
             {
                 0 < data.run.inputs.length &&
                 <Handle type="target" position={Position.Top} isConnectable={false} />
             }
-            <Box maxWidth="33vw" ref={ref} onClick={(ev) => {
+            <Box maxWidth="33vw" onClick={(ev) => {
                 ev.stopPropagation();
                 data.onClick(data.run);
             }}>
@@ -106,9 +80,15 @@ const nodeTypes = {
 };
 
 
-const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { dataService: DataService; runService: RunService; rootDataId?: string; rootRunId?: string }) => {
-    const [foundData, setFoundData] = useState<{ data: DataDetail, size?: { width: number, height: number } }[]>([]);
-    const [foundRun, setFoundRun] = useState<{ run: RunDetail, size?: { width: number, height: number } }[]>([]);
+const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: { dataService: DataService; runService: RunService; rootDataId?: string; rootRunId?: string }) => {
+
+    type NodeVariants = (
+        { type: "runNode", data: RunNodeValues, }
+        | { type: "dataNode", data: DataNodeValues, }
+    );
+
+    const [nodes, setNodes, onNodesChanged] = useNodesState<Node & NodeVariants>([]);
+    const [edges, setEdges, onEdgeChanged] = useEdgesState<Edge>([]);
     const [selectedData, setSelectedData] = useState<DataDetail | null>(null);
     const [selectedDataIsExpanded, setSelectedDataIsExpanded] = useState(false);
     const [selectedRun, setSelectedRun] = useState<RunDetail | null>(null);
@@ -116,15 +96,14 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
     const [selectedRunLogIsExpanded, setSelectedRunLogIsExpanded] = useState(false);
 
     type Link = { type: "input" | "output", source: string, target: string, label: string };
-    const [links, setLinks] = useState<Link[]>([]);
     const sameLink = (a: Link, b: Link) => {
         return a.source === b.source && a.target === b.target;
     }
 
     useEffect(() => {
-        const fetchedData: typeof foundData = [...foundData];
-        const fetchedRun: typeof foundRun = [...foundRun];
-        const fetchedLinks: typeof links = [...links];
+        const fetchedData: { data: DataDetail }[] = [];
+        const fetchedRun: { run: RunDetail }[] = [];
+        const fetchedLinks: Link[] = [];
 
         const fetchData = async (knitId: string) => {
             if (fetchedData.find((n) => n.data.knitId === knitId)) { return; }
@@ -151,7 +130,7 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
                     target: run.runId,
                     label: input.path,
                 };
-                if (!links.find((e) => sameLink(e, newLink))) {
+                if (!fetchedLinks.find((e) => sameLink(e, newLink))) {
                     fetchedLinks.push(newLink);
                 }
             }
@@ -163,7 +142,7 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
                     target: output.knitId,
                     label: output.path,
                 };
-                if (!links.find((e) => sameLink(e, newLink))) {
+                if (!fetchedLinks.find((e) => sameLink(e, newLink))) {
                     fetchedLinks.push(newLink);
                 }
             }
@@ -175,7 +154,7 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
                     target: run.log.knitId,
                     label: "(log)",
                 };
-                if (!links.find((e) => sameLink(e, newLink))) {
+                if (!fetchedLinks.find((e) => sameLink(e, newLink))) {
                     fetchedLinks.push(newLink);
                 }
             }
@@ -189,9 +168,68 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
                 if (rootRunId) {
                     await fetchRun(rootRunId);
                 }
-                setFoundData(fetchedData);
-                setFoundRun(fetchedRun);
-                setLinks(fetchedLinks);
+
+                const _edges = fetchedLinks.map((link) => {
+                    switch (link.type) {
+                        case "input":
+                            return {
+                                id: `data-${link.source}/run-${link.target}`,
+                                source: `data-${link.source}`,
+                                target: `run-${link.target}`,
+                                animated: true,
+                                label: link.label,
+                            };
+                        case "output":
+                            return {
+                                id: `run-${link.source}/data-${link.target}`,
+                                source: `run-${link.source}`,
+                                target: `data-${link.target}`,
+                                animated: true,
+                                label: link.label,
+                            };
+                    }
+                });
+                setEdges(_edges);
+
+                const layoutedNodes = getLayoutedNodes(
+                    _edges,
+                    [
+                        ...(fetchedData.map((data) => ({
+                            id: `data-${data.data.knitId}`,
+                            type: "dataNode" as const,
+                            data: {
+                                data: data.data,
+                                onClick: (data: DataDetail) => {
+                                    setSelectedData(data);
+                                    setSelectedDataIsExpanded(false);
+                                    setSelectedRun(null);
+                                    setSelectedRunIsExpanded(false);
+                                    setSelectedRunLogIsExpanded(false);
+                                },
+                            },
+                        }))),
+                        ...(fetchedRun.map((run) => ({
+                            id: `run-${run.run.runId}`,
+                            type: "runNode" as const,
+                            data: {
+                                run: run.run,
+                                onClick: (run: RunDetail) => {
+                                    setSelectedData(null);
+                                    setSelectedDataIsExpanded(false);
+                                    setSelectedRun(run);
+                                    setSelectedRunIsExpanded(false);
+                                    setSelectedRunLogIsExpanded(false);
+                                },
+                            },
+                        }))),
+                    ],
+                    () => ({}), // default size
+                );
+                setNodes(layoutedNodes.map((node) => ({
+                    draggable: false,
+                    ...node,
+                })));
+
             } catch (error) {
                 console.error("Error fetching lineage graph:", error);
             }
@@ -200,111 +238,45 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
         fetchGraph();
     }, [rootDataId, dataService, runService]);
 
-    const edges = links.map((link) => {
-        switch (link.type) {
-            case "input":
-                return {
-                    id: `data-${link.source}/run-${link.target}`,
-                    source: `data-${link.source}`,
-                    target: `run-${link.target}`,
-                    animated: true,
-                    label: link.label,
-                };
-            case "output":
-                return {
-                    id: `run-${link.source}/data-${link.target}`,
-                    source: `run-${link.source}`,
-                    target: `data-${link.target}`,
-                    animated: true,
-                    label: link.label,
-                };
-        }
-    });
+    const reactflow = useReactFlow();
 
-    type NodeParams = (
-        { type: "runNode", data: RunNodeValues, }
-        | { type: "dataNode", data: DataNodeValues, }
-    );
-    const layoutedNodes = getLayoutedNodes<NodeParams>(
-        [
-            ...(foundData.map((data) => ({
-                id: `data-${data.data.knitId}`,
-                type: "dataNode" as const,
-                size: data.size,
-                data: {
-                    data: data.data,
-                    onResize: (knitId: string, size: { width: number, height: number }) => {
-                        setFoundData((prev) => {
-                            const index = prev.findIndex((n) => n.data.knitId === knitId);
-                            if (index < 0) { return prev; }
-                            const data = prev[index];
-                            if (data.size?.width === size.width && data.size?.height === size.height) { return prev; }
-
-                            const newData = [...prev];
-                            newData[index] = { ...data, size, };
-                            return newData;
-                        })
-                    },
-                    onClick: (data: DataDetail) => {
-                        setSelectedData(data);
-                        setSelectedDataIsExpanded(false);
-                        setSelectedRun(null);
-                        setSelectedRunIsExpanded(false);
-                        setSelectedRunLogIsExpanded(false);
-                    },
-                },
-            }))),
-            ...(foundRun.map((run) => ({
-                id: `run-${run.run.runId}`,
-                type: "runNode" as const,
-                size: run.size,
-                data: {
-                    run: run.run,
-                    onResize: (runId: string, size: { width: number, height: number }) => {
-                        setFoundRun((prev) => {
-                            const index = prev.findIndex((n) => n.run.runId === runId);
-                            if (index < 0) { return prev; }
-                            const run = prev[index];
-                            if (run.size?.width === size.width && run.size?.height === size.height) { return prev; }
-
-                            const newRun = [...prev];
-                            newRun[index] = { ...run, size, };
-                            return newRun;
-                        })
-                    },
-                    onClick: (run: RunDetail) => {
-                        setSelectedData(null);
-                        setSelectedDataIsExpanded(false);
-                        setSelectedRun(run);
-                        setSelectedRunIsExpanded(false);
-                        setSelectedRunLogIsExpanded(false);
-                    },
-                },
-            }))),
-        ],
-        edges,
-    );
+    // this is need to avoid that selecting node invokes fitView
+    const [fireFitView, setFireFitView] = React.useState({});
+    useEffect(() => { reactflow.fitView(); }, [fireFitView])
 
     return (
-        <Stack height="100%" direction="row" overflow="hidden">
-            <ReactFlowProvider>
-                <ReactFlow
-                    nodes={layoutedNodes}
-                    edges={edges}
-                    nodeTypes={nodeTypes}
-                    fitView
-                    onClick={() => {
-                        setSelectedData(null);
-                        setSelectedDataIsExpanded(false);
-                        setSelectedRun(null);
-                        setSelectedRunIsExpanded(false);
-                        setSelectedRunLogIsExpanded(false);
-                    }}
-                >
-                    <Background color="#aaa" gap={16} />
-                    <Controls />
-                </ReactFlow>
-            </ReactFlowProvider>
+        <>
+            <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                fitView
+                onClick={() => {
+                    setSelectedData(null);
+                    setSelectedDataIsExpanded(false);
+                    setSelectedRun(null);
+                    setSelectedRunIsExpanded(false);
+                    setSelectedRunLogIsExpanded(false);
+                }}
+                onEdgesChange={onEdgeChanged}
+                onNodesChange={(updatedNodes) => {
+                    onNodesChanged(updatedNodes);
+                    setNodes((prev) => {
+                        const updated = updatedNodes.some((change) => (change.type === "dimensions"));
+                        if (!updated) {
+                            return prev
+                        }
+                        setFireFitView({});
+                        return getLayoutedNodes(edges, prev, (node) => ({
+                            width: node.measured?.width,
+                            height: node.measured?.height,
+                        }));
+                    });
+                }}
+            >
+                <Background color="#aaa" gap={16} />
+                <Controls />
+            </ReactFlow>
             <Collapse
                 in={selectedData !== null || selectedRun !== null}
                 orientation="horizontal"
@@ -332,6 +304,16 @@ const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { data
                     }
                 </Box>
             </Collapse>
+        </>
+    );
+};
+
+const LineageGraph = ({ dataService, runService, rootDataId, rootRunId }: { dataService: DataService; runService: RunService; rootDataId?: string; rootRunId?: string }) => {
+    return (
+        <Stack height="100%" direction="row" overflow="hidden">
+            <ReactFlowProvider>
+                <LineageGraphInner dataService={dataService} runService={runService} rootDataId={rootDataId} rootRunId={rootRunId} />
+            </ReactFlowProvider>
         </Stack>
     );
 };
