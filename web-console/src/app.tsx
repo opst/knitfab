@@ -78,13 +78,21 @@ const AppTabs: React.FC<{
 
         return (
             <Container>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }}>
-                    <Tabs value={getTabIndex()} aria-label="app navigation" textColor="primary" indicatorColor="primary">
-                        <Tab label="Data" onClick={gotoData} />
-                        <Tab label="Plans" onClick={gotoPlans} />
-                        <Tab label="Runs" onClick={gotoRuns} />
-                    </Tabs>
-                </Box>
+                <Stack direction="row" sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }}>
+                    <Box flexGrow={1}>
+                        <Tabs
+                            value={getTabIndex()}
+                            aria-label="app navigation"
+                            textColor="primary"
+                            indicatorColor="primary"
+                        >
+                            <Tab label="Data" onClick={gotoData} />
+                            <Tab label="Plans" onClick={gotoPlans} />
+                            <Tab label="Runs" onClick={gotoRuns} />
+                        </Tabs>
+                    </Box>
+                    <Button href="/licenses.txt">OSS licenses</Button>
+                </Stack>
                 <Stack direction="column" spacing={2}>
                     <Routes>
                         <Route
