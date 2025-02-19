@@ -1,8 +1,8 @@
-import { ApiClient } from '../apiClient';
-import { DataDetail, Tag } from '../../types/types';
-import { RawDataDetail, toDataDetail, toTagString } from './types/types';
-import { Duration, durationToString } from './types/time';
 import luxon from 'luxon';
+import { DataDetail, Tag } from '../../types/types';
+import { ApiClient } from '../apiClient';
+import { Duration, durationToString } from './types/time';
+import { RawDataDetail, toDataDetail, toTagString } from './types/types';
 
 export class DataService {
     private apiClient: ApiClient;

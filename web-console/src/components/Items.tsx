@@ -662,6 +662,8 @@ const RunLogViewer: React.FC<RunLogViewerProps> = ({ runId, runService }) => {
                         setLoading(false);
                         return
                     }
+
+                    // retry on 400 and 404. The Run might not be ready yet.
                     if (err.response?.status === 400 || err.response?.status === 404) {
                         const d = JSON.parse(err.response?.data ?? "{}");
                         setError(d.message ?? err.response?.statusText);

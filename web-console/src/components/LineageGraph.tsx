@@ -16,7 +16,7 @@ import {
     useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DataService } from "../api/services/dataService";
 import { RunService } from "../api/services/runService";
 import { getLayoutedNodes } from "../dag";
@@ -125,6 +125,12 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
         const fetchedRun: { run: RunDetail }[] = [];
         const fetchedLinks: Link[] = [];
 
+        // Fetch data and run recursively.
+        // - fetchData: fetch Data and its upstream/downstream Runs
+        // - fetchRun: fetch Run and its input/output Data
+        //
+        // Found Data and Runs are stored in fetchedData and fetchedRun, respectively.
+        // Found Links are stored in fetchedLinks.
         const fetchData = async (knitId: string) => {
             if (fetchedData.find((n) => n.data.knitId === knitId)) { return; }
             const data = await dataService.fetchById(knitId);
@@ -142,6 +148,7 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
             const run = await runService.fetchById(runId);
             fetchedRun.push({ run });
 
+            // on Data is fetched, add link between Data and Run
             for (const input of run.inputs) {
                 await fetchData(input.knitId);
                 const newLink = {
@@ -180,6 +187,7 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
             }
         };
 
+        // fetch graph from root, and build graph
         const fetchGraph = async () => {
             try {
                 if (rootDataId) {
@@ -191,7 +199,7 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
 
                 const _edges = fetchedLinks.map((link) => {
                     switch (link.type) {
-                        case "input":
+                        case "input": // = data -> run
                             return {
                                 id: `data-${link.source}/run-${link.target}`,
                                 source: `data-${link.source}`,
@@ -200,7 +208,7 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
                                 selectable: false,
                                 label: link.label,
                             };
-                        case "output":
+                        case "output": // = run -> data
                             return {
                                 id: `run-${link.source}/data-${link.target}`,
                                 source: `run-${link.source}`,
@@ -213,38 +221,50 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
                 });
                 setEdges(_edges);
 
+                // build nodes.
+                //
+                // For each node, it will be selected on click and deselect other nodes.
+                // ID of each node is prefixed with "data-" or "run-" to distinguish Data and Run,
+                // and to avoid ID conflict.
+                const _nodes = [
+                    ...(fetchedData.map((data) => ({
+                        id: `data-${data.data.knitId}`,
+                        type: "dataNode" as const,
+                        data: {
+                            data: data.data,
+                            onClick: (data: DataDetail) => {
+                                setSelectedData(data);
+                                setSelectedDataIsExpanded(false);
+                                setSelectedRun(null);
+                                setSelectedRunIsExpanded(false);
+                                setSelectedRunLogIsExpanded(false);
+                            },
+                        },
+                    }))),
+                    ...(fetchedRun.map((run) => ({
+                        id: `run-${run.run.runId}`,
+                        type: "runNode" as const,
+                        data: {
+                            run: run.run,
+                            onClick: (run: RunDetail) => {
+                                setSelectedData(null);
+                                setSelectedDataIsExpanded(false);
+                                setSelectedRun(run);
+                                setSelectedRunIsExpanded(false);
+                                setSelectedRunLogIsExpanded(false);
+                            },
+                        },
+                    }))),
+
+                ]
+
+                // layout nodes provisionally.
+                //
+                // We do not know the size of nodes yet, so we use default size.
+                // We will re-layout nodes when their dimensions are changed.
                 const layoutedNodes = getLayoutedNodes(
                     _edges,
-                    [
-                        ...(fetchedData.map((data) => ({
-                            id: `data-${data.data.knitId}`,
-                            type: "dataNode" as const,
-                            data: {
-                                data: data.data,
-                                onClick: (data: DataDetail) => {
-                                    setSelectedData(data);
-                                    setSelectedDataIsExpanded(false);
-                                    setSelectedRun(null);
-                                    setSelectedRunIsExpanded(false);
-                                    setSelectedRunLogIsExpanded(false);
-                                },
-                            },
-                        }))),
-                        ...(fetchedRun.map((run) => ({
-                            id: `run-${run.run.runId}`,
-                            type: "runNode" as const,
-                            data: {
-                                run: run.run,
-                                onClick: (run: RunDetail) => {
-                                    setSelectedData(null);
-                                    setSelectedDataIsExpanded(false);
-                                    setSelectedRun(run);
-                                    setSelectedRunIsExpanded(false);
-                                    setSelectedRunLogIsExpanded(false);
-                                },
-                            },
-                        }))),
-                    ],
+                    _nodes,
                     () => ({}), // default size
                 );
                 setNodes(layoutedNodes.map((node) => ({
@@ -282,13 +302,30 @@ const LineageGraphInner = ({ dataService, runService, rootDataId, rootRunId }: {
                 }}
                 onEdgesChange={onEdgeChanged}
                 onNodesChange={(updatedNodes) => {
+                    // this hook call is needed to avoid infinity loop.
                     onNodesChanged(updatedNodes);
+
                     setNodes((prev) => {
+                        // this event hook is called when nodes are "changed",
+                        // added, removed, replaced, clicked(selected), or moved(dimensions, position).
+                        //
+                        // We are interested in the first "dimensions" change to layout nodes.
+                        //
+                        // Initial call of setNodes (in useEffect) ends up here with
+                        // chainging "dimensions" of all nodes.
+                        //
+                        // On that timing, each nodes are measured and ready to be layouted.
                         const updated = updatedNodes.some((change) => (change.type === "dimensions"));
                         if (!updated) {
                             return prev
                         }
+
+                        // Fire fitView only once (after layouted).
+                        // We do not support resizing or moving nodes, so we can ignore further changes.
+                        // Moreover, we do not want to fitView when selecting nodes or other user interactions.
+                        // But, we need to fitView to make sure all nodes are visible at the first time.
                         setFireFitView(true);
+
                         return getLayoutedNodes(edges, prev, (node) => ({
                             width: node.measured?.width,
                             height: node.measured?.height,

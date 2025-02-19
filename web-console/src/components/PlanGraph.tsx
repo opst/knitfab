@@ -1,3 +1,4 @@
+import { Collapse, Stack } from "@mui/material";
 import Box from "@mui/material/Box";
 import {
     Background,
@@ -14,11 +15,10 @@ import {
     useReactFlow,
 } from "@xyflow/react";
 import React, { useEffect } from "react";
+import { PlanService } from "../api/services/planService";
+import { getLayoutedNodes } from "../dag";
 import { Input, Log, Output, PlanDetail } from "../types/types";
 import { InputPointCard, LogPointCard, OutputPointCard, PlanCard, PlanItem } from "./Items";
-import { getLayoutedNodes } from "../dag";
-import { Collapse, Stack } from "@mui/material";
-import { PlanService } from "../api/services/planService";
 
 type NodeValues = {
     plan: PlanDetail,
@@ -179,6 +179,10 @@ const PlanGraphInner: React.FC<{
         const fetchedLogs: { plan: PlanDetail, log: Log }[] = [];
         const fetchedLinks: Link[] = [];
 
+        // recursive function to fetch Plan and its neighbors.
+        //
+        // Found items (Plan, Input, Output, Log) are stored in fetched* arrays.
+        // Found links between items are stored in fetchedLinks array.
         const fetchPlan = async (planId: string) => {
             if (fetchedPlan.some((item) => item.plan.planId === planId)) { return; }
 
@@ -199,6 +203,9 @@ const PlanGraphInner: React.FC<{
                 fetchedLogs.push({ plan: plan, log: plan.log });
             }
 
+            // Inner-Plan links (type = "input-to-plan", "output-from-plan", "output-to-input")
+            //
+            // They have higher weight and width than Inter-Plan links to make them more visible.
             const inputLinks: Link[] = plan.inputs.map((input) => {
                 return {
                     type: "input-to-plan",
@@ -227,6 +234,7 @@ const PlanGraphInner: React.FC<{
 
             fetchedLinks.push(...inputLinks, ...outputLinks, ...logLinks);
 
+            // fetch neighbors Plans
             for (const input of plan.inputs) {
                 for (const upstream of input.upstreams) {
                     await fetchPlan(upstream.plan.planId);
@@ -239,6 +247,7 @@ const PlanGraphInner: React.FC<{
                     } else {
                         suffix = "";
                     }
+                    // Inter-Plan link
                     const newLink: Link = {
                         type: "output-to-input",
                         source: `${upstream.plan.planId}:${suffix}`,
@@ -254,6 +263,7 @@ const PlanGraphInner: React.FC<{
                 for (const downstream of output.downstreams) {
                     await fetchPlan(downstream.plan.planId);
 
+                    // Inter-Plan link
                     const newLink: Link = {
                         type: "output-to-input",
                         source: `${plan.planId}:${output.path}`,
@@ -269,6 +279,7 @@ const PlanGraphInner: React.FC<{
                 for (const downstream of plan.log.downstreams) {
                     await fetchPlan(downstream.plan.planId);
 
+                    // Inter-Plan link
                     const newLink: Link = {
                         type: "output-to-input",
                         source: `${plan.planId}:log`,
@@ -282,15 +293,35 @@ const PlanGraphInner: React.FC<{
             }
         };
 
+        // fetch Plan Graph from root Plan
         const fetchGraph = async () => {
             try {
                 await fetchPlan(rootPlanId);
 
                 const _nodes: ({ id: string } & NodeVariants)[] = [];
 
+                // event handlers to highlight (elevate) nodes of the same Plan.
+                // - onEnterNode is called when mouse enters the node to elevate, and
+                // - onLeaveNode is called when mouse leaves the node to unelevate.
+
                 const onEnterNode = (planId: string) => {
                     setNodes((prev) => {
                         return prev.map((node) => {
+                            // NOTE: this switch statement is redundunt, but needed to satisfy TypeScript.
+                            //
+                            // The type of
+                            //
+                            //     {
+                            //          ...node,
+                            //        data: {
+                            //            ...node.data,
+                            //            variant: node.data.plan.planId === planId ? "elevation" : "outlined",
+                            //        },
+                            //     }
+                            //
+                            // does not satisfy Node & NodeVariants.
+                            // So, we need to narrow the type explicitly.
+                            //
                             switch (node.type) {
                                 case "planNode":
                                     return {
@@ -334,6 +365,10 @@ const PlanGraphInner: React.FC<{
                 const onLeaveNode = () => {
                     setNodes((prev) => {
                         return prev.map((node) => {
+                            // NOTE: this switch statement is redundunt, but needed to satisfy TypeScript.
+                            //
+                            // For detail, see the comment in onEnterNode.
+                            //
                             switch (node.type) {
                                 case "planNode":
                                     return {
@@ -374,6 +409,7 @@ const PlanGraphInner: React.FC<{
                     });
                 };
 
+                // set nodes and edges.
                 for (const { plan } of fetchedPlan) {
                     _nodes.push({
                         id: plan.planId,
@@ -448,9 +484,21 @@ const PlanGraphInner: React.FC<{
                 });
                 setEdges(_edges);
 
-                const layoutedNodes = getLayoutedNodes(_edges, _nodes, () => ({})); // default size
+                // layout nodes provisionally.
+                //
+                // We do not know the size of nodes yet, so we use default size.
+                // We will re-layout nodes when their dimensions are changed.
+                const layoutedNodes = getLayoutedNodes(
+                    _edges,
+                    _nodes,
+                    () => ({}), // default size
+                );
+
+                // set all nodes in one-shot.
+                // This is needed to layout nodes correctly.
                 setNodes(layoutedNodes.map((node) => ({
                     draggable: false,
+                    // selectable should be true (default) to be clickable.
                     ...node,
                 })));
 
@@ -475,13 +523,30 @@ const PlanGraphInner: React.FC<{
                 edges={edges}
                 nodeTypes={nodeTypes}
                 onNodesChange={(updatedNodes) => {
+                    // this hook call is needed to avoid infinity loop.
                     onNodesChange(updatedNodes);
+
                     setNodes((prev) => {
+                        // this event hook is called when nodes are "changed",
+                        // added, removed, replaced, clicked(selected), or moved(dimensions, position).
+                        //
+                        // We are interested in the first "dimensions" change to layout nodes.
+                        //
+                        // Initial call of setNodes (in useEffect) ends up here with
+                        // chainging "dimensions" of all nodes.
+                        //
+                        // On that timing, each nodes are measured and ready to be layouted.
                         const updated = updatedNodes.some((change) => (change.type === "dimensions"));
                         if (!updated) {
                             return prev
                         }
-                        setFireFitView(true);  // fire only once
+
+                        // Fire fitView only once (after layouted).
+                        // We do not support resizing or moving nodes, so we can ignore further changes.
+                        // Moreover, we do not want to fitView when selecting nodes or other user interactions.
+                        // But, we need to fitView to make sure all nodes are visible at the first time.
+                        setFireFitView(true);
+
                         return getLayoutedNodes(edges, prev, (node) => ({
                             width: node.measured?.width,
                             height: node.measured?.height,
@@ -491,6 +556,7 @@ const PlanGraphInner: React.FC<{
                 onEdgesChange={onEdgesChange}
                 fitView
                 onClick={() => {
+                    // delesect Plans
                     setSelectedPlan(null);
                     setSelectedPlanIsExpanded(false);
                 }}

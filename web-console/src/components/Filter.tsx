@@ -1,6 +1,6 @@
-import React, { use, useEffect, useState } from "react";
+import { InputAdornment, Stack, TextField, TextFieldVariants } from "@mui/material";
+import React, { useEffect, useState } from "react";
 import { Duration } from "../api/services/types/time";
-import { InputAdornment, Stack, TextField, TextFieldVariants, Typography } from "@mui/material";
 
 const DurationFilterImpl: React.FC<{
     value: Duration | null,
