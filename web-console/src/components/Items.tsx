@@ -615,15 +615,27 @@ const RunItem: React.FC<{
                     >
                         {expanded ? "Hide Details" : "Show Details"}
                     </Button>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={logExpanded ? <ExpandLessIcon /> : <SubjectIcon />}
-                        onClick={() => { setLogExpanded(run.runId, !logExpanded) }}
-                        sx={{ marginTop: "16px" }}
-                    >
-                        {logExpanded ? "Hide Logs" : "Show Logs"}
-                    </Button>
+                    {
+                        (
+                            run.log
+                            && (
+                                run.status === "running"
+                                || run.status === "aborting"
+                                || run.status === "completing"
+                                || run.status === "done"
+                                || run.status === "failed"
+                            )
+                        ) &&
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={logExpanded ? <ExpandLessIcon /> : <SubjectIcon />}
+                            onClick={() => { setLogExpanded(run.runId, !logExpanded) }}
+                            sx={{ marginTop: "16px" }}
+                        >
+                            {logExpanded ? "Hide Logs" : "Show Logs"}
+                        </Button>
+                    }
                 </CardActions>
             </RunCard>
         );
