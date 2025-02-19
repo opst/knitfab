@@ -45,7 +45,7 @@ export class RunService {
         }
 
         return this.apiClient
-            .get<RawRunDetail[]>(`/runs?${queryParams.toString()}`)
+            .get<RawRunDetail[]>(`/runs/?${queryParams.toString()}`)
             .then(ps => ps.map(toRunDetail));
     }
 

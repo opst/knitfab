@@ -1,6 +1,6 @@
 import { ApiClient } from '../apiClient';
 import { DataDetail, Tag } from '../../types/types';
-import { RawDataDetail, TagString, toDataDetail, toTagString } from './types/types';
+import { RawDataDetail, toDataDetail, toTagString } from './types/types';
 import { Duration, durationToString } from './types/time';
 import luxon from 'luxon';
 
@@ -67,7 +67,7 @@ export class DataService {
         queryParams.append('tag', `knit#id:${id}`);
 
         return this.apiClient
-            .get<RawDataDetail[]>(`/data?${queryParams.toString()}`)
+            .get<RawDataDetail[]>(`/data/?${queryParams.toString()}`)
             .then((ds) => {
                 if (ds.length === 0) {
                     throw new Error(`No data found with ID ${id}`);

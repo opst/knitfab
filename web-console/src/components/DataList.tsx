@@ -30,22 +30,70 @@ import { DurationFilter } from "./Filter";
 import { DataItem, TagChip } from "./Items";
 
 export type DataListProps = {
+    /**
+     * Data service to fetch data from.
+     */
     dataService: DataService;
+
+    /**
+     * Callback to set the Knit ID (Data) as the lineage graph root.
+     * @param knitId
+     */
     setLineageGraphRoot: (knitId: string) => void;
 };
 
+/**
+ * List View for Data.
+ * @param param0
+ * @returns
+ */
 const DataList: React.FC<DataListProps> = ({ dataService, setLineageGraphRoot }) => {
+    /**
+     * DataDetails which are fetched from the server.
+     */
     const [dataList, setDataList] = useState<DataDetail[]>([]);
+
+    /**
+     * Loading state.
+     */
     const [loading, setLoading] = useState<boolean>(true);
+
+    /**
+     * Error message.
+     */
     const [error, setError] = useState<string | null>(null);
+
+    /**
+     * Auto refresh is active or not.
+     */
     const [autoRefresh, setAutoRefresh] = useState<boolean>(false);
+
+    /**
+     * Knit IDs which are expanded.
+     */
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+    /**
+     * What are the filters applied.
+     */
     const [filter, setFilter] = useState<DataFilterParams>({
         tags: [],
         duration: {},
     });
+
+    /**
+     * Filter visibility.
+     *
+     * If trur, filter will be visible.
+     */
     const [filterIsVisible, setFilterIsVisible] = useState<boolean>(false);
 
+    /**
+     * Update the expanded state of a knit ID.
+     *
+     * @param knitId KnitId points the target Data
+     * @param mode Expanded(true) or not(false).
+     */
     const updateExpanded = useCallback((knitId: string, mode: boolean) => {
         if (mode) {
             setExpanded((prev) => {
@@ -62,6 +110,9 @@ const DataList: React.FC<DataListProps> = ({ dataService, setLineageGraphRoot })
         }
     }, [setExpanded])
 
+    /**
+     * Fetch Data from the server with the applied filters.
+     */
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -76,10 +127,12 @@ const DataList: React.FC<DataListProps> = ({ dataService, setLineageGraphRoot })
         }
     };
 
+    // Update list when filter changes.
     useEffect(() => {
         fetchData();
     }, [dataService, filter]);
 
+    // Auto refresh mode: Fetch data every 30 seconds.
     useEffect(() => {
         if (autoRefresh) {
             fetchData();

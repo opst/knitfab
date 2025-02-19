@@ -5,10 +5,20 @@ import { RawPlanDetail, toPlanDetail, toTagString } from './types/types';
 export class PlanService {
     private apiClient: ApiClient;
 
+    /**
+     *
+     * @param apiClient
+     */
     constructor(apiClient: ApiClient) {
         this.apiClient = apiClient;
     }
 
+    /**
+     * Fetches a list of PlanDetails from the API
+     *
+     * @param params filter parameters
+     * @returns found PlanDetails
+     */
     public async fetchList(params: {
         active?: boolean;
         inTags?: Tag[];
@@ -31,10 +41,16 @@ export class PlanService {
         }
 
         return this.apiClient
-            .get<RawPlanDetail[]>(`/plans?${queryParams.toString()}`)
+            .get<RawPlanDetail[]>(`/plans/?${queryParams.toString()}`)
             .then(ps => ps.map(toPlanDetail));
     }
 
+    /**
+     * Fetches a PlanDetail by its ID
+     *
+     * @param id Plan ID to fetch
+     * @returns PlanDetail found
+     */
     public async fetchById(id: string): Promise<PlanDetail> {
         return this.apiClient
             .get<RawPlanDetail>(`/plans/${id}`)
