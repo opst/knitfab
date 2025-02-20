@@ -1,6 +1,14 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const LicensePlugin = require('webpack-license-plugin')
+const LicensePlugin = require('webpack-license-plugin');
+const CopyPlugin = require("copy-webpack-plugin");
+const { webpack, DefinePlugin } = require('webpack');
+const { GitRevisionPlugin } = require('git-revision-webpack-plugin');
+const { readFileSync } = require('fs');
+
+const VERSION = readFileSync('../VERSION').toString().trim();
+
+const COMMIT_HASH = process.env.HASH ?? (new GitRevisionPlugin()).commithash();
 
 var config = {
     entry: './src/index.tsx',
@@ -29,27 +37,17 @@ var config = {
         new HtmlWebpackPlugin({
             template: `${__dirname}/index.html`,
         }),
+        new CopyPlugin({
+            patterns: [
+                { from: "static", to: "static" },
+            ],
+        }),
+        new DefinePlugin({
+            __VERSION__: `"${VERSION}"`,
+            __COMMIT_HASH__: `"${COMMIT_HASH}"`,
+        }),
         new LicensePlugin({
             outputFilename: 'licenses.json',
-            excludedPackageTest: (packageName) => {
-                if (packageName.startsWith('@types/')) {
-                    return true;
-                }
-                switch (packageName) {
-                    // comes from `devDependencies` in "package.json"
-                    case 'css-loader':
-                    case 'html-webpack-plugin':
-                    case 'style-loader':
-                    case 'ts-loader':
-                    case 'typescript':
-                    case 'webpack':
-                    case 'webpack-cli':
-                    case 'webpack-dev-server':
-                    case 'webpack-license-plugin':
-                        return true;
-                }
-                return false;
-            },
             additionalFiles: {
                 'licenses.txt': (packages) => {
                     return [

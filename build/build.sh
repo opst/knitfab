@@ -143,10 +143,11 @@ for CMD in ${ROOT} ${ROOT}/cmd/* ; do
 	)
 done
 
+export HASH=$(git rev-parse --short HEAD)
+export LONG_HASH=$(git rev-parse HEAD)
 if [ -z "${APP_VERSION}" ] ; then
 	APP_VERSION=${CHART_VERSION}
 
-	HASH=$(git rev-parse --short HEAD)
 	APP_VERSION=${APP_VERSION}-${HASH}
 	LOCALDIFF=$(detect_diff)
 	if [ -n "${LOCALDIFF}" ] ; then

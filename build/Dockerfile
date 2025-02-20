@@ -4,6 +4,7 @@ ARG GOVERSION=1.23.1-bullseye
 ARG GCFLAGS=""
 ARG LDFLAGS=""
 ARG REPOSITORY=""
+ARG LONG_HASH=""
 
 #
 # build!
@@ -41,8 +42,11 @@ ENV XDG_CONFIG_HOME=/knit/debugger
 COPY --from=dlv-installer --chown=nobody:nobody /go/bin/dlv /go/bin/dlv
 
 FROM node:22 as web
+ARG LONG_HASH
+ENV HASH=${LONG_HASH}
 WORKDIR /work
 COPY ./web-console .
+COPY ./VERSION /
 RUN npm install && npm run build
 
 #

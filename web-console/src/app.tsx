@@ -20,6 +20,7 @@ import LineageGraph from "./components/LineageGraph";
 import PlanList from "./components/PlanList";
 import RunList from "./components/RunList";
 import PlanGraph from "./components/PlanGraph";
+import { Tooltip, Typography } from "@mui/material";
 
 
 const AppTabs: React.FC<{
@@ -36,6 +37,7 @@ const AppTabs: React.FC<{
 
         const [lineageGraphRoot, setLineageGraphRoot] = useState<{ type: "run" | "data", id: string } | null>(null);
         const [plangraphRoot, setPlanGraphRoot] = useState<string | null>(null);
+        const [showCommitHash, setShowCommitHash] = useState(false);
 
         const getTabIndex = () => {
             switch (location.pathname) {
@@ -79,6 +81,9 @@ const AppTabs: React.FC<{
         return (
             <Container>
                 <Stack direction="row" sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }}>
+                    <Box sx={{ height: 48 }}>
+                        <img src="/static/logo.png" style={{ width: "auto", height: "100%" }} />
+                    </Box>
                     <Box flexGrow={1}>
                         <Tabs
                             value={getTabIndex()}
@@ -91,6 +96,20 @@ const AppTabs: React.FC<{
                             <Tab label="Runs" onClick={gotoRuns} />
                         </Tabs>
                     </Box>
+                    <Tooltip title={showCommitHash ? "Hide commit hash" : "Show commit hash"}>
+                        <Box
+                            sx={{ display: "flex", alignItems: "center" }}
+                            onClick={() => {
+                                setShowCommitHash((prev) => !prev)
+                            }}
+                        >
+                            {
+                                showCommitHash
+                                    ? <Typography variant="subtitle2">{__VERSION__}(hash: {__COMMIT_HASH__})</Typography>
+                                    : <Typography variant="subtitle2">{__VERSION__}</Typography>
+                            }
+                        </Box>
+                    </Tooltip>
                     <Button href="/licenses.txt">OSS licenses</Button>
                 </Stack>
                 <Stack direction="column" spacing={2}>
