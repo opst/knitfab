@@ -1,8 +1,8 @@
-import { ApiClient } from '../apiClient';
-import { RunDetail } from '../../types/types';
-import { RawRunDetail, RunStatus, toRunDetail } from './types/types';
-import { Duration, durationToString } from './types/time';
 import { DateTime } from 'luxon';
+import { RunDetail } from '../../types/types';
+import { ApiClient } from '../apiClient';
+import { Duration, durationToString } from './types/time';
+import { RawRunDetail, RunStatus, toRunDetail } from './types/types';
 
 
 export class RunService {
@@ -45,7 +45,7 @@ export class RunService {
         }
 
         return this.apiClient
-            .get<RawRunDetail[]>(`/runs?${queryParams.toString()}`)
+            .get<RawRunDetail[]>(`/runs/?${queryParams.toString()}`)
             .then(ps => ps.map(toRunDetail));
     }
 

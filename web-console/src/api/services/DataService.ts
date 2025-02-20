@@ -1,8 +1,8 @@
-import { ApiClient } from '../apiClient';
-import { DataDetail, Tag } from '../../types/types';
-import { RawDataDetail, TagString, toDataDetail, toTagString } from './types/types';
-import { Duration, durationToString } from './types/time';
 import luxon from 'luxon';
+import { DataDetail, Tag } from '../../types/types';
+import { ApiClient } from '../apiClient';
+import { Duration, durationToString } from './types/time';
+import { RawDataDetail, toDataDetail, toTagString } from './types/types';
 
 export class DataService {
     private apiClient: ApiClient;
@@ -63,8 +63,16 @@ export class DataService {
      * If no Data item with the specified ID exists, the Promise will be rejected.
      */
     public async fetchById(id: string): Promise<DataDetail> {
+        const queryParams = new URLSearchParams();
+        queryParams.append('tag', `knit#id:${id}`);
+
         return this.apiClient
-            .get<RawDataDetail>(`/data/${id}`)
-            .then(toDataDetail);
+            .get<RawDataDetail[]>(`/data/?${queryParams.toString()}`)
+            .then((ds) => {
+                if (ds.length === 0) {
+                    throw new Error(`No data found with ID ${id}`);
+                }
+                return toDataDetail(ds[0]);
+            });
     }
 }

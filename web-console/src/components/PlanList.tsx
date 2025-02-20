@@ -5,6 +5,7 @@ import ClearIcon from "@mui/icons-material/Clear";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TagIcon from "@mui/icons-material/Tag";
 import Alert from "@mui/material/Alert";
@@ -27,9 +28,10 @@ import { PlanItem, TagChip } from "./Items";
 
 export type PlanListProps = {
     planService: PlanService;
+    setPlanGraphRoot: (planId: string) => void;
 };
 
-const PlanList: React.FC<PlanListProps> = ({ planService }) => {
+const PlanList: React.FC<PlanListProps> = ({ planService, setPlanGraphRoot }) => {
     const [planList, setPlanList] = useState<PlanDetail[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -139,6 +141,15 @@ const PlanList: React.FC<PlanListProps> = ({ planService }) => {
                         {planList.map((plan) => (
                             <PlanItem
                                 key={plan.planId}
+                                action={
+                                    <Button
+                                        variant="contained"
+                                        endIcon={<OpenInNewIcon />}
+                                        onClick={() => setPlanGraphRoot(plan.planId)}
+                                    >
+                                        Plan Graph
+                                    </Button>
+                                }
                                 plan={plan}
                                 expanded={expanded.has(plan.planId)}
                                 setExpanded={updateExpanded}

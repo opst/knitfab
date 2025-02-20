@@ -1,5 +1,14 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const LicensePlugin = require('webpack-license-plugin');
+const CopyPlugin = require("copy-webpack-plugin");
+const { webpack, DefinePlugin } = require('webpack');
+const { GitRevisionPlugin } = require('git-revision-webpack-plugin');
+const { readFileSync } = require('fs');
+
+const VERSION = readFileSync('../VERSION').toString().trim();
+
+const COMMIT_HASH = process.env.HASH ?? (new GitRevisionPlugin()).commithash();
 
 var config = {
     entry: './src/index.tsx',
@@ -9,6 +18,10 @@ var config = {
                 test: /\.tsx?$/,
                 use: 'ts-loader',
                 exclude: /node_modules/,
+            },
+            {
+                test: /\.css$/i,
+                use: ["style-loader", "css-loader"],
             },
         ],
     },
@@ -23,7 +36,44 @@ var config = {
     plugins: [
         new HtmlWebpackPlugin({
             template: `${__dirname}/index.html`,
-        })
+        }),
+        new CopyPlugin({
+            patterns: [
+                { from: "static", to: "static" },
+            ],
+        }),
+        new DefinePlugin({
+            __VERSION__: `"${VERSION}"`,
+            __COMMIT_HASH__: `"${COMMIT_HASH}"`,
+        }),
+        new LicensePlugin({
+            outputFilename: 'licenses.json',
+            additionalFiles: {
+                'licenses.txt': (packages) => {
+                    return [
+                        "Knitfab Web-Console",
+                        "====================",
+                        "",
+                        "This software uses the following packages:",
+                        "",
+                        ...packages.map((pkg) => {
+                            return [
+                                "======",
+                                pkg.name,
+                                "------ ",
+                                'Version: ' + pkg.version,
+                                ...(pkg.author ? ['Author: ' + pkg.author] : []),
+                                'Repository: ' + pkg.repository,
+                                'License: ' + pkg.license,
+                                "",
+                                pkg.licenseText,
+                                "",
+                            ].join('\n');
+                        }),
+                    ].join('\n');
+                },
+            }
+        }),
     ],
 };
 

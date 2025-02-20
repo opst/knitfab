@@ -31,7 +31,7 @@ export type PlanDetail = PlanSummary & {
 export type RunSummary = {
     runId: string
     status: string
-    updatedAt: Date
+    updatedAt: luxon.DateTime
     exit?: Exit
     plan: PlanSummary
 };

@@ -6,6 +6,7 @@ import ConstructionIcon from '@mui/icons-material/Construction';
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import InputIcon from '@mui/icons-material/Input';
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import OutputIcon from '@mui/icons-material/Output';
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -36,9 +37,10 @@ import { RunItem } from "./Items";
 
 export type RunListProps = {
     runService: RunService;
+    setLineageGraphRoot: (runId: string) => void;
 };
 
-const RunList: React.FC<RunListProps> = ({ runService }) => {
+const RunList: React.FC<RunListProps> = ({ runService, setLineageGraphRoot }) => {
     const [runList, setRunList] = useState<RunDetail[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -171,6 +173,15 @@ const RunList: React.FC<RunListProps> = ({ runService }) => {
                             <RunItem
                                 key={run.runId}
                                 run={run}
+                                action={
+                                    <Button
+                                        onClick={() => setLineageGraphRoot(run.runId)}
+                                        variant="contained"
+                                        endIcon={<OpenInNewIcon />}
+                                    >
+                                        Lineage
+                                    </Button>
+                                }
                                 expanded={expanded.has(run.runId)}
                                 setExpanded={updateExpanded}
                                 logExpanded={logExpanded.has(run.runId)}

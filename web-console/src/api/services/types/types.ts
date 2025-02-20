@@ -1,4 +1,5 @@
 import { Assignment, DataDetail, PlanDetail, PlanSummary, RunDetail, RunSummary, Tag } from "../../../types/types";
+import { DateTime } from "luxon";
 
 export type RawDataSummary = {
     knitId: string;
@@ -21,7 +22,7 @@ export function toDataDetail(data: RawDataDetail): DataDetail {
 
     return {
         knitId: data.knitId,
-        tags: data.tags.map(parseTag),
+        tags: (data.tags ?? []).map(parseTag),
         upstream: {
             run: toRunSummary(data.upstream.run),
             mountpoint: data.upstream.mountpoint && {
@@ -70,9 +71,9 @@ export function toPlanSummary(plan: RawPlanSummary): PlanSummary {
         planId: plan.planId,
         image: plan.image,
         name: plan.name,
-        entrypoint: plan.entrypoint || [],
-        args: plan.args || [],
-        annotations: plan.annotations || []
+        entrypoint: plan.entrypoint ?? [],
+        args: plan.args ?? [],
+        annotations: plan.annotations ?? []
     }
 }
 
@@ -91,9 +92,9 @@ export function toPlanDetail(plan: RawPlanDetail): PlanDetail {
         planId: plan.planId,
         image: plan.image,
         name: plan.name,
-        entrypoint: plan.entrypoint || [],
-        args: plan.args || [],
-        annotations: plan.annotations || [],
+        entrypoint: plan.entrypoint ?? [],
+        args: plan.args ?? [],
+        annotations: plan.annotations ?? [],
         inputs: plan.inputs.map(i => ({
             path: i.path,
             tags: i.tags.map(parseTag),
@@ -148,7 +149,7 @@ export function toRunSummary(run: RawRunSummary): RunSummary {
     return {
         runId: run.runId,
         status: run.status,
-        updatedAt: new Date(run.updatedAt),
+        updatedAt: DateTime.fromISO(run.updatedAt),
         exit: run.exit,
         plan: toPlanSummary(run.plan)
     }
@@ -173,7 +174,7 @@ export function toRunDetail(run: RawRunDetail): RunDetail {
     return {
         runId: run.runId,
         status: run.status,
-        updatedAt: new Date(run.updatedAt),
+        updatedAt: DateTime.fromISO(run.updatedAt),
         exit: run.exit,
         plan: toPlanSummary(run.plan),
         inputs: run.inputs.map(toAssignment),

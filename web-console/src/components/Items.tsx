@@ -79,7 +79,13 @@ const TagSet = ({ tags }: { tags: Tag[] }) => {
     );
 }
 
-const DataCard = ({ data, children }: { data: DataSummary, children?: React.ReactNode }) => {
+const DataCard = ({ data, variant = "outlined", elevation = 1, action, children }: {
+    data: DataSummary,
+    variant?: "outlined" | "elevation",
+    elevation?: number
+    action?: React.ReactNode,
+    children?: React.ReactNode,
+}) => {
     const allch = React.Children.toArray(children);
 
     const content: React.ReactNode[] = [];
@@ -94,10 +100,16 @@ const DataCard = ({ data, children }: { data: DataSummary, children?: React.Reac
     }
 
     return (
-        <Card variant="outlined" sx={{ margin: "16px" }}>
+        <Card
+            variant={variant}
+            elevation={elevation}
+            sx={{ margin: "16px" }}
+        >
             <CardHeader
+                subheader="Data"
                 avatar={<Tooltip title="Data"><StorageIcon /></Tooltip>}
                 title={`Knit ID: ${data.knitId}`}
+                action={action}
             />
             <CardContent>
                 <TagSet tags={data.tags} />
@@ -108,19 +120,17 @@ const DataCard = ({ data, children }: { data: DataSummary, children?: React.Reac
     )
 }
 
-/** Card to display DataSummary */
-const DataSummaryCard: React.FC<{ data: DataSummary }> = ({ data }) => (
-    <DataCard data={data} />
-);
-
 /** Component to display DataDetail as a Card */
 const DataItem: React.FC<{
-    data: DataDetail
-    expanded: boolean
+    data: DataDetail,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
+    action?: React.ReactNode,
+    expanded: boolean,
     setExpanded: (knitId: string, mode: boolean) => void
-}> = ({ data, expanded, setExpanded }) => {
+}> = ({ data, variant, elevation, action, expanded, setExpanded }) => {
     return (
-        <DataCard data={data} >
+        <DataCard variant={variant} elevation={elevation} data={data} action={action}>
             <Collapse in={expanded} timeout="auto" unmountOnExit>
                 <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
                     Upstream:
@@ -183,8 +193,11 @@ const DataItem: React.FC<{
     );
 };
 
-const PlanCard = ({ plan, children, subheader }: {
+const PlanCard = ({ plan, variant = "outlined", elevation = 1, action, children, subheader }: {
     plan: PlanSummary,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
+    action?: React.ReactNode,
     children?: React.ReactNode,
     subheader?: string,
 }) => {
@@ -202,11 +215,12 @@ const PlanCard = ({ plan, children, subheader }: {
     }
 
     return (
-        <Card variant="outlined" sx={{ margin: "16px" }}>
+        <Card variant={variant} elevation={elevation} sx={{ margin: "16px" }}>
             <CardHeader
                 avatar={<Tooltip title="Plan"><InsertDriveFileIcon /></Tooltip>}
                 title={`Plan ID: ${plan.planId}`}
-                subheader={subheader}
+                subheader={subheader ? `Plan / ${subheader}` : "Plan"}
+                action={action}
             />
             <CardContent>
                 <TableContainer>
@@ -264,18 +278,25 @@ const PlanCard = ({ plan, children, subheader }: {
 };
 
 /** Card to display PlanSummary */
-const PlanSummaryCard: React.FC<{ plan: PlanSummary }> = ({ plan }) => (
-    <PlanCard plan={plan} />
+const PlanSummaryCard: React.FC<{
+    plan: PlanSummary,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
+}> = ({ plan, variant, elevation }) => (
+    <PlanCard plan={plan} variant={variant} elevation={elevation} />
 );
 
 /** Component to display PlanDetail as a Card */
 const PlanItem: React.FC<{
     plan: PlanDetail,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
     expanded: boolean,
+    action?: React.ReactNode,
     setExpanded: (planId: string, mode: boolean) => void,
-}> = ({ plan, expanded, setExpanded }) => {
+}> = ({ plan, variant = "outlined", expanded, action, setExpanded }) => {
     return (
-        <PlanCard subheader={plan.active ? "active" : "deactivated"} plan={plan}>
+        <PlanCard variant={variant} subheader={plan.active ? "active" : "deactivated"} plan={plan} action={action}>
             <Collapse in={expanded} timeout="auto" unmountOnExit>
                 <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
                     Inputs:
@@ -365,12 +386,15 @@ const PlanItem: React.FC<{
 
 const InputPointCard: React.FC<{
     mountpoint: Mountpoint,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
     children?: React.ReactNode,
-}> = ({ mountpoint, children }) => {
+}> = ({ mountpoint, variant = "outlined", elevation = 1, children }) => {
     return (
-        <Card variant="outlined" sx={{ margin: "16px" }}>
+        <Card variant={variant} elevation={elevation} sx={{ margin: "16px" }}>
             <CardHeader
                 avatar={<Tooltip title="input"><InputIcon /></Tooltip>}
+                subheader="Input"
                 title={`${mountpoint.path}`}
             />
             <CardContent>
@@ -385,12 +409,15 @@ const InputPointCard: React.FC<{
 
 const OutputPointCard: React.FC<{
     mountpoint: Mountpoint,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
     children?: React.ReactNode
-}> = ({ mountpoint, children }) => {
+}> = ({ mountpoint, variant = "outlined", elevation = 1, children }) => {
     return (
-        <Card variant="outlined" sx={{ margin: "16px" }}>
+        <Card variant={variant} elevation={elevation} sx={{ margin: "16px" }}>
             <CardHeader
                 avatar={<Tooltip title="output"><OutputIcon /></Tooltip>}
+                subheader="Output"
                 title={`${mountpoint.path}`}
             />
             <CardContent>
@@ -405,10 +432,12 @@ const OutputPointCard: React.FC<{
 
 const LogPointCard: React.FC<{
     log: LogPoint,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
     children?: React.ReactNode
-}> = ({ log, children }) => {
+}> = ({ log, variant = "outlined", elevation = 1, children }) => {
     return (
-        <Card variant="outlined" sx={{ margin: "16px" }}>
+        <Card variant={variant} elevation={elevation} sx={{ margin: "16px" }}>
             <CardHeader
                 avatar={<Tooltip title="output"><OutputIcon /></Tooltip>}
                 title="(log)"
@@ -423,7 +452,19 @@ const LogPointCard: React.FC<{
     );
 }
 
-const RunCard = ({ run, children }: { run: RunSummary, children?: React.ReactNode }) => {
+const RunCard = ({
+    run,
+    variant = "outlined",
+    elevation = 1,
+    action,
+    children,
+}: {
+    run: RunSummary,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
+    action?: React.ReactNode,
+    children?: React.ReactNode,
+}) => {
     const allch = React.Children.toArray(children);
 
     const content: React.ReactNode[] = [];
@@ -457,11 +498,12 @@ const RunCard = ({ run, children }: { run: RunSummary, children?: React.ReactNod
     }
 
     return (
-        <Card variant="outlined" sx={{ margin: "16px" }}>
+        <Card variant={variant} elevation={elevation} sx={{ margin: "16px" }}>
             <CardHeader
                 avatar={<Tooltip title="Run">{icon}</Tooltip>}
                 title={`Run ID: ${run.runId}`}
-                subheader={`status: ${run.status}`}
+                subheader={`Run / status: ${run.status}`}
+                action={action}
             />
             <CardContent>
                 <TableContainer>
@@ -502,77 +544,102 @@ const RunCard = ({ run, children }: { run: RunSummary, children?: React.ReactNod
 
 const RunItem: React.FC<{
     run: RunDetail,
+    variant?: "outlined" | "elevation",
+    elevation?: number,
+    action?: React.ReactNode,
     expanded: boolean,
     setExpanded: (runId: string, mode: boolean) => void,
     logExpanded: boolean,
     setLogExpanded: (runId: string, mode: boolean) => void,
     runService: RunService,
-}> = ({ run, expanded, setExpanded, runService, logExpanded, setLogExpanded }) => {
-    return (
-        <RunCard run={run}>
-            <Collapse in={expanded} timeout="auto" unmountOnExit>
-                <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
-                    Inputs:
-                </Typography>
-                <Stack sx={{ marginLeft: "16px" }}>
-                    {run.inputs.map((input) => (
-                        <InputPointCard key={input.path} mountpoint={input}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <Chip icon={<StorageIcon />} label="Knit ID" />
-                                <Typography>{input.knitId}</Typography>
-                            </Stack>
-                        </InputPointCard>
-                    ))}
-                </Stack>
+}> = ({
+    run,
+    variant,
+    elevation,
+    action,
+    expanded,
+    setExpanded,
+    runService,
+    logExpanded,
+    setLogExpanded,
+}) => {
+        return (
+            <RunCard run={run} action={action} variant={variant} elevation={elevation}>
+                <Collapse in={expanded} timeout="auto" unmountOnExit>
+                    <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
+                        Inputs:
+                    </Typography>
+                    <Stack sx={{ marginLeft: "16px" }}>
+                        {run.inputs.map((input) => (
+                            <InputPointCard key={input.path} mountpoint={input}>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <Chip icon={<StorageIcon />} label="Knit ID" />
+                                    <Typography>{input.knitId}</Typography>
+                                </Stack>
+                            </InputPointCard>
+                        ))}
+                    </Stack>
 
-                <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
-                    Outputs:
-                </Typography>
-                <Stack sx={{ marginLeft: "16px" }}>
-                    {run.outputs.map((output) => (
-                        <OutputPointCard key={output.path} mountpoint={output}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <Chip icon={<StorageIcon />} label="Knit ID" />
-                                <Typography>{output.knitId}</Typography>
-                            </Stack>
-                        </OutputPointCard>
-                    ))}
-                    {run.log && (
-                        <LogPointCard log={run.log}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <Chip icon={<StorageIcon />} label="Knit ID" />
-                                <Typography>{run.log.knitId}</Typography>
-                            </Stack>
-                        </LogPointCard>
-                    )}
-                </Stack>
-            </Collapse>
-            <Collapse in={logExpanded} timeout="auto" unmountOnExit>
-                <RunLogViewer runId={run.runId} runService={runService} />
-            </Collapse>
-            <CardActions>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    onClick={() => { setExpanded(run.runId, !expanded) }}
-                    sx={{ marginTop: "16px" }}
-                >
-                    {expanded ? "Hide Details" : "Show Details"}
-                </Button>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={logExpanded ? <ExpandLessIcon /> : <SubjectIcon />}
-                    onClick={() => { setLogExpanded(run.runId, !logExpanded) }}
-                    sx={{ marginTop: "16px" }}
-                >
-                    {logExpanded ? "Hide Logs" : "Show Logs"}
-                </Button>
-            </CardActions>
-        </RunCard>
-    );
-};
+                    <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
+                        Outputs:
+                    </Typography>
+                    <Stack sx={{ marginLeft: "16px" }}>
+                        {run.outputs.map((output) => (
+                            <OutputPointCard key={output.path} mountpoint={output}>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <Chip icon={<StorageIcon />} label="Knit ID" />
+                                    <Typography>{output.knitId}</Typography>
+                                </Stack>
+                            </OutputPointCard>
+                        ))}
+                        {run.log && (
+                            <LogPointCard log={run.log}>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <Chip icon={<StorageIcon />} label="Knit ID" />
+                                    <Typography>{run.log.knitId}</Typography>
+                                </Stack>
+                            </LogPointCard>
+                        )}
+                    </Stack>
+                </Collapse>
+                <Collapse in={logExpanded} timeout="auto" unmountOnExit>
+                    <RunLogViewer runId={run.runId} runService={runService} />
+                </Collapse>
+                <CardActions>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        onClick={() => { setExpanded(run.runId, !expanded) }}
+                        sx={{ marginTop: "16px" }}
+                    >
+                        {expanded ? "Hide Details" : "Show Details"}
+                    </Button>
+                    {
+                        (
+                            run.log
+                            && (
+                                run.status === "running"
+                                || run.status === "aborting"
+                                || run.status === "completing"
+                                || run.status === "done"
+                                || run.status === "failed"
+                            )
+                        ) &&
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={logExpanded ? <ExpandLessIcon /> : <SubjectIcon />}
+                            onClick={() => { setLogExpanded(run.runId, !logExpanded) }}
+                            sx={{ marginTop: "16px" }}
+                        >
+                            {logExpanded ? "Hide Logs" : "Show Logs"}
+                        </Button>
+                    }
+                </CardActions>
+            </RunCard>
+        );
+    };
 
 export type RunLogViewerProps = {
     runId: string;
@@ -607,6 +674,8 @@ const RunLogViewer: React.FC<RunLogViewerProps> = ({ runId, runService }) => {
                         setLoading(false);
                         return
                     }
+
+                    // retry on 400 and 404. The Run might not be ready yet.
                     if (err.response?.status === 400 || err.response?.status === 404) {
                         const d = JSON.parse(err.response?.data ?? "{}");
                         setError(d.message ?? err.response?.statusText);
@@ -648,4 +717,14 @@ const RunLogViewer: React.FC<RunLogViewerProps> = ({ runId, runService }) => {
 
 export default RunLogViewer;
 
-export { DataItem, PlanItem, RunItem };
+export {
+    DataItem,
+    DataCard,
+    PlanItem,
+    PlanCard,
+    InputPointCard,
+    OutputPointCard,
+    LogPointCard,
+    RunItem,
+    RunCard,
+};

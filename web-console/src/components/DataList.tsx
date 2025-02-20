@@ -4,6 +4,7 @@ import CheckboxBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ClearIcon from "@mui/icons-material/Clear";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TagIcon from "@mui/icons-material/Tag";
 import TodayIcon from "@mui/icons-material/Today";
@@ -15,6 +16,7 @@ import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
+import Grid2 from "@mui/material/Grid2";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -24,26 +26,74 @@ import { DataService } from "../api/services/dataService";
 import { Duration } from "../api/services/types/time";
 import { isTagString, parseTag, toTagString } from "../api/services/types/types";
 import { DataDetail, Tag, tagsEqual } from "../types/types";
-import { DataItem, TagChip } from "./Items";
 import { DurationFilter } from "./Filter";
-import { Grid2 } from "@mui/material";
+import { DataItem, TagChip } from "./Items";
 
 export type DataListProps = {
+    /**
+     * Data service to fetch data from.
+     */
     dataService: DataService;
+
+    /**
+     * Callback to set the Knit ID (Data) as the lineage graph root.
+     * @param knitId
+     */
+    setLineageGraphRoot: (knitId: string) => void;
 };
 
-const DataList: React.FC<DataListProps> = ({ dataService }) => {
+/**
+ * List View for Data.
+ * @param param0
+ * @returns
+ */
+const DataList: React.FC<DataListProps> = ({ dataService, setLineageGraphRoot }) => {
+    /**
+     * DataDetails which are fetched from the server.
+     */
     const [dataList, setDataList] = useState<DataDetail[]>([]);
+
+    /**
+     * Loading state.
+     */
     const [loading, setLoading] = useState<boolean>(true);
+
+    /**
+     * Error message.
+     */
     const [error, setError] = useState<string | null>(null);
+
+    /**
+     * Auto refresh is active or not.
+     */
     const [autoRefresh, setAutoRefresh] = useState<boolean>(false);
+
+    /**
+     * Knit IDs which are expanded.
+     */
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+    /**
+     * What are the filters applied.
+     */
     const [filter, setFilter] = useState<DataFilterParams>({
         tags: [],
         duration: {},
     });
+
+    /**
+     * Filter visibility.
+     *
+     * If trur, filter will be visible.
+     */
     const [filterIsVisible, setFilterIsVisible] = useState<boolean>(false);
 
+    /**
+     * Update the expanded state of a knit ID.
+     *
+     * @param knitId KnitId points the target Data
+     * @param mode Expanded(true) or not(false).
+     */
     const updateExpanded = useCallback((knitId: string, mode: boolean) => {
         if (mode) {
             setExpanded((prev) => {
@@ -60,6 +110,9 @@ const DataList: React.FC<DataListProps> = ({ dataService }) => {
         }
     }, [setExpanded])
 
+    /**
+     * Fetch Data from the server with the applied filters.
+     */
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -74,10 +127,12 @@ const DataList: React.FC<DataListProps> = ({ dataService }) => {
         }
     };
 
+    // Update list when filter changes.
     useEffect(() => {
         fetchData();
     }, [dataService, filter]);
 
+    // Auto refresh mode: Fetch data every 30 seconds.
     useEffect(() => {
         if (autoRefresh) {
             fetchData();
@@ -143,6 +198,15 @@ const DataList: React.FC<DataListProps> = ({ dataService }) => {
                         {dataList.map((data) => (
                             <DataItem
                                 key={data.knitId}
+                                action={
+                                    <Button
+                                        variant="contained"
+                                        endIcon={<OpenInNewIcon />}
+                                        onClick={() => { setLineageGraphRoot(data.knitId) }}
+                                    >
+                                        Lineage
+                                    </Button>
+                                }
                                 data={data}
                                 expanded={expanded.has(data.knitId)}
                                 setExpanded={updateExpanded}

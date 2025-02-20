@@ -51,7 +51,7 @@ for A in ${ARCH} ; do
 	for COMP in ${COMPONENT} ; do
 		BUILDX_SET="${BUILDX_SET} --set ${COMP}.platform=${PLATFORM}"
 	done
-	TAG=${TAG} PLATFORM=${PLATFORM} ${DOCKER} buildx bake --load \
+	TAG=${TAG} PLATFORM=${PLATFORM} LONG_HASH=${LONG_HASH} ${DOCKER} buildx bake --load \
 		-f ${ROOT}/build/docker-compose.yml ${BUILDX_SET} \
 		${TARGET}
 
