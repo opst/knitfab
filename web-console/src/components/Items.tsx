@@ -33,6 +33,17 @@ import React, { useEffect, useState } from "react";
 import { RunService } from "../api/services/runService";
 import { TagString } from "../api/services/types/types";
 import { DataDetail, DataSummary, LogPoint, Mountpoint, PlanDetail, PlanSummary, RunDetail, RunSummary, Tag } from "../types/types";
+import { DateTime } from 'luxon';
+
+const DATETIME_INSTANT = {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+} as const;
 
 /** Component to render a single Tag as a chip */
 export const TagChip: React.FC<{ tag: Tag | TagString, onDelete?: (event: any) => void }> = ({ tag, onDelete }) => {
@@ -50,18 +61,29 @@ export const TagChip: React.FC<{ tag: Tag | TagString, onDelete?: (event: any) =
     }
 
     const isTimestamp = tag.key === "knit#timestamp";
-    const displayValue = isTimestamp
-        ? new Date(tag.value).toLocaleString() // Convert RFC3339 to local time
-        : tag.value;
-
-    return (
-        <Chip
-            label={`${tag.key}: ${displayValue}`}
+    if (!isTimestamp) {
+        return <Chip
+            label={`${tag.key}: ${tag.value}`}
             color="primary"
             variant="outlined"
             sx={{ margin: "4px" }}
             onDelete={onDelete}
         />
+    }
+
+    const datetime = DateTime.fromISO(tag.value);
+    const displayValue = datetime.toLocaleString(DATETIME_INSTANT);
+
+    return (
+        <Tooltip title={datetime.isValid ? datetime.toISO() : tag.value}>
+            <Chip
+                label={`${tag.key}: ${displayValue}`}
+                color="primary"
+                variant="outlined"
+                sx={{ margin: "4px" }}
+                onDelete={onDelete}
+            />
+        </Tooltip>
     );
 };
 
@@ -511,7 +533,13 @@ const RunCard = ({
                         <TableBody>
                             <TableRow>
                                 <TableCell><Typography variant="subtitle1">Updated At</Typography></TableCell>
-                                <TableCell>{run.updatedAt.toLocaleString()}</TableCell>
+                                <TableCell>
+                                    <Tooltip title={run.updatedAt.toISO()} placement='bottom-start'>
+                                        <Typography>
+                                            {run.updatedAt.toLocaleString(DATETIME_INSTANT)}
+                                        </Typography>
+                                    </Tooltip>
+                                </TableCell>
                             </TableRow>
                             {
                                 run.exit && (
