@@ -1,0 +1,14 @@
+apiVersion: v2
+name: knit-image-registry
+description: In-cluster private image registry for knitfab
+type: application
+
+keywords:
+  - knitfab
+  - MLOps
+  - Lineage Tracking
+  - Workflow
+  - Tag Based
+
+version: v1.6.0-beta
+appVersion: v1.6.0-beta-5ace0d7
