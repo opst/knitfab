@@ -97,13 +97,13 @@
 # Installing kubelet, kubeadm and kubectl using the below code
 - name: Add an apt signing key for Kubernetes
   apt_key:
-    url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
+    url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
     state: present
     keyring: /etc/apt/trusted.gpg.d/kubernetes-apt-keyring.gpg
 
 - name: Add Kubernetes apt repository for stable version
   apt_repository:
-    repo: deb [signed-by=/etc/apt/trusted.gpg.d/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /
+    repo: deb [signed-by=/etc/apt/trusted.gpg.d/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /
     state: present
     filename: kubernetes.list
 
