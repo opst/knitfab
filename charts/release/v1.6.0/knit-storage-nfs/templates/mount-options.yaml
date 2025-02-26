@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.component }}-mount-options
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Values.component }}-mount-options
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+type: Opaque
+data:
+  mountOptions: {{ .Values.nfs.mountOptions | default "" | b64enc }}

@@ -5,7 +5,7 @@ go 1.24.0
 replace github.com/opst/knitfab => ../..
 
 require (
-	github.com/opst/knitfab v1.6.0-beta
+	github.com/opst/knitfab v1.6.0
 	github.com/youta-t/flarc v0.0.3
 )
 
