@@ -1,5 +1,3 @@
-version: "3.4"
-
 #
 # THIS COMPOSE FILE IS FOR `docker compose build` .
 #
@@ -10,6 +8,13 @@ services:
       dockerfile: ./build/Dockerfile
       target: builder
     image: "knit-builder:${TAG}"
+  web:
+    build:
+      dockerfile: ./build/Dockerfile
+      target: web
+      args:
+        - LONG_HASH=${LONG_HASH}
+    image: "web:${TAG}"
   knit-dataagt:
     build:
       dockerfile: ./build/Dockerfile
@@ -95,6 +100,7 @@ services:
       args:
         - LDFLAGS="-s"
         - REPOSITORY=${REPOSITORY}
+        - LONG_HASH=${LONG_HASH}
     image: "knitd:${TAG}"
   knitd-debug:
     build:

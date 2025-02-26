@@ -36,6 +36,7 @@ func main() {
 	loglevel := flag.String("loglevel", "info", "log level. debug|info|warn|error|off")
 	pcert := flag.String("cert", "", "certification file for TLS")
 	pkey := flag.String("certkey", "", "key of certification file for TLS")
+	ppub := flag.String("public", os.Getenv("KNIT_PUBLIC"), "expose public directory. default is $KNIT_PUBLIC")
 	plic := flag.Bool("license", false, "show licenses of dependencies")
 	flag.Parse()
 
@@ -85,6 +86,17 @@ func main() {
 				log.Printf("error on shutdown by extra API config update: %s", err)
 			}
 		})
+	}
+
+	// set public directory
+	if *ppub != "" {
+		pub := *ppub
+		e.Static("/", pub)
+
+		index := path.Join(pub, "index.html")
+		if _, err := os.Stat(index); err == nil {
+			e.File("/", index)
+		}
 	}
 
 	api, err := root("/api")
@@ -186,8 +198,29 @@ func main() {
 
 	quitch := make(chan error, 1)
 	defer close(quitch)
+
+	cert, key := *pcert, *pkey
+
+	// watch certs. When cert or key is updated, stop server. (and k8s will restart it)
+	if cert != "" {
+		_ctx, _cancel, err := filewatch.UntilModifyContext(ctx, cert)
+		if err != nil {
+			log.Fatalf("can not watch cert file: %s", err)
+		}
+		ctx = _ctx
+		defer _cancel()
+	}
+
+	if key != "" {
+		_ctx, _cancel, err := filewatch.UntilModifyContext(ctx, key)
+		if err != nil {
+			log.Fatalf("can not watch key file: %s", err)
+		}
+		ctx = _ctx
+		defer _cancel()
+	}
+
 	go func() {
-		cert, key := *pcert, *pkey
 		var err error
 		if cert != "" && key != "" {
 			err = e.StartTLS(":"+conf.ServerPort, cert, key)

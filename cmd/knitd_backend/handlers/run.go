@@ -75,7 +75,7 @@ func GetRunLogHandler(
 						c.Response().Flush()
 					},
 				}
-				return c.Stream(http.StatusOK, "text/plain", lr)
+				return c.Stream(http.StatusOK, "application/octet-stream", lr)
 			}
 		case domain.Completing, domain.Aborting, domain.Done, domain.Failed:
 			data = runInfo.Log.KnitDataBody
@@ -119,7 +119,7 @@ func GetRunLogHandler(
 		}
 
 		echoutil.CopyHeader(&hdr, &bresp.Header)
-		hdr.Set("Content-Type", "plain/text")
+		hdr.Set("Content-Type", "application/octet-stream")
 		resp.WriteHeader(bresp.StatusCode)
 		if err := archive.TarGzWalk(bresp.Body, func(h *tar.Header, f io.Reader, err error) error {
 			if err != nil {

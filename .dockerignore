@@ -8,6 +8,14 @@
 !./go.mod
 !./go.sum
 !./db
+!./web-console/index.html
+!./web-console/package.json
+!./web-console/package-lock.json
+!./web-console/src
+!./web-console/static
+!./web-console/tsconfig.json
+!./web-console/webpack.config.js
+!./VERSION
 
 # # # ignore list # # #
 *_test.go

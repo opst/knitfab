@@ -205,7 +205,7 @@ func GoTar(ctx context.Context, root string, dest io.Writer, options ...TarOptio
 			case error:
 				prog.err = pan
 			case string:
-				prog.err = fmt.Errorf(pan)
+				prog.err = fmt.Errorf("%s", pan)
 			default:
 				prog.err = fmt.Errorf("%v", pan)
 			}
