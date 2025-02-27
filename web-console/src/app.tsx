@@ -20,7 +20,7 @@ import LineageGraph from "./components/LineageGraph";
 import PlanList from "./components/PlanList";
 import RunList from "./components/RunList";
 import PlanGraph from "./components/PlanGraph";
-import { Tooltip, Typography } from "@mui/material";
+import { Divider, Tooltip, Typography } from "@mui/material";
 
 
 const AppTabs: React.FC<{
@@ -98,7 +98,7 @@ const AppTabs: React.FC<{
                     </Box>
                     <Tooltip title={showCommitHash ? "Hide commit hash" : "Show commit hash"}>
                         <Box
-                            sx={{ display: "flex", alignItems: "center" }}
+                            sx={{ display: "flex", alignItems: "center", cursor: "pointer", marginRight: 2 }}
                             onClick={() => {
                                 setShowCommitHash((prev) => !prev)
                             }}
@@ -110,6 +110,7 @@ const AppTabs: React.FC<{
                             }
                         </Box>
                     </Tooltip>
+                    <Divider orientation="vertical" flexItem />
                     <Button href="/licenses.txt">OSS licenses</Button>
                 </Stack>
                 <Stack direction="column" spacing={2}>
