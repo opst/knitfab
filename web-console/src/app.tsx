@@ -3,10 +3,13 @@ import Backdrop from "@mui/material/Backdrop";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Container from "@mui/material/Container";
+import Divider from "@mui/material/Divider";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterLuxon } from '@mui/x-date-pickers/AdapterLuxon';
 import React, { useCallback, useEffect, useState } from "react";
@@ -17,10 +20,9 @@ import { PlanService } from "./api/services/planService";
 import { RunService } from "./api/services/runService";
 import DataList from "./components/DataList";
 import LineageGraph from "./components/LineageGraph";
+import PlanGraph from "./components/PlanGraph";
 import PlanList from "./components/PlanList";
 import RunList from "./components/RunList";
-import PlanGraph from "./components/PlanGraph";
-import { Divider, Tooltip, Typography } from "@mui/material";
 
 
 const AppTabs: React.FC<{
