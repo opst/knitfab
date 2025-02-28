@@ -1,0 +1,9 @@
+component: certs
+secret:
+  server: certs
+  ca: ca-certs
+# cert: # if set, also set key
+# key: # if set, also set cert
+
+# cacert: # if set, also set cakey
+# cakey: # if set, also set cacert

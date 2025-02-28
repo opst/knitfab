@@ -2,8 +2,18 @@ apiVersion: v1
 entries:
   knit-app:
   - apiVersion: v2
+    appVersion: v1.6.1-beta-731b472
+    created: "2025-02-28T10:12:03.405945+09:00"
+    description: knitfab application
+    digest: 24035787be0cfb0d78405c42bb588f5833b3ae10ed62593037139e9eec12a030
+    name: knit-app
+    type: application
+    urls:
+    - v1.6.1-beta/knit-app-v1.6.1-beta.tgz
+    version: v1.6.1-beta
+  - apiVersion: v2
     appVersion: v1.6.0-09a601b
-    created: "2025-02-26T11:39:20.263106+09:00"
+    created: "2025-02-28T10:12:03.389205+09:00"
     description: knitfab application
     digest: 2d7e5a77df4956a2f26b53d40aabaa5c178b63e724a99993b1e4d64552aebf32
     name: knit-app
@@ -13,7 +23,7 @@ entries:
     version: v1.6.0
   - apiVersion: v2
     appVersion: v1.6.0-beta-5ace0d7
-    created: "2025-02-26T11:39:20.268034+09:00"
+    created: "2025-02-28T10:12:03.398644+09:00"
     description: knitfab application
     digest: 7e0e910f274717aca64e7015b41f063bfaaf95634304713f9fca1614042c2f13
     name: knit-app
@@ -23,7 +33,7 @@ entries:
     version: v1.6.0-beta
   - apiVersion: v2
     appVersion: v1.5.1-72de2f6
-    created: "2025-02-26T11:39:20.251073+09:00"
+    created: "2025-02-28T10:12:03.372709+09:00"
     description: knitfab application
     digest: 7d12a86bce15b2ca947848cb00edd96030c78a1b7664b9635ae8e959cc2c0f6a
     name: knit-app
@@ -33,7 +43,7 @@ entries:
     version: v1.5.1
   - apiVersion: v2
     appVersion: v1.5.1-beta-a2c8e66
-    created: "2025-02-26T11:39:20.257696+09:00"
+    created: "2025-02-28T10:12:03.381579+09:00"
     description: knitfab application
     digest: 0f4e3e768d81ed139244693f952a81ab0ba3670ca47e4a47b106edc0d98fbc18
     name: knit-app
@@ -43,7 +53,7 @@ entries:
     version: v1.5.1-beta
   - apiVersion: v2
     appVersion: v1.5.0-568bb50
-    created: "2025-02-26T11:39:20.23877+09:00"
+    created: "2025-02-28T10:12:03.353162+09:00"
     description: knitfab application
     digest: 7cc298e96361a6ed3c07a30b3573ae85ac968f6d10a99be1357aaef949faf738
     name: knit-app
@@ -53,7 +63,7 @@ entries:
     version: v1.5.0
   - apiVersion: v2
     appVersion: v1.5.0-beta-aadccf0
-    created: "2025-02-26T11:39:20.245103+09:00"
+    created: "2025-02-28T10:12:03.364159+09:00"
     description: knitfab application
     digest: 5edfa3d00dff5f595f850898c8ba46996d5ff56d5e082e6df251b7ddbf3a0110
     name: knit-app
@@ -63,7 +73,7 @@ entries:
     version: v1.5.0-beta
   - apiVersion: v2
     appVersion: v1.4.0-6dc1ccc
-    created: "2025-02-26T11:39:20.224496+09:00"
+    created: "2025-02-28T10:12:03.3355+09:00"
     description: knitfab application
     digest: 704a0e764d453fd091dd95a0bb498e05f111bba5335fc7f2f16b9d2ce44fd7d2
     name: knit-app
@@ -73,7 +83,7 @@ entries:
     version: v1.4.0
   - apiVersion: v2
     appVersion: v1.4.0-beta-703fffb
-    created: "2025-02-26T11:39:20.231361+09:00"
+    created: "2025-02-28T10:12:03.345195+09:00"
     description: knitfab application
     digest: 191f059b44da1c1ac4f0e0b7098fec6536b6192af298bed26288c5f545fe8dfa
     name: knit-app
@@ -83,7 +93,7 @@ entries:
     version: v1.4.0-beta
   - apiVersion: v2
     appVersion: v1.3.1-98d1e14
-    created: "2025-02-26T11:39:20.209923+09:00"
+    created: "2025-02-28T10:12:03.318705+09:00"
     description: knitfab application
     digest: eb7036bddc32b118c323c1c527a514b5ab323b96246b0020b713490bce5d02b8
     name: knit-app
@@ -93,7 +103,7 @@ entries:
     version: v1.3.1
   - apiVersion: v2
     appVersion: v1.3.1-beta-366ebb3
-    created: "2025-02-26T11:39:20.217327+09:00"
+    created: "2025-02-28T10:12:03.328358+09:00"
     description: knitfab application
     digest: 290e150a4aa15227c7fd8bf060653580c4ef2e26ac4fbfe0837b57b37018142f
     name: knit-app
@@ -103,7 +113,7 @@ entries:
     version: v1.3.1-beta
   - apiVersion: v2
     appVersion: v1.3.0-58c2103
-    created: "2025-02-26T11:39:20.197699+09:00"
+    created: "2025-02-28T10:12:03.297131+09:00"
     description: knitfab application
     digest: 71e1b818ce8aa37df182c666260c8de2e0d14147fcf77cb9ec0edc8ae7a96e3e
     name: knit-app
@@ -113,7 +123,7 @@ entries:
     version: v1.3.0
   - apiVersion: v2
     appVersion: v1.3.0-beta-f7163c8
-    created: "2025-02-26T11:39:20.203599+09:00"
+    created: "2025-02-28T10:12:03.307549+09:00"
     description: knitfab application
     digest: 81e62c2bd233b26bd8483264e056f56d01877cabf033031863d4191e25d8c2ad
     name: knit-app
@@ -123,7 +133,7 @@ entries:
     version: v1.3.0-beta
   - apiVersion: v2
     appVersion: v1.2.1-c883a00
-    created: "2025-02-26T11:39:20.185052+09:00"
+    created: "2025-02-28T10:12:03.243991+09:00"
     description: knitfab application
     digest: 4c78574445773725ad45a10d5138c164490b1f5ac5466e8578ee1a50cbeef35c
     name: knit-app
@@ -133,7 +143,7 @@ entries:
     version: v1.2.1
   - apiVersion: v2
     appVersion: v1.2.1-beta-72a9c5b
-    created: "2025-02-26T11:39:20.190876+09:00"
+    created: "2025-02-28T10:12:03.28192+09:00"
     description: knitfab application
     digest: c2f1a347e63cbaa5358f226b265422a3043ec627cad8c7ca42d4d080bc2ff17d
     name: knit-app
@@ -143,7 +153,7 @@ entries:
     version: v1.2.1-beta
   - apiVersion: v2
     appVersion: v1.2.0-7bb428d
-    created: "2025-02-26T11:39:20.178526+09:00"
+    created: "2025-02-28T10:12:03.230748+09:00"
     description: knitfab application
     digest: 9d07dc26bbc40f856aecf9aa7bebe15bb427348799f1f2714c50ae425c1c3523
     name: knit-app
@@ -153,7 +163,7 @@ entries:
     version: v1.2.0
   - apiVersion: v2
     appVersion: v1.1.2-6cd631e
-    created: "2025-02-26T11:39:20.172313+09:00"
+    created: "2025-02-28T10:12:03.216028+09:00"
     description: knitfab application
     digest: 3e57ce0ba1e5edc16225f0c6d0df879b0456494e7173c863018ecab725e2acca
     name: knit-app
@@ -163,7 +173,7 @@ entries:
     version: v1.1.2
   - apiVersion: v2
     appVersion: v1.1.0-140e64f
-    created: "2025-02-26T11:39:20.165899+09:00"
+    created: "2025-02-28T10:12:03.203336+09:00"
     description: knitfab application
     digest: 25e535bcf23eecbe367b0637fd21e39add24e6bad40afb96d5762d2f3c581af7
     name: knit-app
@@ -173,7 +183,7 @@ entries:
     version: v1.1.0
   - apiVersion: v2
     appVersion: v1.0.3-197985e
-    created: "2025-02-26T11:39:20.158723+09:00"
+    created: "2025-02-28T10:12:03.188539+09:00"
     description: knitfab application
     digest: 943d47a522500437746b57697936d5a989e0b720a40b1c9d4f2efc7c04b5e8ca
     name: knit-app
@@ -183,7 +193,7 @@ entries:
     version: v1.0.3
   - apiVersion: v2
     appVersion: v1.0.0-61101e8
-    created: "2025-02-26T11:39:20.153418+09:00"
+    created: "2025-02-28T10:12:03.175822+09:00"
     description: knitfab application
     digest: 5789a6f6fc63c10b12e855df7c479745a8c8b0f9318643f8605b7a540976af8a
     name: knit-app
@@ -193,8 +203,18 @@ entries:
     version: v1.0.0
   knit-certs:
   - apiVersion: v2
+    appVersion: v1.6.1-beta-731b472
+    created: "2025-02-28T10:12:03.406526+09:00"
+    description: certificate management for knitfab
+    digest: 37fcd73ee961589c4bb0f24bc9fb5edf35eb66dfcba595c3068dfdabf0ad3ff2
+    name: knit-certs
+    type: application
+    urls:
+    - v1.6.1-beta/knit-certs-v1.6.1-beta.tgz
+    version: v1.6.1-beta
+  - apiVersion: v2
     appVersion: v1.6.0-09a601b
-    created: "2025-02-26T11:39:20.263535+09:00"
+    created: "2025-02-28T10:12:03.39005+09:00"
     description: certificate management for knitfab
     digest: 003770cc899d3ce6fa2546a67ced37b9f7458d58c8bce011d5863c48ecab1297
     name: knit-certs
@@ -204,7 +224,7 @@ entries:
     version: v1.6.0
   - apiVersion: v2
     appVersion: v1.6.0-beta-5ace0d7
-    created: "2025-02-26T11:39:20.268805+09:00"
+    created: "2025-02-28T10:12:03.399623+09:00"
     description: certificate management for knitfab
     digest: c2a927092f15db986915b5518606f224844c861f1389b11750bfd739b4956cc3
     name: knit-certs
@@ -214,7 +234,7 @@ entries:
     version: v1.6.0-beta
   - apiVersion: v2
     appVersion: v1.5.1-72de2f6
-    created: "2025-02-26T11:39:20.251703+09:00"
+    created: "2025-02-28T10:12:03.373695+09:00"
     description: certificate management for knitfab
     digest: 69a0ca12403ec32fec638074fcbf879a9e32d831b84bb61efed49c5b4ec37393
     name: knit-certs
@@ -224,7 +244,7 @@ entries:
     version: v1.5.1
   - apiVersion: v2
     appVersion: v1.5.1-beta-a2c8e66
-    created: "2025-02-26T11:39:20.258335+09:00"
+    created: "2025-02-28T10:12:03.382466+09:00"
     description: certificate management for knitfab
     digest: ba520c76d8a965d1e094c20772fdf3dbc9eb0d0f0b9353f726db5bbab91d29ce
     name: knit-certs
@@ -234,7 +254,7 @@ entries:
     version: v1.5.1-beta
   - apiVersion: v2
     appVersion: v1.5.0-568bb50
-    created: "2025-02-26T11:39:20.239424+09:00"
+    created: "2025-02-28T10:12:03.354023+09:00"
     description: certificate management for knitfab
     digest: d4ba2ee9f53bdd6add35fa04ee8b3e6fd5a87f27c999474b3cb34d5f73f48a83
     name: knit-certs
@@ -244,7 +264,7 @@ entries:
     version: v1.5.0
   - apiVersion: v2
     appVersion: v1.5.0-beta-aadccf0
-    created: "2025-02-26T11:39:20.245762+09:00"
+    created: "2025-02-28T10:12:03.364953+09:00"
     description: certificate management for knitfab
     digest: bc087d760d7c8564fac5ae1d60e89f6588c079205f5f9e72fa3d0deaf2952edf
     name: knit-certs
@@ -254,7 +274,7 @@ entries:
     version: v1.5.0-beta
   - apiVersion: v2
     appVersion: v1.4.0-6dc1ccc
-    created: "2025-02-26T11:39:20.225191+09:00"
+    created: "2025-02-28T10:12:03.336468+09:00"
     description: certificate management for knitfab
     digest: b13b2a7997a06ac4313e3d3807b3de0d253d0d4b7e6eb3e87d87e5f09e8a1f26
     name: knit-certs
@@ -264,7 +284,7 @@ entries:
     version: v1.4.0
   - apiVersion: v2
     appVersion: v1.4.0-beta-703fffb
-    created: "2025-02-26T11:39:20.232037+09:00"
+    created: "2025-02-28T10:12:03.346232+09:00"
     description: certificate management for knitfab
     digest: e7dd455975487365f6880a4f0dd2c12338c25ca0ebcb542141171496aea4daba
     name: knit-certs
@@ -274,7 +294,7 @@ entries:
     version: v1.4.0-beta
   - apiVersion: v2
     appVersion: v1.3.1-98d1e14
-    created: "2025-02-26T11:39:20.210647+09:00"
+    created: "2025-02-28T10:12:03.31949+09:00"
     description: certificate management for knitfab
     digest: f5e429cae4ee68b792401942fa1f4b3908ba67b20f60a2169b4e870fba46e506
     name: knit-certs
@@ -284,7 +304,7 @@ entries:
     version: v1.3.1
   - apiVersion: v2
     appVersion: v1.3.1-beta-366ebb3
-    created: "2025-02-26T11:39:20.218092+09:00"
+    created: "2025-02-28T10:12:03.329279+09:00"
     description: certificate management for knitfab
     digest: 8e8a2ed508a57ec94b323f0848bb17f8dada1af8cf7f0a0c86772562bb54750b
     name: knit-certs
@@ -294,7 +314,7 @@ entries:
     version: v1.3.1-beta
   - apiVersion: v2
     appVersion: v1.3.0-58c2103
-    created: "2025-02-26T11:39:20.198284+09:00"
+    created: "2025-02-28T10:12:03.298194+09:00"
     description: certificate management for knitfab
     digest: 82e9c7b978e14da640284a381c424ad9d0033d440241a482425322c2ffe33898
     name: knit-certs
@@ -304,7 +324,7 @@ entries:
     version: v1.3.0
   - apiVersion: v2
     appVersion: v1.3.0-beta-f7163c8
-    created: "2025-02-26T11:39:20.204261+09:00"
+    created: "2025-02-28T10:12:03.308673+09:00"
     description: certificate management for knitfab
     digest: 3cc7e5bb6da844b21e418da2591af4c2d3b04080d5b4ce9da7fbb8af04304907
     name: knit-certs
@@ -314,7 +334,7 @@ entries:
     version: v1.3.0-beta
   - apiVersion: v2
     appVersion: v1.2.1-c883a00
-    created: "2025-02-26T11:39:20.185842+09:00"
+    created: "2025-02-28T10:12:03.245822+09:00"
     description: certificate management for knitfab
     digest: f3dde507a710fd924f775eae3c99312b72ec784515d0ae79a84207dfef58966e
     name: knit-certs
@@ -324,7 +344,7 @@ entries:
     version: v1.2.1
   - apiVersion: v2
     appVersion: v1.2.1-beta-72a9c5b
-    created: "2025-02-26T11:39:20.191523+09:00"
+    created: "2025-02-28T10:12:03.28457+09:00"
     description: certificate management for knitfab
     digest: 1808923d77bdf4df68e80f928b23613166b267d52b0717a00f502b5539d38823
     name: knit-certs
@@ -334,7 +354,7 @@ entries:
     version: v1.2.1-beta
   - apiVersion: v2
     appVersion: v1.2.0-7bb428d
-    created: "2025-02-26T11:39:20.17919+09:00"
+    created: "2025-02-28T10:12:03.232087+09:00"
     description: certificate management for knitfab
     digest: 3c19c5195ac9f140871b3e4ca5d61d2bee9bae9c74df5561d777fe7422cdd440
     name: knit-certs
@@ -344,7 +364,7 @@ entries:
     version: v1.2.0
   - apiVersion: v2
     appVersion: v1.1.2-6cd631e
-    created: "2025-02-26T11:39:20.173122+09:00"
+    created: "2025-02-28T10:12:03.219522+09:00"
     description: certificate management for knitfab
     digest: 3231f02932ecfd613f4faccd69f8d623581687c2af8ce8c738e6bc07e8820e0f
     name: knit-certs
@@ -354,7 +374,7 @@ entries:
     version: v1.1.2
   - apiVersion: v2
     appVersion: v1.1.0-140e64f
-    created: "2025-02-26T11:39:20.166682+09:00"
+    created: "2025-02-28T10:12:03.204784+09:00"
     description: certificate management for knitfab
     digest: e7f7c74c68914fccd4b9d01d19e5afc43a4830238bcd8112e188bc612ae2988f
     name: knit-certs
@@ -364,7 +384,7 @@ entries:
     version: v1.1.0
   - apiVersion: v2
     appVersion: v1.0.3-197985e
-    created: "2025-02-26T11:39:20.159458+09:00"
+    created: "2025-02-28T10:12:03.189692+09:00"
     description: certificate management for knitfab
     digest: 4c242d578b736403dbb34faebebd5f432db518a14357fa98bda29b779c564885
     name: knit-certs
@@ -374,7 +394,7 @@ entries:
     version: v1.0.3
   - apiVersion: v2
     appVersion: v1.0.0-61101e8
-    created: "2025-02-26T11:39:20.154031+09:00"
+    created: "2025-02-28T10:12:03.177906+09:00"
     description: certificate management for knitfab
     digest: 71b68a0e16571e67927e913db6d4b6c39bb60c1c0d2d34bfd2e3d340322f3a6b
     name: knit-certs
@@ -384,8 +404,24 @@ entries:
     version: v1.0.0
   knit-db-postgres:
   - apiVersion: v2
+    appVersion: v1.6.1-beta-731b472
+    created: "2025-02-28T10:12:03.407129+09:00"
+    description: knitfab database (postgres)
+    digest: cc1c1fa79ea13510eced98d1e47c456680ff95e58ba4db2672c140f4c1f4fe9c
+    keywords:
+    - knitfab
+    - MLOps
+    - Lineage Tracking
+    - Workflow
+    - Tag Based Workflow
+    name: knit-db-postgres
+    type: application
+    urls:
+    - v1.6.1-beta/knit-db-postgres-v1.6.1-beta.tgz
+    version: v1.6.1-beta
+  - apiVersion: v2
     appVersion: v1.6.0-09a601b
-    created: "2025-02-26T11:39:20.264038+09:00"
+    created: "2025-02-28T10:12:03.390937+09:00"
     description: knitfab database (postgres)
     digest: 44cd4204164dc82a388a626bef788b5aea96624f3b825d365db3a267c466baab
     keywords:
@@ -401,7 +437,7 @@ entries:
     version: v1.6.0
   - apiVersion: v2
     appVersion: v1.6.0-beta-5ace0d7
-    created: "2025-02-26T11:39:20.26963+09:00"
+    created: "2025-02-28T10:12:03.400706+09:00"
     description: knitfab database (postgres)
     digest: d98d70eab4af43dd7f78f4ab737843e56080b6535757aa39ceeaac487e650492
     keywords:
@@ -417,7 +453,7 @@ entries:
     version: v1.6.0-beta
   - apiVersion: v2
     appVersion: v1.5.1-72de2f6
-    created: "2025-02-26T11:39:20.252467+09:00"
+    created: "2025-02-28T10:12:03.374755+09:00"
     description: knitfab database (postgres)
     digest: fdfc41fded402dbe5a9014c86f431db604dc052ce19438f06d41ea4829be6dc8
     keywords:
@@ -433,7 +469,7 @@ entries:
     version: v1.5.1
   - apiVersion: v2
     appVersion: v1.5.1-beta-a2c8e66
-    created: "2025-02-26T11:39:20.25904+09:00"
+    created: "2025-02-28T10:12:03.38344+09:00"
     description: knitfab database (postgres)
     digest: b38fefa6e6b86405c9c93e52b34f51f175e7599260fe854b168b1f3663ff04a4
     keywords:
@@ -449,7 +485,7 @@ entries:
     version: v1.5.1-beta
   - apiVersion: v2
     appVersion: v1.5.0-568bb50
-    created: "2025-02-26T11:39:20.240249+09:00"
+    created: "2025-02-28T10:12:03.355174+09:00"
     description: knitfab database (postgres)
     digest: 4d8a534eff87f47f02837f520930dc53cd1bc55f39f125472105c68eda64867d
     keywords:
@@ -465,7 +501,7 @@ entries:
     version: v1.5.0
   - apiVersion: v2
     appVersion: v1.5.0-beta-aadccf0
-    created: "2025-02-26T11:39:20.246472+09:00"
+    created: "2025-02-28T10:12:03.365838+09:00"
     description: knitfab database (postgres)
     digest: 0623933003f2fb67f460b7a32b29383ea17362bf0940427369d012ecba53c432
     keywords:
@@ -481,7 +517,7 @@ entries:
     version: v1.5.0-beta
   - apiVersion: v2
     appVersion: v1.4.0-6dc1ccc
-    created: "2025-02-26T11:39:20.225942+09:00"
+    created: "2025-02-28T10:12:03.33746+09:00"
     description: knitfab database (postgres)
     digest: 23f0a977b4c19c5225068124118a787d89b0a85dc7e05bb0f940524616e5de0e
     keywords:
@@ -497,7 +533,7 @@ entries:
     version: v1.4.0
   - apiVersion: v2
     appVersion: v1.4.0-beta-703fffb
-    created: "2025-02-26T11:39:20.232844+09:00"
+    created: "2025-02-28T10:12:03.347207+09:00"
     description: knitfab database (postgres)
     digest: 02966187acafb0d494eee6baab58a2f59628ff90fdaf30273344bab902cb5351
     keywords:
@@ -513,7 +549,7 @@ entries:
     version: v1.4.0-beta
   - apiVersion: v2
     appVersion: v1.3.1-98d1e14
-    created: "2025-02-26T11:39:20.211344+09:00"
+    created: "2025-02-28T10:12:03.320391+09:00"
     description: knitfab database (postgres)
     digest: c9fb4bcd9dc6b06c332929f37ad87815614a02585551bf3691abc9a81126a96d
     keywords:
@@ -529,7 +565,7 @@ entries:
     version: v1.3.1
   - apiVersion: v2
     appVersion: v1.3.1-beta-366ebb3
-    created: "2025-02-26T11:39:20.218947+09:00"
+    created: "2025-02-28T10:12:03.330255+09:00"
     description: knitfab database (postgres)
     digest: ad7b648d80cf8252a54016bf23d5c81a2e9bff029ed913e7322dfbc68042a659
     keywords:
@@ -545,7 +581,7 @@ entries:
     version: v1.3.1-beta
   - apiVersion: v2
     appVersion: v1.3.0-58c2103
-    created: "2025-02-26T11:39:20.198954+09:00"
+    created: "2025-02-28T10:12:03.299795+09:00"
     description: knitfab database (postgres)
     digest: beb991ba5faa7ba540b0148e050026edf75c49824a12a21d3bada3ba45db0049
     keywords:
@@ -561,7 +597,7 @@ entries:
     version: v1.3.0
   - apiVersion: v2
     appVersion: v1.3.0-beta-f7163c8
-    created: "2025-02-26T11:39:20.204996+09:00"
+    created: "2025-02-28T10:12:03.309949+09:00"
     description: knitfab database (postgres)
     digest: b5b33a458b5cbea4fcc06e789dcfa01adaa91d7956f1193bc6a232ba5034a414
     keywords:
@@ -577,7 +613,7 @@ entries:
     version: v1.3.0-beta
   - apiVersion: v2
     appVersion: v1.2.1-c883a00
-    created: "2025-02-26T11:39:20.186504+09:00"
+    created: "2025-02-28T10:12:03.247384+09:00"
     description: knitfab database (postgres)
     digest: 20ecfb35422fbc573dad2e8f2a55f082b5911b73d0ab780dbf6b0d23730a7345
     keywords:
@@ -593,7 +629,7 @@ entries:
     version: v1.2.1
   - apiVersion: v2
     appVersion: v1.2.1-beta-72a9c5b
-    created: "2025-02-26T11:39:20.192177+09:00"
+    created: "2025-02-28T10:12:03.289623+09:00"
     description: knitfab database (postgres)
     digest: 10c11142adc2fee4d5f2b742d42f89c8ebe3f7bfa0ed55759d010eadb61c3081
     keywords:
@@ -609,7 +645,7 @@ entries:
     version: v1.2.1-beta
   - apiVersion: v2
     appVersion: v1.2.0-7bb428d
-    created: "2025-02-26T11:39:20.179955+09:00"
+    created: "2025-02-28T10:12:03.233942+09:00"
     description: knitfab database (postgres)
     digest: c3e4c657794ce57dd2bbe7431f3bf2718bad55e142436503e8596931f5abf1c9
     keywords:
@@ -625,7 +661,7 @@ entries:
     version: v1.2.0
   - apiVersion: v2
     appVersion: v1.1.2-6cd631e
-    created: "2025-02-26T11:39:20.174354+09:00"
+    created: "2025-02-28T10:12:03.221733+09:00"
     description: knitfab database (postgres)
     digest: 59f25826dbd05ed0626d2c2698539425e2e3a53b229c3d7d67541546242483a7
     keywords:
@@ -641,7 +677,7 @@ entries:
     version: v1.1.2
   - apiVersion: v2
     appVersion: v1.1.0-140e64f
-    created: "2025-02-26T11:39:20.167816+09:00"
+    created: "2025-02-28T10:12:03.206656+09:00"
     description: knitfab database (postgres)
     digest: 99354fd8cdd5b3921d69f51d8de34555fdcad067e8cbe8304efece0199dcbbbe
     keywords:
@@ -657,7 +693,7 @@ entries:
     version: v1.1.0
   - apiVersion: v2
     appVersion: v1.0.3-197985e
-    created: "2025-02-26T11:39:20.160553+09:00"
+    created: "2025-02-28T10:12:03.192026+09:00"
     description: knitfab database (postgres)
     digest: f555f452108329309af4a3a70a227cffba3fa080da0bacacb722832542b23b15
     keywords:
@@ -673,7 +709,7 @@ entries:
     version: v1.0.3
   - apiVersion: v2
     appVersion: v1.0.0-61101e8
-    created: "2025-02-26T11:39:20.155047+09:00"
+    created: "2025-02-28T10:12:03.180275+09:00"
     description: knitfab database (postgres)
     digest: f4324219dd815df66cebb6f20ec3cd552d099290a313b834115d99a56fbe40d5
     keywords:
@@ -689,8 +725,24 @@ entries:
     version: v1.0.0
   knit-image-registry:
   - apiVersion: v2
+    appVersion: v1.6.1-beta-731b472
+    created: "2025-02-28T10:12:03.407766+09:00"
+    description: In-cluster private image registry for knitfab
+    digest: 391066d7d8eb3121e96aa1e8a265ab7dfd1a10d12a50b7687918b6d0b2756928
+    keywords:
+    - knitfab
+    - MLOps
+    - Lineage Tracking
+    - Workflow
+    - Tag Based
+    name: knit-image-registry
+    type: application
+    urls:
+    - v1.6.1-beta/knit-image-registry-v1.6.1-beta.tgz
+    version: v1.6.1-beta
+  - apiVersion: v2
     appVersion: v1.6.0-09a601b
-    created: "2025-02-26T11:39:20.264512+09:00"
+    created: "2025-02-28T10:12:03.392019+09:00"
     description: In-cluster private image registry for knitfab
     digest: c09bc9c8053d7d0d0a65677c31939a50045a25e504f1c78d028e8f717a6d555e
     keywords:
@@ -706,7 +758,7 @@ entries:
     version: v1.6.0
   - apiVersion: v2
     appVersion: v1.6.0-beta-5ace0d7
-    created: "2025-02-26T11:39:20.270595+09:00"
+    created: "2025-02-28T10:12:03.401615+09:00"
     description: In-cluster private image registry for knitfab
     digest: 69e703271e66324d951e8f0ef58c3d311f56df2b1e81e8c92d4293e9d98a7505
     keywords:
@@ -722,7 +774,7 @@ entries:
     version: v1.6.0-beta
   - apiVersion: v2
     appVersion: v1.5.1-72de2f6
-    created: "2025-02-26T11:39:20.253142+09:00"
+    created: "2025-02-28T10:12:03.375878+09:00"
     description: In-cluster private image registry for knitfab
     digest: 795d691d3c5cb96da2e52be21f081cd431cbe9235bcad45efa8b108efdd20f6e
     keywords:
@@ -738,7 +790,7 @@ entries:
     version: v1.5.1
   - apiVersion: v2
     appVersion: v1.5.1-beta-a2c8e66
-    created: "2025-02-26T11:39:20.259739+09:00"
+    created: "2025-02-28T10:12:03.384307+09:00"
     description: In-cluster private image registry for knitfab
     digest: 5c9ee4aa52d08c4ca3b7a4f013846bda8347671ebcbb97dcba0152a04f04c289
     keywords:
@@ -754,7 +806,7 @@ entries:
     version: v1.5.1-beta
   - apiVersion: v2
     appVersion: v1.5.0-568bb50
-    created: "2025-02-26T11:39:20.240966+09:00"
+    created: "2025-02-28T10:12:03.357051+09:00"
     description: In-cluster private image registry for knitfab
     digest: fb10bd0f6e841635d45a57132ebeec89a67a4adf6521178bf473d256943f8020
     keywords:
@@ -770,7 +822,7 @@ entries:
     version: v1.5.0
   - apiVersion: v2
     appVersion: v1.5.0-beta-aadccf0
-    created: "2025-02-26T11:39:20.247196+09:00"
+    created: "2025-02-28T10:12:03.366916+09:00"
     description: In-cluster private image registry for knitfab
     digest: 4b5311a73d3837e704375bbe5073aa5aa08ae2fa03b0b8eb628f24b15cbcbc35
     keywords:
@@ -786,7 +838,7 @@ entries:
     version: v1.5.0-beta
   - apiVersion: v2
     appVersion: v1.4.0-6dc1ccc
-    created: "2025-02-26T11:39:20.226916+09:00"
+    created: "2025-02-28T10:12:03.338825+09:00"
     description: In-cluster private image registry for knitfab
     digest: b96eb8a628fa0b89dcd8ec8ceb6ce8d9624b4ee390e6b6ffae31c55183343601
     keywords:
@@ -802,7 +854,7 @@ entries:
     version: v1.4.0
   - apiVersion: v2
     appVersion: v1.4.0-beta-703fffb
-    created: "2025-02-26T11:39:20.233654+09:00"
+    created: "2025-02-28T10:12:03.348028+09:00"
     description: In-cluster private image registry for knitfab
     digest: b2df8736f774492fea2068efb3cb8027b98593c7a66342138c1484cd4eafdcf7
     keywords:
@@ -818,7 +870,7 @@ entries:
     version: v1.4.0-beta
   - apiVersion: v2
     appVersion: v1.3.1-98d1e14
-    created: "2025-02-26T11:39:20.212083+09:00"
+    created: "2025-02-28T10:12:03.321255+09:00"
     description: In-cluster private image registry for knitfab
     digest: 7e1dd32e9f5cf7a614c12dcb9b91953e9ab22b9ac10be7e92e9b175fa7396d36
     keywords:
@@ -834,7 +886,7 @@ entries:
     version: v1.3.1
   - apiVersion: v2
     appVersion: v1.3.1-beta-366ebb3
-    created: "2025-02-26T11:39:20.219756+09:00"
+    created: "2025-02-28T10:12:03.331033+09:00"
     description: In-cluster private image registry for knitfab
     digest: ce68771fcd411ffe3ca1a75caac04e218337851233190bfedcab5c05758d5507
     keywords:
@@ -850,7 +902,7 @@ entries:
     version: v1.3.1-beta
   - apiVersion: v2
     appVersion: v1.3.0-58c2103
-    created: "2025-02-26T11:39:20.199666+09:00"
+    created: "2025-02-28T10:12:03.301051+09:00"
     description: In-cluster private image registry for knitfab
     digest: bb08389f714f8b1447af23a4f019bc82d0aff19cbca7ade55628251de4374dfd
     keywords:
@@ -866,7 +918,7 @@ entries:
     version: v1.3.0
   - apiVersion: v2
     appVersion: v1.3.0-beta-f7163c8
-    created: "2025-02-26T11:39:20.205891+09:00"
+    created: "2025-02-28T10:12:03.311507+09:00"
     description: In-cluster private image registry for knitfab
     digest: 91ccd49fc9a5a0fc16ee1e56a05156e0a296b35b6d8277de0f329a66b66eabbe
     keywords:
@@ -882,7 +934,7 @@ entries:
     version: v1.3.0-beta
   - apiVersion: v2
     appVersion: v1.2.1-c883a00
-    created: "2025-02-26T11:39:20.187158+09:00"
+    created: "2025-02-28T10:12:03.248761+09:00"
     description: In-cluster private image registry for knitfab
     digest: 2b05a18f05906a20fb3da71ff0d40030d69e5f694fe5ac768542c16bf6a3afd7
     keywords:
@@ -898,7 +950,7 @@ entries:
     version: v1.2.1
   - apiVersion: v2
     appVersion: v1.2.1-beta-72a9c5b
-    created: "2025-02-26T11:39:20.192905+09:00"
+    created: "2025-02-28T10:12:03.291038+09:00"
     description: In-cluster private image registry for knitfab
     digest: ed01560b9639acfba731034d2e347fecf85c8dac0e3c139aa878ad38c685033b
     keywords:
@@ -914,7 +966,7 @@ entries:
     version: v1.2.1-beta
   - apiVersion: v2
     appVersion: v1.2.0-7bb428d
-    created: "2025-02-26T11:39:20.181085+09:00"
+    created: "2025-02-28T10:12:03.235681+09:00"
     description: In-cluster private image registry for knitfab
     digest: 1acc110fa8da97aced79782d27df33d1104584e3fde5580a857bb11184957ac0
     keywords:
@@ -930,7 +982,7 @@ entries:
     version: v1.2.0
   - apiVersion: v2
     appVersion: v1.1.2-6cd631e
-    created: "2025-02-26T11:39:20.175221+09:00"
+    created: "2025-02-28T10:12:03.223224+09:00"
     description: In-cluster private image registry for knitfab
     digest: 43eeda739b4aa398a40ab005cf8488771820bb30f7fd1ad06abbc20f8c15672e
     keywords:
@@ -946,7 +998,7 @@ entries:
     version: v1.1.2
   - apiVersion: v2
     appVersion: v1.1.0-140e64f
-    created: "2025-02-26T11:39:20.168859+09:00"
+    created: "2025-02-28T10:12:03.208174+09:00"
     description: In-cluster private image registry for knitfab
     digest: 8f74c5178db7d95d95de9294c8721cbda18cb3ec7700f394df2bcf34708ab27f
     keywords:
@@ -962,7 +1014,7 @@ entries:
     version: v1.1.0
   - apiVersion: v2
     appVersion: v1.0.3-197985e
-    created: "2025-02-26T11:39:20.161276+09:00"
+    created: "2025-02-28T10:12:03.195868+09:00"
     description: In-cluster private image registry for knitfab
     digest: f2307909b6aed8c94b874da81c07776d0e2ac2946d98389ebaaf5a1c8ea7b253
     keywords:
@@ -978,7 +1030,7 @@ entries:
     version: v1.0.3
   - apiVersion: v2
     appVersion: v1.0.0-61101e8
-    created: "2025-02-26T11:39:20.155752+09:00"
+    created: "2025-02-28T10:12:03.182433+09:00"
     description: In-cluster private image registry for knitfab
     digest: 7d7f81c3d3c4f352aac0d6b6abda947a1273a9582eb07f4fa98040fea0520fdb
     keywords:
@@ -994,8 +1046,18 @@ entries:
     version: v1.0.0
   knit-schema-upgrader:
   - apiVersion: v2
+    appVersion: v1.6.1-beta-731b472
+    created: "2025-02-28T10:12:03.408383+09:00"
+    description: knitfab databsae schema upgrader
+    digest: 0834bee1bd972915f543638528e3182aec19380c6d358da076874519ffd58642
+    name: knit-schema-upgrader
+    type: application
+    urls:
+    - v1.6.1-beta/knit-schema-upgrader-v1.6.1-beta.tgz
+    version: v1.6.1-beta
+  - apiVersion: v2
     appVersion: v1.6.0-09a601b
-    created: "2025-02-26T11:39:20.264956+09:00"
+    created: "2025-02-28T10:12:03.393984+09:00"
     description: knitfab databsae schema upgrader
     digest: bd546a2bd3e150196b4805e96b50d05c0d1584c5ea36daf3364bac34be90b4f0
     name: knit-schema-upgrader
@@ -1005,7 +1067,7 @@ entries:
     version: v1.6.0
   - apiVersion: v2
     appVersion: v1.6.0-beta-5ace0d7
-    created: "2025-02-26T11:39:20.271435+09:00"
+    created: "2025-02-28T10:12:03.402483+09:00"
     description: knitfab databsae schema upgrader
     digest: 41230cb6ab3ea518301719d8a6ce4b6a9d64af5602eecc8cbe70a7d82fa221a4
     name: knit-schema-upgrader
@@ -1015,7 +1077,7 @@ entries:
     version: v1.6.0-beta
   - apiVersion: v2
     appVersion: v1.5.1-72de2f6
-    created: "2025-02-26T11:39:20.253852+09:00"
+    created: "2025-02-28T10:12:03.377431+09:00"
     description: knitfab databsae schema upgrader
     digest: 3e20438d9c5487de9d71eb6ad49c42bb867247701063eb65f0ae01323a46d67a
     name: knit-schema-upgrader
@@ -1025,7 +1087,7 @@ entries:
     version: v1.5.1
   - apiVersion: v2
     appVersion: v1.5.1-beta-a2c8e66
-    created: "2025-02-26T11:39:20.260504+09:00"
+    created: "2025-02-28T10:12:03.385123+09:00"
     description: knitfab databsae schema upgrader
     digest: 9c1b7e00ed8ed388735cb3ba7180fae7322721973563db215b907cb6a1a1c6b9
     name: knit-schema-upgrader
@@ -1035,7 +1097,7 @@ entries:
     version: v1.5.1-beta
   - apiVersion: v2
     appVersion: v1.5.0-568bb50
-    created: "2025-02-26T11:39:20.241733+09:00"
+    created: "2025-02-28T10:12:03.359766+09:00"
     description: knitfab databsae schema upgrader
     digest: 4e5b4d3b9929c767c13639973f915295c84dfc87d5690ffbe63897fad2db4ef6
     name: knit-schema-upgrader
@@ -1045,7 +1107,7 @@ entries:
     version: v1.5.0
   - apiVersion: v2
     appVersion: v1.5.0-beta-aadccf0
-    created: "2025-02-26T11:39:20.247834+09:00"
+    created: "2025-02-28T10:12:03.367757+09:00"
     description: knitfab databsae schema upgrader
     digest: 5e9684eb1401a8e6f1f8f9cfc083f9dc76ff239befa4b5ad9d00a91d6c83ed01
     name: knit-schema-upgrader
@@ -1055,7 +1117,7 @@ entries:
     version: v1.5.0-beta
   - apiVersion: v2
     appVersion: v1.4.0-6dc1ccc
-    created: "2025-02-26T11:39:20.227654+09:00"
+    created: "2025-02-28T10:12:03.339723+09:00"
     description: knitfab databsae schema upgrader
     digest: 898d07d38151348d8fd0a16de89ddac4ec60cf51479bf9059385ede86fc4c4ad
     name: knit-schema-upgrader
@@ -1065,7 +1127,7 @@ entries:
     version: v1.4.0
   - apiVersion: v2
     appVersion: v1.4.0-beta-703fffb
-    created: "2025-02-26T11:39:20.234372+09:00"
+    created: "2025-02-28T10:12:03.348829+09:00"
     description: knitfab databsae schema upgrader
     digest: 49f0f84ea47c69154e71cc6d24f7b3ea4ffc2c9df2a91f3369da5213a1e08a6f
     name: knit-schema-upgrader
@@ -1075,7 +1137,7 @@ entries:
     version: v1.4.0-beta
   - apiVersion: v2
     appVersion: v1.3.1-98d1e14
-    created: "2025-02-26T11:39:20.212694+09:00"
+    created: "2025-02-28T10:12:03.322307+09:00"
     description: knitfab databsae schema upgrader
     digest: ef41267b7c57aaeae8e01930d4660c6b6a53b01004a4bda78cf4e059ef275238
     name: knit-schema-upgrader
@@ -1085,7 +1147,7 @@ entries:
     version: v1.3.1
   - apiVersion: v2
     appVersion: v1.3.1-beta-366ebb3
-    created: "2025-02-26T11:39:20.220485+09:00"
+    created: "2025-02-28T10:12:03.33175+09:00"
     description: knitfab databsae schema upgrader
     digest: 75d4a155e8cda4bd01e7a7458fcf5fe674ed365e2c5cfff4c3782e3205976b08
     name: knit-schema-upgrader
@@ -1095,7 +1157,7 @@ entries:
     version: v1.3.1-beta
   - apiVersion: v2
     appVersion: v1.3.0-58c2103
-    created: "2025-02-26T11:39:20.200303+09:00"
+    created: "2025-02-28T10:12:03.301923+09:00"
     description: knitfab databsae schema upgrader
     digest: b52f866c3918dd5d7808908cf782459624c6a03394ddea8713f4fb258bacd9af
     name: knit-schema-upgrader
@@ -1105,7 +1167,7 @@ entries:
     version: v1.3.0
   - apiVersion: v2
     appVersion: v1.3.0-beta-f7163c8
-    created: "2025-02-26T11:39:20.206525+09:00"
+    created: "2025-02-28T10:12:03.31282+09:00"
     description: knitfab databsae schema upgrader
     digest: ccdcdb5ce584ae7aad147c7b0dd353a5a99548053f63d22f223f054fb2ed7388
     name: knit-schema-upgrader
@@ -1115,7 +1177,7 @@ entries:
     version: v1.3.0-beta
   - apiVersion: v2
     appVersion: v1.2.1-c883a00
-    created: "2025-02-26T11:39:20.187832+09:00"
+    created: "2025-02-28T10:12:03.251862+09:00"
     description: knitfab databsae schema upgrader
     digest: 5892c706d5f75df3f5467694cbe04ba75eb371b22e7d36df14d0f20ee2dfccb7
     name: knit-schema-upgrader
@@ -1125,7 +1187,7 @@ entries:
     version: v1.2.1
   - apiVersion: v2
     appVersion: v1.2.1-beta-72a9c5b
-    created: "2025-02-26T11:39:20.19352+09:00"
+    created: "2025-02-28T10:12:03.291921+09:00"
     description: knitfab databsae schema upgrader
     digest: ee25e25413b1e926f1eaaf9f0ea5b8b46afa9c2055121b8325b4d28e79660c4b
     name: knit-schema-upgrader
@@ -1135,7 +1197,7 @@ entries:
     version: v1.2.1-beta
   - apiVersion: v2
     appVersion: v1.2.0-7bb428d
-    created: "2025-02-26T11:39:20.181729+09:00"
+    created: "2025-02-28T10:12:03.237308+09:00"
     description: knitfab databsae schema upgrader
     digest: bf1f9abfa0398dc75e2447b8f5286627ebdd3366ec2096130a9dea6034ff03c3
     name: knit-schema-upgrader
@@ -1145,8 +1207,28 @@ entries:
     version: v1.2.0
   knit-storage-nfs:
   - apiVersion: v2
+    appVersion: v1.6.1-beta-731b472
+    created: "2025-02-28T10:12:03.410553+09:00"
+    dependencies:
+    - name: csi-driver-nfs
+      repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+      version: v4.6.0
+    description: storage classes with nfs provisioner and opt-in in-cluster NFS server
+    digest: 4d410a2ae76ca6c442dd003974224e366260dff63878ce5edd9bfdbb9b782159
+    keywords:
+    - knitfab
+    - MLOps
+    - Lineage Tracking
+    - Workflow
+    - Tag Based Workflow
+    name: knit-storage-nfs
+    type: application
+    urls:
+    - v1.6.1-beta/knit-storage-nfs-v1.6.1-beta.tgz
+    version: v1.6.1-beta
+  - apiVersion: v2
     appVersion: v1.6.0-09a601b
-    created: "2025-02-26T11:39:20.266542+09:00"
+    created: "2025-02-28T10:12:03.397136+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1166,7 +1248,7 @@ entries:
     version: v1.6.0
   - apiVersion: v2
     appVersion: v1.6.0-beta-5ace0d7
-    created: "2025-02-26T11:39:20.273345+09:00"
+    created: "2025-02-28T10:12:03.404885+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1186,7 +1268,7 @@ entries:
     version: v1.6.0-beta
   - apiVersion: v2
     appVersion: v1.5.1-72de2f6
-    created: "2025-02-26T11:39:20.255788+09:00"
+    created: "2025-02-28T10:12:03.380245+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1206,7 +1288,7 @@ entries:
     version: v1.5.1
   - apiVersion: v2
     appVersion: v1.5.1-beta-a2c8e66
-    created: "2025-02-26T11:39:20.262357+09:00"
+    created: "2025-02-28T10:12:03.387401+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1226,7 +1308,7 @@ entries:
     version: v1.5.1-beta
   - apiVersion: v2
     appVersion: v1.5.0-568bb50
-    created: "2025-02-26T11:39:20.243708+09:00"
+    created: "2025-02-28T10:12:03.362534+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1246,7 +1328,7 @@ entries:
     version: v1.5.0
   - apiVersion: v2
     appVersion: v1.5.0-beta-aadccf0
-    created: "2025-02-26T11:39:20.249748+09:00"
+    created: "2025-02-28T10:12:03.371059+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1266,7 +1348,7 @@ entries:
     version: v1.5.0-beta
   - apiVersion: v2
     appVersion: v1.4.0-6dc1ccc
-    created: "2025-02-26T11:39:20.229845+09:00"
+    created: "2025-02-28T10:12:03.342317+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1286,7 +1368,7 @@ entries:
     version: v1.4.0
   - apiVersion: v2
     appVersion: v1.4.0-beta-703fffb
-    created: "2025-02-26T11:39:20.237334+09:00"
+    created: "2025-02-28T10:12:03.351262+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1306,7 +1388,7 @@ entries:
     version: v1.4.0-beta
   - apiVersion: v2
     appVersion: v1.3.1-98d1e14
-    created: "2025-02-26T11:39:20.215724+09:00"
+    created: "2025-02-28T10:12:03.325911+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1326,7 +1408,7 @@ entries:
     version: v1.3.1
   - apiVersion: v2
     appVersion: v1.3.1-beta-366ebb3
-    created: "2025-02-26T11:39:20.222711+09:00"
+    created: "2025-02-28T10:12:03.333922+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1346,7 +1428,7 @@ entries:
     version: v1.3.1-beta
   - apiVersion: v2
     appVersion: v1.3.0-58c2103
-    created: "2025-02-26T11:39:20.20225+09:00"
+    created: "2025-02-28T10:12:03.304982+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1366,7 +1448,7 @@ entries:
     version: v1.3.0
   - apiVersion: v2
     appVersion: v1.3.0-beta-f7163c8
-    created: "2025-02-26T11:39:20.208503+09:00"
+    created: "2025-02-28T10:12:03.317191+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1386,7 +1468,7 @@ entries:
     version: v1.3.0-beta
   - apiVersion: v2
     appVersion: v1.2.1-c883a00
-    created: "2025-02-26T11:39:20.189651+09:00"
+    created: "2025-02-28T10:12:03.257391+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1406,7 +1488,7 @@ entries:
     version: v1.2.1
   - apiVersion: v2
     appVersion: v1.2.1-beta-72a9c5b
-    created: "2025-02-26T11:39:20.196228+09:00"
+    created: "2025-02-28T10:12:03.295207+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1426,7 +1508,7 @@ entries:
     version: v1.2.1-beta
   - apiVersion: v2
     appVersion: v1.2.0-7bb428d
-    created: "2025-02-26T11:39:20.18363+09:00"
+    created: "2025-02-28T10:12:03.240995+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1446,7 +1528,7 @@ entries:
     version: v1.2.0
   - apiVersion: v2
     appVersion: v1.1.2-6cd631e
-    created: "2025-02-26T11:39:20.177216+09:00"
+    created: "2025-02-28T10:12:03.22841+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1466,7 +1548,7 @@ entries:
     version: v1.1.2
   - apiVersion: v2
     appVersion: v1.1.0-140e64f
-    created: "2025-02-26T11:39:20.170953+09:00"
+    created: "2025-02-28T10:12:03.213462+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1486,7 +1568,7 @@ entries:
     version: v1.1.0
   - apiVersion: v2
     appVersion: v1.0.3-197985e
-    created: "2025-02-26T11:39:20.164252+09:00"
+    created: "2025-02-28T10:12:03.200443+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1506,7 +1588,7 @@ entries:
     version: v1.0.3
   - apiVersion: v2
     appVersion: v1.0.0-61101e8
-    created: "2025-02-26T11:39:20.157747+09:00"
+    created: "2025-02-28T10:12:03.186947+09:00"
     dependencies:
     - name: csi-driver-nfs
       repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
@@ -1524,4 +1606,4 @@ entries:
     urls:
     - v1.0.0/knit-storage-nfs-v1.0.0.tgz
     version: v1.0.0
-generated: "2025-02-26T11:39:20.152051+09:00"
+generated: "2025-02-28T10:12:03.170883+09:00"

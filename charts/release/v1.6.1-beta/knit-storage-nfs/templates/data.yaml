@@ -1,0 +1,24 @@
+---
+# for knit data
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.class.data }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: {{ .Values.component }}
+    app.kubernetes.io/part-of: knitfab
+provisioner: nfs.csi.k8s.io
+allowVolumeExpansion: true
+parameters:
+  server: {{ .Values.nfs.server }}
+  share: {{ .Values.nfs.share }}
+  subDir: knitfab-data/${pvc.metadata.namespace}/${pvc.metadata.name}.d
+  mountPermissions: "0777"
+  csi.storage.k8s.io/provisioner-secret-name: {{ .Values.component }}-mount-options
+  csi.storage.k8s.io/provisioner-secret-namespace: {{ .Release.Namespace | quote }}
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions: {{ regexSplit "," (.Values.nfs.mountOptions | default "") -1 | toYaml | nindent 2 }}
