@@ -87,7 +87,7 @@ const RunNode: React.FC<NodeProps<Node<RunNodeValues, "runNode">>> = ({ data }) 
                 />
             </Box>
             {
-                0 < data.run.outputs.length &&
+                (0 < data.run.outputs.length || data.run.log !== undefined) &&
                 <Handle type="source" position={Position.Bottom} isConnectable={false} />
             }
         </>

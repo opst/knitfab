@@ -7,8 +7,8 @@ replace github.com/opst/knitfab => ../..
 require (
 	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
-	github.com/opst/knitfab v1.6.0
-	github.com/opst/knitfab-api-types v1.6.0
+	github.com/opst/knitfab v1.6.1
+	github.com/opst/knitfab-api-types v1.6.1
 	github.com/youta-t/flarc v0.0.3
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.32.2
