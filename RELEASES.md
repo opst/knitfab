@@ -1,9 +1,40 @@
+v1.6.1
+============
+
+- Date: 2025-03-03
+
+v1.6.1 is minor bugfix release.
+
+## Bugfix
+
+### Web-Console: Lineage Graph: Run-to-Log edges are visible
+
+At v1.6.0, Edges in Lineage Graph was not visible dependeing on a case.
+
+We have fixed it.
+
+## Upgrade Path
+
+### Knitfab System
+
+Download the installer, and run
+
+```
+installer.sh --install
+```
+
+in the directory where you have installed Knitfab.
+
+### CLI `knit`
+
+Download from assets of this release.
+
 v1.6.1-beta
 ============
 
 - Date: 2025-02-28
 
-v1.6.1 is minor bugfix release.
+v1.6.1-beta is minor bugfix release.
 
 ## Bugfix
 
