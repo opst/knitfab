@@ -90,12 +90,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-deactivated/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-deactivated"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-deactivated/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-deactivated"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-dectivted/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -108,12 +109,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-waiting/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-waiting"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-waiting/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-waiting"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-waiting/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -126,12 +128,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-read	/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-ready"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-read	/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-ready"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-ready/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -144,12 +147,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-starting/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-starting"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-starting/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-starting"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-starting/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -162,12 +166,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-running/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-running"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-running/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-running"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-running/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -180,12 +185,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-completing/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-completing"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-completing/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-completing"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-completing/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -198,12 +204,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-aborting/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-aborting"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-aborting/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-aborting"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-aborting/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -216,12 +223,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-done/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-done"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-done/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-done"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-done/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -234,12 +242,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-done-leaf/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-done-leaf"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-done-leaf/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-done-leaf"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-done-leaf/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -252,12 +261,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-1-pseudo/run-failed/out/1"),
-						RunId:     th.Padding36("plan-1-pseudo/run-failed"),
-						PlanId:    th.Padding36("plan-1-pseudo"),
-						OutputId:  1_010,
+						KnitId:   th.Padding36("plan-1-pseudo/run-failed/out/1"),
+						RunId:    th.Padding36("plan-1-pseudo/run-failed"),
+						PlanId:   th.Padding36("plan-1-pseudo"),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "plan-1/run-failed/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -287,12 +297,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-2-image/run-deactivated/out/1"),
-						RunId:     th.Padding36("plan-2-image/run-deactivated"),
-						PlanId:    th.Padding36("plan-2-image"),
-						OutputId:  2_010,
+						KnitId:   th.Padding36("plan-2-image/run-deactivated/out/1"),
+						RunId:    th.Padding36("plan-2-image/run-deactivated"),
+						PlanId:   th.Padding36("plan-2-image"),
+						OutputId: 2_010,
+					}: {
 						VolumeRef: "plan-2/run-deactivated/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -312,12 +323,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
+						KnitId:   th.Padding36("plan-2-image/run-waiting/out/1"),
+						RunId:    th.Padding36("plan-2-image/run-waiting"),
+						PlanId:   th.Padding36("plan-2-image"),
+						OutputId: 2_010,
+					}: {
 						VolumeRef: "plan-2/run-waiting/out/1",
-						KnitId:    th.Padding36("plan-2-image/run-waiting/out/1"),
-						RunId:     th.Padding36("plan-2-image/run-waiting"),
-						PlanId:    th.Padding36("plan-2-image"),
-						OutputId:  2_010,
-					}: {},
+					},
 				},
 			},
 			{
@@ -337,12 +349,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-2-image/run-ready/out/1"),
-						RunId:     th.Padding36("plan-2-image/run-ready"),
-						PlanId:    th.Padding36("plan-2-image"),
-						OutputId:  2_010,
+						KnitId:   th.Padding36("plan-2-image/run-ready/out/1"),
+						RunId:    th.Padding36("plan-2-image/run-ready"),
+						PlanId:   th.Padding36("plan-2-image"),
+						OutputId: 2_010,
+					}: {
 						VolumeRef: "plan-2/run-ready/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -362,12 +375,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-2-image/run-starting/out/1"),
-						RunId:     th.Padding36("plan-2-image/run-starting"),
-						PlanId:    th.Padding36("plan-2-image"),
-						OutputId:  2_010,
+						KnitId:   th.Padding36("plan-2-image/run-starting/out/1"),
+						RunId:    th.Padding36("plan-2-image/run-starting"),
+						PlanId:   th.Padding36("plan-2-image"),
+						OutputId: 2_010,
+					}: {
 						VolumeRef: "plan-2/run-starting/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -387,12 +401,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-2-image/run-running/out/1"),
-						RunId:     th.Padding36("plan-2-image/run-running"),
-						PlanId:    th.Padding36("plan-2-image"),
-						OutputId:  2_010,
+						KnitId:   th.Padding36("plan-2-image/run-running/out/1"),
+						RunId:    th.Padding36("plan-2-image/run-running"),
+						PlanId:   th.Padding36("plan-2-image"),
+						OutputId: 2_010,
+					}: {
 						VolumeRef: "plan-2/run-running/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -412,12 +427,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-2-image/run-completing/out/1"),
-						RunId:     th.Padding36("plan-2-image/run-completing"),
-						PlanId:    th.Padding36("plan-2-image"),
-						OutputId:  2_010,
+						KnitId:   th.Padding36("plan-2-image/run-completing/out/1"),
+						RunId:    th.Padding36("plan-2-image/run-completing"),
+						PlanId:   th.Padding36("plan-2-image"),
+						OutputId: 2_010,
+					}: {
 						VolumeRef: "plan-2/run-completing/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -437,12 +453,13 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-2-image/run-aborting/out/1"),
-						RunId:     th.Padding36("plan-2-image/run-aborting"),
-						PlanId:    th.Padding36("plan-2-image"),
-						OutputId:  2_010,
+						KnitId:   th.Padding36("plan-2-image/run-aborting/out/1"),
+						RunId:    th.Padding36("plan-2-image/run-aborting"),
+						PlanId:   th.Padding36("plan-2-image"),
+						OutputId: 2_010,
+					}: {
 						VolumeRef: "plan-2/run-aborting/out/1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -499,12 +516,12 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-2-image/run-failed/out/1"),
-						RunId:     th.Padding36("plan-2-image/run-failed"),
-						PlanId:    th.Padding36("plan-2-image"),
-						OutputId:  2_010,
-						VolumeRef: "plan-2/run-failed/out/1",
+						KnitId:   th.Padding36("plan-2-image/run-failed/out/1"),
+						RunId:    th.Padding36("plan-2-image/run-failed"),
+						PlanId:   th.Padding36("plan-2-image"),
+						OutputId: 2_010,
 					}: {
+						VolumeRef: "plan-2/run-failed/out/1",
 						Timestamp: pointer.Ref(time.Now()),
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 					},
@@ -554,12 +571,12 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-3-image/run-done-leaf/out/1"),
-						RunId:     th.Padding36("plan-3-image/run-done-leaf"),
-						PlanId:    th.Padding36("plan-3-image"),
-						OutputId:  3_010,
-						VolumeRef: "plan-3/run-done-leaf/out/1",
+						KnitId:   th.Padding36("plan-3-image/run-done-leaf/out/1"),
+						RunId:    th.Padding36("plan-3-image/run-done-leaf"),
+						PlanId:   th.Padding36("plan-3-image"),
+						OutputId: 3_010,
 					}: {
+						VolumeRef: "plan-3/run-done-leaf/out/1",
 						Timestamp: pointer.Ref(time.Now()),
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 					},
@@ -587,12 +604,12 @@ func TestRetry(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("plan-3-image/run-done/out/1"),
-						RunId:     th.Padding36("plan-3-image/run-done"),
-						PlanId:    th.Padding36("plan-3-image"),
-						OutputId:  3_010,
-						VolumeRef: "plan-3/run-done/out/1",
+						KnitId:   th.Padding36("plan-3-image/run-done/out/1"),
+						RunId:    th.Padding36("plan-3-image/run-done"),
+						PlanId:   th.Padding36("plan-3-image"),
+						OutputId: 3_010,
 					}: {
+						VolumeRef: "plan-3/run-done/out/1",
 						Timestamp: pointer.Ref(time.Now()),
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 					},

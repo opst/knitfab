@@ -150,12 +150,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen1/failed/:out/1"),
-						VolumeRef: "pvc-gen1-failed-out-1",
-						OutputId:  1_010,
-						RunId:     th.Padding36("gen1/failed"),
-						PlanId:    th.Padding36("plan-pseudo"),
+						KnitId:   th.Padding36("gen1/failed/:out/1"),
+						OutputId: 1_010,
+						RunId:    th.Padding36("gen1/failed"),
+						PlanId:   th.Padding36("plan-pseudo"),
 					}: {
+						VolumeRef: "pvc-gen1-failed-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(7*time.Hour + 1*time.Minute)),
 					},
@@ -175,12 +175,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen1/done-leaf/:out/1"),
-						VolumeRef: "pvc-gen1-done-leaf-out-1",
-						OutputId:  1_010,
-						RunId:     th.Padding36("gen1/done-leaf"),
-						PlanId:    th.Padding36("plan-pseudo"),
+						KnitId:   th.Padding36("gen1/done-leaf/:out/1"),
+						OutputId: 1_010,
+						RunId:    th.Padding36("gen1/done-leaf"),
+						PlanId:   th.Padding36("plan-pseudo"),
 					}: {
+						VolumeRef: "pvc-gen1-done-leaf-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(8*time.Hour + 1*time.Minute)),
 					},
@@ -200,12 +200,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen1/done-leaf-with-invalidated/:out/1"),
-						VolumeRef: "pvc-gen1-done-leaf-with-invalidated-out-1",
-						OutputId:  1_010,
-						RunId:     th.Padding36("gen1/done-leaf-with-invalidated"),
-						PlanId:    th.Padding36("plan-pseudo"),
+						KnitId:   th.Padding36("gen1/done-leaf-with-invalidated/:out/1"),
+						OutputId: 1_010,
+						RunId:    th.Padding36("gen1/done-leaf-with-invalidated"),
+						PlanId:   th.Padding36("plan-pseudo"),
 					}: {
+						VolumeRef: "pvc-gen1-done-leaf-with-invalidated-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(8*time.Hour + 1*time.Minute)),
 					},
@@ -225,12 +225,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen1/done-protected/:out/1"),
-						VolumeRef: "pvc-gen1-done-protected-out-1",
-						OutputId:  1_010,
-						RunId:     th.Padding36("gen1/done-protected"),
-						PlanId:    th.Padding36("plan-pseudo"),
+						KnitId:   th.Padding36("gen1/done-protected/:out/1"),
+						OutputId: 1_010,
+						RunId:    th.Padding36("gen1/done-protected"),
+						PlanId:   th.Padding36("plan-pseudo"),
 					}: {
+						VolumeRef: "pvc-gen1-done-protected-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(9*time.Hour + 1*time.Minute)),
 					},
@@ -385,12 +385,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen2/failed/:out/1"),
-						VolumeRef: "pvc-gen2-failed-out-1",
-						OutputId:  9_010,
-						RunId:     th.Padding36("gen2/failed"),
-						PlanId:    th.Padding36("plan-failed"),
+						KnitId:   th.Padding36("gen2/failed/:out/1"),
+						OutputId: 9_010,
+						RunId:    th.Padding36("gen2/failed"),
+						PlanId:   th.Padding36("plan-failed"),
 					}: {
+						VolumeRef: "pvc-gen2-failed-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(7*time.Hour + 1*time.Minute)),
 					},
@@ -418,12 +418,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen2/done-leaf/:out/1"),
-						VolumeRef: "pvc-gen2-done-leaf-out-1",
-						OutputId:  10_010,
-						RunId:     th.Padding36("gen2/done-leaf"),
-						PlanId:    th.Padding36("plan-done"),
+						KnitId:   th.Padding36("gen2/done-leaf/:out/1"),
+						OutputId: 10_010,
+						RunId:    th.Padding36("gen2/done-leaf"),
+						PlanId:   th.Padding36("plan-done"),
 					}: {
+						VolumeRef: "pvc-gen2-done-leaf-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(8*time.Hour + 1*time.Minute)),
 					},
@@ -451,12 +451,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen2/done-leaf-with-invalidated/:out/1"),
-						VolumeRef: "pvc-gen2-done-leaf-with-invalidated-out-1",
-						OutputId:  11_010,
-						RunId:     th.Padding36("gen2/done-leaf-with-invalidated"),
-						PlanId:    th.Padding36("plan-invalidated"),
+						KnitId:   th.Padding36("gen2/done-leaf-with-invalidated/:out/1"),
+						OutputId: 11_010,
+						RunId:    th.Padding36("gen2/done-leaf-with-invalidated"),
+						PlanId:   th.Padding36("plan-invalidated"),
 					}: {
+						VolumeRef: "pvc-gen2-done-leaf-with-invalidated-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(8*time.Hour + 1*time.Minute)),
 					},
@@ -484,12 +484,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen2/done-protected/:out/1"),
-						VolumeRef: "pvc-gen2-done-protected-out-1",
-						OutputId:  10_010,
-						RunId:     th.Padding36("gen2/done-protected"),
-						PlanId:    th.Padding36("plan-done"),
+						KnitId:   th.Padding36("gen2/done-protected/:out/1"),
+						OutputId: 10_010,
+						RunId:    th.Padding36("gen2/done-protected"),
+						PlanId:   th.Padding36("plan-done"),
 					}: {
+						VolumeRef: "pvc-gen2-done-protected-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(9*time.Hour + 1*time.Minute)),
 					},
@@ -652,12 +652,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen3/failed/:out/1"),
-						VolumeRef: "pvc-gen3-failed-out-1",
-						OutputId:  9_010,
-						RunId:     th.Padding36("gen3/failed"),
-						PlanId:    th.Padding36("plan-failed"),
+						KnitId:   th.Padding36("gen3/failed/:out/1"),
+						OutputId: 9_010,
+						RunId:    th.Padding36("gen3/failed"),
+						PlanId:   th.Padding36("plan-failed"),
 					}: {
+						VolumeRef: "pvc-gen3-failed-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(7*time.Hour + 1*time.Minute)),
 					},
@@ -685,12 +685,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen3/done-leaf/:out/1"),
-						VolumeRef: "pvc-gen3-done-leaf-out-1",
-						OutputId:  10_010,
-						RunId:     th.Padding36("gen3/done-leaf"),
-						PlanId:    th.Padding36("plan-done"),
+						KnitId:   th.Padding36("gen3/done-leaf/:out/1"),
+						OutputId: 10_010,
+						RunId:    th.Padding36("gen3/done-leaf"),
+						PlanId:   th.Padding36("plan-done"),
 					}: {
+						VolumeRef: "pvc-gen3-done-leaf-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(8*time.Hour + 1*time.Minute)),
 					},
@@ -718,12 +718,12 @@ func TestRun_Delete(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("gen3/done-with-dataagent/:out/1"),
-						VolumeRef: "pvc-gen3-done-with-dataagent-out-1",
-						OutputId:  10_010,
-						RunId:     th.Padding36("gen3/done-with-dataagent"),
-						PlanId:    th.Padding36("plan-done"),
+						KnitId:   th.Padding36("gen3/done-with-dataagent/:out/1"),
+						OutputId: 10_010,
+						RunId:    th.Padding36("gen3/done-with-dataagent"),
+						PlanId:   th.Padding36("plan-done"),
 					}: {
+						VolumeRef: "pvc-gen3-done-with-dataagent-out-1",
 						UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 						Timestamp: ptr.Ref(UPLOADED_AT.Add(8*time.Hour + 1*time.Minute)),
 						Agent: []tables.DataAgent{

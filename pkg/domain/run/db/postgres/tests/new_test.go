@@ -24,16 +24,37 @@ import (
 func TestRun_New(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 
-	type runComponent struct {
+	type dataEntity struct {
+		data      tables.Data
+		userTags  []domain.Tag
+		volumeRef string
+	}
+
+	type dataExpectation struct {
+		PlanId   string
+		OutputId int
+		userTags []domain.Tag
+	}
+
+	type runEntity struct {
 		body   tables.Run
 		worker string
 		assign []tables.Assign
 
-		// output id -> data & its tag
-		data map[int]tuple.Pair[tables.Data, []domain.Tag]
+		// - key: output id
+		data map[int]dataEntity
 	}
 
-	equivRunComponent := func(a, b runComponent) bool {
+	type runExpectation struct {
+		body   tables.Run
+		worker string
+		assign []tables.Assign
+
+		// - key: output id
+		data map[int]dataExpectation
+	}
+
+	equivRunComponent := func(a runEntity, b runExpectation) bool {
 		return a.body.PlanId == b.body.PlanId &&
 			a.body.Status == b.body.Status &&
 			cmp.SliceContentEqWith(
@@ -44,18 +65,18 @@ func TestRun_New(t *testing.T) {
 			) &&
 			cmp.MapEqWith(
 				a.data, b.data,
-				func(da, db tuple.Pair[tables.Data, []domain.Tag]) bool {
-					return da.First.OutputId == db.First.OutputId &&
-						da.First.PlanId == db.First.PlanId &&
+				func(da dataEntity, db dataExpectation) bool {
+					return da.data.OutputId == db.OutputId &&
+						da.data.PlanId == db.PlanId &&
 						cmp.SliceContentEqWith(
-							da.Second, db.Second,
+							da.userTags, db.userTags,
 							func(ta, tb domain.Tag) bool { return ta.Equal(&tb) },
 						)
 				},
 			)
 	}
 
-	consistentRunComponent := func(rc runComponent) bool {
+	consistentRunComponent := func(rc runEntity) bool {
 		planId := rc.body.PlanId
 		runId := rc.body.RunId
 		for _, a := range rc.assign {
@@ -64,7 +85,7 @@ func TestRun_New(t *testing.T) {
 			}
 		}
 		for _, d := range rc.data {
-			if d.First.RunId != runId || d.First.PlanId != planId {
+			if d.data.RunId != runId || d.data.PlanId != planId {
 				return false
 			}
 		}
@@ -72,7 +93,7 @@ func TestRun_New(t *testing.T) {
 	}
 
 	type expectation struct {
-		newRuns []runComponent
+		newRuns []runExpectation
 
 		// - key: plan id
 		//
@@ -92,7 +113,7 @@ func TestRun_New(t *testing.T) {
 	// - context.Context, conn
 	//
 	// - []string runIds to be restrected to. if empty, all runs will be retuned.
-	getRunEntity := func(ctx context.Context, conn kpool.Queryer) ([]runComponent, error) {
+	getRunEntity := func(ctx context.Context, conn kpool.Queryer) ([]runEntity, error) {
 		runs, err := scanner.New[tables.Run]().QueryAll(
 			ctx, conn, `select * from "run"`,
 		)
@@ -129,6 +150,7 @@ func TestRun_New(t *testing.T) {
 			return nil, err
 		}
 
+		knitIds := slices.Map(data, func(d tables.Data) string { return d.KnitId })
 		type Tagging struct {
 			KnitId string
 			Key    string
@@ -148,7 +170,7 @@ func TestRun_New(t *testing.T) {
 			select "knit_id", "value", "key" from "tag_key"
 			inner join "t2" using("id")
 			`,
-			slices.Map(data, func(d tables.Data) string { return d.KnitId }),
+			knitIds,
 		)
 		if err != nil {
 			return nil, err
@@ -157,24 +179,42 @@ func TestRun_New(t *testing.T) {
 			return tag.KnitId, domain.Tag{Key: tag.Key, Value: tag.Value}
 		})
 
-		var actualRuns []runComponent
-		{
-			_assigns := slices.ToMultiMap(assigns, func(a tables.Assign) (string, tables.Assign) {
-				return a.RunId, a
-			})
-			_data := slices.ToMultiMap(data, func(d tables.Data) (string, tuple.Pair[tables.Data, []domain.Tag]) {
-				return d.RunId, tuple.PairOf(d, tags[d.KnitId])
-			})
+		_volumeRef, err := scanner.New[tuple.Pair[string, string]]().QueryAll(
+			ctx, conn,
+			`select "knit_id" as "first", "volume_ref" as "second" from "volume_ref" where "knit_id" = any($1)`,
+			knitIds,
+		)
+		if err != nil {
+			return nil, err
+		}
+		volumeRef := tuple.ToMap(_volumeRef)
 
-			_actualRuns := map[string]runComponent{}
+		var actualRuns []runEntity
+		{
+			_assigns := slices.ToMultiMap(
+				assigns,
+				func(a tables.Assign) (string, tables.Assign) { return a.RunId, a },
+			)
+			_data := slices.ToMultiMap(
+				data,
+				func(d tables.Data) (string, dataEntity) {
+					return d.RunId, dataEntity{
+						data:      d,
+						userTags:  tags[d.KnitId],
+						volumeRef: volumeRef[d.KnitId],
+					}
+				},
+			)
+
+			_actualRuns := map[string]runEntity{}
 			for _, ar := range runs {
-				_actualRuns[ar.RunId] = runComponent{
+				_actualRuns[ar.RunId] = runEntity{
 					body:   ar,
 					worker: workres[ar.RunId],
 					assign: _assigns[ar.RunId],
 					data: slices.ToMap(
 						_data[ar.RunId],
-						func(d tuple.Pair[tables.Data, []domain.Tag]) int { return d.First.OutputId },
+						func(d dataEntity) int { return d.data.OutputId },
 					),
 				}
 			}
@@ -226,12 +266,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -250,12 +290,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-2/run:1-2/uploaded//out"),
-								VolumeRef: "vol#data:1-2",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-2/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-2/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-2",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:13.345+00:00",
 								)).OrFatal(t).Time()),
@@ -270,7 +310,7 @@ func TestRun_New(t *testing.T) {
 			},
 			then: expectation{
 				planLockData: map[string][]string{},
-				newRuns:      []runComponent{}, // empty
+				newRuns:      []runExpectation{}, // empty
 			},
 		},
 		"Not enough data are given, no projections are performed": {
@@ -312,12 +352,12 @@ func TestRun_New(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
-								OutputId:  1010,
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
+								OutputId: 1010,
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -336,7 +376,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-1/run:1-1/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{}, // empty
+				newRuns: []runExpectation{}, // empty
 			},
 		},
 		"Enough data and nominations are given, projection should be performed": {
@@ -387,12 +427,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -411,12 +451,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-2/run:1-2/uploaded//out"),
-								VolumeRef: "vol#data:1-2",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-2/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-2/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-2",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:13.345+00:00",
 								)).OrFatal(t).Time()),
@@ -437,7 +477,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-2/run:1-2/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{
+				newRuns: []runExpectation{
 					{
 						body: tables.Run{
 							Status: domain.Waiting,
@@ -453,27 +493,23 @@ func TestRun_New(t *testing.T) {
 								PlanId: th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{
 									{Key: "tag-key-1", Value: "tag-value-1"},
 									{Key: "tag-key-2", Value: "tag-value-2"},
 								},
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "tag-key-1", Value: "tag-value-1"},
 									{Key: "tag-key-3", Value: "tag-value-3"},
 								},
-							),
+							},
 						},
 					},
 				},
@@ -527,12 +563,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -551,12 +587,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-2/run:1-2/uploaded//out"),
-								VolumeRef: "vol#data:1-2",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-2/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-2/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-2",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:13.345+00:00",
 								)).OrFatal(t).Time()),
@@ -577,7 +613,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-2/run:1-2/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{
+				newRuns: []runExpectation{
 					{
 						body: tables.Run{
 							Status: domain.Deactivated,
@@ -593,27 +629,23 @@ func TestRun_New(t *testing.T) {
 								PlanId: th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{
 									{Key: "tag-key-1", Value: "tag-value-1"},
 									{Key: "tag-key-2", Value: "tag-value-2"},
 								},
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "tag-key-1", Value: "tag-value-1"},
 									{Key: "tag-key-3", Value: "tag-value-3"},
 								},
-							),
+							},
 						},
 					},
 				},
@@ -669,12 +701,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -697,7 +729,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-1/run:1-1/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{
+				newRuns: []runExpectation{
 					{
 						body: tables.Run{
 							Status: domain.Waiting,
@@ -710,23 +742,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -741,23 +769,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:3/split"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							3010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:3/split"),
-									OutputId: 3010,
-								},
-								[]domain.Tag{},
-							),
-							3020: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:3/split"),
-									OutputId: 3020,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							3010: {
+								PlanId:   th.Padding36("plan:3/split"),
+								OutputId: 3010,
+								userTags: []domain.Tag{},
+							},
+							3020: {
+								PlanId:   th.Padding36("plan:3/split"),
+								OutputId: 3020,
+								userTags: []domain.Tag{
 									{Key: "key-b", Value: "tag-b"},
 								},
-							),
+							},
 						},
 					},
 				},
@@ -819,12 +843,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -843,12 +867,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-2/run:1-2/uploaded//out"),
-								VolumeRef: "vol#data:1-2",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-2/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-2/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-2",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -867,12 +891,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-3/run:1-3/uploaded//out"),
-								VolumeRef: "vol#data:1-3",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-3/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-3/run:1-3/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-3/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-3",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -891,12 +915,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-4/run:1-4/uploaded//out"),
-								VolumeRef: "vol#data:1-4",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-4/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-4/run:1-4/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-4/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-4",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -928,7 +952,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-1/run:1-1/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{
+				newRuns: []runExpectation{
 					{
 						body: tables.Run{
 							Status: domain.Waiting,
@@ -951,23 +975,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -992,23 +1012,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -1033,23 +1049,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -1074,23 +1086,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -1115,23 +1123,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -1156,23 +1160,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -1197,23 +1197,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -1238,23 +1234,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:2/preprocessing"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							2010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2010,
-								},
-								[]domain.Tag{}, // no tags.
-							),
-							2001: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:2/preprocessing"),
-									OutputId: 2001,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							2010: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2010,
+								userTags: []domain.Tag{}, // no tags.
+							},
+							2001: {
+								PlanId:   th.Padding36("plan:2/preprocessing"),
+								OutputId: 2001,
+								userTags: []domain.Tag{
 									{Key: "key-a", Value: "tag-a"},
 								},
-							),
+							},
 						},
 					},
 					{
@@ -1269,23 +1261,19 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:3/split"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							3010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:3/split"),
-									OutputId: 3010,
-								},
-								[]domain.Tag{},
-							),
-							3020: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:3/split"),
-									OutputId: 3020,
-								},
-								[]domain.Tag{
+						data: map[int]dataExpectation{
+							3010: {
+								PlanId:   th.Padding36("plan:3/split"),
+								OutputId: 3010,
+								userTags: []domain.Tag{},
+							},
+							3020: {
+								PlanId:   th.Padding36("plan:3/split"),
+								OutputId: 3020,
+								userTags: []domain.Tag{
 									{Key: "key-b", Value: "tag-b"},
 								},
-							),
+							},
 						},
 					},
 				},
@@ -1335,12 +1323,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1367,12 +1355,12 @@ func TestRun_New(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:2-1/run:2-1/preprocessing//out"),
-								VolumeRef: "vol#data:2-1",
-								OutputId:  2010,
-								RunId:     th.Padding36("run:2-1/preprocessing"),
-								PlanId:    th.Padding36("plan:2/preprocessing"),
+								KnitId:   th.Padding36("data:2-1/run:2-1/preprocessing//out"),
+								OutputId: 2010,
+								RunId:    th.Padding36("run:2-1/preprocessing"),
+								PlanId:   th.Padding36("plan:2/preprocessing"),
 							}: {
+								VolumeRef: "vol#data:2-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-06T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1394,7 +1382,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-1/run:1-1/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{
+				newRuns: []runExpectation{
 					{
 						body: tables.Run{
 							Status: domain.Waiting,
@@ -1407,14 +1395,12 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:3/split"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							3010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:3/split"),
-									OutputId: 3010,
-								},
-								[]domain.Tag{{Key: "type", Value: "raw-data"}},
-							),
+						data: map[int]dataExpectation{
+							3010: {
+								PlanId:   th.Padding36("plan:3/split"),
+								OutputId: 3010,
+								userTags: []domain.Tag{{Key: "type", Value: "raw-data"}},
+							},
 						},
 					},
 				},
@@ -1467,12 +1453,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1491,12 +1477,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-2/run:1-2/uploaded//out"),
-								VolumeRef: "vol#data:1-2",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-2/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-2/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-2",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1529,12 +1515,12 @@ func TestRun_New(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:2-1/run:2-1/preprocessing//out"),
-								VolumeRef: "vol#data:2-1",
-								OutputId:  2010,
-								RunId:     th.Padding36("run:2-1/preprocessing"),
-								PlanId:    th.Padding36("plan:2/preprocessing"),
+								KnitId:   th.Padding36("data:2-1/run:2-1/preprocessing//out"),
+								OutputId: 2010,
+								RunId:    th.Padding36("run:2-1/preprocessing"),
+								PlanId:   th.Padding36("plan:2/preprocessing"),
 							}: {
+								VolumeRef: "vol#data:2-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-06T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1558,7 +1544,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-1/run:1-1/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{
+				newRuns: []runExpectation{
 					{
 						body: tables.Run{
 							Status: domain.Waiting,
@@ -1571,14 +1557,12 @@ func TestRun_New(t *testing.T) {
 								PlanId:  th.Padding36("plan:3/split"),
 							},
 						},
-						data: map[int]tuple.Pair[tables.Data, []domain.Tag]{
-							3010: tuple.PairOf(
-								tables.Data{
-									PlanId:   th.Padding36("plan:3/split"),
-									OutputId: 3010,
-								},
-								[]domain.Tag{{Key: "type", Value: "raw-data"}},
-							),
+						data: map[int]dataExpectation{
+							3010: {
+								PlanId:   th.Padding36("plan:3/split"),
+								OutputId: 3010,
+								userTags: []domain.Tag{{Key: "type", Value: "raw-data"}},
+							},
 						},
 					},
 				},
@@ -1627,12 +1611,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1659,12 +1643,12 @@ func TestRun_New(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:2-1/run:2-1/preprocessing//out"),
-								VolumeRef: "vol#data:2-1",
-								OutputId:  2010,
-								RunId:     th.Padding36("run:2-1/preprocessing"),
-								PlanId:    th.Padding36("plan:2/preprocessing"),
+								KnitId:   th.Padding36("data:2-1/run:2-1/preprocessing//out"),
+								OutputId: 2010,
+								RunId:    th.Padding36("run:2-1/preprocessing"),
+								PlanId:   th.Padding36("plan:2/preprocessing"),
 							}: {
+								VolumeRef: "vol#data:2-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-06T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1690,19 +1674,21 @@ func TestRun_New(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:3-1/run:3-1/split//out/1"),
+								KnitId:   th.Padding36("data:3-1/run:3-1/split//out/1"),
+								OutputId: 3010,
+								RunId:    th.Padding36("run:3-1/split"),
+								PlanId:   th.Padding36("plan:3/split"),
+							}: {
 								VolumeRef: "vol#data:3-1",
-								OutputId:  3010,
-								RunId:     th.Padding36("run:3-1/split"),
-								PlanId:    th.Padding36("plan:3/split"),
-							}: {},
+							},
 							{
-								KnitId:    th.Padding36("data:3-2/run:3-1/split//out/2"),
+								KnitId:   th.Padding36("data:3-2/run:3-1/split//out/2"),
+								OutputId: 3020,
+								RunId:    th.Padding36("run:3-1/split"),
+								PlanId:   th.Padding36("plan:3/split"),
+							}: {
 								VolumeRef: "vol#data:3-2",
-								OutputId:  3020,
-								RunId:     th.Padding36("run:3-1/split"),
-								PlanId:    th.Padding36("plan:3/split"),
-							}: {},
+							},
 						},
 					},
 				},
@@ -1720,7 +1706,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-1/run:1-1/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{}, // empty
+				newRuns: []runExpectation{}, // empty
 			},
 		},
 		"When no nominations are updated, it does nothing": {
@@ -1763,12 +1749,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-1/run:1-1/uploaded//out"),
-								VolumeRef: "vol#data:1-1",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-1/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-1/run:1-1/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-1/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-1",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:12.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1787,12 +1773,12 @@ func TestRun_New(t *testing.T) {
 						Assign: []tables.Assign{},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    th.Padding36("data:1-2/run:1-2/uploaded//out"),
-								VolumeRef: "vol#data:1-2",
-								OutputId:  1010,
-								RunId:     th.Padding36("run:1-2/uploaded"),
-								PlanId:    th.Padding36("plan:1/uploaded"),
+								KnitId:   th.Padding36("data:1-2/run:1-2/uploaded//out"),
+								OutputId: 1010,
+								RunId:    th.Padding36("run:1-2/uploaded"),
+								PlanId:   th.Padding36("plan:1/uploaded"),
 							}: {
+								VolumeRef: "vol#data:1-2",
 								Timestamp: ptr.Ref(try.To(rfctime.ParseRFC3339DateTime(
 									"2021-04-05T10:11:13.345+00:00",
 								)).OrFatal(t).Time()),
@@ -1813,7 +1799,7 @@ func TestRun_New(t *testing.T) {
 						th.Padding36("data:1-2/run:1-2/uploaded//out"),
 					},
 				},
-				newRuns: []runComponent{}, // empty
+				newRuns: []runExpectation{}, // empty
 			},
 		},
 	} {
@@ -1962,17 +1948,18 @@ func TestRun_New(t *testing.T) {
 						)
 					}
 					for _, d := range r.data {
-						actualVolumeRef := d.First.VolumeRef
-						if expectedVolumeRef, _ := naming.impl.VolumeRef(d.First.KnitId); actualVolumeRef != expectedVolumeRef {
+						actualVolumeRef := d.volumeRef
+						if expectedVolumeRef, _ := naming.impl.VolumeRef(d.data.KnitId); actualVolumeRef != expectedVolumeRef {
 							t.Errorf(
 								"unmatch volume ref\n- actual: %+v\n- expected: %+v",
 								actualVolumeRef, expectedVolumeRef,
 							)
 						}
 					}
-					if _, ok := slices.First(testcase.then.newRuns, func(x runComponent) bool {
-						return equivRunComponent(x, r)
-					}); !ok {
+					if _, ok := slices.First(
+						testcase.then.newRuns,
+						func(x runExpectation) bool { return equivRunComponent(r, x) },
+					); !ok {
 						t.Errorf("created run is not in expected runs %+v", r)
 					}
 				}
@@ -1996,7 +1983,7 @@ func TestRun_New(t *testing.T) {
 
 			{
 				actualRuns := try.To(getRunEntity(ctx, conn)).OrFatal(t)
-				actualNewRuns, _ := slices.Group(actualRuns, func(ar runComponent) bool {
+				actualNewRuns, _ := slices.Group(actualRuns, func(ar runEntity) bool {
 					for _, s := range testcase.given.Steps {
 						if ar.body.RunId == s.Run.RunId {
 							return false
@@ -2004,7 +1991,10 @@ func TestRun_New(t *testing.T) {
 					}
 					return true
 				})
-				if !cmp.SliceSubsetWith(testcase.then.newRuns, actualNewRuns, equivRunComponent) {
+				if !cmp.SliceSubsetWith(
+					testcase.then.newRuns, actualNewRuns,
+					func(x runExpectation, r runEntity) bool { return equivRunComponent(r, x) },
+				) {
 					t.Errorf(
 						"unmatch: actual runs do not satisfy expected runs\n- actual: %+v\n- expected: %+v",
 						actualNewRuns, testcase.then.newRuns,

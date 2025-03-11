@@ -166,12 +166,12 @@ func TestOperation(t *testing.T) {
 				Assign: []tables.Assign{},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data-1.run-1.plan-1"),
-						VolumeRef: "pvc-1-1-1",
-						PlanId:    th.Padding36("plan-1"),
-						RunId:     th.Padding36("run-1.plan-1"),
-						OutputId:  1010,
+						KnitId:   th.Padding36("data-1.run-1.plan-1"),
+						PlanId:   th.Padding36("plan-1"),
+						RunId:    th.Padding36("run-1.plan-1"),
+						OutputId: 1010,
 					}: {
+						VolumeRef: "pvc-1-1-1",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "raw-data"},
@@ -202,12 +202,12 @@ func TestOperation(t *testing.T) {
 				Assign: []tables.Assign{},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data-1.run-2.plan-1"),
-						VolumeRef: "pvc-1-2-1",
-						PlanId:    th.Padding36("plan-1"),
-						RunId:     th.Padding36("run-2.plan-1"),
-						OutputId:  1010,
+						KnitId:   th.Padding36("data-1.run-2.plan-1"),
+						PlanId:   th.Padding36("plan-1"),
+						RunId:    th.Padding36("run-2.plan-1"),
+						OutputId: 1010,
 					}: {
+						VolumeRef: "pvc-1-2-1",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "raw-data"},
@@ -234,12 +234,12 @@ func TestOperation(t *testing.T) {
 				Assign: []tables.Assign{},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data-1.run-1.plan-2"),
-						VolumeRef: "pvc-2-1-1",
-						PlanId:    th.Padding36("plan-2"),
-						RunId:     th.Padding36("run-1.plan-2"),
-						OutputId:  2010,
+						KnitId:   th.Padding36("data-1.run-1.plan-2"),
+						PlanId:   th.Padding36("plan-2"),
+						RunId:    th.Padding36("run-1.plan-2"),
+						OutputId: 2010,
 					}: {
+						VolumeRef: "pvc-2-1-1",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -294,12 +294,12 @@ func TestOperation(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data-1.run-1.plan-3"),
-						VolumeRef: "pvc-3-1-1",
-						PlanId:    th.Padding36("plan-3"),
-						RunId:     th.Padding36("run-1.plan-3"),
-						OutputId:  3010,
+						KnitId:   th.Padding36("data-1.run-1.plan-3"),
+						PlanId:   th.Padding36("plan-3"),
+						RunId:    th.Padding36("run-1.plan-3"),
+						OutputId: 3010,
 					}: {
+						VolumeRef: "pvc-3-1-1",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -328,12 +328,12 @@ func TestOperation(t *testing.T) {
 						},
 					},
 					{
-						KnitId:    th.Padding36("data-2.run-1.plan-3"),
+						KnitId:   th.Padding36("data-2.run-1.plan-3"),
+						PlanId:   th.Padding36("plan-3"),
+						RunId:    th.Padding36("run-1.plan-3"),
+						OutputId: 3020,
+					}: {
 						VolumeRef: "pvc-3-1-2",
-						PlanId:    th.Padding36("plan-3"),
-						RunId:     th.Padding36("run-1.plan-3"),
-						OutputId:  3020,
-					}: {
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -344,12 +344,12 @@ func TestOperation(t *testing.T) {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId:    th.Padding36("data-3.run-1.plan-3"),
+						KnitId:   th.Padding36("data-3.run-1.plan-3"),
+						PlanId:   th.Padding36("plan-3"),
+						RunId:    th.Padding36("run-1.plan-3"),
+						OutputId: 3030,
+					}: {
 						VolumeRef: "pvc-3-1-3",
-						PlanId:    th.Padding36("plan-3"),
-						RunId:     th.Padding36("run-1.plan-3"),
-						OutputId:  3030,
-					}: {
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -360,12 +360,12 @@ func TestOperation(t *testing.T) {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId:    th.Padding36("log-1.run-1.plan-3"),
-						VolumeRef: "pvc-log1-1-3",
-						PlanId:    th.Padding36("plan-3"),
-						RunId:     th.Padding36("run-1.plan-3"),
-						OutputId:  3001,
+						KnitId:   th.Padding36("log-1.run-1.plan-3"),
+						PlanId:   th.Padding36("plan-3"),
+						RunId:    th.Padding36("run-1.plan-3"),
+						OutputId: 3001,
 					}: {
+						VolumeRef: "pvc-log1-1-3",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},

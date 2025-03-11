@@ -38,9 +38,10 @@ func TestGetAgentName(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("test-knit-running-1"), VolumeRef: "#test-knit-running-1",
+						KnitId: Padding36("test-knit-running-1"),
 						PlanId: "test-plan", RunId: "test-run-running-1", OutputId: 1_010,
 					}: {
+						VolumeRef: "#test-knit-running-1",
 						Agent: []tables.DataAgent{
 							{
 								Name: "test-agent-1", Mode: domain.DataAgentRead.String(),
@@ -83,9 +84,11 @@ func TestGetAgentName(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("test-knit-running-2"), VolumeRef: "#test-knit-running-2",
+						KnitId: Padding36("test-knit-running-2"),
 						PlanId: "test-plan", RunId: "test-run-running-2", OutputId: 1_010,
-					}: {},
+					}: {
+						VolumeRef: "#test-knit-running-2",
+					},
 				},
 			},
 			{
@@ -97,9 +100,10 @@ func TestGetAgentName(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("test-knit-running-3"), VolumeRef: "#test-knit-running-3",
+						KnitId: Padding36("test-knit-running-3"),
 						PlanId: "test-plan", RunId: "test-run-running-3", OutputId: 1_010,
 					}: {
+						VolumeRef: "#test-knit-running-3",
 						Agent: []tables.DataAgent{
 							{
 								Name: "test-agent-5", Mode: domain.DataAgentWrite.String(),
@@ -121,9 +125,10 @@ func TestGetAgentName(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("test-knit-running-4"), VolumeRef: "#test-knit-running-4",
+						KnitId: Padding36("test-knit-running-4"),
 						PlanId: "test-plan", RunId: "test-run-running-4", OutputId: 1_010,
 					}: {
+						VolumeRef: "#test-knit-running-4",
 						Agent: []tables.DataAgent{
 							{
 								Name: "test-agent-6", Mode: domain.DataAgentRead.String(),

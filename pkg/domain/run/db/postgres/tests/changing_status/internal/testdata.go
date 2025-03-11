@@ -189,12 +189,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-waiting-1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-waiting-1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-waiting-1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-waiting-1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-waiting-1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -207,12 +208,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-waiting+1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-waiting+1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-waiting+1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-waiting+1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-waiting+1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -225,12 +227,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-ready-1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-ready-1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-ready-1",
+						KnitId:   th.Padding36("knit@pseudo-ready-1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-ready-1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-ready-1",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "ready"},
 							{Key: "trigger", Value: "user upload"},
@@ -248,12 +250,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-ready+1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-ready+1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-ready+1",
+						KnitId:   th.Padding36("knit@pseudo-ready+1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-ready+1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-ready+1",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "ready"},
 							{Key: "trigger", Value: "user upload"},
@@ -271,12 +273,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-starting-1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-starting-1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-starting-1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-starting-1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-starting-1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -289,12 +292,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-starting+1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-starting+1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-starting+1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-starting+1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-starting+1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -307,12 +311,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-running-1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-running-1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-running-1",
+						KnitId:   th.Padding36("knit@pseudo-running-1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-running-1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-running-1",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "running"},
 							{Key: "trigger", Value: "user upload"},
@@ -330,12 +334,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-running+1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-running+1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-running+1",
+						KnitId:   th.Padding36("knit@pseudo-running+1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-running+1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-running+1",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "running"},
 							{Key: "trigger", Value: "user upload"},
@@ -353,12 +357,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-aborting-1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-aborting-1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-aborting-1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-aborting-1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-aborting-1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -371,12 +376,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-aborting+1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-aborting+1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-aborting+1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-aborting+1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-aborting+1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -389,12 +395,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-completing-1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-completing-1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-completing-1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-completing-1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-completing-1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -407,12 +414,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-completing+1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-completing+1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-completing+1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-completing+1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-completing+1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -425,12 +433,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-failed-1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-failed-1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-failed-1",
+						KnitId:   th.Padding36("knit@pseudo-failed-1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-failed-1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-failed-1",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "failed"},
 						},
@@ -450,12 +458,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-failed+1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-failed+1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-failed+1",
+						KnitId:   th.Padding36("knit@pseudo-failed+1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-failed+1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-failed+1",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "failed"},
 						},
@@ -475,12 +483,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-done-1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-done-1",
+						KnitId:   th.Padding36("knit@pseudo-done-1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-done-1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-done-1",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "done"},
 						},
@@ -500,12 +508,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-done+1"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-done+1"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-done+1",
+						KnitId:   th.Padding36("knit@pseudo-done+1"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-done+1"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-done+1",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "done"},
 						},
@@ -545,12 +553,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-deactivated-1"),
-						OutputId:  102_010,
-						RunId:     th.Padding36("run@pseudo-deactivated-1"),
-						PlanId:    th.Padding36("plan-pseudo-inactive"),
+						KnitId:   th.Padding36("knit@pseudo-deactivated-1"),
+						OutputId: 102_010,
+						RunId:    th.Padding36("run@pseudo-deactivated-1"),
+						PlanId:   th.Padding36("plan-pseudo-inactive"),
+					}: {
 						VolumeRef: "*pseudo-deactivated-1",
-					}: {},
+					},
 				},
 			},
 			{
@@ -563,12 +572,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-deactivated+1"),
-						OutputId:  102_010,
-						RunId:     th.Padding36("run@pseudo-deactivated+1"),
-						PlanId:    th.Padding36("plan-pseudo-inactive"),
+						KnitId:   th.Padding36("knit@pseudo-deactivated+1"),
+						OutputId: 102_010,
+						RunId:    th.Padding36("run@pseudo-deactivated+1"),
+						PlanId:   th.Padding36("plan-pseudo-inactive"),
+					}: {
 						VolumeRef: "*pseudo-deactivated+1",
-					}: {},
+					},
 				},
 			},
 
@@ -582,12 +592,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-waiting-2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-waiting-2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-waiting-2",
+						KnitId:   th.Padding36("knit@pseudo-waiting-2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-waiting-2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-waiting-2",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "invalidated"},
 							{Key: "reason", Value: "waiting for large storage"},
@@ -605,12 +615,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-waiting+2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-waiting+2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-waiting+2",
+						KnitId:   th.Padding36("knit@pseudo-waiting+2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-waiting+2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-waiting+2",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "invalidated"},
 							{Key: "reason", Value: "waiting for large storage"},
@@ -628,12 +638,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-ready-2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-ready-2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-ready-2",
+						KnitId:   th.Padding36("knit@pseudo-ready-2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-ready-2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-ready-2",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "ready"},
 						},
@@ -650,12 +660,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-ready+2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-ready+2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-ready+2",
+						KnitId:   th.Padding36("knit@pseudo-ready+2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-ready+2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-ready+2",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "ready"},
 						},
@@ -672,12 +682,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-starting-2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-starting-2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-starting-2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-starting-2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-starting-2",
-					}: {},
+					},
 				},
 			},
 			{
@@ -690,12 +701,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-starting+2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-starting+2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-starting+2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-starting+2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-starting+2",
-					}: {},
+					},
 				},
 			},
 			{
@@ -708,12 +720,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-running-2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-running-2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-running-2",
+						KnitId:   th.Padding36("knit@pseudo-running-2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-running-2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-running-2",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "running"},
 						},
@@ -730,12 +742,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-running+2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-running+2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-running+2",
+						KnitId:   th.Padding36("knit@pseudo-running+2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-running+2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-running+2",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "running"},
 						},
@@ -752,12 +764,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-aborting-2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-aborting-2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-aborting-2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-aborting-2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-aborting-2",
-					}: {},
+					},
 				},
 			},
 			{
@@ -770,12 +783,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-aborting+2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-aborting+2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
+						KnitId:   th.Padding36("knit@pseudo-aborting+2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-aborting+2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
+					}: {
 						VolumeRef: "*pseudo-aborting+2",
-					}: {},
+					},
 				},
 			},
 			{
@@ -788,12 +802,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-completing-2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-completing-2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-completing-2",
+						KnitId:   th.Padding36("knit@pseudo-completing-2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-completing-2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-completing-2",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "completing"},
 						},
@@ -810,12 +824,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-completing+2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-completing+2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-completing+2",
+						KnitId:   th.Padding36("knit@pseudo-completing+2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-completing+2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-completing+2",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "completing"},
 						},
@@ -832,12 +846,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-failed-2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-failed-2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-failed-2",
+						KnitId:   th.Padding36("knit@pseudo-failed-2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-failed-2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-failed-2",
 						Timestamp: pointer.Ref(try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-12T13:15:21.679+09:00",
 						)).OrFatal(t).Time()),
@@ -854,12 +868,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-failed+2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-failed+2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-failed+2",
+						KnitId:   th.Padding36("knit@pseudo-failed+2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-failed+2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-failed+2",
 						Timestamp: pointer.Ref(try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-12T13:15:21.679+09:00",
 						)).OrFatal(t).Time()),
@@ -876,12 +890,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-done-2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-done-2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-done-2",
+						KnitId:   th.Padding36("knit@pseudo-done-2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-done-2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-done-2",
 						Timestamp: pointer.Ref(try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-12T13:15:22.679+09:00",
 						)).OrFatal(t).Time()),
@@ -898,12 +912,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-done+2"),
-						OutputId:  101_010,
-						RunId:     th.Padding36("run@pseudo-done+2"),
-						PlanId:    th.Padding36("plan-pseudo-active"),
-						VolumeRef: "*pseudo-done+2",
+						KnitId:   th.Padding36("knit@pseudo-done+2"),
+						OutputId: 101_010,
+						RunId:    th.Padding36("run@pseudo-done+2"),
+						PlanId:   th.Padding36("plan-pseudo-active"),
 					}: {
+						VolumeRef: "*pseudo-done+2",
 						Timestamp: pointer.Ref(try.To(rfctime.ParseRFC3339DateTime(
 							"2022-11-12T13:15:22.679+09:00",
 						)).OrFatal(t).Time()),
@@ -940,12 +954,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-deactivated-2"),
-						OutputId:  102_010,
-						RunId:     th.Padding36("run@pseudo-deactivated-2"),
-						PlanId:    th.Padding36("plan-pseudo-inactive"),
+						KnitId:   th.Padding36("knit@pseudo-deactivated-2"),
+						OutputId: 102_010,
+						RunId:    th.Padding36("run@pseudo-deactivated-2"),
+						PlanId:   th.Padding36("plan-pseudo-inactive"),
+					}: {
 						VolumeRef: "*pseudo-deactivated-2",
-					}: {},
+					},
 				},
 			},
 			{
@@ -958,12 +973,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@pseudo-deactivated+2"),
-						OutputId:  102_010,
-						RunId:     th.Padding36("run@pseudo-deactivated+2"),
-						PlanId:    th.Padding36("plan-pseudo-inactive"),
+						KnitId:   th.Padding36("knit@pseudo-deactivated+2"),
+						OutputId: 102_010,
+						RunId:    th.Padding36("run@pseudo-deactivated+2"),
+						PlanId:   th.Padding36("plan-pseudo-inactive"),
+					}: {
 						VolumeRef: "*pseudo-deactivated+2",
-					}: {},
+					},
 				},
 			},
 			//
@@ -987,23 +1003,23 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-waiting-1:/out"),
-						OutputId:  201_010,
-						RunId:     th.Padding36("run@image-waiting-1"),
-						PlanId:    th.Padding36("plan-image-waiting"),
-						VolumeRef: "*image-waiting-1:/out",
+						KnitId:   th.Padding36("knit@image-waiting-1:/out"),
+						OutputId: 201_010,
+						RunId:    th.Padding36("run@image-waiting-1"),
+						PlanId:   th.Padding36("plan-image-waiting"),
 					}: {
+						VolumeRef: "*image-waiting-1:/out",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "waiting"},
 						},
 					},
 					{
-						KnitId:    th.Padding36("knit@image-waiting-1:/log"),
-						OutputId:  201_001,
-						RunId:     th.Padding36("run@image-waiting-1"),
-						PlanId:    th.Padding36("plan-image-waiting"),
-						VolumeRef: "*image-waiting-1:/log",
+						KnitId:   th.Padding36("knit@image-waiting-1:/log"),
+						OutputId: 201_001,
+						RunId:    th.Padding36("run@image-waiting-1"),
+						PlanId:   th.Padding36("plan-image-waiting"),
 					}: {
+						VolumeRef: "*image-waiting-1:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "waiting"},
 							{Key: "format", Value: "text/plain"},
@@ -1029,23 +1045,23 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-waiting+1:/out"),
-						OutputId:  201_010,
-						RunId:     th.Padding36("run@image-waiting+1"),
-						PlanId:    th.Padding36("plan-image-waiting"),
-						VolumeRef: "*image-waiting+1:/out",
+						KnitId:   th.Padding36("knit@image-waiting+1:/out"),
+						OutputId: 201_010,
+						RunId:    th.Padding36("run@image-waiting+1"),
+						PlanId:   th.Padding36("plan-image-waiting"),
 					}: {
+						VolumeRef: "*image-waiting+1:/out",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "waiting"},
 						},
 					},
 					{
-						KnitId:    th.Padding36("knit@image-waiting+1:/log"),
-						OutputId:  201_001,
-						RunId:     th.Padding36("run@image-waiting+1"),
-						PlanId:    th.Padding36("plan-image-waiting"),
-						VolumeRef: "*image-waiting+1:/log",
+						KnitId:   th.Padding36("knit@image-waiting+1:/log"),
+						OutputId: 201_001,
+						RunId:    th.Padding36("run@image-waiting+1"),
+						PlanId:   th.Padding36("plan-image-waiting"),
 					}: {
+						VolumeRef: "*image-waiting+1:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "waiting"},
 							{Key: "format", Value: "text/plain"},
@@ -1071,21 +1087,21 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-ready-1:/out"),
-						RunId:     th.Padding36("run@image-ready-1"),
-						OutputId:  202_010,
-						PlanId:    th.Padding36("plan-image-ready"),
-						VolumeRef: "*image-ready-1:/out",
+						KnitId:   th.Padding36("knit@image-ready-1:/out"),
+						RunId:    th.Padding36("run@image-ready-1"),
+						OutputId: 202_010,
+						PlanId:   th.Padding36("plan-image-ready"),
 					}: {
-						UserTag: []domain.Tag{}, // empty
+						VolumeRef: "*image-ready-1:/out",
+						UserTag:   []domain.Tag{}, // empty
 					},
 					{
-						KnitId:    th.Padding36("knit@image-ready-1:/log"),
-						RunId:     th.Padding36("run@image-ready-1"),
-						OutputId:  202_001,
-						PlanId:    th.Padding36("plan-image-ready"),
-						VolumeRef: "*image-ready-1:/log",
+						KnitId:   th.Padding36("knit@image-ready-1:/log"),
+						RunId:    th.Padding36("run@image-ready-1"),
+						OutputId: 202_001,
+						PlanId:   th.Padding36("plan-image-ready"),
 					}: {
+						VolumeRef: "*image-ready-1:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "ready"},
 							{Key: "type", Value: "entry-per-line"},
@@ -1112,21 +1128,21 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-ready+1:/out"),
-						RunId:     th.Padding36("run@image-ready+1"),
-						OutputId:  202_010,
-						PlanId:    th.Padding36("plan-image-ready"),
-						VolumeRef: "*image-ready+1:/out",
+						KnitId:   th.Padding36("knit@image-ready+1:/out"),
+						RunId:    th.Padding36("run@image-ready+1"),
+						OutputId: 202_010,
+						PlanId:   th.Padding36("plan-image-ready"),
 					}: {
-						UserTag: []domain.Tag{}, // empty
+						VolumeRef: "*image-ready+1:/out",
+						UserTag:   []domain.Tag{}, // empty
 					},
 					{
-						KnitId:    th.Padding36("knit@image-ready+1:/log"),
-						RunId:     th.Padding36("run@image-ready+1"),
-						OutputId:  202_001,
-						PlanId:    th.Padding36("plan-image-ready"),
-						VolumeRef: "*image-ready+1:/log",
+						KnitId:   th.Padding36("knit@image-ready+1:/log"),
+						RunId:    th.Padding36("run@image-ready+1"),
+						OutputId: 202_001,
+						PlanId:   th.Padding36("plan-image-ready"),
 					}: {
+						VolumeRef: "*image-ready+1:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "ready"},
 							{Key: "type", Value: "entry-per-line"},
@@ -1153,12 +1169,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-starting-1:/out"),
-						RunId:     th.Padding36("run@image-starting-1"),
-						OutputId:  203_010,
-						PlanId:    th.Padding36("plan-image-starting"),
+						KnitId:   th.Padding36("knit@image-starting-1:/out"),
+						RunId:    th.Padding36("run@image-starting-1"),
+						OutputId: 203_010,
+						PlanId:   th.Padding36("plan-image-starting"),
+					}: {
 						VolumeRef: "*image-starting-1:/out",
-					}: {},
+					},
 				},
 			},
 			{
@@ -1179,12 +1196,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-starting+1:/out"),
-						RunId:     th.Padding36("run@image-starting+1"),
-						OutputId:  203_010,
-						PlanId:    th.Padding36("plan-image-starting"),
+						KnitId:   th.Padding36("knit@image-starting+1:/out"),
+						RunId:    th.Padding36("run@image-starting+1"),
+						OutputId: 203_010,
+						PlanId:   th.Padding36("plan-image-starting"),
+					}: {
 						VolumeRef: "*image-starting+1:/out",
-					}: {},
+					},
 				},
 			},
 			{
@@ -1205,12 +1223,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-running-1:/out"),
-						OutputId:  204_010,
-						RunId:     th.Padding36("run@image-running-1"),
-						PlanId:    th.Padding36("plan-image-running"),
-						VolumeRef: "*image-running-1:/out",
+						KnitId:   th.Padding36("knit@image-running-1:/out"),
+						OutputId: 204_010,
+						RunId:    th.Padding36("run@image-running-1"),
+						PlanId:   th.Padding36("plan-image-running"),
 					}: {
+						VolumeRef: "*image-running-1:/out",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "running"},
 							{Key: "mode", Value: "out"},
@@ -1236,12 +1254,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-running+1:/out"),
-						OutputId:  204_010,
-						RunId:     th.Padding36("run@image-running+1"),
-						PlanId:    th.Padding36("plan-image-running"),
-						VolumeRef: "*image-running+1:/out",
+						KnitId:   th.Padding36("knit@image-running+1:/out"),
+						OutputId: 204_010,
+						RunId:    th.Padding36("run@image-running+1"),
+						PlanId:   th.Padding36("plan-image-running"),
 					}: {
+						VolumeRef: "*image-running+1:/out",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "running"},
 							{Key: "mode", Value: "out"},
@@ -1267,13 +1285,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-aborting-1:/log"),
-						RunId:     th.Padding36("run@image-aborting-1"),
-						OutputId:  205_001,
-						PlanId:    th.Padding36("plan-image-aborting"),
-						VolumeRef: "*image-aborting-1:/log",
+						KnitId:   th.Padding36("knit@image-aborting-1:/log"),
+						RunId:    th.Padding36("run@image-aborting-1"),
+						OutputId: 205_001,
+						PlanId:   th.Padding36("plan-image-aborting"),
 					}: {
-						UserTag: []domain.Tag{}, // empty
+						VolumeRef: "*image-aborting-1:/log",
+						UserTag:   []domain.Tag{}, // empty
 					},
 				},
 			},
@@ -1295,13 +1313,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-aborting+1:/log"),
-						RunId:     th.Padding36("run@image-aborting+1"),
-						OutputId:  205_001,
-						PlanId:    th.Padding36("plan-image-aborting"),
-						VolumeRef: "*image-aborting+1:/log",
+						KnitId:   th.Padding36("knit@image-aborting+1:/log"),
+						RunId:    th.Padding36("run@image-aborting+1"),
+						OutputId: 205_001,
+						PlanId:   th.Padding36("plan-image-aborting"),
 					}: {
-						UserTag: []domain.Tag{}, // empty
+						VolumeRef: "*image-aborting+1:/log",
+						UserTag:   []domain.Tag{}, // empty
 					},
 				},
 			},
@@ -1323,12 +1341,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-completing-1:/log"),
-						OutputId:  206_001,
-						RunId:     th.Padding36("run@image-completing-1"),
-						PlanId:    th.Padding36("plan-image-completing"),
-						VolumeRef: "*image-completing-1:/log",
+						KnitId:   th.Padding36("knit@image-completing-1:/log"),
+						OutputId: 206_001,
+						RunId:    th.Padding36("run@image-completing-1"),
+						PlanId:   th.Padding36("plan-image-completing"),
 					}: {
+						VolumeRef: "*image-completing-1:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "completing"},
 							{Key: "mode", Value: "log"},
@@ -1354,12 +1372,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-completing+1:/log"),
-						OutputId:  206_001,
-						RunId:     th.Padding36("run@image-completing+1"),
-						PlanId:    th.Padding36("plan-image-completing"),
-						VolumeRef: "*image-completing+1:/log",
+						KnitId:   th.Padding36("knit@image-completing+1:/log"),
+						OutputId: 206_001,
+						RunId:    th.Padding36("run@image-completing+1"),
+						PlanId:   th.Padding36("plan-image-completing"),
 					}: {
+						VolumeRef: "*image-completing+1:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "completing"},
 							{Key: "mode", Value: "log"},
@@ -1385,12 +1403,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-failed-1:/out"),
-						OutputId:  207_010,
-						RunId:     th.Padding36("run@image-failed-1"),
-						PlanId:    th.Padding36("plan-image-failed"),
-						VolumeRef: "*image-failed-:/out",
+						KnitId:   th.Padding36("knit@image-failed-1:/out"),
+						OutputId: 207_010,
+						RunId:    th.Padding36("run@image-failed-1"),
+						PlanId:   th.Padding36("plan-image-failed"),
 					}: {
+						VolumeRef: "*image-failed-:/out",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "failed"},
 							{Key: "mode", Value: "out"},
@@ -1401,12 +1419,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId:    th.Padding36("knit@image-failed-1:/log"),
-						OutputId:  207_001,
-						RunId:     th.Padding36("run@image-failed-1"),
-						PlanId:    th.Padding36("plan-image-failed"),
-						VolumeRef: "*image-failed-:/log",
+						KnitId:   th.Padding36("knit@image-failed-1:/log"),
+						OutputId: 207_001,
+						RunId:    th.Padding36("run@image-failed-1"),
+						PlanId:   th.Padding36("plan-image-failed"),
 					}: {
+						VolumeRef: "*image-failed-:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "failed"},
 							{Key: "mode", Value: "log"},
@@ -1435,12 +1453,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-failed+1:/out"),
-						OutputId:  207_010,
-						RunId:     th.Padding36("run@image-failed+1"),
-						PlanId:    th.Padding36("plan-image-failed"),
-						VolumeRef: "*image-failed+:/out",
+						KnitId:   th.Padding36("knit@image-failed+1:/out"),
+						OutputId: 207_010,
+						RunId:    th.Padding36("run@image-failed+1"),
+						PlanId:   th.Padding36("plan-image-failed"),
 					}: {
+						VolumeRef: "*image-failed+:/out",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "failed"},
 							{Key: "mode", Value: "out"},
@@ -1451,12 +1469,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId:    th.Padding36("knit@image-failed+1:/log"),
-						OutputId:  207_001,
-						RunId:     th.Padding36("run@image-failed+1"),
-						PlanId:    th.Padding36("plan-image-failed"),
-						VolumeRef: "*image-failed+:/log",
+						KnitId:   th.Padding36("knit@image-failed+1:/log"),
+						OutputId: 207_001,
+						RunId:    th.Padding36("run@image-failed+1"),
+						PlanId:   th.Padding36("plan-image-failed"),
 					}: {
+						VolumeRef: "*image-failed+:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "failed"},
 							{Key: "mode", Value: "log"},
@@ -1485,12 +1503,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-done-1:/out"),
-						OutputId:  208_010,
-						RunId:     th.Padding36("run@image-done-1"),
-						PlanId:    th.Padding36("plan-image-done"),
-						VolumeRef: "*image-done-:/out",
+						KnitId:   th.Padding36("knit@image-done-1:/out"),
+						OutputId: 208_010,
+						RunId:    th.Padding36("run@image-done-1"),
+						PlanId:   th.Padding36("plan-image-done"),
 					}: {
+						VolumeRef: "*image-done-:/out",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "mode", Value: "out"},
@@ -1500,12 +1518,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId:    th.Padding36("knit@image-done-1:/log"),
-						OutputId:  208_001,
-						RunId:     th.Padding36("run@image-done-1"),
-						PlanId:    th.Padding36("plan-image-done"),
-						VolumeRef: "*image-done-:/log",
+						KnitId:   th.Padding36("knit@image-done-1:/log"),
+						OutputId: 208_001,
+						RunId:    th.Padding36("run@image-done-1"),
+						PlanId:   th.Padding36("plan-image-done"),
 					}: {
+						VolumeRef: "*image-done-:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "application/jsonl"},
 							{Key: "mode", Value: "log"},
@@ -1534,12 +1552,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-done+1:/out"),
-						OutputId:  208_010,
-						RunId:     th.Padding36("run@image-done+1"),
-						PlanId:    th.Padding36("plan-image-done"),
-						VolumeRef: "*image-done+:/out",
+						KnitId:   th.Padding36("knit@image-done+1:/out"),
+						OutputId: 208_010,
+						RunId:    th.Padding36("run@image-done+1"),
+						PlanId:   th.Padding36("plan-image-done"),
 					}: {
+						VolumeRef: "*image-done+:/out",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "mode", Value: "out"},
@@ -1549,12 +1567,12 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId:    th.Padding36("knit@image-done+1:/log"),
-						OutputId:  208_001,
-						RunId:     th.Padding36("run@image-done+1"),
-						PlanId:    th.Padding36("plan-image-done"),
-						VolumeRef: "*image-done+:/log",
+						KnitId:   th.Padding36("knit@image-done+1:/log"),
+						OutputId: 208_001,
+						RunId:    th.Padding36("run@image-done+1"),
+						PlanId:   th.Padding36("plan-image-done"),
 					}: {
+						VolumeRef: "*image-done+:/log",
 						UserTag: []domain.Tag{
 							{Key: "type", Value: "application/jsonl"},
 							{Key: "mode", Value: "log"},
@@ -1619,12 +1637,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-deactivated-1:/log"),
-						OutputId:  210_001,
-						RunId:     th.Padding36("run@image-deactivated-1"),
-						PlanId:    th.Padding36("plan-image-deactivated"),
+						KnitId:   th.Padding36("knit@image-deactivated-1:/log"),
+						OutputId: 210_001,
+						RunId:    th.Padding36("run@image-deactivated-1"),
+						PlanId:   th.Padding36("plan-image-deactivated"),
+					}: {
 						VolumeRef: "*image-deactivated-1:/log",
-					}: {},
+					},
 				},
 			},
 			{
@@ -1645,12 +1664,13 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("knit@image-deactivated+1:/log"),
-						OutputId:  210_001,
-						RunId:     th.Padding36("run@image-deactivated+1"),
-						PlanId:    th.Padding36("plan-image-deactivated"),
+						KnitId:   th.Padding36("knit@image-deactivated+1:/log"),
+						OutputId: 210_001,
+						RunId:    th.Padding36("run@image-deactivated+1"),
+						PlanId:   th.Padding36("plan-image-deactivated"),
+					}: {
 						VolumeRef: "*image-deactivated+1:/log",
-					}: {},
+					},
 				},
 			},
 		},

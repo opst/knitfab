@@ -145,13 +145,13 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    Padding36("knit-pre1"),
-						VolumeRef: "should not be nominated unless nomination performs",
-						OutputId:  1,
-						RunId:     Padding36("run-pseudo/pre-1"),
-						PlanId:    Padding36("plan-pseudo"),
+						KnitId:   Padding36("knit-pre1"),
+						OutputId: 1,
+						RunId:    Padding36("run-pseudo/pre-1"),
+						PlanId:   Padding36("plan-pseudo"),
 					}: {
-						UserTag: TAGSET_1,
+						VolumeRef: "should not be nominated unless nomination performs",
+						UserTag:   TAGSET_1,
 					},
 				},
 			},
@@ -164,12 +164,12 @@ func TestNominator_NominateData(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    Padding36("knit-pre2"),
-						VolumeRef: "should not be denominated unless nomination performs",
-						OutputId:  1,
-						RunId:     Padding36("run-pseudo/pre-1"),
-						PlanId:    Padding36("plan-pseudo"),
+						KnitId:   Padding36("knit-pre2"),
+						OutputId: 1,
+						RunId:    Padding36("run-pseudo/pre-1"),
+						PlanId:   Padding36("plan-pseudo"),
 					}: {
+						VolumeRef: "should not be denominated unless nomination performs",
 						Timestamp: &DAY_1,
 						UserTag:   TAGSET_1,
 					},
@@ -198,10 +198,11 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+								KnitId:   Padding36("knit-target"),
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
-								UserTag: TAGSET_1,
+								VolumeRef: "#vol",
+								UserTag:   TAGSET_1,
 							},
 						},
 					},
@@ -226,10 +227,11 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+								KnitId:   Padding36("knit-target"),
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
-								UserTag: TAGSET_1,
+								VolumeRef: "#vol",
+								UserTag:   TAGSET_1,
 							},
 						},
 					},
@@ -259,9 +261,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+								KnitId:   Padding36("knit-target"),
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_2, UserTag: TAGSET_1,
 							},
 						},
@@ -288,9 +291,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+								KnitId:   Padding36("knit-target"),
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_2, UserTag: TAGSET_1,
 							},
 						},
@@ -322,9 +326,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+								KnitId:   Padding36("knit-target"),
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: TAGSET_1,
 							},
 						},
@@ -352,9 +357,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+								KnitId:   Padding36("knit-target"),
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: TAGSET_1,
 							},
 						},
@@ -387,9 +393,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_2, VolumeRef: "#vol",
+								KnitId:   KNITID_2,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: TAGSET_1,
 							},
 						},
@@ -418,9 +425,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_2, VolumeRef: "#vol",
+								KnitId:   KNITID_2,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: TAGSET_1,
 							},
 						},
@@ -454,9 +462,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_1, VolumeRef: "#vol",
+								KnitId:   KNITID_1,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: TAGSET_1,
 							},
 						},
@@ -488,9 +497,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_1, VolumeRef: "#vol",
+								KnitId:   KNITID_1,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: TAGSET_1,
 							},
 						},
@@ -530,9 +540,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_1, VolumeRef: "#vol",
+								KnitId:   KNITID_1,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: []domain.Tag{},
 							},
 						},
@@ -564,9 +575,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_1, VolumeRef: "#vol",
+								KnitId:   KNITID_1,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: []domain.Tag{},
 							},
 						},
@@ -594,9 +606,10 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_1, VolumeRef: "#vol",
+								KnitId:   KNITID_1,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
+								VolumeRef: "#vol",
 								Timestamp: &DAY_1, UserTag: []domain.Tag{},
 							},
 						},
@@ -629,10 +642,11 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_1, VolumeRef: "#vol",
+								KnitId:   KNITID_1,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
-								UserTag: TAGSET_1,
+								VolumeRef: "#vol",
+								UserTag:   TAGSET_1,
 							},
 						},
 					},
@@ -659,10 +673,11 @@ func TestNominator_NominateData(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: KNITID_1, VolumeRef: "#vol",
+								KnitId:   KNITID_1,
 								OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 							}: {
-								UserTag: TAGSET_1,
+								VolumeRef: "#vol",
+								UserTag:   TAGSET_1,
 							},
 						},
 					},
@@ -751,10 +766,11 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+									KnitId:   Padding36("knit-target"),
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
-									UserTag: TAGSET_1,
+									VolumeRef: "#vol",
+									UserTag:   TAGSET_1,
 								},
 							},
 						},
@@ -774,10 +790,11 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+									KnitId:   Padding36("knit-target"),
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
-									UserTag: TAGSET_1,
+									VolumeRef: "#vol",
+									UserTag:   TAGSET_1,
 								},
 							},
 						},
@@ -802,9 +819,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+									KnitId:   Padding36("knit-target"),
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_2, UserTag: TAGSET_1,
 								},
 							},
@@ -825,9 +843,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+									KnitId:   Padding36("knit-target"),
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_2, UserTag: TAGSET_1,
 								},
 							},
@@ -853,9 +872,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+									KnitId:   Padding36("knit-target"),
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -876,9 +896,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: Padding36("knit-target"), VolumeRef: "#vol",
+									KnitId:   Padding36("knit-target"),
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -904,9 +925,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_2, VolumeRef: "#vol",
+									KnitId:   KNITID_2,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -927,9 +949,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_2, VolumeRef: "#vol",
+									KnitId:   KNITID_2,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -955,9 +978,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_1, VolumeRef: "#vol",
+									KnitId:   KNITID_1,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -978,9 +1002,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_1, VolumeRef: "#vol",
+									KnitId:   KNITID_1,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -1009,9 +1034,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_1, VolumeRef: "#vol",
+									KnitId:   KNITID_1,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -1036,9 +1062,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_1, VolumeRef: "#vol",
+									KnitId:   KNITID_1,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -1059,9 +1086,10 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_1, VolumeRef: "#vol",
+									KnitId:   KNITID_1,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
+									VolumeRef: "#vol",
 									Timestamp: &DAY_1, UserTag: TAGSET_1,
 								},
 							},
@@ -1087,10 +1115,11 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_1, VolumeRef: "#vol",
+									KnitId:   KNITID_1,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
-									UserTag: TAGSET_1,
+									VolumeRef: "#vol",
+									UserTag:   TAGSET_1,
 								},
 							},
 						},
@@ -1110,10 +1139,11 @@ func TestNominator_NominateData(t *testing.T) {
 							},
 							Outcomes: map[tables.Data]tables.DataAttibutes{
 								{
-									KnitId: KNITID_1, VolumeRef: "#vol",
+									KnitId:   KNITID_1,
 									OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("plan-pseudo"),
 								}: {
-									UserTag: TAGSET_1,
+									VolumeRef: "#vol",
+									UserTag:   TAGSET_1,
 								},
 							},
 						},
@@ -1198,11 +1228,15 @@ func TestNominator_NominateData(t *testing.T) {
 					},
 					Outcomes: map[tables.Data]tables.DataAttibutes{
 						{
-							KnitId: Padding36("knit-1"), VolumeRef: "vol",
+							KnitId:   Padding36("knit-1"),
 							OutputId: 1,
 							RunId:    Padding36("upload"),
 							PlanId:   Padding36("pseudo"),
-						}: {Timestamp: &DAY_2, UserTag: TAGSET_1},
+						}: {
+							VolumeRef: "vol",
+							Timestamp: &DAY_2,
+							UserTag:   TAGSET_1,
+						},
 					},
 				},
 			},
@@ -1338,10 +1372,12 @@ func TestNominator_NominateInput(t *testing.T) {
 					},
 					Outcomes: map[tables.Data]tables.DataAttibutes{
 						{
-							KnitId: knitid, VolumeRef: Padding64("#" + knitid),
-							RunId: runid, OutputId: 1010, PlanId: Padding36("pseudo"),
+							KnitId: knitid,
+							RunId:  runid, OutputId: 1010, PlanId: Padding36("pseudo"),
 						}: {
-							UserTag: tag, Timestamp: timestamp,
+							VolumeRef: Padding64("#" + knitid),
+							UserTag:   tag,
+							Timestamp: timestamp,
 						},
 					},
 				}
@@ -1893,9 +1929,11 @@ func TestDropData(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("knit-1"), VolumeRef: "vol-1",
+						KnitId:   Padding36("knit-1"),
 						OutputId: 1, RunId: Padding36("run-1"), PlanId: Padding36("pseudo"),
-					}: {},
+					}: {
+						VolumeRef: "vol-1",
+					},
 				},
 			},
 			{
@@ -1904,9 +1942,10 @@ func TestDropData(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("knit-2"), VolumeRef: "vol-2",
+						KnitId:   Padding36("knit-2"),
 						OutputId: 1, RunId: Padding36("run-2"), PlanId: Padding36("pseudo"),
 					}: {
+						VolumeRef: "vol-2",
 						Timestamp: &TIMESTAMP,
 					},
 				},
@@ -1917,10 +1956,11 @@ func TestDropData(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("knit-3"), VolumeRef: "vol-3",
+						KnitId:   Padding36("knit-3"),
 						OutputId: 1, RunId: Padding36("run-3"), PlanId: Padding36("pseudo"),
 					}: {
-						UserTag: []domain.Tag{{Key: "tagkey", Value: "tagval"}},
+						VolumeRef: "vol-3",
+						UserTag:   []domain.Tag{{Key: "tagkey", Value: "tagval"}},
 					},
 				},
 			},
@@ -1930,9 +1970,10 @@ func TestDropData(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("knit-4"), VolumeRef: "vol-4",
+						KnitId:   Padding36("knit-4"),
 						OutputId: 1, RunId: Padding36("run-4"), PlanId: Padding36("pseudo"),
 					}: {
+						VolumeRef: "vol-4",
 						Timestamp: &TIMESTAMP,
 						UserTag:   []domain.Tag{{Key: "tagkey", Value: "tagval"}},
 					},

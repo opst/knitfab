@@ -113,10 +113,11 @@ func TestData_Find(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: knitid, VolumeRef: Padding64("#" + knitid),
-								RunId: runid, OutputId: 1010, PlanId: Padding36("plan"),
+								KnitId: knitid,
+								RunId:  runid, OutputId: 1010, PlanId: Padding36("plan"),
 							}: {
-								UserTag: tag, Timestamp: timestamp,
+								VolumeRef: Padding64("#" + knitid),
+								UserTag:   tag, Timestamp: timestamp,
 							},
 						},
 					}
@@ -936,10 +937,11 @@ func TestData_Find(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: knitid, VolumeRef: Padding64("#" + knitid),
-								RunId: runid, OutputId: 1010, PlanId: Padding36("plan"),
+								KnitId: knitid,
+								RunId:  runid, OutputId: 1010, PlanId: Padding36("plan"),
 							}: {
-								UserTag: tag, Timestamp: timestamp,
+								VolumeRef: Padding64("#" + knitid),
+								UserTag:   tag, Timestamp: timestamp,
 							},
 						},
 					}
@@ -1085,10 +1087,11 @@ func TestData_Find(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: knitid, VolumeRef: Padding64("#" + knitid),
-								RunId: runid, OutputId: 1010, PlanId: Padding36("plan"),
+								KnitId: knitid,
+								RunId:  runid, OutputId: 1010, PlanId: Padding36("plan"),
 							}: {
-								UserTag: tag, Timestamp: timestamp,
+								VolumeRef: Padding64("#" + knitid),
+								UserTag:   tag, Timestamp: timestamp,
 							},
 						},
 					}

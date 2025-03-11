@@ -157,14 +157,14 @@ func TestRun_NewPseudo(t *testing.T) {
 				}
 			}
 
+			var wantKnitId string
 			{
 				expected := []matcher.Data{
 					{
-						KnitId:    matcher.Any[string](),
-						VolumeRef: matcher.EqEq(when.volumeRef),
-						RunId:     matcher.EqEq(actualRunId),
-						OutputId:  matcher.EqEq(then.outputId),
-						PlanId:    matcher.EqEq(planIds[when.planName]),
+						KnitId:   matcher.Any[string](),
+						RunId:    matcher.EqEq(actualRunId),
+						OutputId: matcher.EqEq(then.outputId),
+						PlanId:   matcher.EqEq(planIds[when.planName]),
 					},
 				}
 				actual := try.To(scanner.New[tables.Data]().QueryAll(
@@ -174,6 +174,27 @@ func TestRun_NewPseudo(t *testing.T) {
 				if !cmp.SliceContentEqWith(expected, actual, matcher.Data.Match) {
 					t.Errorf(
 						"unmatch: data\n=== actual ===\n%+v\n=== expected ===\n%+v",
+						actual, expected,
+					)
+				} else {
+					wantKnitId = actual[0].KnitId
+				}
+			}
+
+			{
+				expected := []matcher.VolumeRef{
+					{
+						KnitId:    matcher.EqEq(wantKnitId),
+						VolumeRef: matcher.EqEq(when.volumeRef),
+					},
+				}
+				actual := try.To(scanner.New[tables.VolumeRef]().QueryAll(
+					ctx, conn, `table "volume_ref"`,
+				)).OrFatal(t)
+
+				if !cmp.SliceContentEqWith(expected, actual, matcher.VolumeRef.Match) {
+					t.Errorf(
+						"unmatch: volume_ref\n=== actual ===\n%+v\n=== expected ===\n%+v",
 						actual, expected,
 					)
 				}

@@ -91,15 +91,33 @@ func (f *Tables) InsertData(d *Data) error {
 	ctag, err := conn.Exec(
 		f.ctx,
 		`
-		insert into "data" ("knit_id", "volume_ref", "plan_id", "run_id", "output_id")
-		values ($1, $2, $3, $4, $5)
+		insert into "data" ("knit_id", "plan_id", "run_id", "output_id")
+		values ($1, $2, $3, $4)
 		`,
-		d.KnitId, d.VolumeRef, d.PlanId, d.RunId, d.OutputId,
+		d.KnitId, d.PlanId, d.RunId, d.OutputId,
 	)
 	if err != nil {
 		return withCause(d, err)
 	}
 
+	return shouldEffect(ctag, 1)
+}
+
+func (f *Tables) InsertVolumeRef(vr *VolumeRef) error {
+	conn, err := f.acquire()
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	ctag, err := conn.Exec(
+		f.ctx,
+		`insert into "volume_ref" ("knit_id", "volume_ref") values ($1, $2)`,
+		vr.KnitId, vr.VolumeRef,
+	)
+	if err != nil {
+		return withCause(vr, err)
+	}
 	return shouldEffect(ctag, 1)
 }
 
