@@ -108,12 +108,13 @@ func Test_Get(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    Padding36("data/ch2#1:run/ch2#1/out"),
+								KnitId:   Padding36("data/ch2#1:run/ch2#1/out"),
+								OutputId: 9_01_01_010,
+								RunId:    Padding36("run/ch2#1:plan/ch1#1"),
+								PlanId:   Padding36("plan/ch1#1:uploaded"),
+							}: {
 								VolumeRef: "pvc/data/ch2#1",
-								OutputId:  9_01_01_010,
-								RunId:     Padding36("run/ch2#1:plan/ch1#1"),
-								PlanId:    Padding36("plan/ch1#1:uploaded"),
-							}: {},
+							},
 						},
 					},
 					{ // {} -> run/ch2#2:plan/ch1#1 (failed) -> {data/ch2#2:run/ch2#2/out}
@@ -129,12 +130,12 @@ func Test_Get(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    Padding36("data/ch2#2:run/ch2#2/out"),
-								VolumeRef: "pvc/data/ch2#2",
-								OutputId:  9_01_01_010,
-								RunId:     Padding36("run/ch2#2:plan/ch1#1"),
-								PlanId:    Padding36("plan/ch1#1:uploaded"),
+								KnitId:   Padding36("data/ch2#2:run/ch2#2/out"),
+								OutputId: 9_01_01_010,
+								RunId:    Padding36("run/ch2#2:plan/ch1#1"),
+								PlanId:   Padding36("plan/ch1#1:uploaded"),
 							}: {
+								VolumeRef: "pvc/data/ch2#2",
 								Timestamp: ptr.Ref(START_AT.Add(10*time.Second + 250*time.Millisecond)),
 							},
 						},
@@ -152,12 +153,12 @@ func Test_Get(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    Padding36("data/ch2#3:run/ch2#3/out"),
-								VolumeRef: "pvc/data/ch2#3",
-								OutputId:  9_01_01_010,
-								RunId:     Padding36("run/ch2#3:plan/ch1#1"),
-								PlanId:    Padding36("plan/ch1#1:uploaded"),
+								KnitId:   Padding36("data/ch2#3:run/ch2#3/out"),
+								OutputId: 9_01_01_010,
+								RunId:    Padding36("run/ch2#3:plan/ch1#1"),
+								PlanId:   Padding36("plan/ch1#1:uploaded"),
 							}: {
+								VolumeRef: "pvc/data/ch2#3",
 								UserTag: []domain.Tag{
 									{Key: "project", Value: "testing"},
 									{Key: "type", Value: "training-data"},
@@ -404,11 +405,12 @@ func Test_Get(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: Padding36("data/ch3#1:run/ch3#1/out/1"), VolumeRef: "#data/ch3#1",
+								KnitId:   Padding36("data/ch3#1:run/ch3#1/out/1"),
 								OutputId: 9_03_01_010,
 								RunId:    Padding36("run/ch3#1:plan/ch3#1"),
 								PlanId:   Padding36("plan/ch3#1:trainer"),
 							}: {
+								VolumeRef: "#data/ch3#1",
 								UserTag: []domain.Tag{
 									{Key: "project", Value: "testing"},
 									{Key: "type", Value: "model"},
@@ -418,13 +420,13 @@ func Test_Get(t *testing.T) {
 								Timestamp: ptr.Ref(START_AT.Add(30*time.Second + 101*time.Millisecond)),
 							},
 							{
-								KnitId: Padding36("data/ch3#2:run/ch3#1/out/2"), VolumeRef: "#data/ch3#2",
+								KnitId:   Padding36("data/ch3#2:run/ch3#1/out/2"),
 								OutputId: 9_03_01_020,
 								RunId:    Padding36("run/ch3#1:plan/ch3#1"),
 								PlanId:   Padding36("plan/ch3#1:trainer"),
 							}: {
+								VolumeRef: "#data/ch3#2",
 								UserTag: []domain.Tag{
-
 									{Key: "project", Value: "testing"},
 									{Key: "type", Value: "model"},
 									{Key: "task", Value: "decode"},
@@ -433,11 +435,12 @@ func Test_Get(t *testing.T) {
 								Timestamp: ptr.Ref(START_AT.Add(30*time.Second + 102*time.Millisecond)),
 							},
 							{
-								KnitId: Padding36("data/ch3#3:run/ch3#1/out/3"), VolumeRef: "#data/ch3#3",
+								KnitId:   Padding36("data/ch3#3:run/ch3#1/out/3"),
 								OutputId: 9_03_01_030,
 								RunId:    Padding36("run/ch3#1:plan/ch3#1"),
 								PlanId:   Padding36("plan/ch3#1:trainer"),
 							}: {
+								VolumeRef: "#data/ch3#3",
 								UserTag: []domain.Tag{
 									{Key: "project", Value: "testing"},
 									{Key: "type", Value: "validation-stats"},
@@ -445,11 +448,12 @@ func Test_Get(t *testing.T) {
 								Timestamp: ptr.Ref(START_AT.Add(30*time.Second + 103*time.Millisecond)),
 							},
 							{
-								KnitId: Padding36("data/ch3#4:run/ch3#1/log"), VolumeRef: "#data/ch3#4",
+								KnitId:   Padding36("data/ch3#4:run/ch3#1/log"),
 								OutputId: 9_03_01_001,
 								RunId:    Padding36("run/ch3#1:plan/ch3#1"),
 								PlanId:   Padding36("plan/ch3#1:trainer"),
 							}: {
+								VolumeRef: "#data/ch3#4",
 								UserTag: []domain.Tag{
 									{Key: "project", Value: "testing"},
 									{Key: "type", Value: "log"},
@@ -1142,12 +1146,12 @@ func Test_Get(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId:    Padding36("data/ch4#1:run/ch4#4/out"),
-								VolumeRef: "#data/ch4#1",
-								OutputId:  9_04_03_010,
-								RunId:     Padding36("run/ch4#4:plan/ch4#3"),
-								PlanId:    Padding36("plan/ch4#3:report"),
+								KnitId:   Padding36("data/ch4#1:run/ch4#4/out"),
+								OutputId: 9_04_03_010,
+								RunId:    Padding36("run/ch4#4:plan/ch4#3"),
+								PlanId:   Padding36("plan/ch4#3:report"),
 							}: {
+								VolumeRef: "#data/ch4#1",
 								UserTag: []domain.Tag{
 									{Key: "project", Value: "testing"},
 									{Key: "type", Value: "report"},

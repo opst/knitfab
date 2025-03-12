@@ -24,6 +24,7 @@ type OutputAttr struct {
 }
 
 type DataAttibutes struct {
+	VolumeRef string
 	UserTag   []domain.Tag
 	Timestamp *time.Time
 	Agent     []DataAgent
@@ -39,7 +40,12 @@ type Step struct {
 }
 
 func (step *Step) Apply(ctx context.Context, pool kpool.Pool) error {
-	tbls := New(ctx, pool)
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	tbls := New(ctx, conn)
 	return step.apply(tbls)
 }
 
@@ -60,24 +66,32 @@ func (step *Step) apply(tbls *Tables) error {
 		}
 	}
 
-	for d, tags := range step.Outcomes {
+	for d, attrs := range step.Outcomes {
 		if err := tbls.InsertKnitId(d.KnitId); err != nil {
 			return err
 		}
 		if err := tbls.InsertData(&d); err != nil {
 			return err
 		}
-		if err := tbls.RegisterUserTagsForData(d.KnitId, tags.UserTag); err != nil {
+		if attrs.VolumeRef != "" {
+			if err := tbls.InsertVolumeRef(&VolumeRef{
+				KnitId:    d.KnitId,
+				VolumeRef: attrs.VolumeRef,
+			}); err != nil {
+				return err
+			}
+		}
+		if err := tbls.RegisterUserTagsForData(d.KnitId, attrs.UserTag); err != nil {
 			return err
 		}
-		if tags.Timestamp != nil {
+		if attrs.Timestamp != nil {
 			if err := tbls.InsertDataTimestamp(
-				&DataTimeStamp{KnitId: d.KnitId, Timestamp: *tags.Timestamp},
+				&DataTimeStamp{KnitId: d.KnitId, Timestamp: *attrs.Timestamp},
 			); err != nil {
 				return err
 			}
 		}
-		for _, agent := range tags.Agent {
+		for _, agent := range attrs.Agent {
 			if err := tbls.InsertDataAgent(&agent); err != nil {
 				return err
 			}
@@ -121,7 +135,17 @@ type Operation struct {
 }
 
 func (prem *Operation) Apply(ctx context.Context, pool kpool.Pool) error {
-	tbls := New(ctx, pool)
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	return prem.ApplyWithConn(ctx, conn)
+}
+
+func (prem *Operation) ApplyWithConn(ctx context.Context, conn kpool.Queryer) error {
+	tbls := New(ctx, conn)
 
 	for _, p := range prem.Plan {
 		if err := tbls.InsertPlan(&p); err != nil {
