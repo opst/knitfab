@@ -128,6 +128,27 @@ func TestNominator_NominateInput(t *testing.T) {
 		}
 	}
 
+	{
+		runId := Padding36("run_output_data_without_volume_ref")
+		knitId := Padding36("knit_output_data_without_volume_ref")
+		step := tables.Step{
+			Run: tables.Run{
+				RunId: runId, Status: domain.Done, PlanId: Padding36("pseudo"),
+				UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-11T12:13:14.567+09:00")).OrFatal(t).Time(),
+			},
+			Outcomes: map[tables.Data]tables.DataAttibutes{
+				{
+					KnitId: knitId,
+					RunId:  runId, OutputId: 1010, PlanId: Padding36("pseudo"),
+				}: {
+					UserTag:   tagsetAandC,
+					Timestamp: &newTimestamp,
+				},
+			},
+		}
+		plan.Steps = append(plan.Steps, step)
+	}
+
 	// setup
 	rootTx := try.To(pool.Begin(ctx)).OrFatal(t)
 	defer rootTx.Rollback(ctx)

@@ -159,10 +159,15 @@ func (n *nominator) NominateMountpoints(ctx context.Context, conn kpool.Tx, inpu
 		ctx,
 		`
 		with
-		"data" as (
+		"_data" as (
 			select "knit_id" from "data"
 			inner join "run" using("run_id")
 			where "status" = $1
+		),
+		"data" as (
+			select "knit_id" from "_data"
+			intersect
+			select "knit_id" from "volume_ref"
 		),
 		"d_tags" as (
 			select
