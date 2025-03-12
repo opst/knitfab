@@ -86,14 +86,22 @@ type sqlEventHost interface {
 	Events() *SQLEvents
 }
 
-func WrapTx(tx kpool.Tx, ev sqlEventHost) *Tx {
+func WrapTx(tx kpool.Tx) *Tx {
+	return &Tx{Base: tx, events: NewPgxEvents()}
+}
+
+func wrapTx(tx kpool.Tx, ev sqlEventHost) *Tx {
 	if tx == nil {
 		return nil
 	}
 	return &Tx{Base: tx, events: ev.Events()}
 }
 
-func WrapConn(conn kpool.Conn, ev sqlEventHost) *ConnProxy {
+func WrapConn(conn kpool.Conn) *ConnProxy {
+	return wrapConn(conn, NewPgxEvents())
+}
+
+func wrapConn(conn kpool.Conn, ev sqlEventHost) *ConnProxy {
 	if conn == nil {
 		return nil
 	}
@@ -157,7 +165,7 @@ var _ kpool.Pool = &Pool{}
 
 func (p *Pool) Acquire(ctx context.Context) (kpool.Conn, error) {
 	conn, err := p.Base.Acquire(ctx)
-	if w := WrapConn(conn, p); w != nil {
+	if w := wrapConn(conn, p); w != nil {
 		return w, err
 	}
 	return nil, err
@@ -165,19 +173,19 @@ func (p *Pool) Acquire(ctx context.Context) (kpool.Conn, error) {
 func (p *Pool) AcquireAllIdle(ctx context.Context) []kpool.Conn {
 	return slices.Map(
 		p.Base.AcquireAllIdle(ctx),
-		func(c kpool.Conn) kpool.Conn { return WrapConn(c, p) },
+		func(c kpool.Conn) kpool.Conn { return wrapConn(c, p) },
 	)
 }
 func (p *Pool) Begin(ctx context.Context) (kpool.Tx, error) {
 	tx, err := p.Base.Begin(ctx)
-	if w := WrapTx(tx, p); w != nil {
+	if w := wrapTx(tx, p); w != nil {
 		return w, err
 	}
 	return nil, err
 }
 func (p *Pool) BeginTx(ctx context.Context, txOptions pgx.TxOptions) (kpool.Tx, error) {
 	tx, err := p.Base.BeginTx(ctx, txOptions)
-	if w := WrapTx(tx, p); w != nil {
+	if w := wrapTx(tx, p); w != nil {
 		return w, err
 	}
 	return nil, err
@@ -206,7 +214,7 @@ var _ kpool.Tx = &Tx{}
 
 func (tx *Tx) Begin(ctx context.Context) (kpool.Tx, error) {
 	new, err := tx.Base.Begin(ctx)
-	if w := WrapTx(new, tx); w != nil {
+	if w := wrapTx(new, tx); w != nil {
 		return w, err
 	}
 	return nil, err
@@ -266,7 +274,7 @@ var _ kpool.Conn = &ConnProxy{}
 
 func (c *ConnProxy) Begin(ctx context.Context) (kpool.Tx, error) {
 	tx, err := c.Base.Begin(ctx)
-	if w := WrapTx(tx, c); w != nil {
+	if w := wrapTx(tx, c); w != nil {
 		return w, err
 	}
 	return nil, err
@@ -275,7 +283,7 @@ func (c *ConnProxy) BeginTx(
 	ctx context.Context, txOptions pgx.TxOptions,
 ) (kpool.Tx, error) {
 	tx, err := c.Base.BeginTx(ctx, txOptions)
-	if w := WrapTx(tx, c); w != nil {
+	if w := wrapTx(tx, c); w != nil {
 		return w, err
 	}
 	return nil, err

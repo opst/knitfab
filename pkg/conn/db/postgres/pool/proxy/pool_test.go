@@ -88,9 +88,8 @@ func (t *tracker) afterExitTx() {
 	t.timeline = append(t.timeline, afterExitTx)
 }
 
-func eventTrack() (*tracker, *proxy.SQLEvents) {
+func eventTrack(events *proxy.SQLEvents) *tracker {
 	t := &tracker{}
-	events := proxy.NewPgxEvents()
 	events.Query.
 		Before(t.beforeQuery).
 		After(t.afterQuery)
@@ -106,7 +105,7 @@ func eventTrack() (*tracker, *proxy.SQLEvents) {
 	events.ExitTx.
 		Before(t.beforeExitTx).
 		After(t.afterExitTx)
-	return t, events
+	return t
 }
 
 type FakeRows struct{}
@@ -354,7 +353,7 @@ func TestTxProxy_Begin(t *testing.T) {
 		subTx := &intr.FakeTx{}
 		innerTx.NextBegin.Tx = subTx
 
-		testee := proxy.WrapTx(innerTx, proxy.NewPgxEvents())
+		testee := proxy.WrapTx(innerTx)
 
 		actual, err := testee.Begin(ctx)
 
@@ -383,7 +382,7 @@ func TestTxProxy_Begin(t *testing.T) {
 		innerTx := &intr.FakeTx{}
 		innerTx.NextBegin.Err = errInBegin
 
-		testee := proxy.WrapTx(innerTx, proxy.NewPgxEvents())
+		testee := proxy.WrapTx(innerTx)
 
 		actual, err := testee.Begin(ctx)
 
@@ -404,8 +403,8 @@ func TestTxProxy_Commit(t *testing.T) {
 		innerTx := &intr.FakeTx{}
 		innerTx.NextCommit = errInCommit
 
-		tracker, events := eventTrack()
-		testee := proxy.WrapTx(innerTx, events)
+		testee := proxy.WrapTx(innerTx)
+		tracker := eventTrack(testee.Events())
 
 		err := testee.Commit(ctx)
 		if err != errInCommit {
@@ -428,9 +427,8 @@ func TestTxProxy_Rollback(t *testing.T) {
 		innerTx := &intr.FakeTx{}
 		innerTx.NextRollback = errInRollback
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapTx(innerTx, events)
+		testee := proxy.WrapTx(innerTx)
+		tracker := eventTrack(testee.Events())
 
 		err := testee.Rollback(ctx)
 		if err != errInRollback {
@@ -454,9 +452,8 @@ func TestTxProxy_Exec(t *testing.T) {
 		innerTx := &intr.FakeTx{}
 		innerTx.NextExec.CommandTag = commandTagInExec
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapTx(innerTx, events)
+		testee := proxy.WrapTx(innerTx)
+		tracker := eventTrack(testee.Events())
 
 		commandTag, err := testee.Exec(ctx, `update "table" ("column") values ($1);`, 42)
 
@@ -481,9 +478,8 @@ func TestTxProxy_Exec(t *testing.T) {
 		innerTx := &intr.FakeTx{}
 		innerTx.NextExec.Err = errInExec
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapTx(innerTx, events)
+		testee := proxy.WrapTx(innerTx)
+		tracker := eventTrack(testee.Events())
 
 		commandTag, err := testee.Exec(ctx, `update "table" ("column") values ($1);`, 42)
 
@@ -510,9 +506,8 @@ func TestTxProxy_Query(t *testing.T) {
 		innerTx := &intr.FakeTx{}
 		innerTx.NextQuery.Rows = expectedRows
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapTx(innerTx, events)
+		testee := proxy.WrapTx(innerTx)
+		tracker := eventTrack(testee.Events())
 
 		rows, err := testee.Query(ctx, `select * from  "table" where "column" = $1;`, 42)
 
@@ -537,9 +532,8 @@ func TestTxProxy_Query(t *testing.T) {
 		innerTx := &intr.FakeTx{}
 		innerTx.NextQuery.Err = expectedErr
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapTx(innerTx, events)
+		testee := proxy.WrapTx(innerTx)
+		tracker := eventTrack(testee.Events())
 
 		row, err := testee.Query(ctx, `select * from "table" where "column" = $1;`, 42)
 
@@ -565,9 +559,8 @@ func TestTxProxy_QueryRow(t *testing.T) {
 		innerTx := &intr.FakeTx{}
 		innerTx.NextQueryRow = expectedRow
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapTx(innerTx, events)
+		testee := proxy.WrapTx(innerTx)
+		tracker := eventTrack(testee.Events())
 
 		row := testee.QueryRow(ctx, `select * from  "table" where "id" = $1;`, 42)
 
@@ -587,7 +580,7 @@ func TestTxProxy_Conn(t *testing.T) {
 
 		innerTx := &intr.FakeTx{}
 		innerTx.NextConn = expectedConn
-		testee := proxy.WrapTx(innerTx, proxy.NewPgxEvents())
+		testee := proxy.WrapTx(innerTx)
 
 		conn := testee.Conn()
 
@@ -610,7 +603,7 @@ func TestConnProxy_Begin(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextBegin.Tx = tx
 
-		testee := proxy.WrapConn(innerConn, proxy.NewPgxEvents())
+		testee := proxy.WrapConn(innerConn)
 
 		actual, err := testee.Begin(ctx)
 
@@ -639,7 +632,7 @@ func TestConnProxy_Begin(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextBegin.Err = errInBegin
 
-		testee := proxy.WrapConn(innerConn, proxy.NewPgxEvents())
+		testee := proxy.WrapConn(innerConn)
 
 		actual, err := testee.Begin(ctx)
 
@@ -661,7 +654,7 @@ func TestConnProxy_BeginTx(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextBeginTx.Tx = tx
 
-		testee := proxy.WrapConn(innerConn, proxy.NewPgxEvents())
+		testee := proxy.WrapConn(innerConn)
 
 		actual, err := testee.BeginTx(ctx, pgx.TxOptions{})
 
@@ -690,7 +683,7 @@ func TestConnProxy_BeginTx(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextBeginTx.Err = errInBegin
 
-		testee := proxy.WrapConn(innerConn, proxy.NewPgxEvents())
+		testee := proxy.WrapConn(innerConn)
 
 		actual, err := testee.BeginTx(ctx, pgx.TxOptions{})
 
@@ -713,9 +706,8 @@ func TestConnProxy_Exec(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextExec.CommandTag = commandTagInExec
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapConn(innerConn, events)
+		testee := proxy.WrapConn(innerConn)
+		tracker := eventTrack(testee.Events())
 
 		commandTag, err := testee.Exec(ctx, `update "table" ("column") values ($1);`, 42)
 
@@ -740,9 +732,8 @@ func TestConnProxy_Exec(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextExec.Err = errInExec
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapConn(innerConn, events)
+		testee := proxy.WrapConn(innerConn)
+		tracker := eventTrack(testee.Events())
 
 		commandTag, err := testee.Exec(ctx, `update "table" ("column") values ($1);`, 42)
 
@@ -769,9 +760,8 @@ func TestConnProxy_Query(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextQuery.Rows = expectedRows
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapConn(innerConn, events)
+		testee := proxy.WrapConn(innerConn)
+		tracker := eventTrack(testee.Events())
 
 		rows, err := testee.Query(ctx, `select * from  "table" where "column" = $1;`, 42)
 
@@ -796,9 +786,8 @@ func TestConnProxy_Query(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextQuery.Err = expectedErr
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapConn(innerConn, events)
+		testee := proxy.WrapConn(innerConn)
+		tracker := eventTrack(testee.Events())
 
 		row, err := testee.Query(ctx, `select * from "table" where "column" = $1;`, 42)
 
@@ -824,9 +813,8 @@ func TestConnProxy_QueryRow(t *testing.T) {
 		innerConn := &intr.FakeConn{}
 		innerConn.NextQueryRow = expectedRow
 
-		tracker, events := eventTrack()
-
-		testee := proxy.WrapConn(innerConn, events)
+		testee := proxy.WrapConn(innerConn)
+		tracker := eventTrack(testee.Events())
 
 		row := testee.QueryRow(ctx, `select * from  "table" where "id" = $1;`, 42)
 
@@ -846,7 +834,7 @@ func TestConnProxy_Conn(t *testing.T) {
 
 		inner := &intr.FakeConn{}
 		inner.NextConn = conn
-		testee := proxy.WrapConn(inner, proxy.NewPgxEvents())
+		testee := proxy.WrapConn(inner)
 
 		if testee.Conn() != conn {
 			t.Error("it does not proxy to the inner object.")
@@ -861,7 +849,7 @@ func TestConnProxy_Ping(t *testing.T) {
 		inner := &intr.FakeConn{}
 		inner.NextPing = pingErr
 
-		testee := proxy.WrapConn(inner, proxy.NewPgxEvents())
+		testee := proxy.WrapConn(inner)
 		if testee.Ping(context.Background()) != pingErr {
 			t.Error("it does not proxy to the inner object.")
 		}
