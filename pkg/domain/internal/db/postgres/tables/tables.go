@@ -34,17 +34,13 @@ func withCause(v any, reason error) error {
 //	    and `"knit_id"` table (side effect; if needed to insert into `"data"`).
 type Tables struct {
 	ctx  context.Context
-	pool kpool.Pool
+	conn kpool.Queryer
 }
 
-func New(ctx context.Context, pool kpool.Pool) *Tables {
+func New(ctx context.Context, conn kpool.Queryer) *Tables {
 	return &Tables{
-		ctx: ctx, pool: pool,
+		ctx: ctx, conn: conn,
 	}
-}
-
-func (f *Tables) acquire() (kpool.Conn, error) {
-	return f.pool.Acquire(f.ctx)
 }
 
 func shouldEffect(ctag pgconn.CommandTag, require int) error {
@@ -61,13 +57,7 @@ func shouldEffect(ctag pgconn.CommandTag, require int) error {
 }
 
 func (f *Tables) InsertKnitId(knitId string) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "knit_id" ("knit_id") values ($1)`,
 		knitId,
@@ -82,13 +72,7 @@ func (f *Tables) InsertKnitId(knitId string) error {
 //
 // When you want to insert `data` and `knit_id` table, use `RegisterData` method.
 func (f *Tables) InsertData(d *Data) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "data" ("knit_id", "plan_id", "run_id", "output_id")
@@ -104,13 +88,7 @@ func (f *Tables) InsertData(d *Data) error {
 }
 
 func (f *Tables) InsertVolumeRef(vr *VolumeRef) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "volume_ref" ("knit_id", "volume_ref") values ($1, $2)`,
 		vr.KnitId, vr.VolumeRef,
@@ -122,13 +100,7 @@ func (f *Tables) InsertVolumeRef(vr *VolumeRef) error {
 }
 
 func (f *Tables) InsertDataTimestamp(dt *DataTimeStamp) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "knit_timestamp" ("knit_id", "timestamp") values ($1, $2);`,
 		dt.KnitId, dt.Timestamp,
@@ -142,13 +114,7 @@ func (f *Tables) InsertDataTimestamp(dt *DataTimeStamp) error {
 }
 
 func (f *Tables) InsertTagKey(tk *TagKey) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "tag_key" ("id", "key") values ($1, $2);`,
 		tk.Id, tk.Key,
@@ -160,13 +126,7 @@ func (f *Tables) InsertTagKey(tk *TagKey) error {
 }
 
 func (f *Tables) InsertTag(tag *TagValue) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "tag" ("key_id", "id", "value") values ($1, $2, $3);`,
 		tag.KeyId, tag.Id, tag.Value,
@@ -179,13 +139,7 @@ func (f *Tables) InsertTag(tag *TagValue) error {
 }
 
 func (f *Tables) InsertTagData(knitId string, tagId int) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ret, err := conn.Exec(
+	ret, err := f.conn.Exec(
 		f.ctx,
 		`insert into "tag_data" ("tag_id", "knit_id") values ($1, $2);`,
 		tagId, knitId,
@@ -200,13 +154,7 @@ func (f *Tables) InsertTagData(knitId string, tagId int) error {
 }
 
 func (f *Tables) InsertGarbage(garbage *Garbage) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "garbage" ("knit_id", "volume_ref") values ($1, $2);`,
 		garbage.KnitId, garbage.VolumeRef,
@@ -241,12 +189,6 @@ func (f *Tables) RegisterUserTagsForData(knitId string, usertags []domain.Tag) e
 		tagIds[tid] = struct{}{}
 	}
 
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
 	for tid := range tagIds {
 		if err := f.InsertTagData(knitId, tid); err != nil {
 			return err
@@ -263,14 +205,8 @@ func (f *Tables) RegisterUserTagsForData(knitId string, usertags []domain.Tag) e
 //     if such tag does not exist, it insert the tag silenly, and returns its id.
 //     otherwise, find such tag and retreive its id.
 func (f *Tables) RegisterTag(t *domain.Tag) (int, error) {
-	conn, err := f.acquire()
-	if err != nil {
-		return 0, err
-	}
-	defer conn.Release()
-
 	var tagId int
-	err = conn.QueryRow(
+	err := f.conn.QueryRow(
 		f.ctx,
 		`
 		with
@@ -309,13 +245,7 @@ func (f *Tables) RegisterTag(t *domain.Tag) (int, error) {
 }
 
 func (f *Tables) InsertPlan(p *Plan) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "plan" ("plan_id", "active", "hash")
@@ -330,13 +260,7 @@ func (f *Tables) InsertPlan(p *Plan) error {
 }
 
 func (f *Tables) InsertPlanResource(res PlanResource) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "plan_resource" ("plan_id", "type", "value")
@@ -351,13 +275,7 @@ func (f *Tables) InsertPlanResource(res PlanResource) error {
 }
 
 func (f *Tables) InsertPlanOnNode(p *PlanOnNode) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "plan_on_node" ("plan_id", "mode", "key", "value")
@@ -372,13 +290,7 @@ func (f *Tables) InsertPlanOnNode(p *PlanOnNode) error {
 }
 
 func (f *Tables) InsertPlanImage(pi *PlanImage) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "plan_image" ("plan_id", "image", "version")
@@ -393,13 +305,7 @@ func (f *Tables) InsertPlanImage(pi *PlanImage) error {
 }
 
 func (f *Tables) InsertPlanEntrypoint(pent *PlanEntrypoint) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "plan_entrypoint" ("plan_id", "entrypoint")
@@ -414,13 +320,7 @@ func (f *Tables) InsertPlanEntrypoint(pent *PlanEntrypoint) error {
 }
 
 func (f *Tables) InsertPlanArgs(pargs *PlanArgs) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "plan_args" ("plan_id", "args")
@@ -435,13 +335,7 @@ func (f *Tables) InsertPlanArgs(pargs *PlanArgs) error {
 }
 
 func (f *Tables) InsertPlanPseudo(pp *PlanPseudo) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "plan_pseudo" ("plan_id", "name") values ($1, $2);`,
 		pp.PlanId, pp.Name,
@@ -454,13 +348,7 @@ func (f *Tables) InsertPlanPseudo(pp *PlanPseudo) error {
 }
 
 func (f *Tables) InsertInput(in *Input) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "input" ("input_id", "plan_id", "path") values ($1, $2, $3)`,
 		in.InputId, in.PlanId, in.Path,
@@ -472,13 +360,7 @@ func (f *Tables) InsertInput(in *Input) error {
 }
 
 func (f *Tables) InsertOutput(out *Output) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "output" ("output_id", "plan_id", "path") values ($1, $2, $3)`,
 		out.OutputId, out.PlanId, out.Path,
@@ -490,14 +372,8 @@ func (f *Tables) InsertOutput(out *Output) error {
 }
 
 func (f *Tables) InsertPlanAnnotations(an []Annotation) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
 	for _, a := range an {
-		ctag, err := conn.Exec(
+		ctag, err := f.conn.Exec(
 			f.ctx,
 			`insert into "plan_annotation" ("plan_id", "key", "value") values ($1, $2, $3)`,
 			a.PlanId, a.Key, a.Value,
@@ -514,13 +390,7 @@ func (f *Tables) InsertPlanAnnotations(an []Annotation) error {
 }
 
 func (f *Tables) InsertPlanServiceAccount(sa *ServiceAccount) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "plan_service_account" ("plan_id", "service_account") values ($1, $2)`,
 		sa.PlanId, sa.ServiceAccount,
@@ -532,13 +402,7 @@ func (f *Tables) InsertPlanServiceAccount(sa *ServiceAccount) error {
 }
 
 func (f *Tables) SetAsLog(out *Output) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "log" ("output_id", "plan_id") values ($1, $2);`,
 		out.OutputId, out.PlanId,
@@ -550,13 +414,7 @@ func (f *Tables) SetAsLog(out *Output) error {
 }
 
 func (f *Tables) InsertTagInput(inputId int, tagId int) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ret, err := conn.Exec(
+	ret, err := f.conn.Exec(
 		f.ctx,
 		`insert into "tag_input" ("tag_id", "input_id") values ($1, $2);`,
 		tagId, inputId,
@@ -570,13 +428,7 @@ func (f *Tables) InsertTagInput(inputId int, tagId int) error {
 	return shouldEffect(ret, 1)
 }
 func (f *Tables) InsertTagOutput(outputId int, tagId int) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ret, err := conn.Exec(
+	ret, err := f.conn.Exec(
 		f.ctx,
 		`insert into "tag_output" ("tag_id", "output_id") values ($1, $2);`,
 		tagId, outputId,
@@ -621,12 +473,6 @@ func (f *Tables) RegisterUserTagsForOutput(outputId int, usertag []domain.Tag) e
 		tagIds[tid] = struct{}{}
 	}
 
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
 	for tid := range tagIds {
 		if err := f.InsertTagOutput(outputId, tid); err != nil {
 			return err
@@ -637,13 +483,7 @@ func (f *Tables) RegisterUserTagsForOutput(outputId int, usertag []domain.Tag) e
 }
 
 func (f *Tables) InsertKnitIdInput(inputId int, knitId string) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "knitid_input" ("knit_id", "input_id") values ($1, $2)`,
 		knitId, inputId,
@@ -658,13 +498,7 @@ func (f *Tables) InsertKnitIdInput(inputId int, knitId string) error {
 }
 
 func (f *Tables) InsertTimestampInput(inputId int, timestamp time.Time) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "timestamp_input" ("timestamp", "input_id") values ($1, $2);`,
 		timestamp, inputId,
@@ -680,13 +514,7 @@ func (f *Tables) InsertTimestampInput(inputId int, timestamp time.Time) error {
 }
 
 func (f *Tables) InsertRun(r *Run) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "run"
@@ -702,13 +530,7 @@ func (f *Tables) InsertRun(r *Run) error {
 }
 
 func (f *Tables) InsertRunExit(re *RunExit) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "run_exit" ("run_id", "exit_code", "message")
@@ -723,13 +545,7 @@ func (f *Tables) InsertRunExit(re *RunExit) error {
 }
 
 func (f *Tables) InsertAssign(assign *Assign) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "assign" ("run_id", "input_id", "knit_id", "plan_id")
@@ -745,13 +561,7 @@ func (f *Tables) InsertAssign(assign *Assign) error {
 }
 
 func (f *Tables) InsertWorker(w *Worker) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "worker" ("run_id", "name") values ($1, $2)`,
 		w.RunId, w.Name,
@@ -764,13 +574,7 @@ func (f *Tables) InsertWorker(w *Worker) error {
 }
 
 func (f *Tables) InsertNomination(n *Nomination) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "nomination" ("knit_id", "input_id", "updated") values ($1, $2, $3)`,
 		n.KnitId, n.InputId, n.Updated,
@@ -783,13 +587,7 @@ func (f *Tables) InsertNomination(n *Nomination) error {
 }
 
 func (f *Tables) InsertDataAgent(da *DataAgent) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`
 		insert into "data_agent"
@@ -806,13 +604,7 @@ func (f *Tables) InsertDataAgent(da *DataAgent) error {
 }
 
 func (f *Tables) InsertKeychain(name string) error {
-	conn, err := f.acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
-	ctag, err := conn.Exec(
+	ctag, err := f.conn.Exec(
 		f.ctx,
 		`insert into "keychain" ("name") values ($1)`,
 		name,

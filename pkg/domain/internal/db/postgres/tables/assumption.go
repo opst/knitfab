@@ -40,7 +40,12 @@ type Step struct {
 }
 
 func (step *Step) Apply(ctx context.Context, pool kpool.Pool) error {
-	tbls := New(ctx, pool)
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	tbls := New(ctx, conn)
 	return step.apply(tbls)
 }
 
@@ -130,7 +135,17 @@ type Operation struct {
 }
 
 func (prem *Operation) Apply(ctx context.Context, pool kpool.Pool) error {
-	tbls := New(ctx, pool)
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	return prem.ApplyWithConn(ctx, conn)
+}
+
+func (prem *Operation) ApplyWithConn(ctx context.Context, conn kpool.Queryer) error {
+	tbls := New(ctx, conn)
 
 	for _, p := range prem.Plan {
 		if err := tbls.InsertPlan(&p); err != nil {
