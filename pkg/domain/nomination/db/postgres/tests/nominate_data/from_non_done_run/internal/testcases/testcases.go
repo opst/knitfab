@@ -10,7 +10,6 @@ import (
 	pgerrcode "github.com/jackc/pgerrcode"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/proxy"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
 	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
@@ -28,48 +27,47 @@ type Testcase struct {
 	then  []tables.Nomination
 }
 
-func Theory(testcase Testcase) func(*testing.T) {
+// Theory is a test helper function that generates a test function for each test case.
+//
+// Before run this test, you need to prepare a database with the internal/dataset package.:
+func Theory(testcase Testcase, rootTx kpool.Tx, pool kpool.Pool) func(*testing.T) {
 	return func(t *testing.T) {
-		poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 		ctx := context.Background()
-		pool := poolBroaker.GetPool(ctx, t)
 
-		if err := ds.GivenDatabase.Apply(ctx, pool); err != nil {
-			t.Fatal(err)
-		}
-		if err := testcase.given.Apply(ctx, pool); err != nil {
-			t.Fatal(err)
-		}
-
-		wpool := proxy.Wrap(pool)
-		wpool.Events().Query.After(func() {
-			BeginFuncToRollback(ctx, pool, fn.Void[error](func(tx kpool.Tx) {
-				if _, err := tx.Exec(ctx, `lock table "nomination" in ROW EXCLUSIVE mode nowait`); err == nil {
-					t.Errorf("nomination is not locked")
-				} else if pgerr := new(pgconn.PgError); !errors.As(err, &pgerr) || pgerr.Code != pgerrcode.LockNotAvailable {
-					t.Errorf(
-						"unexpected error: expected error code is %s, but %s",
-						pgerrcode.LockNotAvailable, err,
-					)
-				}
-			}))
-		})
-		tx := try.To(wpool.Begin(ctx)).OrFatal(t)
+		tx := try.To(rootTx.Begin(ctx)).OrFatal(t)
 		defer tx.Rollback(ctx)
+		if err := testcase.given.ApplyWithConn(ctx, tx); err != nil {
+			t.Fatal(err)
+		}
 
 		testee := kpgnom.DefaultNominator()
-		if err := testee.NominateData(ctx, tx, []string{testcase.when}); err != nil {
-			t.Fatal(err)
+		{
+			wtx := proxy.WrapTx(tx)
+			wtx.Events().Query.After(func() {
+				BeginFuncToRollback(ctx, pool, fn.Void[error](func(tx kpool.Tx) {
+					if _, err := tx.Exec(ctx, `lock table "nomination" in ROW EXCLUSIVE mode nowait`); err == nil {
+						t.Errorf("nomination is not locked")
+					} else if pgerr := new(pgconn.PgError); !errors.As(err, &pgerr) || pgerr.Code != pgerrcode.LockNotAvailable {
+						t.Errorf(
+							"unexpected error: expected error code is %s, but %s",
+							pgerrcode.LockNotAvailable, err,
+						)
+					}
+				}))
+			})
+
+			_tx := try.To(wtx.Begin(ctx)).OrFatal(t)
+			defer _tx.Rollback(ctx)
+			if err := testee.NominateData(ctx, _tx, []string{testcase.when}); err != nil {
+				t.Fatal(err)
+			}
+			if err := _tx.Commit(ctx); err != nil {
+				t.Fatal(err)
+			}
 		}
 
-		if err := tx.Commit(ctx); err != nil {
-			t.Fatal(err)
-		}
-
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
 		actual := try.To(scanner.New[tables.Nomination]().QueryAll(
-			ctx, conn, `table "nomination"`,
+			ctx, tx, `table "nomination"`,
 		)).OrFatal(t)
 
 		if !cmp.SliceContentEq(actual, testcase.then) {

@@ -25,6 +25,22 @@ import (
 
 func TestNominator_NominateData_Nominate_Done(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
+	ctx := context.Background()
+	pool := poolBroaker.GetPool(ctx, t)
+
+	rootTx := try.To(pool.Begin(ctx)).OrFatal(t)
+	defer rootTx.Rollback(ctx)
+
+	func() {
+		tx := try.To(rootTx.Begin(ctx)).OrFatal(t)
+		defer tx.Rollback(ctx)
+		if err := ds.GivenDatabase.ApplyWithConn(ctx, tx); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	for name, testcase := range map[string]struct {
 		given tables.Operation
@@ -570,17 +586,14 @@ func TestNominator_NominateData_Nominate_Done(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
-			pool := poolBroaker.GetPool(ctx, t)
-
-			if err := ds.GivenDatabase.Apply(ctx, pool); err != nil {
-				t.Fatal(err)
-			}
-			if err := testcase.given.Apply(ctx, pool); err != nil {
+			tx := try.To(rootTx.Begin(ctx)).OrFatal(t)
+			defer tx.Rollback(ctx)
+			if err := testcase.given.ApplyWithConn(ctx, tx); err != nil {
 				t.Fatal(err)
 			}
 
-			wpool := proxy.Wrap(pool)
-			wpool.Events().Query.After(func() {
+			wtx := proxy.WrapTx(tx)
+			wtx.Events().Query.After(func() {
 				BeginFuncToRollback(ctx, pool, fn.Void[error](func(tx kpool.Tx) {
 					if _, err := tx.Exec(ctx, `lock table "nomination" in ROW EXCLUSIVE mode nowait`); err == nil {
 						t.Errorf("nomination is not locked")
@@ -592,21 +605,21 @@ func TestNominator_NominateData_Nominate_Done(t *testing.T) {
 					}
 				}))
 			})
-			tx := try.To(wpool.Begin(ctx)).OrFatal(t)
-			defer tx.Rollback(ctx)
 
 			testee := kpgnom.DefaultNominator()
-			if err := testee.NominateData(ctx, tx, []string{testcase.when}); err != nil {
-				t.Fatal(err)
-			}
-			if err := tx.Commit(ctx); err != nil {
-				t.Fatal(err)
+			{
+				_tx := try.To(wtx.Begin(ctx)).OrFatal(t)
+				defer _tx.Rollback(ctx)
+				if err := testee.NominateData(ctx, _tx, []string{testcase.when}); err != nil {
+					t.Fatal(err)
+				}
+				if err := _tx.Commit(ctx); err != nil {
+					t.Fatal(err)
+				}
 			}
 
-			conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-			defer conn.Release()
 			actual := try.To(scanner.New[tables.Nomination]().QueryAll(
-				ctx, conn, `table "nomination"`,
+				ctx, tx, `table "nomination"`,
 			)).OrFatal(t)
 
 			if !cmp.SliceContentEq(actual, testcase.then) {

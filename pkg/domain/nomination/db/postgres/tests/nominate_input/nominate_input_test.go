@@ -27,6 +27,8 @@ import (
 
 func TestNominator_NominateInput(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
+	ctx := context.Background()
+	pool := poolBroaker.GetPool(ctx, t)
 
 	oldTimestamp := try.To(rfctime.ParseRFC3339DateTime(
 		"2022-11-12T13:14:15.678+09:00",
@@ -125,6 +127,22 @@ func TestNominator_NominateInput(t *testing.T) {
 			}
 		}
 	}
+
+	// setup
+	rootTx := try.To(pool.Begin(ctx)).OrFatal(t)
+	defer rootTx.Rollback(ctx)
+
+	func() {
+		tx := try.To(rootTx.Begin(ctx)).OrFatal(t)
+		defer tx.Rollback(ctx)
+
+		if err := plan.ApplyWithConn(ctx, tx); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	for name, testcase := range map[string]struct {
 		given tables.Operation
@@ -569,16 +587,14 @@ func TestNominator_NominateInput(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
-			pool := poolBroaker.GetPool(ctx, t)
-			if err := plan.Apply(ctx, pool); err != nil {
-				t.Fatal(err)
-			}
-			if err := testcase.given.Apply(ctx, pool); err != nil {
+			tx := try.To(rootTx.Begin(ctx)).OrFatal(t)
+			defer tx.Rollback(ctx)
+			if err := testcase.given.ApplyWithConn(ctx, tx); err != nil {
 				t.Fatal(err)
 			}
 
-			wpool := proxy.Wrap(pool)
-			wpool.Events().Events().Query.After(func() {
+			wtx := proxy.WrapTx(tx)
+			wtx.Events().Events().Query.After(func() {
 				BeginFuncToRollback(ctx, pool, fn.Void[error](func(tx kpool.Tx) {
 					if _, err := tx.Exec(ctx, `lock table "nomination" in ROW EXCLUSIVE mode nowait;`); err == nil {
 						t.Errorf("nomination is not locked")
@@ -590,21 +606,13 @@ func TestNominator_NominateInput(t *testing.T) {
 					}
 				}))
 			})
-
-			tx := try.To(wpool.Begin(ctx)).OrFatal(t)
-			defer tx.Rollback(ctx)
 			testee := kpgnom.DefaultNominator()
-			if err := testee.NominateMountpoints(ctx, tx, testcase.when); err != nil {
-				t.Fatal(err)
-			}
-			if err := tx.Commit(ctx); err != nil {
+			if err := testee.NominateMountpoints(ctx, wtx, testcase.when); err != nil {
 				t.Fatal(err)
 			}
 
-			conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-			defer conn.Release()
 			actual := try.To(scanner.New[tables.Nomination]().QueryAll(
-				ctx, conn, `table "nomination"`,
+				ctx, tx, `table "nomination"`,
 			)).OrFatal(t)
 
 			if !cmp.SliceContentEq(actual, testcase.then) {
@@ -612,7 +620,6 @@ func TestNominator_NominateInput(t *testing.T) {
 					actual, testcase.then,
 				)
 			}
-
 		})
 	}
 

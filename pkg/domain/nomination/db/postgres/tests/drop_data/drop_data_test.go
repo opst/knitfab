@@ -134,6 +134,24 @@ func TestDropData(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+	pool := poolBroaker.GetPool(ctx, t)
+
+	rootTx := try.To(pool.Begin(ctx)).OrFatal(t)
+	defer rootTx.Rollback(ctx)
+
+	{
+		tx := try.To(rootTx.Begin(ctx)).OrFatal(t)
+		defer tx.Rollback(ctx)
+
+		if err := given.ApplyWithConn(ctx, tx); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	for name, testcase := range map[string]struct {
 		when []string
 		then []tables.Nomination
@@ -176,44 +194,38 @@ func TestDropData(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
-			pgpool := poolBroaker.GetPool(ctx, t)
-
-			if err := given.Apply(ctx, pgpool); err != nil {
-				t.Fatal(err)
-			}
-
-			wpool := proxy.Wrap(pgpool)
-			wpool.Events().Query.After(func() {
-				BeginFuncToRollback(ctx, pgpool, fn.Void[error](func(tx kpool.Tx) {
-					if _, err := tx.Exec(ctx, `lock table "nomination" in ROW EXCLUSIVE mode nowait;`); err == nil {
-						t.Errorf("nomination is not locked")
-					} else if pgerr := new(pgconn.PgError); !errors.As(err, &pgerr) || pgerr.Code != pgerrcode.LockNotAvailable {
-						t.Errorf(
-							"unexpected error: expected error code is %s, but %s",
-							pgerrcode.LockNotAvailable, err,
-						)
-					}
-				}))
-			})
-
-			tx := try.To(wpool.Begin(ctx)).OrFatal(t)
+			tx := try.To(rootTx.Begin(ctx)).OrFatal(t)
 			defer tx.Rollback(ctx)
+			{
+				wtx := proxy.WrapTx(tx)
+				wtx.Events().Query.After(func() {
+					BeginFuncToRollback(ctx, pool, fn.Void[error](func(tx kpool.Tx) {
+						if _, err := tx.Exec(ctx, `lock table "nomination" in ROW EXCLUSIVE mode nowait;`); err == nil {
+							t.Errorf("nomination is not locked")
+						} else if pgerr := new(pgconn.PgError); !errors.As(err, &pgerr) || pgerr.Code != pgerrcode.LockNotAvailable {
+							t.Errorf(
+								"unexpected error: expected error code is %s, but %s",
+								pgerrcode.LockNotAvailable, err,
+							)
+						}
+					}))
+				})
 
-			testee := kpgnom.DefaultNominator()
+				_tx := try.To(wtx.Begin(ctx)).OrFatal(t)
+				defer _tx.Rollback(ctx)
 
-			if err := testee.DropData(ctx, tx, testcase.when); err != nil {
-				t.Fatal(err)
+				testee := kpgnom.DefaultNominator()
+				if err := testee.DropData(ctx, _tx, testcase.when); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := _tx.Commit(ctx); err != nil {
+					t.Fatal(err)
+				}
 			}
-
-			if err := tx.Commit(ctx); err != nil {
-				t.Fatal(err)
-			}
-
-			conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
-			defer conn.Release()
 
 			actual := try.To(scanner.New[tables.Nomination]().QueryAll(
-				ctx, conn, `table "nomination"`,
+				ctx, tx, `table "nomination"`,
 			)).OrFatal(t)
 			if !cmp.SliceContentEq(actual, testcase.then) {
 				t.Errorf(
