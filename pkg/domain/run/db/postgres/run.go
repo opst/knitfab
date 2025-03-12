@@ -802,10 +802,16 @@ func (m *runPG) complementData(ctx context.Context, conn kpool.Queryer, runId st
 			_, err := conn.Exec(
 				ctx,
 				`
-				insert into "data" ("knit_id", "volume_ref", "output_id", "run_id", "plan_id")
-				values ($1, $2, $3, $4, $5)
+				with "data" as (
+					insert into "data" ("knit_id", "output_id", "run_id", "plan_id")
+					values ($1, $2, $3, $4)
+					returning "knit_id"
+				)
+				insert into "volume_ref" ("knit_id", "volume_ref")
+				select "knit_id", $5 as "volume_ref"
+				from "data"
 				`,
-				knitId, volumeRef, spec.outputId, spec.runId, spec.planId,
+				knitId, spec.outputId, spec.runId, spec.planId, volumeRef,
 			)
 			if err != nil {
 				return err
