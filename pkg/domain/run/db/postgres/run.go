@@ -143,54 +143,7 @@ func (m *runPG) New(ctx context.Context) ([]string, *domain.ProjectionTrigger, e
 	}
 	defer tx.Rollback(ctx)
 
-	// step 1. determine plan & lock the plan + nominated data
-	var planId string
-	var _dn int
-	if err := tx.QueryRow(
-		ctx,
-		`
-		with
-		"mp" as (
-			select distinct "input_id" from "nomination" where "updated"
-		),
-		"pids" as (
-			select "plan_id" from "plan_image"
-
-			intersect
-
-			select "plan_id" from "input"
-			inner join "mp" using ("input_id")
-		),
-		"plan" as (
-			select "plan_id" from "plan" inner join "pids" using("plan_id")
-			for update of "plan" skip locked
-			limit 1
-		),
-		"rel_mp" as (
-			select "input_id" from "input" inner join "plan" using("plan_id")
-		),
-		"n" as (
-			select "knit_id" from "nomination" inner join "rel_mp" using("input_id")
-		),
-		"d" as (
-			select "knit_id" from "data" inner join "n" using("knit_id")
-			order by "knit_id" for share of "data"
-		),
-		"dn" as (select count("knit_id") as "locked_data" from "d")
-		select "plan_id", "locked_data" from "plan", "dn"
-		`,
-		// to lock data, we count (scanning all rows) them.
-		//
-		// This operation needs preventing update/delete data, so we take lock on data with "for share".
-		// But not need to occupy them; only referencing them is Okay, multiple New's can run in parallel.
-	).Scan(&planId, &_dn); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, nil // nothing to do
-		}
-		return nil, nil, err
-	}
-
-	// step 2. fetch nominations
+	// step 1. determine plan & lock the plan
 	nominations := map[int][]string{}     // mountpointId -> knitIds, nominated
 	var trigger *domain.ProjectionTrigger // mountpontId, knitId nominated
 	{
@@ -198,13 +151,33 @@ func (m *runPG) New(ctx context.Context) ([]string, *domain.ProjectionTrigger, e
 			ctx,
 			`
 			with
+			"mp" as (
+				select distinct "input_id" from "nomination" where "updated"
+			),
+			"pids" as (
+				select "plan_id" from "plan_image"
+
+				intersect
+
+				select "plan_id" from "input"
+				inner join "mp" using ("input_id")
+			),
+			"plan" as (
+				select "plan_id" from "plan" inner join "pids" using("plan_id")
+				for update of "plan" skip locked
+				limit 1
+			),
 			"input" as (
 				select "input_id" from "input"
-				where "plan_id" = $1
+				where "plan_id" in (table "plan")
 			),
 			"nom" as (
-				select "input_id", "knit_id", "updated" from "nomination"
+				select "input_id", "knit_id", "updated"
+				from "nomination"
 				inner join "input" using ("input_id")
+				inner join "data" using ("knit_id")
+				order by "knit_id"
+				for share of "data", "nomination"
 			),
 			"new" as (
 				select "input_id", "knit_id", "updated" from "nom"
@@ -216,15 +189,13 @@ func (m *runPG) New(ctx context.Context) ([]string, *domain.ProjectionTrigger, e
 			)
 			select "input_id", "knit_id", "updated"
 			from "input"
-			left outer join (table "known" union table "new") as "n" using("input_id")
+			left outer join (table "known" union table "new") as "n" using ("input_id")
 			`,
-			planId,
 		)
 		if err != nil {
 			return nil, nil, err
 		}
 		defer rows.Close()
-
 		for rows.Next() {
 			var mountpointId int
 			var knitId *string
@@ -243,17 +214,29 @@ func (m *runPG) New(ctx context.Context) ([]string, *domain.ProjectionTrigger, e
 
 			if updated != nil && *updated {
 				trigger = &domain.ProjectionTrigger{
-					PlanId: planId, InputId: mountpointId, KnitId: *knitId,
+					InputId: mountpointId, KnitId: *knitId,
 				}
 			} else {
 				nominations[mountpointId] = append(k, *knitId)
 			}
 		}
-		rows.Close()
 	}
 
 	if trigger == nil {
 		return nil, nil, nil
+	}
+
+	// step 2. fetch & lock nominations, lock data
+	{
+		var planId string
+		if err := tx.QueryRow(
+			ctx,
+			`select "plan_id" from "input" where "input_id" = $1`,
+			trigger.InputId,
+		).Scan(&planId); err != nil {
+			return nil, nil, err
+		}
+		trigger.PlanId = planId
 	}
 
 	// step 3. perform projection.
@@ -802,10 +785,16 @@ func (m *runPG) complementData(ctx context.Context, conn kpool.Queryer, runId st
 			_, err := conn.Exec(
 				ctx,
 				`
-				insert into "data" ("knit_id", "volume_ref", "output_id", "run_id", "plan_id")
-				values ($1, $2, $3, $4, $5)
+				with "data" as (
+					insert into "data" ("knit_id", "output_id", "run_id", "plan_id")
+					values ($1, $2, $3, $4)
+					returning "knit_id"
+				)
+				insert into "volume_ref" ("knit_id", "volume_ref")
+				select "knit_id", $5 as "volume_ref"
+				from "data"
 				`,
-				knitId, volumeRef, spec.outputId, spec.runId, spec.planId,
+				knitId, spec.outputId, spec.runId, spec.planId, volumeRef,
 			)
 			if err != nil {
 				return err
