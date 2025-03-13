@@ -94,11 +94,6 @@ func TestRun_New(t *testing.T) {
 
 	type expectation struct {
 		newRuns []runExpectation
-
-		// - key: plan id
-		//
-		// - value: knit ids which are to be locked when plan in key is locked.
-		planLockData map[string][]string
 	}
 
 	type testcase struct {
@@ -309,8 +304,7 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{},
-				newRuns:      []runExpectation{}, // empty
+				newRuns: []runExpectation{}, // empty
 			},
 		},
 		"Not enough data are given, no projections are performed": {
@@ -371,11 +365,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{}, // empty
 			},
 		},
@@ -471,12 +460,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-						th.Padding36("data:1-2/run:1-2/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{
 					{
 						body: tables.Run{
@@ -607,12 +590,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-						th.Padding36("data:1-2/run:1-2/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{
 					{
 						body: tables.Run{
@@ -721,14 +698,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-					th.Padding36("plan:3/split"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{
 					{
 						body: tables.Run{
@@ -942,16 +911,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-						th.Padding36("data:1-2/run:1-2/uploaded//out"),
-						th.Padding36("data:1-3/run:1-3/uploaded//out"),
-					},
-					th.Padding36("plan:3/split"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{
 					{
 						body: tables.Run{
@@ -1374,14 +1333,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-					th.Padding36("plan:3/split"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{
 					{
 						body: tables.Run{
@@ -1535,15 +1486,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-						th.Padding36("data:1-2/run:1-2/uploaded//out"),
-					},
-					th.Padding36("plan:3/split"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{
 					{
 						body: tables.Run{
@@ -1698,14 +1640,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-					th.Padding36("plan:3/split"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{}, // empty
 			},
 		},
@@ -1793,12 +1727,6 @@ func TestRun_New(t *testing.T) {
 				},
 			},
 			then: expectation{
-				planLockData: map[string][]string{
-					th.Padding36("plan:2/preprocessing"): {
-						th.Padding36("data:1-1/run:1-1/uploaded//out"),
-						th.Padding36("data:1-2/run:1-2/uploaded//out"),
-					},
-				},
 				newRuns: []runExpectation{}, // empty
 			},
 		},
@@ -1847,8 +1775,16 @@ func TestRun_New(t *testing.T) {
 					}
 				}
 
-				// interest #2 : which data are locked?
+				if !cmp.SliceSubsetWith(plansWithUpdatedNomination, lockedPlanId, cmp.EqEq[string]) {
+					t.Errorf(
+						"unexpected plan is locked:\n- locked: %v\n- plan have updated input: %v",
+						lockedPlanId, plansWithUpdatedNomination,
+					)
+				}
 
+				// interest #2 : which Data are locked?
+
+				// - actual Data locked
 				lockedKnitId := try.To(scanner.New[string]().QueryAll(
 					ctx, conn,
 					`
@@ -1858,13 +1794,7 @@ func TestRun_New(t *testing.T) {
 					`,
 				)).OrFatal(t)
 
-				if !cmp.SliceSubsetWith(plansWithUpdatedNomination, lockedPlanId, cmp.EqEq[string]) {
-					t.Errorf(
-						"unexpected plan is locked:\n- locked: %v\n- plan have updated input: %v",
-						lockedPlanId, plansWithUpdatedNomination,
-					)
-				}
-
+				// - expected Data locked. They are Data nominated from locked Plans.
 				knitIdNominatedForLockedPlan := try.To(scanner.New[string]().QueryAll(
 					ctx, conn,
 					`
@@ -1877,10 +1807,10 @@ func TestRun_New(t *testing.T) {
 					lockedPlanId,
 				)).OrFatal(t)
 
-				if !cmp.SliceContentEq(knitIdNominatedForLockedPlan, lockedKnitId) {
+				if !cmp.SliceContentEq(lockedKnitId, knitIdNominatedForLockedPlan) {
 					t.Errorf(
-						"unexpected lock: data:\nactual   = %v\nexpected = %v",
-						knitIdNominatedForLockedPlan, lockedKnitId,
+						"unexpected lock: data:\nactual   = %v\nexpected = %v\n(for plan %v)",
+						lockedKnitId, knitIdNominatedForLockedPlan, lockedPlanId,
 					)
 				}
 			})
