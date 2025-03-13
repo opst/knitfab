@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/opst/knitfab/pkg/domain"
@@ -121,4 +123,10 @@ type DataInterface interface {
 	// - []string : names of DataAgents with the modes
 	//
 	GetAgentName(ctx context.Context, knitId string, modes []domain.DataAgentMode) ([]string, error)
+}
+
+var ErrDataIsPurged = errors.New("Data is purged")
+
+func NewErrDataIsPurged(knitId string) error {
+	return fmt.Errorf("%w: %s", ErrDataIsPurged, knitId)
 }

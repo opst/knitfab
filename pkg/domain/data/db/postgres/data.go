@@ -13,6 +13,7 @@ import (
 	"github.com/opst/knitfab-api-types/misc/rfctime"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
+	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
 	kpgerr "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
 	kpgintr "github.com/opst/knitfab/pkg/domain/internal/db/postgres"
 	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
@@ -27,6 +28,8 @@ type dataPG struct { // implements kdb.DataInterface
 
 	nominator kpgnom.Nominator
 }
+
+var _ kdbdata.DataInterface = (*dataPG)(nil)
 
 type Option func(*dataPG) *dataPG
 
@@ -571,24 +574,17 @@ func (m *dataPG) NewAgent(ctx context.Context, knitId string, mode domain.DataAg
 	}
 	defer tx.Rollback(ctx)
 
-	var daname string
+	var volumeRef string
 	if err := tx.QueryRow(
 		ctx,
 		`
-		with "data" as (
-			select "knit_id" from "data" where "knit_id" = $1 for update
-		)
-		insert into "data_agent" ("name", "knit_id", "mode", "lifecycle_suspend_until")
-		select
-			'knitid-' || "knit_id" || '-' || $2 || '-' || substr(md5(random()::text), 0, 6),
-			"knit_id",
-			$2::dataAgentMode,
-			now() + $3
-		from "data"
-		returning "name"
+		select "knit_id", coalesce("volume_ref", '') from "data"
+		left join "volume_ref" using("knit_id")
+		where "knit_id" = $1
+		for update of "data"
 		`,
-		knitId, string(mode), lifecycleSuspend,
-	).Scan(&daname); err != nil {
+		knitId,
+	).Scan(nil, &volumeRef); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.DataAgent{}, kpgerr.Missing{
 				Table: "data", Identity: fmt.Sprintf("knit_id='%s'", knitId),
@@ -596,6 +592,28 @@ func (m *dataPG) NewAgent(ctx context.Context, knitId string, mode domain.DataAg
 		}
 		return domain.DataAgent{}, err
 	}
+	if volumeRef == "" {
+		return domain.DataAgent{}, kdbdata.NewErrDataIsPurged(knitId)
+	}
+
+	var daname string
+	if err := tx.QueryRow(
+		ctx,
+		`
+		insert into "data_agent" ("name", "knit_id", "mode", "lifecycle_suspend_until")
+		values (
+			'knitid-' || $1 || '-' || $2 || '-' || substr(md5(random()::text), 0, 6),
+			$1,
+			$2::dataAgentMode,
+			now() + $3
+		)
+		returning "name"
+		`,
+		knitId, string(mode), lifecycleSuspend,
+	).Scan(&daname); err != nil {
+		return domain.DataAgent{}, err
+	}
+
 	body, err := kpgintr.GetDataBody(ctx, tx, []string{knitId})
 	if err != nil {
 		return domain.DataAgent{}, err

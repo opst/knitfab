@@ -12,6 +12,7 @@ import (
 	testenv "github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
 	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/domain"
+	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
 	kpgdata "github.com/opst/knitfab/pkg/domain/data/db/postgres"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
@@ -25,7 +26,8 @@ import (
 func TestNewAgent(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 
-	knitId := Padding36("test-knit-done")
+	knitIdDone := Padding36("test-knit-done")
+	knitIdPurged := Padding36("test-knit-purged")
 	given := tables.Operation{
 		Plan: []tables.Plan{
 			{PlanId: "test-plan", Active: true, Hash: "#test-plan"},
@@ -46,10 +48,33 @@ func TestNewAgent(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: knitId,
+						KnitId: knitIdDone,
 						PlanId: "test-plan", RunId: "test-run-done", OutputId: 1_010,
 					}: {
 						VolumeRef: "#test-knit-done",
+						UserTag: []domain.Tag{
+							{Key: "tag-a", Value: "a-value"},
+							{Key: "tag-b", Value: "b-value"},
+						},
+						Timestamp: pointer.Ref(try.To(rfctime.ParseRFC3339DateTime(
+							"2022-10-11T12:13:14.567+09:00",
+						)).OrFatal(t).Time()),
+					},
+				},
+			},
+			{
+				Run: tables.Run{
+					PlanId: "test-plan", RunId: "test-run-output-is-purged", Status: domain.Done,
+					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+						"2022-10-11T12:13:14.567+09:00",
+					)).OrFatal(t).Time(),
+				},
+				Outcomes: map[tables.Data]tables.DataAttibutes{
+					{
+						KnitId: knitIdPurged,
+						PlanId: "test-plan", RunId: "test-run-output-is-purged", OutputId: 1_010,
+					}: {
+						// no volume ref
 						UserTag: []domain.Tag{
 							{Key: "tag-a", Value: "a-value"},
 							{Key: "tag-b", Value: "b-value"},
@@ -82,13 +107,13 @@ func TestNewAgent(t *testing.T) {
 				conn := try.To(pool.Acquire(ctx)).OrFatal(t)
 				defer conn.Release()
 				before := try.To(PGNow(ctx, conn)).OrFatal(t)
-				agent, err := testee.NewAgent(ctx, knitId, when.Mode, when.LifecycleSuspend)
+				agent, err := testee.NewAgent(ctx, knitIdDone, when.Mode, when.LifecycleSuspend)
 				if err != nil {
 					t.Fatal(err)
 				}
 				after := try.To(PGNow(ctx, conn)).OrFatal(t)
 
-				expectedAgentNamePrefix := fmt.Sprintf("knitid-%s-%s-", knitId, when.Mode)
+				expectedAgentNamePrefix := fmt.Sprintf("knitid-%s-%s-", knitIdDone, when.Mode)
 
 				{
 					expected := struct {
@@ -99,11 +124,12 @@ func TestNewAgent(t *testing.T) {
 						NamePrefix: expectedAgentNamePrefix,
 						Mode:       when.Mode,
 						KnitDataBody: domain.KnitDataBody{
-							KnitId: knitId, VolumeRef: "#test-knit-done",
+							KnitId:    knitIdDone,
+							VolumeRef: "#test-knit-done",
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "tag-a", Value: "a-value"},
 								{Key: "tag-b", Value: "b-value"},
-								{Key: domain.KeyKnitId, Value: knitId},
+								{Key: domain.KeyKnitId, Value: knitIdDone},
 								{Key: domain.KeyKnitTimestamp, Value: "2022-10-11T12:13:14.567+09:00"},
 							}),
 						},
@@ -122,12 +148,12 @@ func TestNewAgent(t *testing.T) {
 					actual := try.To(scanner.New[tables.DataAgent]().QueryAll(
 						ctx, conn,
 						`select * from "data_agent" where "knit_id" = $1`,
-						knitId,
+						knitIdDone,
 					)).OrFatal(t)
 					expected := []matcher.DataAgentMatcher{
 						{
 							Name:   matcher.Prefix(expectedAgentNamePrefix),
-							KnitId: matcher.EqEq(knitId),
+							KnitId: matcher.EqEq(knitIdDone),
 							Mode:   matcher.EqEq(when.Mode.String()),
 							LifecycleSuspendUntil: matcher.Between(
 								before, after.Add(when.LifecycleSuspend),
@@ -157,7 +183,7 @@ func TestNewAgent(t *testing.T) {
 
 	}
 
-	t.Run("when create new agent for not-existing data, it should error ErrMissing", func(t *testing.T) {
+	t.Run("when create new agent for not-existing Data, it should error ErrMissing", func(t *testing.T) {
 		ctx := context.Background()
 		pool := poolBroaker.GetPool(ctx, t)
 
@@ -165,6 +191,21 @@ func TestNewAgent(t *testing.T) {
 
 		_, err := testee.NewAgent(ctx, Padding36("not-existing-knit"), domain.DataAgentRead, 30*time.Second)
 		if !errors.Is(err, kerr.ErrMissing) {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("when create new agent for purged Data, it should error ErrDataIsPurged", func(t *testing.T) {
+		ctx := context.Background()
+		pool := poolBroaker.GetPool(ctx, t)
+		if err := given.Apply(ctx, pool); err != nil {
+			t.Fatal(err)
+		}
+
+		testee := kpgdata.New(pool)
+
+		_, err := testee.NewAgent(ctx, knitIdPurged, domain.DataAgentRead, 30*time.Second)
+		if !errors.Is(err, kdbdata.ErrDataIsPurged) {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
@@ -190,7 +231,7 @@ func TestNewAgent(t *testing.T) {
 
 				for nth, item := range testcase {
 					_, err := testee.NewAgent(
-						ctx, knitId, item.when.Mode, item.when.LifecycleSuspend,
+						ctx, knitIdDone, item.when.Mode, item.when.LifecycleSuspend,
 					)
 					if item.wantError {
 						if err == nil {

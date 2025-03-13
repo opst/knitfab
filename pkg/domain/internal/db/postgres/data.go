@@ -13,11 +13,16 @@ func GetDataBody(ctx context.Context, conn kpool.Queryer, knitIds []string) (map
 	rows, err := conn.Query(
 		ctx,
 		`
-		with "data" as (
+		with "_data" as (
 			select
-				"knit_id", "volume_ref", "run_id"
+				"knit_id", "run_id"
 			from "data"
 			where "knit_id" = any($1::varchar[])
+		),
+		"data" as (
+			select "knit_id", "volume_ref", "run_id"
+			from "_data"
+			left join "volume_ref" using ("knit_id")
 		),
 		"data_with_timestamp" as (
 			select
