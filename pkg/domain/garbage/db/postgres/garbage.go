@@ -33,10 +33,6 @@ func (g *pgGarbage) Pop(ctx context.Context, callback func(types.Garbage) error)
 		"del_garbage" as (
 			delete from "garbage"
 			where "knit_id" in (select "knit_id" from "del_id")
-		),
-		"del_knit" as (
-			delete from "knit_id"
-			where "knit_id" in (select "knit_id" from "del_id")
 		)
 		select * from "del_id";
 		`,
@@ -46,11 +42,11 @@ func (g *pgGarbage) Pop(ctx context.Context, callback func(types.Garbage) error)
 	}
 	defer rows.Close()
 
-	var KnitId string
-	var VolumeRef string
+	var knitId string
+	var volumeRef string
 	pop := false
 	for rows.Next() {
-		err = rows.Scan(&KnitId, &VolumeRef)
+		err = rows.Scan(&knitId, &volumeRef)
 		if err != nil {
 			return false, err
 		}
@@ -61,7 +57,7 @@ func (g *pgGarbage) Pop(ctx context.Context, callback func(types.Garbage) error)
 	}
 
 	if pop && callback != nil {
-		if err := callback(types.Garbage{KnitId: KnitId, VolumeRef: VolumeRef}); err != nil {
+		if err := callback(types.Garbage{KnitId: knitId, VolumeRef: volumeRef}); err != nil {
 			return false, err
 		}
 	}
