@@ -793,3 +793,16 @@ func (m *dataPG) GetAgentName(ctx context.Context, knitId string, modes []domain
 
 	return names, nil
 }
+
+func (m *dataPG) Purge(ctx context.Context, knitId string) error {
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if err := kpgintr.PurgeData(ctx, tx, m.nominator, knitId); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}

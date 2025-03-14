@@ -2,10 +2,17 @@ package postgres
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v4"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/pkg/domain/data/db"
+	kpgerrors "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
+	nominator "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
 	"github.com/opst/knitfab/pkg/utils/slices"
 )
 
@@ -147,4 +154,159 @@ func UserTagsOfData(ctx context.Context, conn kpool.Queryer, knitId []string) (m
 	}
 
 	return result, nil
+}
+
+// PurgeData purges VolumeRef from the Data.
+//
+// It returns an error if the Data is being accessed by DataAgents or Runs.
+// It returns nil if the Data is already purged or purged successfully.
+//
+// Lock:
+//
+// PurgeData locks Data and VolumeRef for update.
+func PurgeData(ctx context.Context, tx kpool.Tx, nom nominator.Nominator, knitId string) error {
+	// lock Data
+	{
+		var volumeRef string
+		if err := tx.QueryRow(
+			ctx,
+			`
+			with "data" as (
+				select "knit_id"
+				from "data"
+				where "knit_id" = $1
+				for update
+			),
+			"volume_ref" as (
+				select "knit_id", "volume_ref"
+				from "data"
+				inner join "volume_ref" using ("knit_id")
+				for update
+			)
+			select "knit_id", coalesce("volume_ref", '' ) as "volume_ref"
+			from "data"
+			left join "volume_ref" using ("knit_id")
+			`,
+			knitId,
+		).Scan(nil, &volumeRef); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return &kpgerrors.Missing{Table: "data", Identity: fmt.Sprintf("knit_id=%s", knitId)}
+			}
+			return err
+		}
+		if volumeRef == "" {
+			return nil // already purged
+		}
+	}
+
+	// check upstream Run
+	finished := slices.Map(
+		[]domain.KnitRunStatus{domain.Done, domain.Failed, domain.Invalidated},
+		domain.KnitRunStatus.String,
+	)
+	{
+		rows, err := tx.Query(
+			ctx,
+			`
+			with "data" as (
+				select "run_id" from "data" where "knit_id" = $1
+			)
+			select "run_id" from "run"
+			where "run_id" in (select "run_id" from "data")
+			and not ("status" = any($2::runStatus[]))
+			`,
+			knitId, finished,
+		)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var runId string
+			if err := rows.Scan(&runId); err != nil {
+				return err
+			}
+			return fmt.Errorf(
+				"%w: Data(knit#id: %s) is being written by Run: %s",
+				db.ErrDataInUse, knitId, runId,
+			)
+		}
+	}
+
+	// check downstream Runs and DataAgents
+	{
+		var num int
+		if err := tx.QueryRow(
+			ctx,
+			`select count(*) as "num" from "data_agent" where "knit_id" = $1`,
+			knitId,
+		).Scan(&num); err != nil {
+			return err
+		}
+
+		if 0 < num {
+			return fmt.Errorf(
+				"%w: Data(knit#id: %s) is being accessed by users.",
+				db.ErrDataInUse, knitId,
+			)
+		}
+	}
+
+	{
+		rows, err := tx.Query(
+			ctx,
+			`
+			with "assigned_run" as (
+				select distinct "run_id" from "assign" where "knit_id" = $1
+			)
+			select "run_id" from "run"
+			where "run_id" in (select "run_id" from "assigned_run")
+				and not ( "status" = any($2::runStatus[]) )
+			`,
+			knitId, finished,
+		)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		runIds := []string{}
+		for rows.Next() {
+			var runId string
+			if err := rows.Scan(&runId); err != nil {
+				return err
+			}
+			runIds = append(runIds, runId)
+		}
+
+		if 0 < len(runIds) {
+
+			return fmt.Errorf(
+				"%w: Data(knit#id: %s) is being accessed by Runs: %s",
+				db.ErrDataInUse, knitId, strings.Join(runIds, ", "),
+			)
+		}
+	}
+
+	// delete VolumeRef of the Data
+	if err := nom.DropData(ctx, tx, []string{knitId}); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(
+		ctx,
+		`
+		with "del" as (
+			delete from "volume_ref" where "knit_id" = $1
+			returning  "knit_id", "volume_ref"
+		)
+		insert into "garbage" ("knit_id", "volume_ref")
+		select "knit_id", "volume_ref" from "del"
+		`,
+		knitId,
+	); err != nil {
+		return err
+	}
+
+	return nil
 }

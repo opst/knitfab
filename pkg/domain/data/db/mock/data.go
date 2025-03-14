@@ -19,6 +19,7 @@ type DataInterface struct {
 		RemoveAgent        func(context.Context, string) error
 		PickAndRemoveAgent func(context.Context, domain.DataAgentCursor, func(domain.DataAgent) (bool, error)) (domain.DataAgentCursor, error)
 		GetAgentName       func(context.Context, string, []domain.DataAgentMode) ([]string, error)
+		Purge              func(context.Context, string) error
 	}
 	Calls struct {
 		Get  dbmock.CallLog[struct{ KnitId []string }]
@@ -44,6 +45,7 @@ type DataInterface struct {
 			KnitId string
 			Modes  []domain.DataAgentMode
 		}]
+		Purge dbmock.CallLog[struct{ KnitId string }]
 	}
 }
 
@@ -131,6 +133,14 @@ func (di *DataInterface) GetAgentName(ctx context.Context, knitId string, modes 
 	})
 	if di.Impl.GetAgentName != nil {
 		return di.Impl.GetAgentName(ctx, knitId, modes)
+	}
+	panic(errors.New("it should not be called"))
+}
+
+func (di *DataInterface) Purge(ctx context.Context, knitId string) error {
+	di.Calls.Purge = append(di.Calls.Purge, struct{ KnitId string }{KnitId: knitId})
+	if di.Impl.Purge != nil {
+		return di.Impl.Purge(ctx, knitId)
 	}
 	panic(errors.New("it should not be called"))
 }

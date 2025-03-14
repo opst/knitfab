@@ -123,6 +123,23 @@ type DataInterface interface {
 	// - []string : names of DataAgents with the modes
 	//
 	GetAgentName(ctx context.Context, knitId string, modes []domain.DataAgentMode) ([]string, error)
+
+	// Purge the Volume from the Data.
+	//
+	// Args
+	//
+	// - ctx context.Context
+	//
+	// - knitId string : knitId of target data
+	//
+	// Return
+	//
+	// - error:
+	// knitfab/pkg/domain/data.ErrDataInUse: It returns an error if the Data is being accessed by DataAgents or Runs.
+	// knitfab/pkg/domain.ErrMissing: Target data is not found.
+	// It returns nil if the Volume is purged (or has been purged).
+	//
+	Purge(ctx context.Context, knitId string) error
 }
 
 var ErrDataIsPurged = errors.New("Data is purged")
@@ -130,3 +147,5 @@ var ErrDataIsPurged = errors.New("Data is purged")
 func NewErrDataIsPurged(knitId string) error {
 	return fmt.Errorf("%w: %s", ErrDataIsPurged, knitId)
 }
+
+var ErrDataInUse = errors.New("Data is in use")
