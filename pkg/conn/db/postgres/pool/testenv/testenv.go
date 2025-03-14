@@ -17,13 +17,14 @@ type pg struct {
 }
 
 func (p *pg) GetPool(ctx context.Context, t *testing.T) kpool.Pool {
+	pool := kpool.Wrap(p.pool)
 	t.Cleanup(func() {
 		t.Helper()
-		ClearTables(ctx, p.pool, t)
+		ClearTables(ctx, pool, t)
 	})
 
-	ClearTables(ctx, p.pool, t)
-	return kpool.Wrap(p.pool)
+	ClearTables(ctx, pool, t)
+	return pool
 }
 
 type pgNoClean struct {
@@ -156,7 +157,7 @@ func NewPoolBroakerWithForwarder(
 	}
 }
 
-func ClearTables(ctx context.Context, p *pgxpool.Pool, t *testing.T) {
+func ClearTables(ctx context.Context, p kpool.Pool, t *testing.T) {
 	t.Helper()
 
 	conn, err := p.Acquire(ctx)
