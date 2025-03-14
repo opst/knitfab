@@ -28,7 +28,7 @@ func (g *pgGarbage) Pop(ctx context.Context, callback func(types.Garbage) error)
 		ctx,
 		`
 		with "del_id" as (
-			select "knit_id","volume_ref" from "garbage" limit 1 for update skip locked
+			select "knit_id", "volume_ref" from "garbage" limit 1 for update skip locked
 		),
 		"del_garbage" as (
 			delete from "garbage"
@@ -56,7 +56,26 @@ func (g *pgGarbage) Pop(ctx context.Context, callback func(types.Garbage) error)
 		return false, err
 	}
 
-	if pop && callback != nil {
+	if !pop {
+		return false, nil
+	}
+
+	if _, err := tx.Exec(
+		ctx,
+		`
+		with
+		"dep" as (
+			select 1 from "data" where "knit_id" = $1
+		)
+		delete from "knit_id"
+		where "knit_id" = $1 and not exists (select 1 from "dep")
+		`,
+		knitId,
+	); err != nil {
+		return false, err
+	}
+
+	if callback != nil {
 		if err := callback(types.Garbage{KnitId: knitId, VolumeRef: volumeRef}); err != nil {
 			return false, err
 		}
