@@ -2,12 +2,9 @@ package tables
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgerrcode"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
 )
@@ -109,16 +106,31 @@ func (step *Step) apply(tbls *Tables) error {
 
 // Declare premise of test.
 type Operation struct {
-	Plan               []Plan
-	PlanEntrypoint     []PlanEntrypoint
-	PlanArgs           []PlanArgs
-	PlanResources      []PlanResource
-	OnNode             []PlanOnNode
-	PlanImage          []PlanImage
-	PlanPseudo         []PlanPseudo
-	Inputs             map[Input]InputAttr
-	Outputs            map[Output]OutputAttr
-	PlanAnnotations    []Annotation
+	// Orphan KnitId.
+	//
+	// When you put Gatbage or Outcomes in Steps, you do not need to put KnitId here.
+	KnitId []string
+
+	Plan []Plan
+
+	PlanEntrypoint []PlanEntrypoint
+
+	PlanArgs []PlanArgs
+
+	PlanResources []PlanResource
+
+	OnNode []PlanOnNode
+
+	PlanImage []PlanImage
+
+	PlanPseudo []PlanPseudo
+
+	Inputs map[Input]InputAttr
+
+	Outputs map[Output]OutputAttr
+
+	PlanAnnotations []Annotation
+
 	PlanServiceAccount []ServiceAccount
 
 	Steps []Step
@@ -146,6 +158,12 @@ func (prem *Operation) Apply(ctx context.Context, pool kpool.Pool) error {
 
 func (prem *Operation) ApplyWithConn(ctx context.Context, conn kpool.Queryer) error {
 	tbls := New(ctx, conn)
+
+	for _, kid := range prem.KnitId {
+		if err := tbls.InsertKnitId(kid); err != nil {
+			return err
+		}
+	}
 
 	for _, p := range prem.Plan {
 		if err := tbls.InsertPlan(&p); err != nil {
@@ -246,9 +264,7 @@ func (prem *Operation) ApplyWithConn(ctx context.Context, conn kpool.Queryer) er
 
 	for _, gab := range prem.Garbage {
 		if err := tbls.InsertKnitId(gab.KnitId); err != nil {
-			if pgerr := new(pgconn.PgError); !errors.As(err, &pgerr) || pgerr.Code != pgerrcode.UniqueViolation {
-				return err
-			}
+			return err
 		}
 		if err := tbls.InsertGarbage(&gab); err != nil {
 			return err

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
@@ -59,10 +60,15 @@ func shouldEffect(ctag pgconn.CommandTag, require int) error {
 func (f *Tables) InsertKnitId(knitId string) error {
 	ctag, err := f.conn.Exec(
 		f.ctx,
-		`insert into "knit_id" ("knit_id") values ($1)`,
+		`
+		insert into "knit_id" ("knit_id") values ($1)
+		`,
 		knitId,
 	)
 	if err != nil {
+		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
+			return nil
+		}
 		return withCause(struct{ KnitId string }{KnitId: knitId}, err)
 	}
 	return shouldEffect(ctag, 1)
