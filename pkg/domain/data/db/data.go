@@ -147,5 +147,3 @@ var ErrDataIsPurged = errors.New("Data is purged")
 func NewErrDataIsPurged(knitId string) error {
 	return fmt.Errorf("%w: %s", ErrDataIsPurged, knitId)
 }
-
-var ErrDataInUse = errors.New("Data is in use")

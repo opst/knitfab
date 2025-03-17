@@ -12,7 +12,6 @@ import (
 	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
 	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/domain"
-	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
 	"github.com/opst/knitfab/pkg/domain/data/db/postgres"
 	domerr "github.com/opst/knitfab/pkg/domain/errors"
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
@@ -120,9 +119,9 @@ func TestPurge(t *testing.T) {
 
 				{
 					notLocked := try.To(
-						scanner.New[string]().QueryAll(
+						scanner.New[tables.VolumeRef]().QueryAll(
 							ctx, conn,
-							`select "knit_id" from "volume_ref" where "knit_id" = $1 for update skip locked`,
+							`select * from "volume_ref" where "knit_id" = $1 for update skip locked`,
 							when.knitIdToBePurged,
 						),
 					).OrFatal(t)
@@ -540,7 +539,7 @@ func TestPurge(t *testing.T) {
 			},
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -580,7 +579,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("run2-waiting/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -620,7 +619,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("run2-ready/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -660,7 +659,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("run2-starting/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -700,7 +699,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("run2-running/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -740,7 +739,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("run2-aborting/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -780,7 +779,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("run2-completing"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -838,7 +837,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("upstream/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -896,7 +895,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("upstream/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -954,7 +953,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("upstream/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -1012,7 +1011,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("upstream/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -1070,7 +1069,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("upstream/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{
@@ -1128,7 +1127,7 @@ func TestPurge(t *testing.T) {
 			knitIdToBePurged: testhelpers.Padding36("upstream/out"),
 		},
 		Then{
-			wantErr: kdbdata.ErrDataInUse,
+			wantErr: domain.ErrDataInUse,
 			garbage: []tables.Garbage{},
 			volumeRef: []tables.VolumeRef{
 				{

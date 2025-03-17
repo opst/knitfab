@@ -167,6 +167,12 @@ func ClearTables(ctx context.Context, p kpool.Pool, t *testing.T) {
 		t.Errorf("fail to clean-up tables.: %v", err)
 	}
 
+	ClearTablesWithConn(ctx, conn, t)
+}
+
+func ClearTablesWithConn(ctx context.Context, conn kpool.Queryer, t *testing.T) {
+	t.Helper()
+
 	for _, command := range []string{
 		`truncate "plan" RESTART IDENTITY cascade`,
 		`truncate "knit_id" RESTART IDENTITY cascade`,
@@ -174,9 +180,10 @@ func ClearTables(ctx context.Context, p kpool.Pool, t *testing.T) {
 		`truncate "keychain" RESTART IDENTITY cascade`,
 		// by cascade, all row in tables should be deleted.
 	} {
-		_, err = conn.Exec(ctx, command)
+		_, err := conn.Exec(ctx, command)
 		if err != nil {
 			t.Errorf("fail to clean-up tables.: %v", err)
 		}
 	}
+
 }

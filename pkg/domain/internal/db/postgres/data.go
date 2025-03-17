@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v4"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/data/db"
 	kpgerrors "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
 	nominator "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
 	"github.com/opst/knitfab/pkg/utils/slices"
@@ -166,29 +165,35 @@ func UserTagsOfData(ctx context.Context, conn kpool.Queryer, knitId []string) (m
 // PurgeData locks Data and VolumeRef for update.
 func PurgeData(ctx context.Context, tx kpool.Tx, nom nominator.Nominator, knitId string) error {
 	// lock Data
+	var status domain.KnitRunStatus
 	{
 		var volumeRef string
+		var _statusStr string
 		if err := tx.QueryRow(
 			ctx,
 			`
 			with "data" as (
-				select "knit_id"
+				select "knit_id", "run_id"
 				from "data"
 				where "knit_id" = $1
 				for update
 			),
-			"volume_ref" as (
+			"data_and_volume_ref" as (
 				select "knit_id", "volume_ref"
 				from "data"
 				inner join "volume_ref" using ("knit_id")
-				for update
+				for update of "volume_ref"
+			),
+			"data_and_status" as (
+				select "knit_id", "status" from "run"
+				inner join "data" using ("run_id")
 			)
-			select "knit_id", coalesce("volume_ref", '' ) as "volume_ref"
-			from "data"
-			left join "volume_ref" using ("knit_id")
+			select "knit_id", "status", coalesce("volume_ref", '' ) as "volume_ref"
+			from "data_and_status"
+			left join "data_and_volume_ref" using ("knit_id")
 			`,
 			knitId,
-		).Scan(nil, &volumeRef); err != nil {
+		).Scan(nil, &_statusStr, &volumeRef); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return &kpgerrors.Missing{Table: "data", Identity: fmt.Sprintf("knit_id=%s", knitId)}
 			}
@@ -197,40 +202,22 @@ func PurgeData(ctx context.Context, tx kpool.Tx, nom nominator.Nominator, knitId
 		if volumeRef == "" {
 			return nil // already purged
 		}
-	}
-
-	// check upstream Run
-	finished := slices.Map(
-		[]domain.KnitRunStatus{domain.Done, domain.Failed, domain.Invalidated},
-		domain.KnitRunStatus.String,
-	)
-	{
-		rows, err := tx.Query(
-			ctx,
-			`
-			with "data" as (
-				select "run_id" from "data" where "knit_id" = $1
-			)
-			select "run_id" from "run"
-			where "run_id" in (select "run_id" from "data")
-			and not ("status" = any($2::runStatus[]))
-			`,
-			knitId, finished,
-		)
+		_status, err := domain.AsKnitRunStatus(_statusStr)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var runId string
-			if err := rows.Scan(&runId); err != nil {
-				return err
-			}
-			return fmt.Errorf(
-				"%w: Data(knit#id: %s) is being written by Run: %s",
-				db.ErrDataInUse, knitId, runId,
-			)
-		}
+		status = _status
+	}
+
+	// check upstream Run
+	switch status {
+	case domain.Done, domain.Failed, domain.Invalidated:
+		break
+	default:
+		return fmt.Errorf(
+			"%w: Data(knit#id: %s) is being written by Run: %s",
+			domain.ErrDataInUse, knitId, status,
+		)
 	}
 
 	// check downstream Runs and DataAgents
@@ -247,7 +234,7 @@ func PurgeData(ctx context.Context, tx kpool.Tx, nom nominator.Nominator, knitId
 		if 0 < num {
 			return fmt.Errorf(
 				"%w: Data(knit#id: %s) is being accessed by users.",
-				db.ErrDataInUse, knitId,
+				domain.ErrDataInUse, knitId,
 			)
 		}
 	}
@@ -263,7 +250,10 @@ func PurgeData(ctx context.Context, tx kpool.Tx, nom nominator.Nominator, knitId
 			where "run_id" in (select "run_id" from "assigned_run")
 				and not ( "status" = any($2::runStatus[]) )
 			`,
-			knitId, finished,
+			knitId,
+			[]string{
+				domain.Done.String(), domain.Failed.String(), domain.Invalidated.String(),
+			},
 		)
 		if err != nil {
 			return err
@@ -280,17 +270,18 @@ func PurgeData(ctx context.Context, tx kpool.Tx, nom nominator.Nominator, knitId
 		}
 
 		if 0 < len(runIds) {
-
 			return fmt.Errorf(
 				"%w: Data(knit#id: %s) is being accessed by Runs: %s",
-				db.ErrDataInUse, knitId, strings.Join(runIds, ", "),
+				domain.ErrDataInUse, knitId, strings.Join(runIds, ", "),
 			)
 		}
 	}
 
-	// delete VolumeRef of the Data
-	if err := nom.DropData(ctx, tx, []string{knitId}); err != nil {
-		return err
+	if status == domain.Done {
+		// delete VolumeRef of the Data
+		if err := nom.DropData(ctx, tx, []string{knitId}); err != nil {
+			return err
+		}
 	}
 
 	if _, err := tx.Exec(
