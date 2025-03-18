@@ -219,6 +219,23 @@ var GivenDatabase = tables.Operation{
 		},
 		{
 			Run: tables.Run{
+				RunId:                 th.Padding36("plan-1-pseudo/run-done-purged"),
+				PlanId:                th.Padding36("plan-1-pseudo"),
+				Status:                domain.Done,
+				UpdatedAt:             time.Now().Add(-time.Hour),
+				LifecycleSuspendUntil: time.Now().Add(-time.Hour),
+			},
+			Outcomes: map[tables.Data]tables.DataAttibutes{
+				{
+					KnitId:   th.Padding36("plan-1-pseudo/run-done-purged/out/1"),
+					RunId:    th.Padding36("plan-1-pseudo/run-done-purged"),
+					PlanId:   th.Padding36("plan-1-pseudo"),
+					OutputId: 1_010,
+				}: {},
+			},
+		},
+		{
+			Run: tables.Run{
 				RunId:                 th.Padding36("plan-1-pseudo/run-done-leaf"),
 				PlanId:                th.Padding36("plan-1-pseudo"),
 				Status:                domain.Done,
@@ -475,6 +492,39 @@ var GivenDatabase = tables.Operation{
 					OutputId: 2_010,
 				}: {
 					VolumeRef: "plan-2/run-done/out/1",
+					Timestamp: pointer.Ref(time.Now()),
+					UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
+				},
+			},
+		},
+		{
+			Run: tables.Run{
+				RunId:     th.Padding36("plan-2-image/downstream-of-purged"),
+				PlanId:    th.Padding36("plan-2-image"),
+				Status:    domain.Done,
+				UpdatedAt: time.Now().Add(-time.Hour),
+			},
+			Exit: &tables.RunExit{
+				RunId:    th.Padding36("plan-2-image/downstream-of-purged"),
+				ExitCode: 0,
+				Message:  "done",
+			},
+			Assign: []tables.Assign{
+				{
+					KnitId:  th.Padding36("plan-1-pseudo/run-done-purged/out/1"),
+					RunId:   th.Padding36("plan-2-image/downstream-of-purged"),
+					PlanId:  th.Padding36("plan-2-image"),
+					InputId: 2_100,
+				},
+			},
+			Outcomes: map[tables.Data]tables.DataAttibutes{
+				{
+					KnitId:   th.Padding36("plan-2-image/downstream-of-purged/out/1"),
+					RunId:    th.Padding36("plan-2-image/downstream-of-purged"),
+					PlanId:   th.Padding36("plan-2-image"),
+					OutputId: 2_010,
+				}: {
+					VolumeRef: "plan-2-image/downstream-of-purged/out/1",
 					Timestamp: pointer.Ref(time.Now()),
 					UserTag:   []domain.Tag{{Key: "key", Value: "value"}},
 				},

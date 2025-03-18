@@ -1265,6 +1265,8 @@ func (r *runPG) Retry(ctx context.Context, runId string) error {
 	}
 	defer tx.Rollback(ctx)
 
+	// At first, rebuild downstream of the run to lock output.
+	//
 	// `truncateRun` truncates the downward resources of the run.
 	// When `truncateRun` causes ErrDataInUse,
 	// it means that the run is not Done nor Failed.
@@ -1282,30 +1284,47 @@ func (r *runPG) Retry(ctx context.Context, runId string) error {
 		}
 	}
 
+	// Then, Check the Run itself and its upstreams.
 	var status domain.KnitRunStatus
-	// okay, verified. it can be restarted.
+	var purged bool
 	if err := tx.QueryRow(
 		ctx,
 		`
 		with "run" as (
 			select "status", "plan_id" from "run" where "run_id" = $1
+		),
+		"assign" as (
+			select "knit_id" from "assign" where "run_id" = $1
+		),
+		"volume_ref" as (
+			select count("knit_id") != count("volume_ref") as "purged"
+			from "assign"
+			left join "volume_ref" using ("knit_id")
 		)
-		select "status"
+		select "status", "purged"
 		from "run"
 		inner join "plan_image" using ("plan_id")
+		cross join "volume_ref"
 		`,
 		runId,
-	).Scan((*kpgintr.KnitRunStatus)(&status)); err != nil {
+	).Scan((*kpgintr.KnitRunStatus)(&status), &purged); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// This run DOES exist, because truncateRun goes well.
 			// So, this error means that there are no "plan_image" record,
 			// that is, this run is not image-based.
 			return fmt.Errorf(
-				"%w: run (id='%s') is not image-based, cannot be retryed",
+				"%w: Run (id='%s') is not image-based, cannot be retryed",
 				domain.ErrRunIsProtected, runId,
 			)
 		}
 		return err
+	}
+
+	if purged {
+		return fmt.Errorf(
+			"%w: Run (id='%s') has purged input, cannot be retryed",
+			domain.ErrRunIsProtected, runId,
+		)
 	}
 
 	switch status {
