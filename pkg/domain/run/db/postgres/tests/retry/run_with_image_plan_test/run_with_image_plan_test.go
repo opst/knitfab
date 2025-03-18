@@ -62,6 +62,13 @@ func TestRetry_ForRunWithImage(t *testing.T) {
 		pgpool,
 	))
 
+	t.Run("finished run downstream pf purged Data can not be retried", theory.Theory(
+		dataset.GivenDatabase,
+		theory.When{RunId: th.Padding36("plan-2-image/downstream-of-purged")},
+		theory.Then{Err: domain.ErrRunIsProtected},
+		pgpool,
+	))
+
 	t.Run("finished run with downstream can not be retried", theory.Theory(
 		dataset.GivenDatabase,
 		theory.When{RunId: th.Padding36("plan-2-image/run-done")},
