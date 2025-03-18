@@ -1105,10 +1105,6 @@ func (m *runPG) SetExit(ctx context.Context, runId string, exit domain.RunExit) 
 }
 
 func (m *runPG) delete(ctx context.Context, tx kpool.Tx, runId string) error {
-	if err := m.truncateRun(ctx, tx, runId); err != nil {
-		return err
-	}
-
 	var runStatus domain.KnitRunStatus
 	var upstreams int
 	if err := tx.QueryRow(
@@ -1116,14 +1112,34 @@ func (m *runPG) delete(ctx context.Context, tx kpool.Tx, runId string) error {
 		`
 		with "run_status" as (
 			select "status" from "run" where "run_id" = $1
+			for update
 		),
-		"assign" as (
+		"upstream_assign" as (
 			select count(*) as "n_input" from "assign" where "run_id" = $1
+		),
+		"downstream_data" as (
+			select "knit_id" from "data" where "run_id" = $1
+			for update
+		),
+		"downstream_assign" as (
+			select distinct "run_id" from "assign"
+			where "knit_id" in (table "downstream_data")
+		),
+		"invalidated_downstreams" as (
+			select "run_id" from "run"
+			where "run_id" in (table "downstream_assign")
+			and "status" = $2
+			for update of "run"
 		)
-		select "status", "n_input" from "run_status", "assign"
+		select "status", "n_input", "n_inval_downstream", "n_output_data"
+		from
+			"run_status",
+			"upstream_assign",
+			(select count(*) as "n_inval_downstream" from "invalidated_downstreams") as "n1",
+			(select count(*) as "n_output_data" from "downstream_data") as "n2"
 		`,
-		runId,
-	).Scan((*kpgintr.KnitRunStatus)(&runStatus), &upstreams); err != nil {
+		runId, domain.Invalidated,
+	).Scan((*kpgintr.KnitRunStatus)(&runStatus), &upstreams, nil, nil); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return kpgerr.Missing{
 				Table:    "run",
@@ -1133,20 +1149,38 @@ func (m *runPG) delete(ctx context.Context, tx kpool.Tx, runId string) error {
 		return err
 	}
 
+	forceFailed := false
 	switch runStatus {
-	case domain.Waiting, domain.Deactivated, domain.Done, domain.Failed:
+	case domain.Waiting, domain.Deactivated:
+		// ok. they can be deleted.
+		forceFailed = true // but, they should be marked as failed.
+
+	case domain.Done, domain.Failed:
 		// ok. they can be deleted.
 	case domain.Invalidated:
 		//no. they does not exited.
 		return kpgerr.Missing{
 			Table:    "run",
-			Identity: fmt.Sprintf("run_id = %s", runId),
+			Identity: fmt.Sprintf("Run_id = %s", runId),
 		}
 	default:
 		return fmt.Errorf(
-			"%w: run (id='%s', status='%s') is not stopped",
+			"%w: Run (id='%s', status='%s') is not stopped",
 			domain.ErrWorkerActive, runId, runStatus,
 		)
+	}
+
+	if forceFailed {
+		if err := m.setStatus(ctx, tx, runId, domain.Aborting, 0); err != nil {
+			return err
+		}
+		if err := m.setStatus(ctx, tx, runId, domain.Failed, 0); err != nil {
+			return err
+		}
+	}
+
+	if err := m.truncateRun(ctx, tx, runId); err != nil {
+		return err
 	}
 
 	if upstreams == 0 || runStatus == domain.Invalidated {
@@ -1231,15 +1265,21 @@ func (r *runPG) Retry(ctx context.Context, runId string) error {
 	}
 	defer tx.Rollback(ctx)
 
+	// `truncateRun` truncates the downward resources of the run.
+	// When `truncateRun` causes ErrDataInUse,
+	// it means that the run is not Done nor Failed.
+	// In this case, skip complement the data and set the worker and check the status.
 	if err := r.truncateRun(ctx, tx, runId); err != nil {
-		return err
-	}
-
-	if err := r.complementData(ctx, tx, runId); err != nil {
-		return err
-	}
-	if err := r.setWorker(ctx, tx, runId); err != nil {
-		return err
+		if !errors.Is(err, domain.ErrDataInUse) {
+			return err
+		}
+	} else {
+		if err := r.complementData(ctx, tx, runId); err != nil {
+			return err
+		}
+		if err := r.setWorker(ctx, tx, runId); err != nil {
+			return err
+		}
 	}
 
 	var status domain.KnitRunStatus
@@ -1333,9 +1373,10 @@ func (r *runPG) Retry(ctx context.Context, runId string) error {
 // # Returns
 //
 // - error : If the run cannot be truncated, it returns an error.
-// kdb.Missing = the run does not exist.;
-// kdb.WorkerActive = the run's Worker or output's DataAgent may exist.;
-// kdb.ErrRunHasDownstreams = the run has downstream runs.;
+// domain.Missing = the run does not exist.;
+// domain.WorkerActive = the run's Worker or output's DataAgent may exist.;
+// domain.ErrRunHasDownstreams = the run has downstream runs.;
+// domain.DataInUse = the run is not stopped.;
 // and other errors from Nominator.DropData() or database.
 func (m *runPG) truncateRun(
 	ctx context.Context,
@@ -1429,7 +1470,7 @@ func (m *runPG) truncateRun(
 
 	if 0 < dataagents || worker != "" {
 		return fmt.Errorf(
-			"%w: runId = %s: data reading or writing is ongoing",
+			"%w: runId = %s: Data reading or writing is ongoing",
 			domain.ErrWorkerActive, runId,
 		)
 	}
@@ -1468,19 +1509,26 @@ func (m *runPG) truncateRun(
 		knitIds = append(knitIds, knitId)
 	}
 
-	if err := m.nominator.DropData(ctx, tx, knitIds); err != nil {
-		return err
+	for _, knitId := range knitIds {
+		err := kpgintr.PurgeData(ctx, tx, m.nominator, knitId)
+		if err != nil {
+			return err
+		}
 	}
 
 	if _, err := tx.Exec(
 		ctx,
 		`
-		with "data" as (
+		with "del" as (
 			delete from "data" where "knit_id" = any($1)
-			returning "knit_id", "volume_ref"
+			returning "knit_id"
+		),
+		"orphan_knit_id" as (
+			select "knit_id" from "del"
+			left join "garbage" using ("knit_id")
+			where "volume_ref" is null
 		)
-		insert into "garbage" ("knit_id", "volume_ref")
-		select "knit_id", "volume_ref" from "data"
+		delete from "knit_id" where "knit_id" in (select "knit_id" from "orphan_knit_id")
 		`,
 		knitIds,
 	); err != nil {
