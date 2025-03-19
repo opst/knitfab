@@ -172,7 +172,10 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 
 		if u, ok := upstreams[outputId]; ok {
 			if u.ForLog {
-				lp = &domain.LogPoint{Tags: u.MountPoint.Tags}
+				lp = &domain.LogPoint{
+					Id:   u.Id,
+					Tags: u.MountPoint.Tags,
+				}
 			} else {
 				mp = &u.MountPoint
 			}
@@ -180,7 +183,7 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 
 		data := domain.KnitData{
 			KnitDataBody: b,
-			Upsteram: domain.DataSource{
+			Upstream: domain.DataSource{
 				RunBody:    runBodies[runId],
 				MountPoint: mp,
 				LogPoint:   lp,

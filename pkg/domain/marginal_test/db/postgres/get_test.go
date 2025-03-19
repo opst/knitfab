@@ -17,6 +17,7 @@ import (
 	kpgrun "github.com/opst/knitfab/pkg/domain/run/db/postgres"
 	"github.com/opst/knitfab/pkg/utils/cmp"
 	"github.com/opst/knitfab/pkg/utils/maps"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
@@ -54,8 +55,8 @@ func Test_Get(t *testing.T) {
 	// ordering matters. they run top to bottom.
 	for nth, chap := range []chapter{
 		{ // chapter 1: databsae has no data (note: comment trailing open-brace line to summary the block. It may help you also after collapsing)
-			"database has no data",
-			tables.Operation{ // (no runs)
+			title: "database has no data",
+			operation: tables.Operation{ // (no runs)
 				Plan: []tables.Plan{
 					{PlanId: Padding36("plan/ch1#1:uploaded"), Hash: Padding64("#plan/ch1#1:uploaded"), Active: true},
 					//                  ^^^^   ^ ^ ^^^^^^^^
@@ -79,7 +80,7 @@ func Test_Get(t *testing.T) {
 					}: {},
 				},
 			},
-			expectation{
+			expectation: expectation{
 				plan: []domain.Plan{
 					{
 						PlanBody: domain.PlanBody{
@@ -97,8 +98,8 @@ func Test_Get(t *testing.T) {
 			}, // no data
 		},
 		{ // chapter 2: uploading new training data
-			"uploading new training data",
-			tables.Operation{
+			title: "uploading new training data",
+			operation: tables.Operation{
 				Steps: []tables.Step{
 					{ // {} -> run/ch2#1:plan/ch1#1 (running) -> {data/ch2#1:run/ch2#1/out}
 						Run: tables.Run{
@@ -169,7 +170,7 @@ func Test_Get(t *testing.T) {
 					},
 				},
 			},
-			expectation{
+			expectation: expectation{
 				run: []domain.Run{
 					{
 						RunBody: domain.RunBody{
@@ -188,7 +189,7 @@ func Test_Get(t *testing.T) {
 								},
 								KnitDataBody: domain.KnitDataBody{
 									KnitId:    Padding36("data/ch2#1:run/ch2#1/out"),
-									VolumeRef: "pvc/data/ch2#1",
+									VolumeRef: pointer.Ref("pvc/data/ch2#1"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: domain.KeyKnitId, Value: Padding36("data/ch2#1:run/ch2#1/out")},
 										{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -202,13 +203,13 @@ func Test_Get(t *testing.T) {
 					{
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    Padding36("data/ch2#1:run/ch2#1/out"),
-							VolumeRef: "pvc/data/ch2#1",
+							VolumeRef: pointer.Ref("pvc/data/ch2#1"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: domain.KeyKnitId, Value: Padding36("data/ch2#1:run/ch2#1/out")},
 								{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch2#1:plan/ch1#1"), Status: domain.Running,
 								UpdatedAt: START_AT.Add(10*time.Second + 100*time.Millisecond),
@@ -226,7 +227,7 @@ func Test_Get(t *testing.T) {
 					{
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    Padding36("data/ch2#2:run/ch2#2/out"),
-							VolumeRef: "pvc/data/ch2#2",
+							VolumeRef: pointer.Ref("pvc/data/ch2#2"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: domain.KeyKnitId, Value: Padding36("data/ch2#2:run/ch2#2/out")},
 								{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientFailed},
@@ -236,7 +237,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch2#2:plan/ch1#1"), Status: domain.Failed,
 								UpdatedAt: START_AT.Add(10*time.Second + 200*time.Millisecond),
@@ -258,7 +259,7 @@ func Test_Get(t *testing.T) {
 					{
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    Padding36("data/ch2#3:run/ch2#3/out"),
-							VolumeRef: "pvc/data/ch2#3",
+							VolumeRef: pointer.Ref("pvc/data/ch2#3"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "project", Value: "testing"},
 								{Key: "type", Value: "training-data"},
@@ -269,7 +270,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch2#3:plan/ch1#1"), Status: domain.Done,
 								UpdatedAt: START_AT.Add(10*time.Second + 300*time.Millisecond),
@@ -292,8 +293,8 @@ func Test_Get(t *testing.T) {
 			},
 		},
 		{ // chapter 3: training
-			"training",
-			tables.Operation{
+			title: "training",
+			operation: tables.Operation{
 				Plan: []tables.Plan{
 					{
 						PlanId: Padding36("plan/ch3#1:trainer"), Active: true,
@@ -467,7 +468,7 @@ func Test_Get(t *testing.T) {
 					{KnitId: Padding36("data/ch2#3:run/ch2#3/out"), InputId: 9_03_01_100},
 				},
 			},
-			expectation{
+			expectation: expectation{
 				plan: []domain.Plan{
 					{
 						PlanBody: domain.PlanBody{
@@ -492,7 +493,6 @@ func Test_Get(t *testing.T) {
 							ServiceAccount: "trainer",
 						},
 						Inputs: []domain.Input{
-
 							{
 								MountPoint: domain.MountPoint{
 									Id: 9_03_01_100, Path: "/in",
@@ -590,7 +590,7 @@ func Test_Get(t *testing.T) {
 								},
 								KnitDataBody: domain.KnitDataBody{
 									KnitId:    Padding36("data/ch2#3:run/ch2#3/out"),
-									VolumeRef: "pvc/data/ch2#3",
+									VolumeRef: pointer.Ref("pvc/data/ch2#3"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "training-data"},
@@ -614,7 +614,7 @@ func Test_Get(t *testing.T) {
 									}),
 								},
 								KnitDataBody: domain.KnitDataBody{
-									KnitId: Padding36("data/ch3#1:run/ch3#1/out/1"), VolumeRef: "#data/ch3#1",
+									KnitId: Padding36("data/ch3#1:run/ch3#1/out/1"), VolumeRef: pointer.Ref("#data/ch3#1"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "model"},
@@ -638,7 +638,7 @@ func Test_Get(t *testing.T) {
 									}),
 								},
 								KnitDataBody: domain.KnitDataBody{
-									KnitId: Padding36("data/ch3#2:run/ch3#1/out/2"), VolumeRef: "#data/ch3#2",
+									KnitId: Padding36("data/ch3#2:run/ch3#1/out/2"), VolumeRef: pointer.Ref("#data/ch3#2"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "model"},
@@ -661,7 +661,7 @@ func Test_Get(t *testing.T) {
 									}),
 								},
 								KnitDataBody: domain.KnitDataBody{
-									KnitId: Padding36("data/ch3#3:run/ch3#1/out/3"), VolumeRef: "#data/ch3#3",
+									KnitId: Padding36("data/ch3#3:run/ch3#1/out/3"), VolumeRef: pointer.Ref("#data/ch3#3"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "validation-stats"},
@@ -681,7 +681,7 @@ func Test_Get(t *testing.T) {
 								{Key: "type", Value: "log"},
 							}),
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: Padding36("data/ch3#4:run/ch3#1/log"), VolumeRef: "#data/ch3#4",
+								KnitId: Padding36("data/ch3#4:run/ch3#1/log"), VolumeRef: pointer.Ref("#data/ch3#4"),
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "testing"},
 									{Key: "type", Value: "log"},
@@ -699,7 +699,7 @@ func Test_Get(t *testing.T) {
 					{
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    Padding36("data/ch2#3:run/ch2#3/out"),
-							VolumeRef: "pvc/data/ch2#3",
+							VolumeRef: pointer.Ref("pvc/data/ch2#3"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "project", Value: "testing"},
 								{Key: "type", Value: "training-data"},
@@ -710,7 +710,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch2#3:plan/ch1#1"), Status: domain.Done,
 								UpdatedAt: START_AT.Add(10*time.Second + 300*time.Millisecond),
@@ -718,6 +718,10 @@ func Test_Get(t *testing.T) {
 									PlanId: Padding36("plan/ch1#1:uploaded"), Active: true,
 									Hash:   Padding64("#plan/ch1#1:uploaded"),
 									Pseudo: &domain.PseudoPlanDetail{Name: domain.Uploaded},
+								},
+								Exit: &domain.RunExit{
+									Code:    0,
+									Message: "succeeded",
 								},
 							},
 							MountPoint: &domain.MountPoint{
@@ -748,6 +752,11 @@ func Test_Get(t *testing.T) {
 											"cpu":    resource.MustParse("0.5"),
 											"memory": resource.MustParse("1Gi"),
 										},
+										Annotations: []domain.Annotation{
+											{Key: "model-version", Value: "1"},
+											{Key: "description", Value: "testing"},
+										},
+										ServiceAccount: "trainer",
 									},
 								},
 								MountPoint: domain.MountPoint{
@@ -776,6 +785,11 @@ func Test_Get(t *testing.T) {
 										"cpu":    resource.MustParse("0.5"),
 										"memory": resource.MustParse("1Gi"),
 									},
+									Annotations: []domain.Annotation{
+										{Key: "model-version", Value: "1"},
+										{Key: "description", Value: "testing"},
+									},
+									ServiceAccount: "trainer",
 								},
 								MountPoint: domain.MountPoint{
 									Id: 9_03_01_100, Path: "/in",
@@ -789,7 +803,7 @@ func Test_Get(t *testing.T) {
 					},
 					{
 						KnitDataBody: domain.KnitDataBody{
-							KnitId: Padding36("data/ch3#1:run/ch3#1/out/1"), VolumeRef: "#data/ch3#1",
+							KnitId: Padding36("data/ch3#1:run/ch3#1/out/1"), VolumeRef: pointer.Ref("#data/ch3#1"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "project", Value: "testing"},
 								{Key: "type", Value: "model"},
@@ -802,7 +816,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
 								Exit: &domain.RunExit{
@@ -825,6 +839,11 @@ func Test_Get(t *testing.T) {
 										"cpu":    resource.MustParse("0.5"),
 										"memory": resource.MustParse("1Gi"),
 									},
+									Annotations: []domain.Annotation{
+										{Key: "model-version", Value: "1"},
+										{Key: "description", Value: "testing"},
+									},
+									ServiceAccount: "trainer",
 								},
 							},
 							MountPoint: &domain.MountPoint{
@@ -839,7 +858,7 @@ func Test_Get(t *testing.T) {
 					},
 					{
 						KnitDataBody: domain.KnitDataBody{
-							KnitId: Padding36("data/ch3#2:run/ch3#1/out/2"), VolumeRef: "#data/ch3#2",
+							KnitId: Padding36("data/ch3#2:run/ch3#1/out/2"), VolumeRef: pointer.Ref("#data/ch3#2"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "project", Value: "testing"},
 								{Key: "type", Value: "model"},
@@ -852,7 +871,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
 								Exit: &domain.RunExit{
@@ -875,6 +894,11 @@ func Test_Get(t *testing.T) {
 										"cpu":    resource.MustParse("0.5"),
 										"memory": resource.MustParse("1Gi"),
 									},
+									Annotations: []domain.Annotation{
+										{Key: "model-version", Value: "1"},
+										{Key: "description", Value: "testing"},
+									},
+									ServiceAccount: "trainer",
 								},
 							},
 							MountPoint: &domain.MountPoint{
@@ -889,7 +913,7 @@ func Test_Get(t *testing.T) {
 					},
 					{
 						KnitDataBody: domain.KnitDataBody{
-							KnitId: Padding36("data/ch3#3:run/ch3#1/out/3"), VolumeRef: "#data/ch3#3",
+							KnitId: Padding36("data/ch3#3:run/ch3#1/out/3"), VolumeRef: pointer.Ref("#data/ch3#3"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "project", Value: "testing"},
 								{Key: "type", Value: "validation-stats"},
@@ -900,7 +924,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
 								Exit: &domain.RunExit{
@@ -923,6 +947,11 @@ func Test_Get(t *testing.T) {
 										"cpu":    resource.MustParse("0.5"),
 										"memory": resource.MustParse("1Gi"),
 									},
+									Annotations: []domain.Annotation{
+										{Key: "model-version", Value: "1"},
+										{Key: "description", Value: "testing"},
+									},
+									ServiceAccount: "trainer",
 								},
 							},
 							MountPoint: &domain.MountPoint{
@@ -936,7 +965,7 @@ func Test_Get(t *testing.T) {
 					},
 					{
 						KnitDataBody: domain.KnitDataBody{
-							KnitId: Padding36("data/ch3#4:run/ch3#1/log"), VolumeRef: "#data/ch3#4",
+							KnitId: Padding36("data/ch3#4:run/ch3#1/log"), VolumeRef: pointer.Ref("#data/ch3#4"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "project", Value: "testing"},
 								{Key: "type", Value: "log"},
@@ -947,7 +976,7 @@ func Test_Get(t *testing.T) {
 								},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							RunBody: domain.RunBody{
 								Id: Padding36("run/ch3#1:plan/ch3#1"), Status: domain.Done,
 								Exit: &domain.RunExit{
@@ -970,6 +999,11 @@ func Test_Get(t *testing.T) {
 										"cpu":    resource.MustParse("0.5"),
 										"memory": resource.MustParse("1Gi"),
 									},
+									Annotations: []domain.Annotation{
+										{Key: "model-version", Value: "1"},
+										{Key: "description", Value: "testing"},
+									},
+									ServiceAccount: "trainer",
 								},
 							},
 							LogPoint: &domain.LogPoint{
@@ -985,8 +1019,8 @@ func Test_Get(t *testing.T) {
 			},
 		},
 		{ // chapter 4: test model and reporting (is runnning)
-			"test model and reporting (is runnning)",
-			tables.Operation{
+			title: "test model and reporting (is runnning)",
+			operation: tables.Operation{
 				Plan: []tables.Plan{
 					{
 						PlanId: Padding36("plan/ch4#1:test"),
@@ -1162,7 +1196,7 @@ func Test_Get(t *testing.T) {
 					},
 				},
 			},
-			expectation{
+			expectation: expectation{
 				plan: []domain.Plan{
 					{
 						PlanBody: domain.PlanBody{
@@ -1273,7 +1307,7 @@ func Test_Get(t *testing.T) {
 									}),
 								},
 								KnitDataBody: domain.KnitDataBody{
-									KnitId: Padding36("data/ch3#1:run/ch3#1/out/1"), VolumeRef: "#data/ch3#1",
+									KnitId: Padding36("data/ch3#1:run/ch3#1/out/1"), VolumeRef: pointer.Ref("#data/ch3#1"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "model"},
@@ -1323,7 +1357,7 @@ func Test_Get(t *testing.T) {
 									}),
 								},
 								KnitDataBody: domain.KnitDataBody{
-									KnitId: Padding36("data/ch3#2:run/ch3#1/out/2"), VolumeRef: "#data/ch3#2",
+									KnitId: Padding36("data/ch3#2:run/ch3#1/out/2"), VolumeRef: pointer.Ref("#data/ch3#2"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "model"},
@@ -1375,7 +1409,7 @@ func Test_Get(t *testing.T) {
 								},
 
 								KnitDataBody: domain.KnitDataBody{
-									KnitId: Padding36("data/ch3#4:run/ch3#1/log"), VolumeRef: "#data/ch3#4",
+									KnitId: Padding36("data/ch3#4:run/ch3#1/log"), VolumeRef: pointer.Ref("#data/ch3#4"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "log"},
@@ -1417,7 +1451,7 @@ func Test_Get(t *testing.T) {
 									}),
 								},
 								KnitDataBody: domain.KnitDataBody{
-									KnitId: Padding36("data/ch3#3:run/ch3#1/out/3"), VolumeRef: "#data/ch3#3",
+									KnitId: Padding36("data/ch3#3:run/ch3#1/out/3"), VolumeRef: pointer.Ref("#data/ch3#3"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "validation-stats"},
@@ -1443,7 +1477,7 @@ func Test_Get(t *testing.T) {
 								},
 								KnitDataBody: domain.KnitDataBody{
 									KnitId:    Padding36("data/ch4#1:run/ch4#4/out"),
-									VolumeRef: "#data/ch4#1",
+									VolumeRef: pointer.Ref("#data/ch4#1"),
 									Tags: domain.NewTagSet([]domain.Tag{
 										{Key: "project", Value: "testing"},
 										{Key: "type", Value: "report"},
@@ -1460,7 +1494,7 @@ func Test_Get(t *testing.T) {
 					{
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    Padding36("data/ch4#1:run/ch4#4/out"),
-							VolumeRef: "#data/ch4#1",
+							VolumeRef: pointer.Ref("#data/ch4#1"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "project", Value: "testing"},
 								{Key: "type", Value: "report"},
@@ -1469,15 +1503,13 @@ func Test_Get(t *testing.T) {
 								{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
 							}),
 						},
-						Upsteram: domain.DataSource{
+						Upstream: domain.DataSource{
 							MountPoint: &domain.MountPoint{
-								Id: 9_04_03_100, Path: "/metrics",
+								Id: 9_04_03_010, Path: "/out",
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: "project", Value: "testing"},
-									{
-										Key:   domain.KeyKnitTimestamp,
-										Value: rfctime.RFC3339(START_AT.Add(30*time.Second + 103*time.Millisecond)).String(),
-									},
+									{Key: "type", Value: "report"},
+									{Key: "format", Value: "pdf"},
 								}),
 							},
 							RunBody: domain.RunBody{
@@ -1490,6 +1522,7 @@ func Test_Get(t *testing.T) {
 										Image: "repo.invalid/reporter", Version: "v4#3",
 									},
 								},
+								WorkerName: "worker/ch4#1:run/ch4#4",
 							},
 						},
 					},
@@ -1498,8 +1531,8 @@ func Test_Get(t *testing.T) {
 		},
 
 		{ // chapter 5: plan dependencies
-			"plan dependencies",
-			tables.Operation{
+			title: "plan dependencies",
+			operation: tables.Operation{
 				Plan: []tables.Plan{
 					{
 						PlanId: Padding36("plan/ch5#1:train"),
@@ -1642,7 +1675,7 @@ func Test_Get(t *testing.T) {
 					},
 				},
 			},
-			expectation{
+			expectation: expectation{
 				plan: []domain.Plan{
 					{
 						PlanBody: domain.PlanBody{
@@ -1870,6 +1903,118 @@ func Test_Get(t *testing.T) {
 								Upstreams: []domain.PlanUpstream{},
 							},
 						},
+					},
+				},
+			},
+		},
+
+		// chapter 6: purged Data
+		{
+			title: "purged Data",
+			operation: tables.Operation{
+				Steps: []tables.Step{
+					{
+						Run: tables.Run{
+							RunId:     Padding36("run/ch6#1:plan/ch1#1"),
+							PlanId:    Padding36("plan/ch1#1:uploaded"),
+							Status:    domain.Done,
+							UpdatedAt: START_AT.Add(60*time.Second + 101*time.Millisecond),
+						},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:   Padding36("data/ch6#1:run/ch6#1/out"),
+								PlanId:   Padding36("plan/ch1#1:uploaded"),
+								RunId:    Padding36("run/ch6#1:plan/ch1#1"),
+								OutputId: 9_01_01_010,
+							}: {
+								UserTag: []domain.Tag{
+									{Key: "project", Value: "testing"},
+									{Key: "type", Value: "report"},
+									{Key: "format", Value: "pdf"},
+								},
+							},
+						},
+					},
+					{
+						Run: tables.Run{
+							RunId:     Padding36("run/ch6#2:plan/ch1#1"),
+							PlanId:    Padding36("plan/ch1#1:uploaded"),
+							Status:    domain.Done,
+							UpdatedAt: START_AT.Add(60*time.Second + 102*time.Millisecond),
+						},
+						Outcomes: map[tables.Data]tables.DataAttibutes{
+							{
+								KnitId:   Padding36("data/ch6#2:run/ch6#2/out"),
+								PlanId:   Padding36("plan/ch1#1:uploaded"),
+								RunId:    Padding36("run/ch6#2:plan/ch1#1"),
+								OutputId: 9_01_01_010,
+							}: {},
+						},
+					},
+				},
+			},
+			expectation: expectation{
+				data: []domain.KnitData{
+					{
+						KnitDataBody: domain.KnitDataBody{
+							KnitId: Padding36("data/ch6#1:run/ch6#1/out"),
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: "project", Value: "testing"},
+								{Key: "type", Value: "report"},
+								{Key: "format", Value: "pdf"},
+								{Key: domain.KeyKnitId, Value: Padding36("data/ch6#1:run/ch6#1/out")},
+								{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientPurged},
+							}),
+						},
+						Upstream: domain.DataSource{
+							MountPoint: &domain.MountPoint{
+								Id: 9_01_01_010, Path: "/out",
+							},
+							RunBody: domain.RunBody{
+								Id:        Padding36("run/ch6#1:plan/ch1#1"),
+								Status:    domain.Done,
+								UpdatedAt: START_AT.Add(60*time.Second + 101*time.Millisecond),
+								PlanBody: domain.PlanBody{
+									PlanId: Padding36("plan/ch1#1:uploaded"),
+									Hash:   Padding64("#plan/ch1#1:uploaded"),
+									Active: true,
+									Pseudo: &domain.PseudoPlanDetail{
+										Name: domain.Uploaded,
+									},
+								},
+							},
+						},
+						Downstreams: []domain.DataSink{},
+						NominatedBy: []domain.Nomination{},
+					},
+					{
+						KnitDataBody: domain.KnitDataBody{
+							KnitId: Padding36("data/ch6#2:run/ch6#2/out"),
+							Tags: domain.NewTagSet([]domain.Tag{
+								{Key: domain.KeyKnitId, Value: Padding36("data/ch6#2:run/ch6#2/out")},
+								{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientPurged},
+							}),
+						},
+						Upstream: domain.DataSource{
+							MountPoint: &domain.MountPoint{
+								Id: 9_01_01_010, Path: "/out",
+							},
+							RunBody: domain.RunBody{
+								Id:        Padding36("run/ch6#2:plan/ch1#1"),
+								Status:    domain.Done,
+								UpdatedAt: START_AT.Add(60*time.Second + 102*time.Millisecond),
+								PlanBody: domain.PlanBody{
+									PlanId: Padding36("plan/ch1#1:uploaded"),
+									Hash:   Padding64("#plan/ch1#1:uploaded"),
+									Active: true,
+									Pseudo: &domain.PseudoPlanDetail{
+										Name: domain.Uploaded,
+									},
+								},
+							},
+						},
+						Downstreams: []domain.DataSink{},
+						NominatedBy: []domain.Nomination{},
 					},
 				},
 			},

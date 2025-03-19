@@ -13,10 +13,13 @@ import (
 func CheckDataIsBound(
 	ctx context.Context, kcluster cluster.Cluster, body domain.KnitDataBody,
 ) (bool, error) {
+	if body.VolumeRef == nil {
+		return false, nil
+	}
 	_ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	result := <-kcluster.GetPVC(
-		_ctx, retry.StaticBackoff(1*time.Second), body.VolumeRef,
+		_ctx, retry.StaticBackoff(1*time.Second), *body.VolumeRef,
 		cluster.PVCIsBound,
 	)
 	if err := result.Err; err != nil {

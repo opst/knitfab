@@ -51,34 +51,57 @@ func (td *TagDelta) Equal(other *TagDelta) bool {
 
 type KnitDataBody struct {
 	KnitId    string
-	VolumeRef string
+	VolumeRef *string
 	Tags      *TagSet
 }
 
-func (kbd *KnitDataBody) Equal(o *KnitDataBody) bool {
-	if (kbd == nil) || (o == nil) {
-		return (kbd == nil) && (o == nil)
+func (kdb *KnitDataBody) Equal(o *KnitDataBody) bool {
+	if (kdb == nil) || (o == nil) {
+		return (kdb == nil) && (o == nil)
 	}
 
-	return kbd.KnitId == o.KnitId &&
-		kbd.VolumeRef == o.VolumeRef &&
-		kbd.Tags.Equal(o.Tags)
+	if kdb.VolumeRef == nil || o.VolumeRef == nil {
+		return kdb.VolumeRef == o.VolumeRef
+	}
+	if *kdb.VolumeRef != *o.VolumeRef {
+		return false
+	}
+
+	return kdb.KnitId == o.KnitId &&
+		kdb.Tags.Equal(o.Tags)
+}
+
+func (kdb KnitDataBody) String() string {
+	volumeRef := "(nil)"
+	if kdb.VolumeRef != nil {
+		volumeRef = *kdb.VolumeRef
+	}
+	return fmt.Sprintf("KnitDataBody{KnitId: %s, VolumeRef: %s, Tags: %s}", kdb.KnitId, volumeRef, kdb.Tags)
 }
 
 func (kbody *KnitDataBody) Fulfilled() bool {
-	return kbody != nil && kbody.KnitId != "" && kbody.VolumeRef != ""
+	return kbody != nil && kbody.KnitId != "" && kbody.VolumeRef != nil
 }
 
 type KnitData struct {
 	KnitDataBody
-	Upsteram    DataSource
+	Upstream    DataSource
 	Downstreams []DataSink
 	NominatedBy []Nomination
 }
 
 func (d *KnitData) Equal(other *KnitData) bool {
 	return d.KnitDataBody.Equal(&other.KnitDataBody) &&
-		d.Tags.Equal(other.Tags)
+		d.Upstream.Equal(&other.Upstream) &&
+		cmp.SliceContentEqWith(d.Downstreams, other.Downstreams, func(a, b DataSink) bool { return a.Equal(&b) }) &&
+		cmp.SliceContentEqWith(d.NominatedBy, other.NominatedBy, func(a, b Nomination) bool { return a.Equal(&b) })
+}
+
+func (d KnitData) String() string {
+	return fmt.Sprintf(
+		"KnitData{KnitDataBody: %s, Upstream: %+v, Downstreams: %v, NominatedBy: %v}",
+		d.KnitDataBody, d.Upstream, d.Downstreams, d.NominatedBy,
+	)
 }
 
 type DataSource struct {
@@ -87,9 +110,26 @@ type DataSource struct {
 	RunBody    RunBody
 }
 
+func (ds *DataSource) Equal(other *DataSource) bool {
+	if ds == nil || other == nil {
+		return ds == other
+	}
+	return ds.LogPoint.Equal(other.LogPoint) &&
+		ds.MountPoint.Equal(other.MountPoint) &&
+		ds.RunBody.Equal(&other.RunBody)
+}
+
 type DataSink struct {
 	MountPoint
 	RunBody
+}
+
+func (ds *DataSink) Equal(other *DataSink) bool {
+	if ds == nil || other == nil {
+		return ds == other
+	}
+	return ds.MountPoint.Equal(&other.MountPoint) &&
+		ds.RunBody.Equal(&other.RunBody)
 }
 
 type DataAgent struct {

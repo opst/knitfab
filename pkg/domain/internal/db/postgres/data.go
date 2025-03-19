@@ -41,8 +41,7 @@ func GetDataBody(ctx context.Context, conn kpool.Queryer, knitIds []string) (map
 			"volume_ref",
 			"status" = any($2::runStatus[]) as "knit_transient__processing",
 			"status" = any($3::runStatus[]) as "knit_transient__failed",
-			"timestamp" is not null as "has_timestamp",
-			coalesce("timestamp", to_timestamp(0)) as "timestamp"
+			"timestamp"
 		from "data_with_timestamp"
 		inner join "run" using ("run_id")
 		`,
@@ -59,17 +58,20 @@ func GetDataBody(ctx context.Context, conn kpool.Queryer, knitIds []string) (map
 	tags := map[string][]domain.Tag{}
 	for rows.Next() {
 		b := domain.KnitDataBody{}
-		var transientProcessing, transientFailed, hasTimestamp bool
-		var timestamp time.Time
+		var transientProcessing, transientFailed bool
+		var timestamp *time.Time
 		err := rows.Scan(
 			&b.KnitId, &b.VolumeRef, &transientProcessing, &transientFailed,
-			&hasTimestamp, &timestamp,
+			&timestamp,
 		)
 		if err != nil {
 			return nil, err
 		}
 		ts := []domain.Tag{
 			{Key: domain.KeyKnitId, Value: b.KnitId},
+		}
+		if b.VolumeRef == nil {
+			ts = append(ts, domain.Tag{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientPurged})
 		}
 		if transientProcessing {
 			ts = append(
@@ -89,8 +91,8 @@ func GetDataBody(ctx context.Context, conn kpool.Queryer, knitIds []string) (map
 				},
 			)
 		}
-		if hasTimestamp {
-			ts = append(ts, domain.NewTimestampTag(timestamp))
+		if timestamp != nil {
+			ts = append(ts, domain.NewTimestampTag(*timestamp))
 		}
 		bodies[b.KnitId] = b
 		tags[b.KnitId] = ts

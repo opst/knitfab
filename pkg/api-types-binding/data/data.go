@@ -56,7 +56,7 @@ func ComposeDetail(d domain.KnitData) data.Detail {
 	return data.Detail{
 		KnitId:      d.KnitId,
 		Tags:        slices.Map(d.Tags.Slice(), bindtags.Compose),
-		Upstream:    composeCreatedFrom(d.Upsteram),
+		Upstream:    composeCreatedFrom(d.Upstream),
 		Downstreams: slices.Map(downstreams, composeAssignTo),
 		Nomination:  slices.Map(d.NominatedBy, composeNominatedBy),
 	}

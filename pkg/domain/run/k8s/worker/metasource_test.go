@@ -8,6 +8,7 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 	kubebatch "k8s.io/api/batch/v1"
@@ -16,11 +17,11 @@ import (
 )
 
 func TestRunExecutable(t *testing.T) {
-	dsIn1 := domain.KnitDataBody{KnitId: "input-1", VolumeRef: "ref-input-1"}
-	dsIn2 := domain.KnitDataBody{KnitId: "input-2", VolumeRef: "ref-input-2"}
-	dsOut3 := domain.KnitDataBody{KnitId: "output-3", VolumeRef: "ref-output-3"}
-	dsOut4 := domain.KnitDataBody{KnitId: "output-4", VolumeRef: "ref-output-4"}
-	dsLog5 := domain.KnitDataBody{KnitId: "log-5", VolumeRef: "ref-log-5"}
+	dsIn1 := domain.KnitDataBody{KnitId: "input-1", VolumeRef: pointer.Ref("ref-input-1")}
+	dsIn2 := domain.KnitDataBody{KnitId: "input-2", VolumeRef: pointer.Ref("ref-input-2")}
+	dsOut3 := domain.KnitDataBody{KnitId: "output-3", VolumeRef: pointer.Ref("ref-output-3")}
+	dsOut4 := domain.KnitDataBody{KnitId: "output-4", VolumeRef: pointer.Ref("ref-output-4")}
+	dsLog5 := domain.KnitDataBody{KnitId: "log-5", VolumeRef: pointer.Ref("ref-log-5")}
 
 	config := bconf.TrySeal(&bconf.KnitClusterConfigMarshall{
 		Namespace: "knit-test",
@@ -470,7 +471,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn1.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn1.VolumeRef,
+									ClaimName: *dsIn1.VolumeRef,
 								},
 							},
 						},
@@ -478,7 +479,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn2.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn2.VolumeRef,
+									ClaimName: *dsIn2.VolumeRef,
 								},
 							},
 						},
@@ -486,7 +487,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsOut3.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsOut3.VolumeRef,
+									ClaimName: *dsOut3.VolumeRef,
 								},
 							},
 						},
@@ -494,7 +495,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsOut4.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsOut4.VolumeRef,
+									ClaimName: *dsOut4.VolumeRef,
 								},
 							},
 						},
@@ -502,7 +503,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsLog5.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsLog5.VolumeRef,
+									ClaimName: *dsLog5.VolumeRef,
 								},
 							},
 						},
@@ -749,7 +750,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn1.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn1.VolumeRef,
+									ClaimName: *dsIn1.VolumeRef,
 								},
 							},
 						},
@@ -757,7 +758,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsOut3.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsOut3.VolumeRef,
+									ClaimName: *dsOut3.VolumeRef,
 								},
 							},
 						},
@@ -765,7 +766,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsLog5.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsLog5.VolumeRef,
+									ClaimName: *dsLog5.VolumeRef,
 								},
 							},
 						},
@@ -868,7 +869,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn1.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn1.VolumeRef,
+									ClaimName: *dsIn1.VolumeRef,
 								},
 							},
 						},
@@ -876,7 +877,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn2.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn2.VolumeRef,
+									ClaimName: *dsIn2.VolumeRef,
 								},
 							},
 						},
@@ -884,7 +885,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsOut3.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsOut3.VolumeRef,
+									ClaimName: *dsOut3.VolumeRef,
 								},
 							},
 						},
@@ -892,7 +893,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsOut4.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsOut4.VolumeRef,
+									ClaimName: *dsOut4.VolumeRef,
 								},
 							},
 						},
@@ -1019,7 +1020,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn1.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn1.VolumeRef,
+									ClaimName: *dsIn1.VolumeRef,
 								},
 							},
 						},
@@ -1027,7 +1028,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn2.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn2.VolumeRef,
+									ClaimName: *dsIn2.VolumeRef,
 								},
 							},
 						},
@@ -1035,7 +1036,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsLog5.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsLog5.VolumeRef,
+									ClaimName: *dsLog5.VolumeRef,
 								},
 							},
 						},
@@ -1098,7 +1099,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn1.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn1.VolumeRef,
+									ClaimName: *dsIn1.VolumeRef,
 								},
 							},
 						},
@@ -1106,7 +1107,7 @@ func TestRunExecutable(t *testing.T) {
 							Name: dsIn2.KnitId,
 							VolumeSource: kubecore.VolumeSource{
 								PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-									ClaimName: dsIn2.VolumeRef,
+									ClaimName: *dsIn2.VolumeRef,
 								},
 							},
 						},
@@ -1145,12 +1146,51 @@ func TestRunExecutable(t *testing.T) {
 						// KnitDataBody: (missing) // all inputs should have data
 						MountPoint: domain.MountPoint{Id: 2, Path: "/in/2"},
 					},
+				},
+				Outputs: []domain.Assignment{
 					{
 						KnitDataBody: dsOut3,
 						MountPoint:   domain.MountPoint{Id: 3, Path: "/out/3"},
 					},
+					{
+						KnitDataBody: dsOut4,
+						MountPoint:   domain.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &domain.Log{Id: 5, KnitDataBody: dsLog5},
+			},
+		},
+	))
+	t.Run("when kdb.Run has an input without volume_ref, it will cause error", theoryErr(
+		When{
+			run: domain.Run{
+				RunBody: domain.RunBody{
+					Id: "test-run-id",
+					PlanBody: domain.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &domain.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
+					},
+				},
+				Inputs: []domain.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   domain.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: domain.KnitDataBody{
+							KnitId: "knit-id-2",
+							// VolumeRef: (missing) // all inputs should have volume_ref
+						},
+						MountPoint: domain.MountPoint{Id: 2, Path: "/in/2"},
+					},
 				},
 				Outputs: []domain.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   domain.MountPoint{Id: 3, Path: "/out/3"},
+					},
 					{
 						KnitDataBody: dsOut4,
 						MountPoint:   domain.MountPoint{Id: 4, Path: "/out/4"},
@@ -1228,6 +1268,45 @@ func TestRunExecutable(t *testing.T) {
 					},
 					{
 						// KnitDataBody: (missing) // all outputs should have data
+						MountPoint: domain.MountPoint{Id: 4, Path: "/out/4"},
+					},
+				},
+				Log: &domain.Log{Id: 5, KnitDataBody: dsLog5},
+			},
+		},
+	))
+	t.Run("when kdb.Run has an output without VolumeRef, it will cause error", theoryErr(
+		When{
+			run: domain.Run{
+				RunBody: domain.RunBody{
+					Id: "test-run-id",
+					PlanBody: domain.PlanBody{
+						PlanId: "test-plan-id",
+						Image: &domain.ImageIdentifier{
+							Image: "repo.invalid/image-name", Version: "1.0",
+						},
+					},
+				},
+				Inputs: []domain.Assignment{
+					{
+						KnitDataBody: dsIn1,
+						MountPoint:   domain.MountPoint{Id: 1, Path: "/in/1"},
+					},
+					{
+						KnitDataBody: dsIn2,
+						MountPoint:   domain.MountPoint{Id: 2, Path: "/in/2"},
+					},
+				},
+				Outputs: []domain.Assignment{
+					{
+						KnitDataBody: dsOut3,
+						MountPoint:   domain.MountPoint{Id: 3, Path: "/out/3"},
+					},
+					{
+						KnitDataBody: domain.KnitDataBody{
+							KnitId: "knit-id-4",
+							// VolumeRef: (missing) // all outputs should have volume_ref
+						},
 						MountPoint: domain.MountPoint{Id: 4, Path: "/out/4"},
 					},
 				},

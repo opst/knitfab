@@ -125,7 +125,7 @@ func TestNewAgent(t *testing.T) {
 						Mode:       when.Mode,
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    knitIdDone,
-							VolumeRef: "#test-knit-done",
+							VolumeRef: pointer.Ref("#test-knit-done"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "tag-a", Value: "a-value"},
 								{Key: "tag-b", Value: "b-value"},

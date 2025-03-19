@@ -320,6 +320,9 @@ func (mp *MountPoint) String() string {
 
 // true if m and other are equal, means they are represents same entity.
 func (m *MountPoint) Equal(other *MountPoint) bool {
+	if (m == nil) || (other == nil) {
+		return (m == nil) && (other == nil)
+	}
 	return m.Id == other.Id && m.Equiv(other)
 }
 

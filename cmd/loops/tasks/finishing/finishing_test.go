@@ -16,6 +16,7 @@ import (
 	kdbmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
 	mockK8sRun "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
 	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 )
 
 func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
@@ -139,7 +140,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 						},
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "knit-id-1",
-							VolumeRef: "#knit-id-1",
+							VolumeRef: pointer.Ref("#knit-id-1"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "csv"},
 								{Key: "input", Value: "1"},
@@ -156,7 +157,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 						},
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "knit-id-2",
-							VolumeRef: "#knit-id-2",
+							VolumeRef: pointer.Ref("#knit-id-2"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "model"},
 								{Key: "output", Value: "1"},
@@ -171,7 +172,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 					}),
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "knit-id-log",
-						VolumeRef: "#knit-id-log",
+						VolumeRef: pointer.Ref("#knit-id-log"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "text"},
 							{Key: "log", Value: "1"},
@@ -229,7 +230,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 						},
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "knit-id-1",
-							VolumeRef: "#knit-id-1",
+							VolumeRef: pointer.Ref("#knit-id-1"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "csv"},
 								{Key: "input", Value: "1"},
@@ -246,7 +247,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 						},
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "knit-id-2",
-							VolumeRef: "#knit-id-2",
+							VolumeRef: pointer.Ref("#knit-id-2"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "type", Value: "model"},
 								{Key: "output", Value: "1"},
@@ -261,7 +262,7 @@ func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {
 					}),
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "knit-id-log",
-						VolumeRef: "#knit-id-log",
+						VolumeRef: pointer.Ref("#knit-id-log"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "text"},
 							{Key: "log", Value: "1"},
