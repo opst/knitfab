@@ -239,23 +239,25 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 			from "data"
 			inner join "run" using("run_id")
 			left outer join "knit_timestamp" using("knit_id")
+			left outer join "volume_ref" using("knit_id")
 			where
 				($1::varchar is null or "knit_id" = $1::varchar)
 				and (cardinality($2::runStatus[]) = 0 or "status" = any($2::runStatus[]))
 				and (cardinality($3::runStatus[]) = 0 or "status" = any($3::runStatus[]))
+				and (($4::bool) is null or ("volume_ref" is null) = $4::bool)
 		),
 		"_data" as (
 			select "knit_id", "raw_timestamp", "timestamp" from "__data"
 			where
-				($4::timestamp with time zone is null or "timestamp" = $4::timestamp with time zone)
-				and ($5::timestamp with time zone is null or "timestamp" >= $5::timestamp with time zone)
-				and ($6::timestamp with time zone is null or "timestamp" < $6::timestamp with time zone)
+				($5::timestamp with time zone is null or "timestamp" = $5::timestamp with time zone)
+				and ($6::timestamp with time zone is null or "timestamp" >= $6::timestamp with time zone)
+				and ($7::timestamp with time zone is null or "timestamp" < $7::timestamp with time zone)
 		),
 		"_query" as (
 			select
 				unnest("c"[:][1:1]) as "key",
 				unnest("c"[:][2:2]) as "value"
-			from (select $7::varchar[][]) as "t"("c")
+			from (select $8::varchar[][]) as "t"("c")
 		),
 		"_tag_key" as (
 			select "key", "id" as "key_id"
@@ -284,7 +286,8 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 		inner join "_data" using("knit_id")
 		order by "raw_timestamp" ASC NULLS LAST, "knit_id"
 		`,
-		query.sysKnitId, processingStatus, failedStatus, timestamp, query.updatedSince, query.updatedUntil,
+		query.sysKnitId, processingStatus, failedStatus, query.sysKnitTransientPurged,
+		timestamp, query.updatedSince, query.updatedUntil,
 		slices.Map(query.userTag, func(t domain.Tag) [2]string { return [2]string{t.Key, t.Value} }),
 	)
 	if err != nil {
@@ -353,6 +356,12 @@ func makeDataFindQuery(tag []domain.Tag, since *time.Time, until *time.Time) *da
 				f := false
 				result.sysKnitTransientProcessing = &f
 				result.sysKnitTransientFailed = &t
+			} else if t.Value == domain.ValueKnitTransientPurged {
+				if result.sysKnitTransientPurged != nil {
+					return nil
+				}
+				t := true
+				result.sysKnitTransientPurged = &t
 			} else {
 				return nil
 			}
@@ -394,6 +403,7 @@ type dataFindQuery struct {
 	sysKnitTimeStamp           *string
 	sysKnitTransientProcessing *bool
 	sysKnitTransientFailed     *bool
+	sysKnitTransientPurged     *bool
 	updatedSince               *time.Time
 	updatedUntil               *time.Time
 }
