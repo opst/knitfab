@@ -21,6 +21,7 @@ import (
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	mockdb "github.com/opst/knitfab/pkg/domain/run/db/mock"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
@@ -88,7 +89,7 @@ func TestRunFindHandler(t *testing.T) {
 							Inputs: []domain.Assignment{
 								{
 									KnitDataBody: domain.KnitDataBody{
-										KnitId: "knitin1", VolumeRef: "pvc-knitin1",
+										KnitId: "knitin1", VolumeRef: pointer.Ref("pvc-knitin1"),
 									},
 									MountPoint: domain.MountPoint{
 										Id: 1, Path: "C:\\mp-1",
@@ -100,7 +101,7 @@ func TestRunFindHandler(t *testing.T) {
 								},
 								{
 									KnitDataBody: domain.KnitDataBody{
-										KnitId: "knitin2", VolumeRef: "pvc-knitin2",
+										KnitId: "knitin2", VolumeRef: pointer.Ref("pvc-knitin2"),
 									},
 									MountPoint: domain.MountPoint{
 										Id: 2, Path: "C:\\mp-2",
@@ -112,7 +113,7 @@ func TestRunFindHandler(t *testing.T) {
 								},
 								{
 									KnitDataBody: domain.KnitDataBody{
-										KnitId: "knitin3", VolumeRef: "pvc-knitin3",
+										KnitId: "knitin3", VolumeRef: pointer.Ref("pvc-knitin3"),
 									},
 									MountPoint: domain.MountPoint{
 										Id: 3, Path: "C:\\mp-3",
@@ -126,7 +127,7 @@ func TestRunFindHandler(t *testing.T) {
 							Outputs: []domain.Assignment{
 								{
 									KnitDataBody: domain.KnitDataBody{
-										KnitId: "knitout1", VolumeRef: "pvc-knitout1",
+										KnitId: "knitout1", VolumeRef: pointer.Ref("pvc-knitout1"),
 									},
 									MountPoint: domain.MountPoint{
 										Id: 4, Path: "C:\\mp-4",
@@ -144,7 +145,7 @@ func TestRunFindHandler(t *testing.T) {
 									{Key: "key2", Value: "value"},
 								}),
 								KnitDataBody: domain.KnitDataBody{
-									KnitId: "knitlog1", VolumeRef: "pvc-knitlog1",
+									KnitId: "knitlog1", VolumeRef: pointer.Ref("pvc-knitlog1"),
 								},
 							},
 						},
@@ -162,27 +163,27 @@ func TestRunFindHandler(t *testing.T) {
 							},
 							Inputs: []domain.Assignment{
 								{
-									KnitDataBody: domain.KnitDataBody{KnitId: "knitin1", VolumeRef: "ref-knitin1"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin1", VolumeRef: pointer.Ref("ref-knitin1")},
 									MountPoint:   domain.MountPoint{Id: 1, Path: "C:\\mp-1"},
 								},
 								{
-									KnitDataBody: domain.KnitDataBody{KnitId: "knitin2", VolumeRef: "ref-knitin2"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin2", VolumeRef: pointer.Ref("ref-knitin2")},
 									MountPoint:   domain.MountPoint{Id: 2, Path: "C:\\mp-2"},
 								},
 								{
-									KnitDataBody: domain.KnitDataBody{KnitId: "knitin4", VolumeRef: "ref-knitin4"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin4", VolumeRef: pointer.Ref("ref-knitin4")},
 									MountPoint:   domain.MountPoint{Id: 3, Path: "C:\\mp-3"},
 								},
 							},
 							Outputs: []domain.Assignment{
 								{
-									KnitDataBody: domain.KnitDataBody{KnitId: "knitout2", VolumeRef: "ref-knitout2"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitout2", VolumeRef: pointer.Ref("ref-knitout2")},
 									MountPoint:   domain.MountPoint{Id: 4, Path: "C:\\mp-4"},
 								},
 							},
 							Log: &domain.Log{
 								Id:           5,
-								KnitDataBody: domain.KnitDataBody{KnitId: "knitlog2", VolumeRef: "ref-knitlog2"},
+								KnitDataBody: domain.KnitDataBody{KnitId: "knitlog2", VolumeRef: pointer.Ref("ref-knitlog2")},
 							},
 						},
 						{
@@ -198,17 +199,17 @@ func TestRunFindHandler(t *testing.T) {
 							},
 							Inputs: []domain.Assignment{
 								{
-									KnitDataBody: domain.KnitDataBody{KnitId: "knitin5", VolumeRef: "ref-knitin5"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin5", VolumeRef: pointer.Ref("ref-knitin5")},
 									MountPoint:   domain.MountPoint{Id: 6, Path: "C:\\mp-6"},
 								},
 								{
-									KnitDataBody: domain.KnitDataBody{KnitId: "knitin6", VolumeRef: "ref-knitin6"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitin6", VolumeRef: pointer.Ref("ref-knitin6")},
 									MountPoint:   domain.MountPoint{Id: 7, Path: "C:\\mp-7"},
 								},
 							},
 							Outputs: []domain.Assignment{
 								{
-									KnitDataBody: domain.KnitDataBody{KnitId: "knitout3", VolumeRef: "ref-knitout3"},
+									KnitDataBody: domain.KnitDataBody{KnitId: "knitout3", VolumeRef: pointer.Ref("ref-knitout3")},
 									MountPoint:   domain.MountPoint{Id: 8, Path: "C:\\mp-8"},
 								},
 							},
@@ -726,7 +727,7 @@ func TestGetRunHandler(t *testing.T) {
 					Inputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-1@/in/1", VolumeRef: "pvc-run-1@/in/1",
+								KnitId: "run-1@/in/1", VolumeRef: pointer.Ref("pvc-run-1@/in/1"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 1100, Path: "/in/1",
@@ -779,7 +780,7 @@ func TestGetRunHandler(t *testing.T) {
 					Outputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-2@/out/1", VolumeRef: "pvc-run-2@/out/1",
+								KnitId: "run-2@/out/1", VolumeRef: pointer.Ref("pvc-run-2@/out/1"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 2010, Path: "/out/1",
@@ -828,7 +829,7 @@ func TestGetRunHandler(t *testing.T) {
 					Inputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-3@/in/1", VolumeRef: "pvc-run-3@/in/1",
+								KnitId: "run-3@/in/1", VolumeRef: pointer.Ref("pvc-run-3@/in/1"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 3100, Path: "/in/1",
@@ -842,7 +843,7 @@ func TestGetRunHandler(t *testing.T) {
 					Outputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-3@/out/1", VolumeRef: "pvc-run-3@/out/1",
+								KnitId: "run-3@/out/1", VolumeRef: pointer.Ref("pvc-run-3@/out/1"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 3010, Path: "/out/1",
@@ -907,7 +908,7 @@ func TestGetRunHandler(t *testing.T) {
 					Inputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-4@/in/1", VolumeRef: "ref-run-4@/in/1",
+								KnitId: "run-4@/in/1", VolumeRef: pointer.Ref("ref-run-4@/in/1"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 4100, Path: "/in/1",
@@ -919,7 +920,7 @@ func TestGetRunHandler(t *testing.T) {
 						},
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-4@/in/2", VolumeRef: "ref-run-4@/in/2",
+								KnitId: "run-4@/in/2", VolumeRef: pointer.Ref("ref-run-4@/in/2"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 4200, Path: "/in/2",
@@ -933,7 +934,7 @@ func TestGetRunHandler(t *testing.T) {
 					Outputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-3@/out/1", VolumeRef: "ref-run-3@/out/1",
+								KnitId: "run-3@/out/1", VolumeRef: pointer.Ref("ref-run-3@/out/1"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 4010, Path: "/out/1",
@@ -945,7 +946,7 @@ func TestGetRunHandler(t *testing.T) {
 						},
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-3@/out/2", VolumeRef: "ref-run-3@/out/2",
+								KnitId: "run-3@/out/2", VolumeRef: pointer.Ref("ref-run-3@/out/2"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 4020, Path: "/out/2",
@@ -959,7 +960,7 @@ func TestGetRunHandler(t *testing.T) {
 					Log: &domain.Log{
 						Id: 4001,
 						KnitDataBody: domain.KnitDataBody{
-							KnitId: "run-3@/log", VolumeRef: "ref-run-3@/log",
+							KnitId: "run-3@/log", VolumeRef: pointer.Ref("ref-run-3@/log"),
 						},
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "shared", Value: "val1"},
@@ -1049,7 +1050,7 @@ func TestGetRunHandler(t *testing.T) {
 					Inputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-4@/in/1", VolumeRef: "ref-run-4@/in/1",
+								KnitId: "run-4@/in/1", VolumeRef: pointer.Ref("ref-run-4@/in/1"),
 							},
 							MountPoint: domain.MountPoint{
 								Id: 4100, Path: "/in/1",
@@ -1401,7 +1402,7 @@ func TestAbortRun(t *testing.T) {
 					Inputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-1@/in/1", VolumeRef: "pvc-run-1@/in/1",
+								KnitId: "run-1@/in/1", VolumeRef: pointer.Ref("pvc-run-1@/in/1"),
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: domain.KeyKnitId, Value: "run-1@/in/1"},
 									{Key: "shared", Value: "val1"},
@@ -1419,7 +1420,7 @@ func TestAbortRun(t *testing.T) {
 					Outputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-1@/out/1", VolumeRef: "pvc-run-1@/out/1",
+								KnitId: "run-1@/out/1", VolumeRef: pointer.Ref("pvc-run-1@/out/1"),
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: domain.KeyKnitId, Value: "run-1@/out/1"},
 									{Key: "shared", Value: "val1"},
@@ -1437,7 +1438,7 @@ func TestAbortRun(t *testing.T) {
 					Log: &domain.Log{
 						Id: 1001,
 						KnitDataBody: domain.KnitDataBody{
-							KnitId: "run-1@/log", VolumeRef: "pvc-run-1@/log",
+							KnitId: "run-1@/log", VolumeRef: pointer.Ref("pvc-run-1@/log"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: domain.KeyKnitId, Value: "run-1@/log"},
 								{Key: "shared", Value: "val1"},
@@ -1713,7 +1714,7 @@ func TestTearoffRun(t *testing.T) {
 					Inputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-1@/in/1", VolumeRef: "pvc-run-1@/in/1",
+								KnitId: "run-1@/in/1", VolumeRef: pointer.Ref("pvc-run-1@/in/1"),
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: domain.KeyKnitId, Value: "run-1@/in/1"},
 									{Key: "shared", Value: "val1"},
@@ -1731,7 +1732,7 @@ func TestTearoffRun(t *testing.T) {
 					Outputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "run-1@/out/1", VolumeRef: "pvc-run-1@/out/1",
+								KnitId: "run-1@/out/1", VolumeRef: pointer.Ref("pvc-run-1@/out/1"),
 								Tags: domain.NewTagSet([]domain.Tag{
 									{Key: domain.KeyKnitId, Value: "run-1@/out/1"},
 									{Key: "shared", Value: "val1"},
@@ -1749,7 +1750,7 @@ func TestTearoffRun(t *testing.T) {
 					Log: &domain.Log{
 						Id: 1001,
 						KnitDataBody: domain.KnitDataBody{
-							KnitId: "run-1@/log", VolumeRef: "pvc-run-1@/log",
+							KnitId: "run-1@/log", VolumeRef: pointer.Ref("pvc-run-1@/log"),
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: domain.KeyKnitId, Value: "run-1@/log"},
 								{Key: "shared", Value: "val1"},

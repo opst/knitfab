@@ -1691,7 +1691,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-waiting-1"),
-						VolumeRef: "*pseudo-waiting-1",
+						VolumeRef: pointer.Ref("*pseudo-waiting-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-waiting-1")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -1715,7 +1715,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-ready-1"),
-						VolumeRef: "*pseudo-ready-1",
+						VolumeRef: pointer.Ref("*pseudo-ready-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-ready-1")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -1741,7 +1741,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-starting-1"),
-						VolumeRef: "*pseudo-starting-1",
+						VolumeRef: pointer.Ref("*pseudo-starting-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-starting-1")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -1765,7 +1765,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-running-1"),
-						VolumeRef: "*pseudo-running-1",
+						VolumeRef: pointer.Ref("*pseudo-running-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-running-1")},
 							{Key: "type", Value: "running"},
@@ -1791,7 +1791,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-aborting-1"),
-						VolumeRef: "*pseudo-aborting-1",
+						VolumeRef: pointer.Ref("*pseudo-aborting-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-aborting-1")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -1815,7 +1815,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-completing-1"),
-						VolumeRef: "*pseudo-completing-1",
+						VolumeRef: pointer.Ref("*pseudo-completing-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-completing-1")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -1839,7 +1839,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-failed-1"),
-						VolumeRef: "*pseudo-failed-1",
+						VolumeRef: pointer.Ref("*pseudo-failed-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-failed-1")},
 							{Key: "type", Value: "failed"},
@@ -1865,7 +1865,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -1906,7 +1906,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 102_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-deactivated-1"),
-						VolumeRef: "*pseudo-deactivated-1",
+						VolumeRef: pointer.Ref("*pseudo-deactivated-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-deactivated-1")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -1930,7 +1930,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-waiting-2"),
-						VolumeRef: "*pseudo-waiting-2",
+						VolumeRef: pointer.Ref("*pseudo-waiting-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-waiting-2")},
 							{Key: "type", Value: "invalidated"},
@@ -1956,7 +1956,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-ready-2"),
-						VolumeRef: "*pseudo-ready-2",
+						VolumeRef: pointer.Ref("*pseudo-ready-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-ready-2")},
 							{Key: "type", Value: "ready"},
@@ -1981,7 +1981,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-starting-2"),
-						VolumeRef: "*pseudo-starting-2",
+						VolumeRef: pointer.Ref("*pseudo-starting-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-starting-2")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -2005,7 +2005,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-running-2"),
-						VolumeRef: "*pseudo-running-2",
+						VolumeRef: pointer.Ref("*pseudo-running-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-running-2")},
 							{Key: "type", Value: "running"},
@@ -2030,7 +2030,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-aborting-2"),
-						VolumeRef: "*pseudo-aborting-2",
+						VolumeRef: pointer.Ref("*pseudo-aborting-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-aborting-2")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -2054,7 +2054,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-completing-2"),
-						VolumeRef: "*pseudo-completing-2",
+						VolumeRef: pointer.Ref("*pseudo-completing-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-completing-2")},
 							{Key: "type", Value: "completing"},
@@ -2079,7 +2079,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-failed-2"),
-						VolumeRef: "*pseudo-failed-2",
+						VolumeRef: pointer.Ref("*pseudo-failed-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-failed-2")},
 							{Key: domain.KeyKnitTimestamp, Value: "2022-11-12T13:15:21.679+09:00"},
@@ -2104,7 +2104,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 101_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-2"),
-						VolumeRef: "*pseudo-done-2",
+						VolumeRef: pointer.Ref("*pseudo-done-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-2")},
 							{Key: domain.KeyKnitTimestamp, Value: "2022-11-12T13:15:22.679+09:00"},
@@ -2144,7 +2144,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					MountPoint: domain.MountPoint{Id: 102_010, Path: "/out"},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-deactivated-2"),
-						VolumeRef: "*pseudo-deactivated-2",
+						VolumeRef: pointer.Ref("*pseudo-deactivated-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-deactivated-2")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -2176,7 +2176,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2196,7 +2196,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@image-waiting-1:/out"),
-						VolumeRef: "*image-waiting-1:/out",
+						VolumeRef: pointer.Ref("*image-waiting-1:/out"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-waiting-1:/out")},
 							{Key: "type", Value: "waiting"},
@@ -2213,7 +2213,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				}),
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    th.Padding36("knit@image-waiting-1:/log"),
-					VolumeRef: "*image-waiting-1:/log",
+					VolumeRef: pointer.Ref("*image-waiting-1:/log"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-waiting-1:/log")},
 						{Key: "type", Value: "waiting"},
@@ -2245,7 +2245,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2265,7 +2265,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@image-ready-1:/out"),
-						VolumeRef: "*image-ready-1:/out",
+						VolumeRef: pointer.Ref("*image-ready-1:/out"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-ready-1:/out")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -2281,7 +2281,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				}),
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    th.Padding36("knit@image-ready-1:/log"),
-					VolumeRef: "*image-ready-1:/log",
+					VolumeRef: pointer.Ref("*image-ready-1:/log"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-ready-1:/log")},
 						{Key: "type", Value: "ready"},
@@ -2315,7 +2315,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: domain.KeyKnitTimestamp, Value: "2022-11-12T13:14:22.679+09:00"},
@@ -2335,7 +2335,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@image-starting-1:/out"),
-						VolumeRef: "*image-starting-1:/out",
+						VolumeRef: pointer.Ref("*image-starting-1:/out"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-starting-1:/out")},
 							{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -2365,7 +2365,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2385,7 +2385,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@image-running-1:/out"),
-						VolumeRef: "*image-running-1:/out",
+						VolumeRef: pointer.Ref("*image-running-1:/out"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-running-1:/out")},
 							{Key: "type", Value: "running"},
@@ -2418,7 +2418,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2435,7 +2435,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				}),
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    th.Padding36("knit@image-aborting-1:/log"),
-					VolumeRef: "*image-aborting-1:/log",
+					VolumeRef: pointer.Ref("*image-aborting-1:/log"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-aborting-1:/log")},
 						{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},
@@ -2464,7 +2464,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2481,7 +2481,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				}),
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    th.Padding36("knit@image-completing-1:/log"),
-					VolumeRef: "*image-completing-1:/log",
+					VolumeRef: pointer.Ref("*image-completing-1:/log"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-completing-1:/log")},
 						{Key: "type", Value: "completing"},
@@ -2508,7 +2508,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2528,7 +2528,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@image-failed-1:/out"),
-						VolumeRef: "*image-failed-1:/out",
+						VolumeRef: pointer.Ref("*image-failed-1:/out"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-failed-1:/out")},
 							{Key: domain.KeyKnitTimestamp, Value: "2022-11-13T14:14:21.679+09:00"},
@@ -2548,7 +2548,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				}),
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    th.Padding36("knit@image-failed-1:/log"),
-					VolumeRef: "*image-failed-1:/log",
+					VolumeRef: pointer.Ref("*image-failed-1:/log"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-failed-1:/log")},
 						{Key: domain.KeyKnitTimestamp, Value: "2022-11-12T14:14:21.680+09:00"},
@@ -2579,7 +2579,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2599,7 +2599,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@image-done-1:/out"),
-						VolumeRef: "*image-done-1:/out",
+						VolumeRef: pointer.Ref("*image-done-1:/out"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-done-1:/out")},
 							{Key: domain.KeyKnitTimestamp, Value: "2022-11-13T14:14:22.679+09:00"},
@@ -2617,7 +2617,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				}),
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    th.Padding36("knit@image-done-1:/log"),
-					VolumeRef: "*image-done-1:/log",
+					VolumeRef: pointer.Ref("*image-done-1:/log"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-done-1:/log")},
 						{Key: domain.KeyKnitTimestamp, Value: "2022-11-13T14:14:22.680+09:00"},
@@ -2649,7 +2649,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2699,7 +2699,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 					},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    th.Padding36("knit@pseudo-done-1"),
-						VolumeRef: "*pseudo-done-1",
+						VolumeRef: pointer.Ref("*pseudo-done-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: domain.KeyKnitId, Value: th.Padding36("knit@pseudo-done-1")},
 							{Key: "type", Value: "done"},
@@ -2716,7 +2716,7 @@ func Testdata(t *testing.T, NOW time.Time) Given {
 				}),
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    th.Padding36("knit@image-deactivated-1:/log"),
-					VolumeRef: "*image-deactivated-1:/log",
+					VolumeRef: pointer.Ref("*image-deactivated-1:/log"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: domain.KeyKnitId, Value: th.Padding36("knit@image-deactivated-1:/log")},
 						{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientProcessing},

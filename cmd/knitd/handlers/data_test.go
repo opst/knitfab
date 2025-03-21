@@ -21,6 +21,7 @@ import (
 	dbmock "github.com/opst/knitfab/pkg/domain/data/db/mock"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 
@@ -38,7 +39,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 			d := map[string]domain.KnitData{
 				"knit-1": {
 					KnitDataBody: domain.KnitDataBody{
-						KnitId: "knit-1", VolumeRef: "pvc-knit-1",
+						KnitId: "knit-1", VolumeRef: pointer.Ref("pvc-knit-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "project", Value: "test-project"},
 							{Key: "series", Value: "42"},
@@ -48,7 +49,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 							{Key: domain.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
 						}),
 					},
-					Upsteram: domain.DataSource{
+					Upstream: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run-1", Status: domain.Done,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -117,7 +118,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 				},
 				"knit-2": {
 					KnitDataBody: domain.KnitDataBody{
-						KnitId: "knit-2", VolumeRef: "pvc-knit-2",
+						KnitId: "knit-2", VolumeRef: pointer.Ref("pvc-knit-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "framework", Value: "pytorch"},
@@ -126,7 +127,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 							{Key: domain.KeyKnitTransient, Value: "processing"},
 						}),
 					},
-					Upsteram: domain.DataSource{
+					Upstream: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run-2", Status: domain.Running,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -441,7 +442,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			return map[string]domain.KnitData{
 				knitId: {
 					KnitDataBody: domain.KnitDataBody{
-						KnitId: knitId, VolumeRef: "#volume-ref",
+						KnitId: knitId, VolumeRef: pointer.Ref("#volume-ref"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "project", Value: "testing"},
@@ -450,7 +451,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 							{Key: tags.KeyKnitId, Value: knitId},
 						}),
 					},
-					Upsteram: domain.DataSource{
+					Upstream: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run#1", Status: domain.Done,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-11T12:34:56+09:00")).OrFatal(t).Time(),

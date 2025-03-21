@@ -210,6 +210,11 @@ func ImportDataBeginHandler(
 			return binderr.InternalServerError(err)
 		}
 
+		volumeRef := data.KnitDataBody.VolumeRef
+		if volumeRef == nil {
+			return binderr.InternalServerError(fmt.Errorf("Data %s has been purged", data.KnitDataBody.KnitId))
+		}
+
 		token, err := keychain.NewJWS(
 			kid, key,
 			DataImportClaim{
@@ -218,7 +223,7 @@ func ImportDataBeginHandler(
 					ID: uuid.NewString(),
 
 					// sub
-					Subject: data.KnitDataBody.VolumeRef,
+					Subject: *volumeRef,
 				},
 
 				// private claims
@@ -283,17 +288,21 @@ func ImportDataEndHandler(
 			return binderr.InternalServerError(errors.New("data not found"))
 		}
 
+		volumeRef := data[knitId].KnitDataBody.VolumeRef
+		if volumeRef == nil {
+			return binderr.InternalServerError(fmt.Errorf("Data %s has been purged", knitId))
+		}
 		if ok, err := k8sData.CheckDataIsBound(ctx, data[knitId].KnitDataBody); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || k8serrors.AsMissingError(err) {
 				return binderr.BadRequest(
-					fmt.Sprintf("retry after that PVC %s is bound", data[knitId].KnitDataBody.VolumeRef),
+					fmt.Sprintf("retry after that PVC %s is bound", *volumeRef),
 					err,
 				)
 			}
 			return binderr.InternalServerError(err)
 		} else if !ok {
 			return binderr.BadRequest(
-				fmt.Sprintf("retry after that PVC %s is bound", data[knitId].KnitDataBody.VolumeRef),
+				fmt.Sprintf("retry after that PVC %s is bound", *volumeRef),
 				nil,
 			)
 		}

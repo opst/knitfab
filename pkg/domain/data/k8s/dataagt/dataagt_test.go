@@ -46,7 +46,7 @@ func TestSpawn(t *testing.T) {
 	{
 		theory := func(mode domain.DataAgentMode) func(t *testing.T) {
 			return func(t *testing.T) {
-				t.Run("When Dataagt is spawned without VolumeRef, it should cause error", func(t *testing.T) {
+				t.Run("When Dataagt is spawned without VolumeRef (nil), it should cause error", func(t *testing.T) {
 					ctx, cancel := testutilctx.WithTest(context.Background(), t)
 					defer cancel()
 
@@ -81,7 +81,57 @@ func TestSpawn(t *testing.T) {
 
 					targetData := domain.KnitDataBody{
 						KnitId: k8smock.LabelValue(t, lenUUID),
-						// VolumeRef: zero value = "",
+						// VolumeRef: nil,
+					}
+
+					dbDataAgent := domain.DataAgent{
+						Name:         fmt.Sprintf("test-dataagt-%s-%s", mode, targetData.KnitId),
+						Mode:         mode,
+						KnitDataBody: targetData,
+					}
+
+					_, err := dataagt.Spawn(ctx, configs, cluster, dbDataAgent, time.Now().Add(1*time.Hour))
+					if err == nil {
+						t.Error("expected error is not retuerned")
+					}
+				})
+
+				t.Run("When Dataagt is spawned without VolumeRef (empty string), it should cause error", func(t *testing.T) {
+					ctx, cancel := testutilctx.WithTest(context.Background(), t)
+					defer cancel()
+
+					cluster, _ := k8smock.NewCluster()
+					configs := (&bconf.KnitClusterConfigMarshall{
+						Namespace: cluster.Namespace(),
+						Database:  "postgres://do-not-care",
+						DataAgent: &bconf.DataAgentConfigMarshall{
+							Image: testenv.Images().Dataagt,
+							Port:  8080,
+							Volume: &bconf.VolumeConfigMarshall{
+								StorageClassName: testenv.STORAGE_CLASS_NAME,
+								InitialCapacity:  "1Ki",
+							},
+						},
+						Worker: &bconf.WorkerConfigMarshall{
+							Priority: "fake-priority",
+							Init: &bconf.InitContainerConfigMarshall{
+								Image: "repo.invalid/init-image:latest",
+							},
+							Nurse: &bconf.NurseContainerConfigMarshall{
+								Image:                "repo.invalid/nurse-image:latest",
+								ServiceAccountSecret: "fake-sa",
+							},
+						},
+						Keychains: &bconf.KeychainsConfigMarshall{
+							SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+								Name: "signe-for-import-token",
+							},
+						},
+					}).TrySeal()
+
+					targetData := domain.KnitDataBody{
+						KnitId:    k8smock.LabelValue(t, lenUUID),
+						VolumeRef: pointer.Ref(""),
 					}
 
 					dbDataAgent := domain.DataAgent{
@@ -182,7 +232,7 @@ func TestSpawn(t *testing.T) {
 
 					targetData := domain.KnitDataBody{
 						KnitId:    k8smock.LabelValue(t, lenUUID),
-						VolumeRef: pvcname,
+						VolumeRef: &pvcname,
 					}
 
 					dbDataAgent := domain.DataAgent{
@@ -295,7 +345,7 @@ func TestSpawn(t *testing.T) {
 
 					targetData := domain.KnitDataBody{
 						KnitId:    k8smock.LabelValue(t, lenUUID),
-						VolumeRef: pvcname,
+						VolumeRef: &pvcname,
 					}
 
 					dbDataAgent := domain.DataAgent{
@@ -332,10 +382,13 @@ func TestSpawn(t *testing.T) {
 					})
 
 					t.Run("k8s PVC", func(t *testing.T) {
+						if targetData.VolumeRef == nil {
+							t.Fatal("VolumeRef is nil")
+						}
 						pvc := try.To(
 							clientset.CoreV1().
 								PersistentVolumeClaims(cluster.Namespace()).
-								Get(ctx, targetData.VolumeRef, kubeapimeta.GetOptions{}),
+								Get(ctx, *targetData.VolumeRef, kubeapimeta.GetOptions{}),
 						).OrFatal(t)
 
 						pvcCapacity := configs.DataAgent().Volume().InitialCapacity()
@@ -419,10 +472,13 @@ func TestSpawn(t *testing.T) {
 						if err := testee.Close(); err != nil {
 							t.Errorf("close caused error. %#v", err)
 						}
+						if targetData.VolumeRef == nil {
+							t.Fatal("VolumeRef is nil")
+						}
 
 						if _, err := clientset.CoreV1().
 							PersistentVolumeClaims(cluster.Namespace()).
-							Get(ctx, targetData.VolumeRef, kubeapimeta.GetOptions{}); err != nil {
+							Get(ctx, *targetData.VolumeRef, kubeapimeta.GetOptions{}); err != nil {
 							t.Errorf("PVC should not be removed if Dataagt is closed. %#v", err)
 						}
 
@@ -523,7 +579,7 @@ func TestSpawn(t *testing.T) {
 
 			targetData := domain.KnitDataBody{
 				KnitId:    k8smock.LabelValue(t, lenUUID),
-				VolumeRef: pvcname,
+				VolumeRef: &pvcname,
 			}
 			dbDataAgent := domain.DataAgent{
 				Name:         fmt.Sprintf("test-dataagt-read-%s-%s", targetData.KnitId, suffix),
@@ -574,7 +630,7 @@ func TestSpawn(t *testing.T) {
 		suffixies := []string{"a", "b"}
 		input := domain.KnitDataBody{
 			KnitId:    k8smock.LabelValue(t, lenUUID),
-			VolumeRef: fmt.Sprintf("volume-ref-%d", _iota),
+			VolumeRef: pointer.Ref(fmt.Sprintf("volume-ref-%d", _iota)),
 		}
 		for nth := range suffixies {
 			suffix := suffixies[nth]
@@ -641,7 +697,7 @@ func TestSpawn(t *testing.T) {
 
 		input := domain.KnitDataBody{
 			KnitId:    k8smock.LabelValue(t, lenUUID),
-			VolumeRef: fmt.Sprintf("volume-ref-%d", _iota),
+			VolumeRef: pointer.Ref(fmt.Sprintf("volume-ref-%d", _iota)),
 		}
 
 		{ // Write mode agent x1
@@ -762,7 +818,7 @@ func TestFind(t *testing.T) {
 
 					targetData := domain.KnitDataBody{
 						KnitId:    k8smock.LabelValue(t, lenUUID),
-						VolumeRef: pvcname,
+						VolumeRef: &pvcname,
 					}
 
 					dbDataAgent := domain.DataAgent{
@@ -793,7 +849,7 @@ func TestFind(t *testing.T) {
 						t.Errorf("Dataagt should be %s mode, but %s", mode, testee.Mode())
 					}
 
-					if testee.VolumeRef() != targetData.VolumeRef {
+					if testee.VolumeRef() != *targetData.VolumeRef {
 						t.Errorf("Dataagt should have volume ref. %s", testee.VolumeRef())
 					}
 
@@ -805,7 +861,7 @@ func TestFind(t *testing.T) {
 
 						if _, err := clientset.CoreV1().
 							PersistentVolumeClaims(cluster.Namespace()).
-							Get(ctx, targetData.VolumeRef, kubeapimeta.GetOptions{}); err != nil {
+							Get(ctx, *targetData.VolumeRef, kubeapimeta.GetOptions{}); err != nil {
 							t.Errorf("PVC should not be removed if Dataagt is closed. %#v", err)
 						}
 
@@ -832,7 +888,7 @@ func TestFind(t *testing.T) {
 
 		targetData := domain.KnitDataBody{
 			KnitId:    k8smock.LabelValue(t, lenUUID),
-			VolumeRef: pvcname,
+			VolumeRef: &pvcname,
 		}
 
 		dbDataAgent := domain.DataAgent{

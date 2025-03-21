@@ -36,6 +36,7 @@ import (
 	mockkeychain "github.com/opst/knitfab/pkg/domain/keychain/k8s/mock"
 	dbrunmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -126,7 +127,7 @@ func TestGetDataHandler(t *testing.T) {
 			targetData := domain.KnitData{
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    testcase.when.knitId,
-					VolumeRef: "volume-ref",
+					VolumeRef: pointer.Ref("volume-ref"),
 				},
 			}
 
@@ -256,7 +257,7 @@ func TestGetDataHandler(t *testing.T) {
 					Name: "fake-data-agent",
 					Mode: mode,
 					KnitDataBody: domain.KnitDataBody{
-						KnitId: knitId, VolumeRef: "volume-ref",
+						KnitId: knitId, VolumeRef: pointer.Ref("volume-ref"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "knit#id", Value: knitId},
 							{Key: "knit#timestamp", Value: "2022-01-02T12:23:34+00:00"},
@@ -298,12 +299,12 @@ func TestGetDataHandler(t *testing.T) {
 		knitId := "test-knit-id"
 		data := domain.KnitData{
 			KnitDataBody: domain.KnitDataBody{
-				KnitId: knitId, VolumeRef: "#volume-ref",
+				KnitId: knitId, VolumeRef: pointer.Ref("#volume-ref"),
 				Tags: domain.NewTagSet([]domain.Tag{
 					{Key: domain.KeyKnitId, Value: knitId},
 				}),
 			},
-			Upsteram: domain.DataSource{
+			Upstream: domain.DataSource{
 				RunBody: domain.RunBody{
 					Id: "run#1", Status: domain.Done,
 					UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -440,14 +441,14 @@ func TestPostDataHandler(t *testing.T) {
 			createdData := domain.KnitData{
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    knitId,
-					VolumeRef: pvcname,
+					VolumeRef: &pvcname,
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "knit#id", Value: knitId},
 						{Key: "knit#timestamp", Value: "2022-01-02T12:23:34+00:00"},
 						{Key: "some-user-defined-tag", Value: "tag value"},
 					}),
 				},
-				Upsteram: domain.DataSource{
+				Upstream: domain.DataSource{
 					RunBody: domain.RunBody{
 						Id: runId, Status: domain.Done,
 						UpdatedAt: try.To(
@@ -773,7 +774,7 @@ func TestPostDataHandler(t *testing.T) {
 						MountPoint: domain.MountPoint{Id: 1, Path: "/out"},
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    knitId,
-							VolumeRef: pvcname,
+							VolumeRef: &pvcname,
 							Tags: domain.NewTagSet([]domain.Tag{
 								{Key: "knit#id", Value: knitId},
 								{Key: "knit#timestamp", Value: "2022-01-02T12:23:34+00:00"},
@@ -929,7 +930,7 @@ func TestPostDataHandler(t *testing.T) {
 
 			databody := domain.KnitDataBody{
 				KnitId:    knitId,
-				VolumeRef: "volume-ref",
+				VolumeRef: pointer.Ref("volume-ref"),
 			}
 
 			iRunDB := dbrunmock.NewRunInterface()
@@ -1030,7 +1031,7 @@ func TestPostDataHandler(t *testing.T) {
 
 		databody := domain.KnitDataBody{
 			KnitId:    knitId,
-			VolumeRef: pvcname,
+			VolumeRef: &pvcname,
 		}
 		iRunDB := dbrunmock.NewRunInterface()
 		iRunDB.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
@@ -1301,7 +1302,7 @@ func TestPostDataHandler(t *testing.T) {
 
 		databody := domain.KnitDataBody{
 			KnitId:    "knit-id",
-			VolumeRef: "volume-ref",
+			VolumeRef: pointer.Ref("volume-ref"),
 		}
 
 		runId := "run-id"
@@ -1367,7 +1368,7 @@ func TestPostDataHandler(t *testing.T) {
 		dagt := NewMockedDataagt(svr)
 		dagt.Impl.KnitID = func() string { return databody.KnitId }
 		dagt.Impl.Close = func() error { return nil }
-		dagt.Impl.VolumeRef = func() string { return databody.VolumeRef }
+		dagt.Impl.VolumeRef = func() string { return *databody.VolumeRef }
 		defer dagt.Close()
 
 		iDataK8s := k8sdatamocks.New(t)
@@ -1448,13 +1449,13 @@ func TestPostDataHandler(t *testing.T) {
 		runId := "test-run-id"
 		databody := domain.KnitDataBody{
 			KnitId:    "test-knit-id",
-			VolumeRef: "test-pvc-name",
+			VolumeRef: pointer.Ref("test-pvc-name"),
 		}
 
 		dagt := NewMockedDataagt(svr)
 		dagt.Impl.KnitID = func() string { return databody.KnitId }
 		dagt.Impl.Close = func() error { return nil }
-		dagt.Impl.VolumeRef = func() string { return databody.VolumeRef }
+		dagt.Impl.VolumeRef = func() string { return *databody.VolumeRef }
 
 		iRunDB := dbrunmock.NewRunInterface()
 		iRunDB.Impl.NewPseudo = func(context.Context, domain.PseudoPlanName, time.Duration) (string, error) {
@@ -1570,7 +1571,7 @@ func TestPostDataHandler(t *testing.T) {
 
 		runId := "test-run-id"
 		databody := domain.KnitDataBody{
-			KnitId: "test-knit-id", VolumeRef: "test-pvc-name",
+			KnitId: "test-knit-id", VolumeRef: pointer.Ref("test-pvc-name"),
 		}
 
 		iRunDB := dbrunmock.NewRunInterface()
@@ -1633,7 +1634,7 @@ func TestPostDataHandler(t *testing.T) {
 		dagt := NewMockedDataagt(svr)
 		dagt.Impl.KnitID = func() string { return databody.KnitId }
 		dagt.Impl.Close = func() error { return nil }
-		dagt.Impl.VolumeRef = func() string { return databody.VolumeRef }
+		dagt.Impl.VolumeRef = func() string { return *databody.VolumeRef }
 
 		iDataK8s := k8sdatamocks.New(t)
 		iDataK8s.Impl.SpawnDataAgent = func(context.Context, domain.DataAgent, time.Time) (dataagt.DataAgent, error) {
@@ -1713,7 +1714,7 @@ func TestImportDataBeginHandler(t *testing.T) {
 				{
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "test-knit-id",
-						VolumeRef: "test-volume-ref",
+						VolumeRef: pointer.Ref("test-volume-ref"),
 					},
 				},
 			},
@@ -1781,8 +1782,8 @@ func TestImportDataBeginHandler(t *testing.T) {
 			if c.KnitId != run.Outputs[0].KnitDataBody.KnitId {
 				t.Errorf("KnitId is not expected. actual = %s, expected = %s", c.KnitId, run.Outputs[0].KnitDataBody.KnitId)
 			}
-			if c.Subject != run.Outputs[0].KnitDataBody.VolumeRef {
-				t.Errorf("VolumeRef is not expected. actual = %s, expected = %s", c.Subject, run.Outputs[0].KnitDataBody.VolumeRef)
+			if want := run.Outputs[0].KnitDataBody.VolumeRef; c.Subject != *want {
+				t.Errorf("VolumeRef is not expected. actual = %s, expected = %s", c.Subject, *want)
 			}
 		}
 	})
@@ -1807,7 +1808,7 @@ func TestImportDataBeginHandler(t *testing.T) {
 				{
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "test-knit-id",
-						VolumeRef: "test-volume-ref",
+						VolumeRef: pointer.Ref("test-volume-ref"),
 					},
 				},
 			},
@@ -1857,13 +1858,13 @@ func TestImportDataBeginHandler(t *testing.T) {
 				{
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "test-knit-id",
-						VolumeRef: "test-volume-ref",
+						VolumeRef: pointer.Ref("test-volume-ref"),
 					},
 				},
 				{
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "test-knit-id-2",
-						VolumeRef: "test-volume-ref-2",
+						VolumeRef: pointer.Ref("test-volume-ref-2"),
 					},
 				},
 			},
@@ -2010,9 +2011,9 @@ func TestImpoerDataEndHandler(t *testing.T) {
 		data := domain.KnitData{
 			KnitDataBody: domain.KnitDataBody{
 				KnitId:    claim.KnitId,
-				VolumeRef: claim.Subject,
+				VolumeRef: &claim.Subject,
 			},
-			Upsteram: domain.DataSource{
+			Upstream: domain.DataSource{
 				MountPoint: &domain.MountPoint{Id: 1, Path: "/imported"},
 				RunBody: domain.RunBody{
 					Id: claim.RunId, Status: domain.Completing,
@@ -2118,9 +2119,9 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			data := domain.KnitData{
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    claim.KnitId,
-					VolumeRef: claim.Subject,
+					VolumeRef: &claim.Subject,
 				},
-				Upsteram: domain.DataSource{
+				Upstream: domain.DataSource{
 					MountPoint: &domain.MountPoint{Id: 1, Path: "/imported"},
 					RunBody: domain.RunBody{
 						Id: claim.RunId, Status: domain.Completing,
@@ -2193,7 +2194,12 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
 				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
 			}
-			return map[string]domain.KnitData{claim.KnitId: {}}, nil
+			return map[string]domain.KnitData{claim.KnitId: {
+				KnitDataBody: domain.KnitDataBody{
+					KnitId:    claim.KnitId,
+					VolumeRef: &claim.Subject,
+				},
+			}}, nil
 		}
 
 		k8sData := k8sdatamocks.New(t)
@@ -2246,7 +2252,12 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
 				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
 			}
-			return map[string]domain.KnitData{claim.KnitId: {}}, nil
+			return map[string]domain.KnitData{claim.KnitId: {
+				KnitDataBody: domain.KnitDataBody{
+					KnitId:    claim.KnitId,
+					VolumeRef: &claim.Subject,
+				},
+			}}, nil
 		}
 
 		k8sData := k8sdatamocks.New(t)
@@ -2299,7 +2310,12 @@ func TestImpoerDataEndHandler(t *testing.T) {
 			if !cmp.SliceContentEq([]string{claim.KnitId}, knitId) {
 				t.Errorf("Get should be called with {%s}. actual = %s", claim.KnitId, knitId)
 			}
-			return map[string]domain.KnitData{claim.KnitId: {}}, nil
+			return map[string]domain.KnitData{claim.KnitId: {
+				KnitDataBody: domain.KnitDataBody{
+					KnitId:    claim.KnitId,
+					VolumeRef: &claim.Subject,
+				},
+			}}, nil
 		}
 
 		expectedError := errors.New("fake error")

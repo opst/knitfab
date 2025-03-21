@@ -1,7 +1,7 @@
 package data
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 
 	bconf "github.com/opst/knitfab/pkg/configs/backend"
@@ -37,9 +37,18 @@ type WrappingDataSource[T any] interface {
 
 func Of(d domain.KnitDataBody) (Builder, error) {
 	if knitId := d.KnitId; knitId != strings.ToLower(knitId) {
-		return nil, errors.New("knitId should be consisted with lower alphanumeric chars, '-', '_' and '.'")
+		return nil, fmt.Errorf(
+			"knitId %s: should be consisted with lower alphanumeric chars, '-', '_' and '.'",
+			knitId,
+		)
 	}
-	return data(d), nil
+	if d.VolumeRef == nil {
+		return nil, fmt.Errorf("Data is purged: knit#id = %s", d.KnitId)
+	}
+	return Data{
+		KnitId:    d.KnitId,
+		VolumeRef: *d.VolumeRef,
+	}, nil
 }
 
 func OfOutputs(r domain.Run) ([]Builder, error) {
@@ -76,45 +85,49 @@ func buildDataMetaSource(vt VolumeTemplate, s Builder) *kubecore.PersistentVolum
 	}
 }
 
-// Subject which describing data under initilization
+// Subject which describing Data under initilization
 //
-// Use this when your subject is data whose VolumeRef is to be determined.
+// Use this when your subject is Data whose VolumeRef is to be determined.
 //
 // Otherwise, you have complete KnitData, use Data as subject.
-type data domain.KnitDataBody // based knit_id
-var _ Builder = data{}
-
-func (ds data) Unwrap() domain.KnitDataBody {
-	return domain.KnitDataBody(ds)
+type Data struct {
+	KnitId    string
+	VolumeRef string
 }
 
-func (ds data) Component() string {
+var _ Builder = Data{}
+
+func (ds Data) Unwrap() Data {
+	return Data(ds)
+}
+
+func (ds Data) Component() string {
 	return "data"
 }
 
-func (ds data) IdType() string {
+func (ds Data) IdType() string {
 	return "knitid"
 }
 
-func (ds data) Name() string {
+func (ds Data) Name() string {
 	return ds.Component()
 }
 
 // points PVC name
-func (ds data) Instance() string {
+func (ds Data) Instance() string {
 	// this method determins naming convention of PVC.
 	return ds.VolumeRef
 }
 
-func (ds data) Id() string {
+func (ds Data) Id() string {
 	return ds.KnitId
 }
 
-func (ds data) ObjectMeta(namespace string) kubeapimeta.ObjectMeta {
+func (ds Data) ObjectMeta(namespace string) kubeapimeta.ObjectMeta {
 	return metasource.ToObjectMeta(ds, namespace)
 }
 
-func (ds data) Build(conf *bconf.KnitClusterConfig) *kubecore.PersistentVolumeClaim {
+func (ds Data) Build(conf *bconf.KnitClusterConfig) *kubecore.PersistentVolumeClaim {
 	vt := VolumeTemplate{
 		Namespece:    conf.Namespace(),
 		StorageClass: conf.DataAgent().Volume().StorageClassName(),

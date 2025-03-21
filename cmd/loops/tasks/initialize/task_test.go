@@ -13,6 +13,7 @@ import (
 	types "github.com/opst/knitfab/pkg/domain"
 	kdbrunmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
 	k8srunmock "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -125,7 +126,7 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 						},
 						KnitDataBody: types.KnitDataBody{
 							KnitId:    "next-run-input-1",
-							VolumeRef: "ref-next-run-input-1",
+							VolumeRef: pointer.Ref("ref-next-run-input-1"),
 							Tags: types.NewTagSet([]types.Tag{
 								{Key: "type", Value: "csv"},
 								{Key: "input", Value: "1"},
@@ -152,7 +153,7 @@ func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {
 					}),
 					KnitDataBody: types.KnitDataBody{
 						KnitId:    "next-run-log",
-						VolumeRef: "ref-next-run-log",
+						VolumeRef: pointer.Ref("ref-next-run-log"),
 						Tags: types.NewTagSet([]types.Tag{
 							{Key: "type", Value: "jsonl"},
 							{Key: "log", Value: "1"},
@@ -267,7 +268,7 @@ func TestTask_Inside_of_PickAndSetStatus(t *testing.T) {
 				},
 				KnitDataBody: types.KnitDataBody{
 					KnitId:    "picked-run-input-1",
-					VolumeRef: "ref-picked-run-input-1",
+					VolumeRef: pointer.Ref("ref-picked-run-input-1"),
 					Tags: types.NewTagSet([]types.Tag{
 						{Key: "type", Value: "csv"},
 						{Key: "input", Value: "1"},
