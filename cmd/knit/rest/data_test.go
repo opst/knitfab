@@ -524,6 +524,91 @@ func TestPutTagshWithKnitId(t *testing.T) {
 	})
 }
 
+func TestPurgeData(t *testing.T) {
+	t.Run("when `PurgeData` is completed, it returns nil.", func(t *testing.T) {
+		knitId := "1234"
+		apiHasCalled := false
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			apiHasCalled = true
+			if r.Method != http.MethodDelete {
+				t.Error("unexpected http method")
+			}
+			if !strings.HasSuffix(r.URL.Path, "/"+knitId) {
+				t.Errorf("unexpected path: %s", r.URL.Path)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		})
+		ts := httptest.NewServer(h)
+		defer ts.Close()
+
+		// prepare for the tests
+		profile := kprof.KnitProfile{ApiRoot: ts.URL}
+
+		ci := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+		if err := ci.PurgeData(context.Background(), knitId); err != nil {
+			t.Errorf("unexpected result. an error should not be occured: %s", err)
+		}
+		if !apiHasCalled {
+			t.Error("unexpected result. api should be called.")
+		}
+	})
+
+	t.Run("when API returns 404, it returns an error.", func(t *testing.T) {
+		knitId := "1234"
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		})
+		ts := httptest.NewServer(h)
+		defer ts.Close()
+
+		// prepare for the tests
+		profile := kprof.KnitProfile{ApiRoot: ts.URL}
+
+		ci := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+		if err := ci.PurgeData(context.Background(), knitId); err == nil {
+			t.Error("unexpected result. an error should be occured.")
+		}
+	})
+
+	t.Run("when API returns 409, it returns an error.", func(t *testing.T) {
+		knitId := "1234"
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusConflict)
+		})
+		ts := httptest.NewServer(h)
+		defer ts.Close()
+
+		// prepare for the tests
+		profile := kprof.KnitProfile{ApiRoot: ts.URL}
+
+		ci := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+		if err := ci.PurgeData(context.Background(), knitId); err == nil {
+			t.Error("unexpected result. an error should be occured.")
+		}
+	})
+
+	t.Run("when API returns 500, it returns an error.", func(t *testing.T) {
+		knitId := "1234"
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+		ts := httptest.NewServer(h)
+		defer ts.Close()
+
+		// prepare for the tests
+		profile := kprof.KnitProfile{ApiRoot: ts.URL}
+
+		ci := try.To(krst.NewClient(&profile)).OrFatal(t)
+
+		if err := ci.PurgeData(context.Background(), knitId); err == nil {
+			t.Error("unexpected result. an error should be occured.")
+		}
+	})
+}
+
 func TestFindData(t *testing.T) {
 	t.Run("a server responding successfully	is given", func(t *testing.T) {
 		handlerFactory := func(t *testing.T, resp []data.Detail) (http.Handler, func() *http.Request) {
