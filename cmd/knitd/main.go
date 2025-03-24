@@ -140,6 +140,7 @@ func main() {
 
 		e.GET(api("data/:knitid/"), proxy)
 		e.PUT(api("data/:knitid/"), handlers.PutTagForDataHandler(db.Data(), knitid))
+		e.DELETE(api("data/:knitid/"), handlers.PurgeDataHandler(db.Data(), knitid))
 	}
 
 	{

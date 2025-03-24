@@ -804,3 +804,94 @@ func TestPutTagsForDataHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestPurgeDataHandler(t *testing.T) {
+	type When struct {
+		knitId   string
+		purgeErr error
+	}
+
+	type Then struct {
+		statusCode int
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			dbdata := dbmock.NewDataInterface()
+			dbdata.Impl.Purge = func(ctx context.Context, knitId string) error {
+				return when.purgeErr
+			}
+
+			wantErr := 400 <= then.statusCode
+
+			e := echo.New()
+			c, _ := httptestutil.Delete(e, "/data/"+when.knitId)
+			c.SetPath("/data/:knitid")
+			c.SetParamNames("knitid")
+			c.SetParamValues(when.knitId)
+
+			testee := handlers.PurgeDataHandler(dbdata, "knitid")
+			err := testee(c)
+
+			if wantErr {
+				if err == nil {
+					t.Error("expected error, but got nil")
+				} else {
+					if err.(*echo.HTTPError).Code != then.statusCode {
+						t.Errorf("unexpected status code: %d", err.(*echo.HTTPError).Code)
+					}
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if c.Response().Status != then.statusCode {
+				t.Errorf("unexpected status code: %d", c.Response().Status)
+			}
+		}
+	}
+
+	t.Run("When the knitId is not found, return 404", theory(
+		When{
+			knitId:   "knit-1",
+			purgeErr: kerr.ErrMissing,
+		},
+		Then{
+			statusCode: http.StatusNotFound,
+		},
+	))
+
+	t.Run("When the knitId is found, return 204", theory(
+		When{
+			knitId:   "knit-1",
+			purgeErr: nil,
+		},
+		Then{
+			statusCode: http.StatusNoContent,
+		},
+	))
+
+	fakeError := errors.New("fake error")
+	t.Run("When the knitId is found, but the purge operation failed, return 500", theory(
+		When{
+			knitId:   "knit-1",
+			purgeErr: fakeError,
+		},
+		Then{
+			statusCode: http.StatusInternalServerError,
+		},
+	))
+
+	t.Run("When the found Data is in use, return 409", theory(
+		When{
+			knitId:   "knit-1",
+			purgeErr: domain.ErrDataInUse,
+		},
+		Then{
+			statusCode: http.StatusConflict,
+		},
+	))
+
+}
