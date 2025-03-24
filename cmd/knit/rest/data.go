@@ -182,6 +182,31 @@ func (c *client) PostData(sendingCtx context.Context, source string, dereference
 	return prog
 }
 
+func (c *client) PurgeData(ctx context.Context, knitId string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.apipath("data", knitId), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpclient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if err := unmarshalResponseDiscardingPayload(
+		resp,
+		MessageFor{
+			Status4xx: fmt.Sprintf("purging data is rejected by server (status code = %d)", resp.StatusCode),
+			Status5xx: fmt.Sprintf("server error (status code = %d)", resp.StatusCode),
+		},
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *client) PutTagsForData(knitId string, tags tags.Change) (*data.Detail, error) {
 
 	reqBody, err := json.Marshal(tags)

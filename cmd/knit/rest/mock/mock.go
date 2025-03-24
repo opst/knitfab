@@ -109,6 +109,7 @@ type mockKnitClient struct {
 		GetDataRaw     func(context.Context, string, func(io.Reader) error) error
 		GetData        func(context.Context, string, func(rest.FileEntry) error) error
 		FindData       func(ctx context.Context, tags []apitags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error)
+		PurgeData      func(ctx context.Context, knitId string) error
 
 		GetPlans func(ctx context.Context, planId string) (plans.Detail, error)
 		FindPlan func(
@@ -136,6 +137,7 @@ type mockKnitClient struct {
 		GetDataRaw     []string
 		GetData        []string
 		FindData       []FindDataArgs
+		PurgeData      []string
 
 		GetPlans           []string
 		Findplan           []FindPlanArgs
@@ -186,6 +188,16 @@ func (m *mockKnitClient) PutTagsForData(knitId string, argtags apitags.Change) (
 		m.t.Fatal("PutTagsForData is not ready to be called")
 	}
 	return m.Impl.PutTagsForData(knitId, argtags)
+}
+
+func (m *mockKnitClient) PurgeData(ctx context.Context, knitId string) error {
+	m.t.Helper()
+
+	m.Calls.PurgeData = append(m.Calls.PurgeData, knitId)
+	if m.Impl.PurgeData == nil {
+		m.t.Fatal("PurgeData is not ready to be called")
+	}
+	return m.Impl.PurgeData(ctx, knitId)
 }
 
 func (m *mockKnitClient) GetDataRaw(ctx context.Context, knitId string, handler func(io.Reader) error) error {
