@@ -175,6 +175,148 @@ func TestGenerateDot(t *testing.T) {
 		))
 	}
 	{
+		// [test case of data lineage with purged Data]
+		// data1 --[in/1]--> run1 --[out/1]--> data2
+		data1 := data.Detail{
+			KnitId: "data1",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data1"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:55+00:00"},
+				{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientPurged},
+			},
+			Upstream: data.CreatedFrom{
+				Run: runs.Summary{
+					RunId: "run0", Status: "done",
+					Plan: plans.Summary{PlanId: "upload", Name: "knit#uploaded"},
+				},
+				Mountpoint: &plans.Mountpoint{Path: "/out/1"},
+			},
+			Downstreams: []data.AssignedTo{
+				{
+					Run: runs.Summary{
+						RunId: "run1", Status: "done",
+						Plan: plans.Summary{
+							PlanId: "plan-3",
+							Image: &plans.Image{
+								Repository: "knit.image.repo.invalid/trainer",
+								Tag:        "v1",
+							},
+						},
+					},
+					Mountpoint: plans.Mountpoint{Path: "/in/1"},
+				},
+			},
+		}
+		data2 := data.Detail{
+			KnitId: "data2",
+			Tags: []tags.Tag{
+				{Key: "foo", Value: "bar"},
+				{Key: "fizz", Value: "bazz"},
+				{Key: domain.KeyKnitId, Value: "data2"},
+				{Key: domain.KeyKnitTimestamp, Value: "2024-04-01T12:34:56+00:00"},
+				{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientPurged},
+				{Key: domain.KeyKnitTransient, Value: domain.ValueKnitTransientFailed},
+			},
+			Upstream: data.CreatedFrom{
+				Run: runs.Summary{
+					RunId: "run1", Status: "failed",
+					Plan: plans.Summary{
+						PlanId: "plan-3",
+						Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+					},
+				},
+				Mountpoint: &plans.Mountpoint{Path: "/out/1"},
+			},
+		}
+		run1 := runs.Detail{
+			Summary: runs.Summary{
+				RunId: "run1", Status: "done",
+				Plan: plans.Summary{
+					PlanId: "plan-3",
+					Image:  &plans.Image{Repository: "knit.image.repo.invalid/trainer", Tag: "v1"},
+				},
+				UpdatedAt: try.To(
+					rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00"),
+				).OrFatal(t),
+			},
+			Inputs: []runs.Assignment{
+				{
+					KnitId:     "data1",
+					Mountpoint: plans.Mountpoint{Path: "/in/1"},
+				},
+			},
+			Outputs: []runs.Assignment{
+				{
+					KnitId:     "data2",
+					Mountpoint: plans.Mountpoint{Path: "/out/1"},
+				},
+			},
+		}
+		t.Run("When graph have nodes and edges, then they should be output as dot format. (Data are purged)", theory(
+			When{
+				Graph: knitgraph.NewDirectedGraph(
+					knitgraph.WithData(data1, knitgraph.Emphasize()),
+					knitgraph.WithData(data2),
+					knitgraph.WithRun(run1),
+				),
+			},
+			Then{
+				RequiredContent: fmt.Sprintf(
+					`digraph G {
+	node [shape=record fontsize=10]
+	edge [fontsize=10]
+
+	"ddata1"[
+		shape=none
+		color="#10571c"
+		label=<
+			<TABLE CELLSPACING="0">
+				<TR><TD BGCOLOR="#10571c"><FONT COLOR="#FFFFFF"><B>Data / purged</B></FONT></TD><TD BGCOLOR="#d4ecc6">knit#id: data1</TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s | knit#transient:purged</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
+			</TABLE>
+		>
+	];
+	"ddata2"[
+		shape=none
+		color="#10571c"
+		label=<
+			<TABLE CELLSPACING="0">
+				<TR><TD BGCOLOR="#10571c"><FONT COLOR="#FFFFFF"><B>Data / purged</B></FONT></TD><TD BGCOLOR="#FFFFFF">knit#id: data2</TD></TR>
+				<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">%s | knit#transient:purged | knit#transient:failed</FONT></TD></TR>
+				<TR><TD COLSPAN="2"><B>foo</B>:bar<BR/><B>fizz</B>:bazz</TD></TR>
+			</TABLE>
+		>
+	];
+	"rrun1"[
+		shape=none
+		color="#FFA500"
+		label=<
+			<TABLE CELLSPACING="0">
+				<TR><TD BGCOLOR="#FFA500"><FONT COLOR="#FFFFFF"><B>Run</B></FONT></TD><TD><FONT COLOR="#007700"><B>done</B></FONT></TD><TD BGCOLOR="#FFFFFF">id: run1</TD></TR>
+				<TR><TD COLSPAN="3"><FONT POINT-SIZE="8">last updated: %s</FONT></TD></TR>
+				<TR><TD COLSPAN="3">image = knit.image.repo.invalid/trainer:v1</TD></TR>
+			</TABLE>
+		>
+	];
+
+	"ddata1" -> "rrun1" [label="/in/1"];
+	"rrun1" -> "ddata2" [label="/out/1"];
+
+}`,
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:55+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+					try.To(rfctime.ParseRFC3339DateTime("2024-04-01T12:34:56+00:00")).OrFatal(t).
+						Time().Local().Format(rfctime.RFC3339DateTimeFormat),
+				),
+			},
+		))
+	}
+	{
 		// [test case of data lineage]
 		// root -->  run1 --[/upload]--> data1 --[/in/1]--> run2 --[/out/1]--> data2
 		run1 := runs.Detail{
