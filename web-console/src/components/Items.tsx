@@ -719,6 +719,10 @@ const RunLogViewer: React.FC<RunLogViewerProps> = ({ runId, runService }) => {
                         setError(d.message ?? err.response?.statusText);
                         setTimeout(() => { fetchLogs(); }, 5000);
                         return
+                    } else if (err.response?.status === 410) {
+                        setError("The log is not available since it has been purged.");
+                        setLoading(false);
+                        return
                     }
 
                     setError("Failed to fetch logs");

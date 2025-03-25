@@ -87,6 +87,8 @@ func GetRunLogHandler(
 		if err != nil {
 			if errors.Is(err, kerr.ErrMissing) {
 				return apierr.NotFound()
+			} else if errors.Is(err, domain.ErrDataIsPurged) {
+				return apierr.Gone(apierr.WithError(err))
 			}
 			return apierr.InternalServerError(err)
 		}
@@ -95,6 +97,8 @@ func GetRunLogHandler(
 		if err != nil {
 			if errors.Is(err, k8serrors.ErrDeadlineExceeded) {
 				return apierr.ServiceUnavailable("please retry later", err)
+			} else if errors.Is(err, domain.ErrDataIsPurged) {
+				return apierr.Gone(apierr.WithError(err))
 			}
 			return apierr.InternalServerError(err)
 		}
