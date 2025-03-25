@@ -493,6 +493,37 @@ func TestGetRunLogHandler(t *testing.T) {
 			errorFromNewAgent:  errors.New("fake error"),
 			expectedStatusCode: 500,
 		},
+		"when NewDataAgent returns ErrDataIsPurged, it responses 410": {
+			run: map[string]domain.Run{
+				"test-run-id": {
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Done,
+						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+							"2022-11-10T01:00:01.000+09:00",
+						)).OrFatal(t).Time(),
+						PlanBody: domain.PlanBody{
+							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
+							Image: &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+						},
+					},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
+					},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
+					},
+					Log: &domain.Log{
+						Id: 2,
+						KnitDataBody: domain.KnitDataBody{
+							KnitId:    "test-log-knit-id",
+							VolumeRef: pointer.Ref("vpc-test-log-knit-id"),
+						},
+					},
+				},
+			},
+			errorFromNewAgent:  domain.ErrDataIsPurged,
+			expectedStatusCode: 410,
+		},
 		"Data reader spawn failure by ErrDeadlineExceeded causes 503 error": {
 			run: map[string]domain.Run{
 				"test-run-id": {
@@ -523,6 +554,37 @@ func TestGetRunLogHandler(t *testing.T) {
 			},
 			errorFromSpawner:   k8serrors.ErrDeadlineExceeded,
 			expectedStatusCode: 503,
+		},
+		"Data reader spawn failure by ErrDataIsPurged causes 410 error": {
+			run: map[string]domain.Run{
+				"test-run-id": {
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Done,
+						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+							"2022-11-10T01:00:01.000+09:00",
+						)).OrFatal(t).Time(),
+						PlanBody: domain.PlanBody{
+							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
+							Image: &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+						},
+					},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
+					},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
+					},
+					Log: &domain.Log{
+						Id: 2,
+						KnitDataBody: domain.KnitDataBody{
+							KnitId:    "test-log-knit-id",
+							VolumeRef: pointer.Ref("vpc-test-log-knit-id"),
+						},
+					},
+				},
+			},
+			errorFromSpawner:   domain.ErrDataIsPurged,
+			expectedStatusCode: 410,
 		},
 		"Data reader spawn failure causes 500 error": {
 			run: map[string]domain.Run{

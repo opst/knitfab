@@ -8,9 +8,9 @@ import (
 	"github.com/opst/knitfab/pkg/utils/cmp"
 )
 
-var ErrUnknownDataAgentMode = errors.New("unknown data agent mode")
-var ErrDataInUse = errors.New("data is in use")
-var ErrDataIsPurged = errors.New("data is purged")
+var ErrUnknownDataAgentMode = errors.New("unknown Data Agent mode")
+var ErrDataInUse = errors.New("Data is in use")
+var ErrDataIsPurged = errors.New("Data is purged")
 
 type DataAgentMode string
 
