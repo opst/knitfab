@@ -10,6 +10,7 @@ import (
 
 var ErrUnknownDataAgentMode = errors.New("unknown data agent mode")
 var ErrDataInUse = errors.New("data is in use")
+var ErrDataIsPurged = errors.New("data is purged")
 
 type DataAgentMode string
 

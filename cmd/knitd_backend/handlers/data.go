@@ -146,6 +146,8 @@ func GetDataHandler(
 		if err != nil {
 			if errors.Is(err, kerr.ErrMissing) {
 				return binderr.NotFound()
+			} else if errors.Is(err, domain.ErrDataIsPurged) {
+				return binderr.Gone(binderr.WithError(err))
 			}
 			return binderr.InternalServerError(err)
 		}
@@ -153,6 +155,8 @@ func GetDataHandler(
 		dagt, err := iDataK8s.SpawnDataAgent(ctx, daRecord, deadline)
 		if errors.Is(err, k8serrors.ErrDeadlineExceeded) {
 			return binderr.ServiceUnavailable("please retry later", err)
+		} else if errors.Is(err, domain.ErrDataIsPurged) {
+			return binderr.Gone(binderr.WithError(err))
 		} else if err != nil {
 			return binderr.InternalServerError(err)
 		}

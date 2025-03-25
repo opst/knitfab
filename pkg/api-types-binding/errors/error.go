@@ -89,8 +89,20 @@ func ServiceUnavailable(advice string, err error) *echo.HTTPError {
 	)
 }
 
-func NotFound() *echo.HTTPError {
-	return NewErrorMessage(http.StatusNotFound, "not found")
+func NotFound(options ...ErrorMessageOption) *echo.HTTPError {
+	return NewErrorMessage(
+		http.StatusNotFound,
+		"not found",
+		options...,
+	)
+}
+
+func Gone(options ...ErrorMessageOption) *echo.HTTPError {
+	return NewErrorMessage(
+		http.StatusGone,
+		"This resource is not available anymore",
+		options...,
+	)
 }
 
 func BadRequest(advice string, err error) *echo.HTTPError {

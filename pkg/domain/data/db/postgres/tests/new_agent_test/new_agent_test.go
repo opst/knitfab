@@ -12,7 +12,6 @@ import (
 	testenv "github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
 	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/domain"
-	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
 	kpgdata "github.com/opst/knitfab/pkg/domain/data/db/postgres"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
@@ -205,7 +204,7 @@ func TestNewAgent(t *testing.T) {
 		testee := kpgdata.New(pool)
 
 		_, err := testee.NewAgent(ctx, knitIdPurged, domain.DataAgentRead, 30*time.Second)
-		if !errors.Is(err, kdbdata.ErrDataIsPurged) {
+		if !errors.Is(err, domain.ErrDataIsPurged) {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})

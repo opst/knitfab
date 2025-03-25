@@ -240,6 +240,14 @@ func TestGetDataHandler(t *testing.T) {
 			errorFromSpawner:   k8serrors.ErrDeadlineExceeded,
 			expectedStatusCode: http.StatusServiceUnavailable,
 		},
+		"ErrDataIsPurged error causes 410 error (from NewAgent)": {
+			errorFromNewAgent:  domain.ErrDataIsPurged,
+			expectedStatusCode: http.StatusGone,
+		},
+		"ErrDataIsPurged error causes 410 error (from Spawner)": {
+			errorFromSpawner:   domain.ErrDataIsPurged,
+			expectedStatusCode: http.StatusGone,
+		},
 		"other errors causes 500 error": {
 			errorFromSpawner:   errors.New("fake error"),
 			expectedStatusCode: http.StatusInternalServerError,

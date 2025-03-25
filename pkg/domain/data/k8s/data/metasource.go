@@ -43,7 +43,7 @@ func Of(d domain.KnitDataBody) (Builder, error) {
 		)
 	}
 	if d.VolumeRef == nil {
-		return nil, fmt.Errorf("Data is purged: knit#id = %s", d.KnitId)
+		return nil, fmt.Errorf("%w: knit#id = %s", domain.ErrDataIsPurged, d.KnitId)
 	}
 	return Data{
 		KnitId:    d.KnitId,
