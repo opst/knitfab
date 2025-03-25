@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -142,8 +141,6 @@ type DataInterface interface {
 	Purge(ctx context.Context, knitId string) error
 }
 
-var ErrDataIsPurged = errors.New("Data is purged")
-
 func NewErrDataIsPurged(knitId string) error {
-	return fmt.Errorf("%w: %s", ErrDataIsPurged, knitId)
+	return fmt.Errorf("%w: %s", domain.ErrDataIsPurged, knitId)
 }
