@@ -356,19 +356,36 @@ func (d *DataNode) ToDot(w io.Writer) error {
 		)
 	}
 
+	purgedLabel := ""
+	for _, t := range d.Tags {
+		if t.Key != domain.KeyKnitTransient {
+			continue
+		}
+		if t.Value != domain.ValueKnitTransientPurged {
+			continue
+		}
+		purgedLabel = " / purged"
+		break
+	}
+
 	//The background color of the data node that is the argument gets highlighted from the others.
 	idBgColor := "#FFFFFF"
 	if d.Emphasize {
 		idBgColor = "#d4ecc6"
 	}
+
+	borderColor := "#1c9930"
+	if purgedLabel != "" {
+		borderColor = "#10571c"
+	}
 	_, err := fmt.Fprintf(
 		w,
 		`	"%s"[
 		shape=none
-		color="#1c9930"
+		color="%s"
 		label=<
 			<TABLE CELLSPACING="0">
-				<TR><TD BGCOLOR="#1c9930"><FONT COLOR="#FFFFFF"><B>Data</B></FONT></TD><TD BGCOLOR="%s">knit#id: %s</TD></TR>
+				<TR><TD BGCOLOR="%s"><FONT COLOR="#FFFFFF"><B>Data%s</B></FONT></TD><TD BGCOLOR="%s">knit#id: %s</TD></TR>
 				%s
 				<TR><TD COLSPAN="2">%s</TD></TR>
 			</TABLE>
@@ -376,6 +393,9 @@ func (d *DataNode) ToDot(w io.Writer) error {
 	];
 `,
 		d.NodeId,
+		borderColor,
+		borderColor,
+		purgedLabel,
 		idBgColor,
 		html.EscapeString(knitId),
 		subheader,

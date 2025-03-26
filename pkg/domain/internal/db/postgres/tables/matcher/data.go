@@ -8,16 +8,14 @@ import (
 )
 
 type Data struct {
-	KnitId    Matcher[string]
-	VolumeRef Matcher[string]
-	PlanId    Matcher[string]
-	RunId     Matcher[string]
-	OutputId  Matcher[int]
+	KnitId   Matcher[string]
+	PlanId   Matcher[string]
+	RunId    Matcher[string]
+	OutputId Matcher[int]
 }
 
 func (r Data) Match(actual tables.Data) bool {
 	return r.KnitId.Match(actual.KnitId) &&
-		r.VolumeRef.Match(actual.VolumeRef) &&
 		r.PlanId.Match(actual.PlanId) &&
 		r.RunId.Match(actual.RunId) &&
 		r.OutputId.Match(actual.OutputId)
@@ -25,13 +23,34 @@ func (r Data) Match(actual tables.Data) bool {
 
 func (r Data) String() string {
 	return fmt.Sprintf(
-		"{knitId:%s volumeRef:%s planId:%s runId:%s outputId:%s}",
-		r.KnitId, r.VolumeRef, r.PlanId, r.RunId, r.OutputId,
+		"{knitId:%s planId:%s runId:%s outputId:%s}",
+		r.KnitId, r.PlanId, r.RunId, r.OutputId,
 	)
 }
 
 func (d Data) Format(s fmt.State, _ rune) {
 	fmt.Fprint(s, d.String())
+}
+
+type VolumeRef struct {
+	KnitId    Matcher[string]
+	VolumeRef Matcher[string]
+}
+
+func (vr VolumeRef) Match(actual tables.VolumeRef) bool {
+	return vr.KnitId.Match(actual.KnitId) &&
+		vr.VolumeRef.Match(actual.VolumeRef)
+}
+
+func (vr VolumeRef) String() string {
+	return fmt.Sprintf(
+		"{KnitId:%s VolumeRef:%s}",
+		vr.KnitId, vr.VolumeRef,
+	)
+}
+
+func (vr VolumeRef) Format(s fmt.State, _ rune) {
+	fmt.Fprint(s, vr.String())
 }
 
 type DataAgentMatcher struct {

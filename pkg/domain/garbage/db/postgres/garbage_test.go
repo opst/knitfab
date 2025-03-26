@@ -7,157 +7,298 @@ import (
 	"testing"
 
 	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/domain"
 	kpggbg "github.com/opst/knitfab/pkg/domain/garbage/db/postgres"
-	. "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
+	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
+	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
+	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
 func TestGarbage_Pop(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 	t.Run("If there is 1 record in garbage, that record will be popped", func(t *testing.T) {
-		//[Preparation]
-		//Connect to the database
-		//Insert 1 record into the knit_id table and the garbage table
+		// [Preparation]
+		// Connect to the database
+		// Insert 1 record into the knit_id table and the garbage table
 		ctx := context.Background()
 		pgpool := poolBroaker.GetPool(ctx, t)
 		conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
 		defer conn.Release()
 
-		expectedGarbage := domain.Garbage{KnitId: Padding36("knit-1"), VolumeRef: "garbage-1"}
-		if _, err := conn.Exec(ctx,
-			`insert into "knit_id" ("knit_id") values ($1)`,
-			expectedGarbage.KnitId,
-		); err != nil {
-			t.Fatal(err)
+		expectedGarbage := domain.Garbage{
+			KnitId:    testhelpers.Padding36("knit-1"),
+			VolumeRef: "garbage-1",
 		}
-		if _, err := conn.Exec(ctx,
-			`insert into "garbage" ("knit_id","volume_ref") values ($1,$2)`,
-			expectedGarbage.KnitId,
-			expectedGarbage.VolumeRef,
-		); err != nil {
+		given := tables.Operation{
+			Garbage: []tables.Garbage{
+				tables.Garbage(expectedGarbage),
+			},
+		}
+
+		if err := given.ApplyWithConn(ctx, conn); err != nil {
 			t.Fatal(err)
 		}
 
 		testee := kpggbg.New(pgpool)
-		pop, err := testee.Pop(ctx, func(g domain.Garbage) error {
-			if g == expectedGarbage {
+		pop, err := testee.Pop(
+			ctx,
+			func(g domain.Garbage) error {
+				if g != expectedGarbage {
+					t.Errorf(
+						"argument of callback function does not match.(KnitId, VolumeRef = %v, %v)",
+						g.KnitId, g.VolumeRef,
+					)
+				}
 				return nil
-			}
-			return fmt.Errorf(
-				"argument of callback function does not match.(KnitId, VolumeRef= %v,%v)",
-				g.KnitId, g.VolumeRef)
-		})
-		//[Verification]
+			},
+		)
+		// [Verification]
 		// The record to be popped is passed as an argument to the callback function.
 		// The first return value "pop" of the target function is true, and the second return value is nil.
 		// The record count of the knit_id table and the garbage table becomes 0.
 		if !pop || err != nil {
 			t.Errorf(
-				"return value of test function does not match. (pop,err =%v,%v)",
-				pop, err)
+				"return value of test function does not match. (pop, err = %v, %v)",
+				pop, err,
+			)
 		}
-		var countKnitId int
-		var countGarbage int
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "knit_id";`).Scan(&countKnitId); err != nil {
-			t.Fatalf("counting record of knit_id is failed. %v", err)
-		}
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "garbage";`).Scan(&countGarbage); err != nil {
-			t.Fatalf("counting record of gargabe is failed. %v", err)
-		}
-		if countKnitId != 0 || countGarbage != 0 {
+		knitIds := try.To(
+			scanner.New[string]().QueryAll(ctx, conn, `table "knit_id"`),
+		).OrFatal(t)
+
+		if want := []string{}; !cmp.SliceContentEq(knitIds, want) {
 			t.Errorf(
-				"record count does not match. (countKnitId, countGarbage =%v,%v)",
-				countKnitId, countGarbage)
+				"record of knit_id table does not match. got: %v, want: %v",
+				knitIds, want,
+			)
+		}
+		garbage := try.To(
+			scanner.New[domain.Garbage]().QueryAll(ctx, conn, `table "garbage"`),
+		).OrFatal(t)
+
+		if want := []domain.Garbage{}; !cmp.SliceContentEq(garbage, want) {
+			t.Errorf(
+				"record count does not match. got: %v, want: %v",
+				garbage, want,
+			)
 		}
 	})
 
-	t.Run("If there is 1 record in garbage and the callback function is nil, that record will be popped", func(t *testing.T) {
-		//[Preparation]
-		//Connect to the database
-		//Insert 1 record into the knit_id table and the garbage table
+	t.Run("If there is 1 record in garbage, that record will be popped; do not delete knit_id if there are Data referencing it", func(t *testing.T) {
+		// [Preparation]
+		// Connect to the database
+		// Insert 1 record into the knit_id table and the garbage table
 		ctx := context.Background()
 		pgpool := poolBroaker.GetPool(ctx, t)
 		conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
 		defer conn.Release()
-		if _, err := conn.Exec(ctx,
-			`insert into "knit_id" ("knit_id") values ('knit-1')`,
-		); err != nil {
+
+		expectedGarbage := domain.Garbage{
+			KnitId:    testhelpers.Padding36("knit-1"),
+			VolumeRef: "garbage-1",
+		}
+		given := tables.Operation{
+			Plan: []tables.Plan{
+				{
+					PlanId: testhelpers.Padding36("plan-1"),
+					Active: true,
+					Hash:   "hash-1",
+				},
+			},
+			PlanPseudo: []tables.PlanPseudo{
+				{
+					PlanId: testhelpers.Padding36("plan-1"),
+					Name:   testhelpers.Padding36("pseudo-1"),
+				},
+			},
+			Outputs: map[tables.Output]tables.OutputAttr{
+				{
+					OutputId: 1,
+					PlanId:   testhelpers.Padding36("plan-1"),
+				}: {},
+			},
+
+			Steps: []tables.Step{
+				{
+					Run: tables.Run{
+						RunId:                 testhelpers.Padding36("run-1"),
+						PlanId:                testhelpers.Padding36("plan-1"),
+						Status:                domain.Done,
+						LifecycleSuspendUntil: try.To(testhelpers.ISO8601("2021-01-01T00:00:00Z")).OrFatal(t),
+						UpdatedAt:             try.To(testhelpers.ISO8601("2021-01-02T00:00:00Z")).OrFatal(t),
+					},
+					Outcomes: map[tables.Data]tables.DataAttibutes{
+						{
+							KnitId:   testhelpers.Padding36("knit-1"),
+							PlanId:   testhelpers.Padding36("plan-1"),
+							OutputId: 1,
+							RunId:    testhelpers.Padding36("run-1"),
+						}: {
+							Timestamp: pointer.Ref(try.To(testhelpers.ISO8601("2021-01-01T00:00:00Z")).OrFatal(t)),
+						},
+					},
+				},
+			},
+
+			Garbage: []tables.Garbage{
+				tables.Garbage(expectedGarbage),
+			},
+		}
+
+		if err := given.ApplyWithConn(ctx, conn); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := conn.Exec(ctx,
-			`insert into "garbage" ("knit_id","volume_ref") values ('knit-1','garbage-1')`,
-		); err != nil {
+
+		testee := kpggbg.New(pgpool)
+		pop, err := testee.Pop(
+			ctx,
+			func(g domain.Garbage) error {
+				if g != expectedGarbage {
+					t.Errorf(
+						"argument of callback function does not match.(KnitId, VolumeRef = %v, %v)",
+						g.KnitId, g.VolumeRef,
+					)
+				}
+				return nil
+			},
+		)
+		// [Verification]
+		// The record to be popped is passed as an argument to the callback function.
+		// The first return value "pop" of the target function is true, and the second return value is nil.
+		// The record count of the knit_id table and the garbage table becomes 0.
+		if !pop || err != nil {
+			t.Errorf(
+				"return value of test function does not match. (pop, err = %v, %v)",
+				pop, err,
+			)
+		}
+		knitIds := try.To(
+			scanner.New[string]().QueryAll(ctx, conn, `table "knit_id"`),
+		).OrFatal(t)
+
+		if want := []string{
+			testhelpers.Padding36("knit-1"),
+		}; !cmp.SliceContentEq(knitIds, want) {
+			t.Errorf(
+				"record of knit_id table does not match. got: %v, want: %v",
+				knitIds, want,
+			)
+		}
+		garbage := try.To(
+			scanner.New[domain.Garbage]().QueryAll(ctx, conn, `table "garbage"`),
+		).OrFatal(t)
+
+		if want := []domain.Garbage{}; !cmp.SliceContentEq(garbage, want) {
+			t.Errorf(
+				"record count does not match. got: %v, want: %v",
+				garbage, want,
+			)
+		}
+	})
+
+	t.Run("If there is 1 record in garbage and the callback function is nil, that record will be popped", func(t *testing.T) {
+		// [Preparation]
+		// Connect to the database
+		// Insert 1 record into the knit_id table and the garbage table
+		ctx := context.Background()
+		pgpool := poolBroaker.GetPool(ctx, t)
+		conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
+		defer conn.Release()
+
+		given := tables.Operation{
+			Garbage: []tables.Garbage{
+				{
+					KnitId:    testhelpers.Padding36("knit-1"),
+					VolumeRef: "garbage-1",
+				},
+			},
+		}
+
+		if err := given.ApplyWithConn(ctx, conn); err != nil {
 			t.Fatal(err)
 		}
 
 		testee := kpggbg.New(pgpool)
 		pop, err := testee.Pop(ctx, nil)
-		//[Verification]
+		// [Verification]
 		// The first return value "pop" of the target function is true, and the second return value is nil.
 		// The record count of the "knit_id" table and the "garbage" table becomes 0.
 		if !pop || err != nil {
-			t.Errorf("return value of test function does not match. (pop,err =%v,%v)",
-				pop, err)
-		}
-		var countKnitId int
-		var countGarbage int
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "knit_id";`).Scan(&countKnitId); err != nil {
-			t.Fatalf("counting record of knit_id is failed. %v", err)
-		}
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "garbage";`).Scan(&countGarbage); err != nil {
-			t.Fatalf("counting record of gargabe is failed. %v", err)
-		}
-		if countKnitId != 0 || countGarbage != 0 {
 			t.Errorf(
-				"record count does not match. (countKnitId, countGarbage =%v,%v)",
-				countKnitId, countGarbage)
+				"return value of test function does not match. (pop, err = %v, %v)",
+				pop, err,
+			)
+		}
+
+		knitIds := try.To(
+			scanner.New[string]().QueryAll(ctx, conn, `table "knit_id"`),
+		).OrFatal(t)
+
+		if want := []string{}; !cmp.SliceContentEq(knitIds, want) {
+			t.Errorf("record of knit_id table does not match. got: %v, want: %v", knitIds, want)
+		}
+
+		garbage := try.To(
+			scanner.New[domain.Garbage]().QueryAll(ctx, conn, `table "garbage"`),
+		).OrFatal(t)
+		if want := []domain.Garbage{}; !cmp.SliceContentEq(garbage, want) {
+			t.Errorf(
+				"record count does not match. want: %v, got: %v",
+				want, garbage,
+			)
 		}
 	})
 
 	t.Run("If there are 0 records in garbage, nothing is popped", func(t *testing.T) {
-		//[Preparation]
-		//Connect to the database
+		// [Preparation]
+		// Connect to the database
 		ctx := context.Background()
 		pgpool := poolBroaker.GetPool(ctx, t)
 		conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
 		defer conn.Release()
 
 		// Insert record into the knit_id table
-		if _, err := conn.Exec(ctx,
-			`insert into "knit_id" ("knit_id") values ('knit-1')`,
-		); err != nil {
+		given := tables.Operation{
+			KnitId: []string{
+				testhelpers.Padding36("knit-1"),
+			},
+		}
+		if err := given.ApplyWithConn(ctx, conn); err != nil {
 			t.Fatal(err)
 		}
 
 		expectedError := fmt.Errorf("callback was used")
 		testee := kpggbg.New(pgpool)
-		pop, err := testee.Pop(ctx, func(domain.Garbage) error {
-			return expectedError
-		})
-		//[Verification]
+		pop, err := testee.Pop(
+			ctx,
+			func(domain.Garbage) error { return expectedError },
+		)
+		// [Verification]
 		// The first return value "pop" of the target function is false, and the second return value is nil.
 		if pop || err != nil {
 			t.Errorf(
 				"return value of test function does not match. (pop,err) = (%v, %v)",
-				pop, err)
+				pop, err,
+			)
 		}
 		// The callback function is not executed.
 		if errors.Is(err, expectedError) {
 			t.Error("callback was used")
 		}
 		// The record count of the knit_id table remains unchanged.
-		var count int
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "knit_id";`).Scan(&count); err != nil {
-			t.Fatalf("count query is failed. %v", err)
-		}
-		if count != 1 {
-			t.Errorf("record count of knit_id table changes! record count: %v", count)
+		knitIds := try.To(
+			scanner.New[string]().QueryAll(ctx, conn, `table "knit_id"`),
+		).OrFatal(t)
+		if want := []string{
+			testhelpers.Padding36("knit-1"),
+		}; !cmp.SliceContentEq(knitIds, want) {
+			t.Errorf(
+				"record count of knit_id table changes! want: %v, got: %v",
+				want, knitIds,
+			)
 		}
 	})
 	t.Run("When the callback function returns an error, the entire function becomes an error", func(t *testing.T) {
@@ -168,103 +309,139 @@ func TestGarbage_Pop(t *testing.T) {
 		pgpool := poolBroaker.GetPool(ctx, t)
 		conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
 		defer conn.Release()
-		if _, err := conn.Exec(ctx,
-			`insert into "knit_id" ("knit_id") values ('knit-1')`,
-		); err != nil {
+
+		given := tables.Operation{
+			Garbage: []tables.Garbage{
+				{
+					KnitId:    testhelpers.Padding36("knit-1"),
+					VolumeRef: "garbage-1",
+				},
+			},
+		}
+
+		if err := given.ApplyWithConn(ctx, conn); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := conn.Exec(ctx,
-			`insert into "garbage" ("knit_id","volume_ref") values ('knit-1','garbage-1')`,
-		); err != nil {
-			t.Fatal(err)
-		}
+
 		expectedError := fmt.Errorf("callback causes expected error")
 		testee := kpggbg.New(pgpool)
-		pop, err := testee.Pop(ctx, func(domain.Garbage) error {
-			return expectedError
-		})
-		//[Verification]
+		pop, err := testee.Pop(
+			ctx,
+			func(domain.Garbage) error { return expectedError },
+		)
+		// [Verification]
 		// The first return value "pop" of the target function is false, and the second return value is expectedError.
 		if pop || !errors.Is(err, expectedError) {
 			t.Errorf(
 				"return value of test function does not match. (pop,err) = (%v, %v)",
-				pop, err)
+				pop, err,
+			)
 		}
 		// The record count of the knit_id table and the garbage table remains unchanged (still 1).
-		var countKnitId int
-		var countGarbage int
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "knit_id";`).Scan(&countKnitId); err != nil {
-			t.Fatalf("counting record of knit_id is failed. %v", err)
+		knitIds := try.To(
+			scanner.New[string]().QueryAll(ctx, conn, `table "knit_id"`),
+		).OrFatal(t)
+		if want := []string{
+			testhelpers.Padding36("knit-1"),
+		}; !cmp.SliceContentEq(knitIds, want) {
+			t.Errorf(
+				"record count of knit_id table changes! want: %v, got: %v",
+				want, knitIds,
+			)
 		}
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "garbage";`).Scan(&countGarbage); err != nil {
-			t.Fatalf("counting record of gargabe is failed. %v", err)
-		}
-		if countKnitId != 1 || countGarbage != 1 {
-			t.Errorf("record count does not match. (countKnitId, countGarbage =%v,%v)",
-				countKnitId, countGarbage)
+
+		garbage := try.To(
+			scanner.New[domain.Garbage]().QueryAll(ctx, conn, `table "garbage";`),
+		).OrFatal(t)
+		if want := []domain.Garbage{
+			{
+				KnitId:    testhelpers.Padding36("knit-1"),
+				VolumeRef: "garbage-1",
+			},
+		}; !cmp.SliceContentEq(garbage, want) {
+			t.Errorf(
+				"record count of garbage table changes! want: %v, got: %v",
+				want, garbage,
+			)
 		}
 	})
 	t.Run("If all records in the garbage table are locked, nothing is popped", func(t *testing.T) {
-		//[Preparation]
-		//Connect to the database
-		//Insert 1 record into the knit_id table and the garbage table
-		//Lock all records in the garbage table
+		// [Preparation]
+		// Connect to the database
+		// Insert 1 record into the knit_id table and the garbage table
+		// Lock all records in the garbage table
 		ctx := context.Background()
 		pgpool := poolBroaker.GetPool(ctx, t)
 		conn := try.To(pgpool.Acquire(ctx)).OrFatal(t)
 		defer conn.Release()
 
-		if _, err := conn.Exec(ctx,
-			`insert into "knit_id" ("knit_id") values ('knit-1')`,
-		); err != nil {
-			t.Fatal(err)
+		given := tables.Operation{
+			Garbage: []tables.Garbage{
+				{
+					KnitId:    testhelpers.Padding36("knit-1"),
+					VolumeRef: "garbage-1",
+				},
+			},
 		}
-		if _, err := conn.Exec(ctx,
-			`insert into "garbage" ("knit_id","volume_ref") values ('knit-1','garbage-1')`,
-		); err != nil {
+		if err := given.ApplyWithConn(ctx, conn); err != nil {
 			t.Fatal(err)
 		}
 
 		locked := try.To(pgpool.Begin(ctx)).OrFatal(t)
 		defer locked.Rollback(ctx)
-		if _, err := locked.Exec(ctx,
-			`select * from "garbage" for update`); err != nil {
+		if _, err := locked.Exec(
+			ctx,
+			`select * from "garbage" for update`,
+		); err != nil {
 			t.Fatal(err)
 		}
 
 		expectedError := fmt.Errorf("callback was used")
 		testee := kpggbg.New(pgpool)
-		pop, err := testee.Pop(ctx, func(domain.Garbage) error {
-			return expectedError
-		})
-		//[Verification]
-		//The first return value of the test function should be false, and the second return value should be nil.
+		pop, err := testee.Pop(
+			ctx,
+			func(domain.Garbage) error { return expectedError },
+		)
+		// [Verification]
+		// The first return value of the test function should be false, and the second return value should be nil.
 		if pop || err != nil {
 			t.Errorf(
 				"return value of test function does not match. (pop,err) = (%v, %v)",
-				pop, err)
+				pop, err,
+			)
 		}
 		// The callback function is not executed
 		if errors.Is(err, expectedError) {
 			t.Error("callback was used")
 		}
 		// The record count of the knit_id table and the garbage table remains unchanged (still 1)
-		var countKnitId int
-		var countGarbage int
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "knit_id";`).Scan(&countKnitId); err != nil {
-			t.Fatalf("counting record of knit_id is failed. %v", err)
-		}
-		if err := conn.QueryRow(ctx,
-			`select count("knit_id") from "garbage";`).Scan(&countGarbage); err != nil {
-			t.Fatalf("counting record of gargabe is failed. %v", err)
-		}
-		if countKnitId != 1 || countGarbage != 1 {
+		knitIds := try.To(
+			scanner.New[string]().QueryAll(ctx, conn, `table "knit_id"`),
+		).OrFatal(t)
+
+		if want := []string{
+			testhelpers.Padding36("knit-1"),
+		}; !cmp.SliceContentEq(knitIds, want) {
 			t.Errorf(
-				"record count does not match. (countKnitId, countGarbage =%v,%v)",
-				countKnitId, countGarbage)
+				"record count of knit_id table changes! want: %v, got: %v",
+				want, knitIds,
+			)
+		}
+
+		garbage := try.To(
+			scanner.New[domain.Garbage]().QueryAll(ctx, conn, `table "garbage"`),
+		).OrFatal(t)
+
+		if want := []domain.Garbage{
+			{
+				KnitId:    testhelpers.Padding36("knit-1"),
+				VolumeRef: "garbage-1",
+			},
+		}; !cmp.SliceContentEq(garbage, want) {
+			t.Errorf(
+				"record count of garbage table changes! want: %v, got: %v",
+				want, garbage,
+			)
 		}
 	})
 }

@@ -41,9 +41,10 @@ func TestUpdateTag(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("test-knit-running-1"), VolumeRef: "#test-knit-running-1",
+						KnitId: Padding36("test-knit-running-1"),
 						PlanId: "test-plan", RunId: "test-run-running-1", OutputId: 1_010,
 					}: {
+						VolumeRef: "#test-knit-running-1",
 						UserTag: []domain.Tag{
 							{Key: "tag-a", Value: "value 1"},
 							{Key: "tag-a", Value: "value 2"},
@@ -54,9 +55,10 @@ func TestUpdateTag(t *testing.T) {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId: Padding36("test-knit-running-2"), VolumeRef: "#test-knit-running-2",
+						KnitId: Padding36("test-knit-running-2"),
 						PlanId: "test-plan", RunId: "test-run-running-1", OutputId: 1_020,
 					}: {
+						VolumeRef: "#test-knit-running-2",
 						UserTag: []domain.Tag{
 							{Key: "tag-a", Value: "value 1"},
 							{Key: "tag-a", Value: "value 2"},
@@ -77,9 +79,11 @@ func TestUpdateTag(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: Padding36("test-knit-running-3"), VolumeRef: "#test-knit-running-3",
+						KnitId: Padding36("test-knit-running-3"),
 						PlanId: "test-plan", RunId: "test-run-running-2", OutputId: 1_010,
-					}: {},
+					}: {
+						VolumeRef: "#test-knit-running-3",
+					},
 				},
 			},
 		},

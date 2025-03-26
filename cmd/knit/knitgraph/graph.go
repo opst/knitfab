@@ -7,8 +7,6 @@ import (
 	"github.com/opst/knitfab-api-types/data"
 	"github.com/opst/knitfab-api-types/plans"
 	"github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils/maps"
 )
 
@@ -445,11 +443,4 @@ func ErrFindDataWithKnitId(knitId string, err error) error {
 
 func ErrGetRunWithRunId(runId string, err error) error {
 	return fmt.Errorf("%w: during searching run %s", err, runId)
-}
-
-func knitIdTag(knitId string) tags.Tag {
-	return tags.Tag{
-		Key:   domain.KeyKnitId,
-		Value: knitId,
-	}
 }

@@ -1929,9 +1929,11 @@ func TestPlan_Activate(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: th.Padding36("knit-1"), VolumeRef: "vol-1",
+								KnitId:   th.Padding36("knit-1"),
 								OutputId: 1, RunId: th.Padding36("run-1-pseudo-1"), PlanId: th.Padding36("pseudo-plan-1"),
-							}: {},
+							}: {
+								VolumeRef: "vol-1",
+							},
 						},
 					},
 					{
@@ -1943,9 +1945,11 @@ func TestPlan_Activate(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: th.Padding36("knit-2"), VolumeRef: "vol-2",
+								KnitId:   th.Padding36("knit-2"),
 								OutputId: 1, RunId: th.Padding36("run-2-pseudo-1"), PlanId: th.Padding36("pseudo-plan-1"),
-							}: {},
+							}: {
+								VolumeRef: "vol-2",
+							},
 						},
 					},
 					{
@@ -1957,9 +1961,11 @@ func TestPlan_Activate(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: th.Padding36("knit-5"), VolumeRef: "vol-5",
+								KnitId:   th.Padding36("knit-5"),
 								OutputId: 1, RunId: th.Padding36("run-3-pseudo-1"), PlanId: th.Padding36("pseudo-plan-1"),
-							}: {},
+							}: {
+								VolumeRef: "vol-5",
+							},
 						},
 					},
 					{
@@ -1971,9 +1977,11 @@ func TestPlan_Activate(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: th.Padding36("knit-8"), VolumeRef: "vol-8",
+								KnitId:   th.Padding36("knit-8"),
 								OutputId: 1, RunId: th.Padding36("run-4-pseudo-1"), PlanId: th.Padding36("pseudo-plan-1"),
-							}: {},
+							}: {
+								VolumeRef: "vol-8",
+							},
 						},
 					},
 					{
@@ -1995,13 +2003,17 @@ func TestPlan_Activate(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: th.Padding36("knit-3"), VolumeRef: "vol-3",
+								KnitId:   th.Padding36("knit-3"),
 								OutputId: 1010, RunId: th.Padding36("run-1-a"), PlanId: th.Padding36("plan-1"),
-							}: {},
+							}: {
+								VolumeRef: "vol-3",
+							},
 							{
-								KnitId: th.Padding36("knit-4"), VolumeRef: "vol-4",
+								KnitId:   th.Padding36("knit-4"),
 								OutputId: 1001, RunId: th.Padding36("run-1-a"), PlanId: th.Padding36("plan-1"),
-							}: {},
+							}: {
+								VolumeRef: "vol-4",
+							},
 						},
 					},
 					{
@@ -2017,13 +2029,17 @@ func TestPlan_Activate(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: th.Padding36("knit-6"), VolumeRef: "vol-6",
+								KnitId:   th.Padding36("knit-6"),
 								OutputId: 1010, RunId: th.Padding36("run-1-b"), PlanId: th.Padding36("plan-1"),
-							}: {},
+							}: {
+								VolumeRef: "vol-6",
+							},
 							{
-								KnitId: th.Padding36("knit-7"), VolumeRef: "vol-7",
+								KnitId:   th.Padding36("knit-7"),
 								OutputId: 1001, RunId: th.Padding36("run-1-b"), PlanId: th.Padding36("plan-1"),
-							}: {},
+							}: {
+								VolumeRef: "vol-7",
+							},
 						},
 					},
 					{
@@ -2038,9 +2054,11 @@ func TestPlan_Activate(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: th.Padding36("knit-9"), VolumeRef: "vol-9",
+								KnitId:   th.Padding36("knit-9"),
 								OutputId: 2010, RunId: th.Padding36("run-2-a"), PlanId: th.Padding36("plan-2"),
-							}: {},
+							}: {
+								VolumeRef: "vol-9",
+							},
 						},
 					},
 				},

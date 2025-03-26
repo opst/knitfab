@@ -97,12 +97,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.deactivated.pseudo-plan-2"),
+						KnitId:   th.Padding36("data.deactivated.pseudo-plan-2"),
+						OutputId: 99_020,
+						RunId:    th.Padding36("deactivated.pseudo-plan-2"),
+						PlanId:   th.Padding36("pseudo-plan-2"),
+					}: {
 						VolumeRef: "pvc/data.deactivated.pseudo-plan-2",
-						OutputId:  99_020,
-						RunId:     th.Padding36("deactivated.pseudo-plan-2"),
-						PlanId:    th.Padding36("pseudo-plan-2"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -116,12 +117,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.waiting.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.waiting.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("waiting.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.waiting.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("waiting.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -135,12 +137,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.ready.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.ready.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("ready.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.ready.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("ready.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -154,12 +157,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.starting.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.starting.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("starting.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.starting.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("starting.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -173,12 +177,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.running.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.running.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("running.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.running.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("running.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -192,12 +197,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.aborting.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.aborting.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("aborting.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.aborting.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("aborting.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -211,12 +217,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.completing.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.completing.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("completing.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.completing.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("completing.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -230,12 +237,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.failed.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.failed.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("failed.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.failed.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("failed.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -249,12 +257,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.done.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.done.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("done.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.done.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("done.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -268,12 +277,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.invalidated.pseudo-plan-1"),
+						KnitId:   th.Padding36("data.invalidated.pseudo-plan-1"),
+						OutputId: 99_010,
+						RunId:    th.Padding36("invalidated.pseudo-plan-1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+					}: {
 						VolumeRef: "pvc/data.invalidated.pseudo-plan-1",
-						OutputId:  99_010,
-						RunId:     th.Padding36("invalidated.pseudo-plan-1"),
-						PlanId:    th.Padding36("pseudo-plan-1"),
-					}: {},
+					},
 				},
 			},
 			// plans with image
@@ -296,12 +306,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-deactivated"),
+						KnitId:   th.Padding36("data.plan-deactivated"),
+						OutputId: 1_010,
+						RunId:    th.Padding36("run.plan-deactivated"),
+						PlanId:   th.Padding36("plan-deactivated"),
+					}: {
 						VolumeRef: "pvc/data.plan-deactivated",
-						OutputId:  1_010,
-						RunId:     th.Padding36("run.plan-deactivated"),
-						PlanId:    th.Padding36("plan-deactivated"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -323,12 +334,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-waiting"),
+						KnitId:   th.Padding36("data.plan-waiting"),
+						OutputId: 2_010,
+						RunId:    th.Padding36("run.plan-waiting"),
+						PlanId:   th.Padding36("plan-waiting"),
+					}: {
 						VolumeRef: "pvc/data.plan-waiting",
-						OutputId:  2_010,
-						RunId:     th.Padding36("run.plan-waiting"),
-						PlanId:    th.Padding36("plan-waiting"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -350,12 +362,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-ready"),
+						KnitId:   th.Padding36("data.plan-ready"),
+						OutputId: 3_010,
+						RunId:    th.Padding36("run.plan-ready"),
+						PlanId:   th.Padding36("plan-ready"),
+					}: {
 						VolumeRef: "pvc/data.plan-ready",
-						OutputId:  3_010,
-						RunId:     th.Padding36("run.plan-ready"),
-						PlanId:    th.Padding36("plan-ready"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -377,12 +390,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-starting"),
+						KnitId:   th.Padding36("data.plan-starting"),
+						OutputId: 4_010,
+						RunId:    th.Padding36("run.plan-starting"),
+						PlanId:   th.Padding36("plan-starting"),
+					}: {
 						VolumeRef: "pvc/data.plan-starting",
-						OutputId:  4_010,
-						RunId:     th.Padding36("run.plan-starting"),
-						PlanId:    th.Padding36("plan-starting"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -404,12 +418,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-running"),
+						KnitId:   th.Padding36("data.plan-running"),
+						OutputId: 5_010,
+						RunId:    th.Padding36("run.plan-running"),
+						PlanId:   th.Padding36("plan-running"),
+					}: {
 						VolumeRef: "pvc/data.plan-running",
-						OutputId:  5_010,
-						RunId:     th.Padding36("run.plan-running"),
-						PlanId:    th.Padding36("plan-running"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -431,12 +446,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-aborting"),
+						KnitId:   th.Padding36("data.plan-aborting"),
+						OutputId: 6_010,
+						RunId:    th.Padding36("run.plan-aborting"),
+						PlanId:   th.Padding36("plan-aborting"),
+					}: {
 						VolumeRef: "pvc/data.plan-aborting",
-						OutputId:  6_010,
-						RunId:     th.Padding36("run.plan-aborting"),
-						PlanId:    th.Padding36("plan-aborting"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -458,12 +474,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-completing"),
+						KnitId:   th.Padding36("data.plan-completing"),
+						OutputId: 7_010,
+						RunId:    th.Padding36("run.plan-completing"),
+						PlanId:   th.Padding36("plan-completing"),
+					}: {
 						VolumeRef: "pvc/data.plan-completing",
-						OutputId:  7_010,
-						RunId:     th.Padding36("run.plan-completing"),
-						PlanId:    th.Padding36("plan-completing"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -485,12 +502,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-failed"),
+						KnitId:   th.Padding36("data.plan-failed"),
+						OutputId: 8_010,
+						RunId:    th.Padding36("run.plan-failed"),
+						PlanId:   th.Padding36("plan-failed"),
+					}: {
 						VolumeRef: "pvc/data.plan-failed",
-						OutputId:  8_010,
-						RunId:     th.Padding36("run.plan-failed"),
-						PlanId:    th.Padding36("plan-failed"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -512,12 +530,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-done"),
+						KnitId:   th.Padding36("data.plan-done"),
+						OutputId: 9_010,
+						RunId:    th.Padding36("run.plan-done"),
+						PlanId:   th.Padding36("plan-done"),
+					}: {
 						VolumeRef: "pvc/data.plan-done",
-						OutputId:  9_010,
-						RunId:     th.Padding36("run.plan-done"),
-						PlanId:    th.Padding36("plan-done"),
-					}: {},
+					},
 				},
 			},
 			{
@@ -539,12 +558,13 @@ func TestRun_Finish(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data.plan-invalidated"),
+						KnitId:   th.Padding36("data.plan-invalidated"),
+						OutputId: 10_010,
+						RunId:    th.Padding36("run.plan-invalidated"),
+						PlanId:   th.Padding36("plan-invalidated"),
+					}: {
 						VolumeRef: "pvc/data.plan-invalidated",
-						OutputId:  10_010,
-						RunId:     th.Padding36("run.plan-invalidated"),
-						PlanId:    th.Padding36("plan-invalidated"),
-					}: {},
+					},
 				},
 			},
 		},

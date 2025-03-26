@@ -53,12 +53,13 @@ func TestDelete_Worker(t *testing.T) {
 				// NO worker
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("pseudo-plan-1:run:/out/1"),
+						KnitId:   th.Padding36("pseudo-plan-1:run:/out/1"),
+						PlanId:   th.Padding36("pseudo-plan-1"),
+						RunId:    th.Padding36(run1Id),
+						OutputId: 1_010,
+					}: {
 						VolumeRef: "&pseudo-plan-1:run:/out/1",
-						PlanId:    th.Padding36("pseudo-plan-1"),
-						RunId:     th.Padding36(run1Id),
-						OutputId:  1_010,
-					}: {},
+					},
 				},
 			},
 			// make Run-2

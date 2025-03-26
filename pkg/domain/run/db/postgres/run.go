@@ -143,54 +143,7 @@ func (m *runPG) New(ctx context.Context) ([]string, *domain.ProjectionTrigger, e
 	}
 	defer tx.Rollback(ctx)
 
-	// step 1. determine plan & lock the plan + nominated data
-	var planId string
-	var _dn int
-	if err := tx.QueryRow(
-		ctx,
-		`
-		with
-		"mp" as (
-			select distinct "input_id" from "nomination" where "updated"
-		),
-		"pids" as (
-			select "plan_id" from "plan_image"
-
-			intersect
-
-			select "plan_id" from "input"
-			inner join "mp" using ("input_id")
-		),
-		"plan" as (
-			select "plan_id" from "plan" inner join "pids" using("plan_id")
-			for update of "plan" skip locked
-			limit 1
-		),
-		"rel_mp" as (
-			select "input_id" from "input" inner join "plan" using("plan_id")
-		),
-		"n" as (
-			select "knit_id" from "nomination" inner join "rel_mp" using("input_id")
-		),
-		"d" as (
-			select "knit_id" from "data" inner join "n" using("knit_id")
-			order by "knit_id" for share of "data"
-		),
-		"dn" as (select count("knit_id") as "locked_data" from "d")
-		select "plan_id", "locked_data" from "plan", "dn"
-		`,
-		// to lock data, we count (scanning all rows) them.
-		//
-		// This operation needs preventing update/delete data, so we take lock on data with "for share".
-		// But not need to occupy them; only referencing them is Okay, multiple New's can run in parallel.
-	).Scan(&planId, &_dn); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, nil // nothing to do
-		}
-		return nil, nil, err
-	}
-
-	// step 2. fetch nominations
+	// step 1. determine plan & lock the plan
 	nominations := map[int][]string{}     // mountpointId -> knitIds, nominated
 	var trigger *domain.ProjectionTrigger // mountpontId, knitId nominated
 	{
@@ -198,13 +151,33 @@ func (m *runPG) New(ctx context.Context) ([]string, *domain.ProjectionTrigger, e
 			ctx,
 			`
 			with
+			"mp" as (
+				select distinct "input_id" from "nomination" where "updated"
+			),
+			"pids" as (
+				select "plan_id" from "plan_image"
+
+				intersect
+
+				select "plan_id" from "input"
+				inner join "mp" using ("input_id")
+			),
+			"plan" as (
+				select "plan_id" from "plan" inner join "pids" using("plan_id")
+				for update of "plan" skip locked
+				limit 1
+			),
 			"input" as (
 				select "input_id" from "input"
-				where "plan_id" = $1
+				where "plan_id" in (table "plan")
 			),
 			"nom" as (
-				select "input_id", "knit_id", "updated" from "nomination"
+				select "input_id", "knit_id", "updated"
+				from "nomination"
 				inner join "input" using ("input_id")
+				inner join "data" using ("knit_id")
+				order by "knit_id"
+				for share of "data", "nomination"
 			),
 			"new" as (
 				select "input_id", "knit_id", "updated" from "nom"
@@ -216,15 +189,13 @@ func (m *runPG) New(ctx context.Context) ([]string, *domain.ProjectionTrigger, e
 			)
 			select "input_id", "knit_id", "updated"
 			from "input"
-			left outer join (table "known" union table "new") as "n" using("input_id")
+			left outer join (table "known" union table "new") as "n" using ("input_id")
 			`,
-			planId,
 		)
 		if err != nil {
 			return nil, nil, err
 		}
 		defer rows.Close()
-
 		for rows.Next() {
 			var mountpointId int
 			var knitId *string
@@ -243,17 +214,29 @@ func (m *runPG) New(ctx context.Context) ([]string, *domain.ProjectionTrigger, e
 
 			if updated != nil && *updated {
 				trigger = &domain.ProjectionTrigger{
-					PlanId: planId, InputId: mountpointId, KnitId: *knitId,
+					InputId: mountpointId, KnitId: *knitId,
 				}
 			} else {
 				nominations[mountpointId] = append(k, *knitId)
 			}
 		}
-		rows.Close()
 	}
 
 	if trigger == nil {
 		return nil, nil, nil
+	}
+
+	// step 2. fetch & lock nominations, lock data
+	{
+		var planId string
+		if err := tx.QueryRow(
+			ctx,
+			`select "plan_id" from "input" where "input_id" = $1`,
+			trigger.InputId,
+		).Scan(&planId); err != nil {
+			return nil, nil, err
+		}
+		trigger.PlanId = planId
 	}
 
 	// step 3. perform projection.
@@ -802,10 +785,16 @@ func (m *runPG) complementData(ctx context.Context, conn kpool.Queryer, runId st
 			_, err := conn.Exec(
 				ctx,
 				`
-				insert into "data" ("knit_id", "volume_ref", "output_id", "run_id", "plan_id")
-				values ($1, $2, $3, $4, $5)
+				with "data" as (
+					insert into "data" ("knit_id", "output_id", "run_id", "plan_id")
+					values ($1, $2, $3, $4)
+					returning "knit_id"
+				)
+				insert into "volume_ref" ("knit_id", "volume_ref")
+				select "knit_id", $5 as "volume_ref"
+				from "data"
 				`,
-				knitId, volumeRef, spec.outputId, spec.runId, spec.planId,
+				knitId, spec.outputId, spec.runId, spec.planId, volumeRef,
 			)
 			if err != nil {
 				return err
@@ -1116,10 +1105,6 @@ func (m *runPG) SetExit(ctx context.Context, runId string, exit domain.RunExit) 
 }
 
 func (m *runPG) delete(ctx context.Context, tx kpool.Tx, runId string) error {
-	if err := m.truncateRun(ctx, tx, runId); err != nil {
-		return err
-	}
-
 	var runStatus domain.KnitRunStatus
 	var upstreams int
 	if err := tx.QueryRow(
@@ -1127,14 +1112,34 @@ func (m *runPG) delete(ctx context.Context, tx kpool.Tx, runId string) error {
 		`
 		with "run_status" as (
 			select "status" from "run" where "run_id" = $1
+			for update
 		),
-		"assign" as (
+		"upstream_assign" as (
 			select count(*) as "n_input" from "assign" where "run_id" = $1
+		),
+		"downstream_data" as (
+			select "knit_id" from "data" where "run_id" = $1
+			for update
+		),
+		"downstream_assign" as (
+			select distinct "run_id" from "assign"
+			where "knit_id" in (table "downstream_data")
+		),
+		"invalidated_downstreams" as (
+			select "run_id" from "run"
+			where "run_id" in (table "downstream_assign")
+			and "status" = $2
+			for update of "run"
 		)
-		select "status", "n_input" from "run_status", "assign"
+		select "status", "n_input", "n_inval_downstream", "n_output_data"
+		from
+			"run_status",
+			"upstream_assign",
+			(select count(*) as "n_inval_downstream" from "invalidated_downstreams") as "n1",
+			(select count(*) as "n_output_data" from "downstream_data") as "n2"
 		`,
-		runId,
-	).Scan((*kpgintr.KnitRunStatus)(&runStatus), &upstreams); err != nil {
+		runId, domain.Invalidated,
+	).Scan((*kpgintr.KnitRunStatus)(&runStatus), &upstreams, nil, nil); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return kpgerr.Missing{
 				Table:    "run",
@@ -1144,20 +1149,38 @@ func (m *runPG) delete(ctx context.Context, tx kpool.Tx, runId string) error {
 		return err
 	}
 
+	forceFailed := false
 	switch runStatus {
-	case domain.Waiting, domain.Deactivated, domain.Done, domain.Failed:
+	case domain.Waiting, domain.Deactivated:
+		// ok. they can be deleted.
+		forceFailed = true // but, they should be marked as failed.
+
+	case domain.Done, domain.Failed:
 		// ok. they can be deleted.
 	case domain.Invalidated:
 		//no. they does not exited.
 		return kpgerr.Missing{
 			Table:    "run",
-			Identity: fmt.Sprintf("run_id = %s", runId),
+			Identity: fmt.Sprintf("Run_id = %s", runId),
 		}
 	default:
 		return fmt.Errorf(
-			"%w: run (id='%s', status='%s') is not stopped",
+			"%w: Run (id='%s', status='%s') is not stopped",
 			domain.ErrWorkerActive, runId, runStatus,
 		)
+	}
+
+	if forceFailed {
+		if err := m.setStatus(ctx, tx, runId, domain.Aborting, 0); err != nil {
+			return err
+		}
+		if err := m.setStatus(ctx, tx, runId, domain.Failed, 0); err != nil {
+			return err
+		}
+	}
+
+	if err := m.truncateRun(ctx, tx, runId); err != nil {
+		return err
 	}
 
 	if upstreams == 0 || runStatus == domain.Invalidated {
@@ -1242,41 +1265,66 @@ func (r *runPG) Retry(ctx context.Context, runId string) error {
 	}
 	defer tx.Rollback(ctx)
 
+	// At first, rebuild downstream of the run to lock output.
+	//
+	// `truncateRun` truncates the downward resources of the run.
+	// When `truncateRun` causes ErrDataInUse,
+	// it means that the run is not Done nor Failed.
+	// In this case, skip complement the data and set the worker and check the status.
 	if err := r.truncateRun(ctx, tx, runId); err != nil {
-		return err
+		if !errors.Is(err, domain.ErrDataInUse) {
+			return err
+		}
+	} else {
+		if err := r.complementData(ctx, tx, runId); err != nil {
+			return err
+		}
+		if err := r.setWorker(ctx, tx, runId); err != nil {
+			return err
+		}
 	}
 
-	if err := r.complementData(ctx, tx, runId); err != nil {
-		return err
-	}
-	if err := r.setWorker(ctx, tx, runId); err != nil {
-		return err
-	}
-
+	// Then, Check the Run itself and its upstreams.
 	var status domain.KnitRunStatus
-	// okay, verified. it can be restarted.
+	var purged bool
 	if err := tx.QueryRow(
 		ctx,
 		`
 		with "run" as (
 			select "status", "plan_id" from "run" where "run_id" = $1
+		),
+		"assign" as (
+			select "knit_id" from "assign" where "run_id" = $1
+		),
+		"volume_ref" as (
+			select count("knit_id") != count("volume_ref") as "purged"
+			from "assign"
+			left join "volume_ref" using ("knit_id")
 		)
-		select "status"
+		select "status", "purged"
 		from "run"
 		inner join "plan_image" using ("plan_id")
+		cross join "volume_ref"
 		`,
 		runId,
-	).Scan((*kpgintr.KnitRunStatus)(&status)); err != nil {
+	).Scan((*kpgintr.KnitRunStatus)(&status), &purged); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// This run DOES exist, because truncateRun goes well.
 			// So, this error means that there are no "plan_image" record,
 			// that is, this run is not image-based.
 			return fmt.Errorf(
-				"%w: run (id='%s') is not image-based, cannot be retryed",
+				"%w: Run (id='%s') is not image-based, cannot be retryed",
 				domain.ErrRunIsProtected, runId,
 			)
 		}
 		return err
+	}
+
+	if purged {
+		return fmt.Errorf(
+			"%w: Run (id='%s') has purged input, cannot be retryed",
+			domain.ErrRunIsProtected, runId,
+		)
 	}
 
 	switch status {
@@ -1344,9 +1392,10 @@ func (r *runPG) Retry(ctx context.Context, runId string) error {
 // # Returns
 //
 // - error : If the run cannot be truncated, it returns an error.
-// kdb.Missing = the run does not exist.;
-// kdb.WorkerActive = the run's Worker or output's DataAgent may exist.;
-// kdb.ErrRunHasDownstreams = the run has downstream runs.;
+// domain.Missing = the run does not exist.;
+// domain.WorkerActive = the run's Worker or output's DataAgent may exist.;
+// domain.ErrRunHasDownstreams = the run has downstream runs.;
+// domain.DataInUse = the run is not stopped.;
 // and other errors from Nominator.DropData() or database.
 func (m *runPG) truncateRun(
 	ctx context.Context,
@@ -1440,7 +1489,7 @@ func (m *runPG) truncateRun(
 
 	if 0 < dataagents || worker != "" {
 		return fmt.Errorf(
-			"%w: runId = %s: data reading or writing is ongoing",
+			"%w: runId = %s: Data reading or writing is ongoing",
 			domain.ErrWorkerActive, runId,
 		)
 	}
@@ -1479,19 +1528,26 @@ func (m *runPG) truncateRun(
 		knitIds = append(knitIds, knitId)
 	}
 
-	if err := m.nominator.DropData(ctx, tx, knitIds); err != nil {
-		return err
+	for _, knitId := range knitIds {
+		err := kpgintr.PurgeData(ctx, tx, m.nominator, knitId)
+		if err != nil {
+			return err
+		}
 	}
 
 	if _, err := tx.Exec(
 		ctx,
 		`
-		with "data" as (
+		with "del" as (
 			delete from "data" where "knit_id" = any($1)
-			returning "knit_id", "volume_ref"
+			returning "knit_id"
+		),
+		"orphan_knit_id" as (
+			select "knit_id" from "del"
+			left join "garbage" using ("knit_id")
+			where "volume_ref" is null
 		)
-		insert into "garbage" ("knit_id", "volume_ref")
-		select "knit_id", "volume_ref" from "data"
+		delete from "knit_id" where "knit_id" in (select "knit_id" from "orphan_knit_id")
 		`,
 		knitIds,
 	); err != nil {

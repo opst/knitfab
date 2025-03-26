@@ -21,6 +21,7 @@ const (
 	KeyKnitTransient             string = tags.KeyKnitTransient
 	ValueKnitTransientFailed     string = tags.ValueKnitTransientFailed
 	ValueKnitTransientProcessing string = tags.ValueKnitTransientProcessing
+	ValueKnitTransientPurged     string = tags.ValueKnitTransientPurged
 )
 
 var (
@@ -81,12 +82,12 @@ func NewTag(key, value string) (Tag, error) {
 			}
 		case KeyKnitTransient:
 			switch value {
-			case ValueKnitTransientProcessing, ValueKnitTransientFailed:
+			case ValueKnitTransientProcessing, ValueKnitTransientFailed, ValueKnitTransientPurged:
 				// pass
 			default:
 				return Tag{}, fmt.Errorf(
-					`tag parse error: "%s" should be one of "%s" or "%s"`,
-					KeyKnitTransient, ValueKnitTransientProcessing, ValueKnitTransientFailed,
+					`tag parse error: "%s" should be one of "%s", "%s" or, "%s"`,
+					KeyKnitTransient, ValueKnitTransientProcessing, ValueKnitTransientFailed, ValueKnitTransientPurged,
 				)
 			}
 		}

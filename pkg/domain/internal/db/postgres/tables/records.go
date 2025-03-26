@@ -23,11 +23,10 @@ type TagValue struct {
 }
 
 type Data struct {
-	KnitId    string
-	VolumeRef string
-	PlanId    string
-	RunId     string
-	OutputId  int
+	KnitId   string
+	PlanId   string
+	RunId    string
+	OutputId int
 }
 
 func (a *Data) Equal(b *Data) bool {
@@ -35,6 +34,18 @@ func (a *Data) Equal(b *Data) bool {
 		return a == nil && b == nil
 	}
 	return *a == *b
+}
+
+type VolumeRef struct {
+	KnitId    string
+	VolumeRef string
+}
+
+func (vr *VolumeRef) Equal(other *VolumeRef) bool {
+	if vr == nil || other == nil {
+		return vr == nil && other == nil
+	}
+	return vr.KnitId == other.KnitId && vr.VolumeRef == other.VolumeRef
 }
 
 type DataTimeStamp struct {

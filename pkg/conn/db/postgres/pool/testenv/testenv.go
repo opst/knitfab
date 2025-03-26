@@ -17,13 +17,14 @@ type pg struct {
 }
 
 func (p *pg) GetPool(ctx context.Context, t *testing.T) kpool.Pool {
+	pool := kpool.Wrap(p.pool)
 	t.Cleanup(func() {
 		t.Helper()
-		ClearTables(ctx, p.pool, t)
+		ClearTables(ctx, pool, t)
 	})
 
-	ClearTables(ctx, p.pool, t)
-	return kpool.Wrap(p.pool)
+	ClearTables(ctx, pool, t)
+	return pool
 }
 
 type pgNoClean struct {
@@ -156,7 +157,7 @@ func NewPoolBroakerWithForwarder(
 	}
 }
 
-func ClearTables(ctx context.Context, p *pgxpool.Pool, t *testing.T) {
+func ClearTables(ctx context.Context, p kpool.Pool, t *testing.T) {
 	t.Helper()
 
 	conn, err := p.Acquire(ctx)
@@ -166,6 +167,12 @@ func ClearTables(ctx context.Context, p *pgxpool.Pool, t *testing.T) {
 		t.Errorf("fail to clean-up tables.: %v", err)
 	}
 
+	ClearTablesWithConn(ctx, conn, t)
+}
+
+func ClearTablesWithConn(ctx context.Context, conn kpool.Queryer, t *testing.T) {
+	t.Helper()
+
 	for _, command := range []string{
 		`truncate "plan" RESTART IDENTITY cascade`,
 		`truncate "knit_id" RESTART IDENTITY cascade`,
@@ -173,9 +180,10 @@ func ClearTables(ctx context.Context, p *pgxpool.Pool, t *testing.T) {
 		`truncate "keychain" RESTART IDENTITY cascade`,
 		// by cascade, all row in tables should be deleted.
 	} {
-		_, err = conn.Exec(ctx, command)
+		_, err := conn.Exec(ctx, command)
 		if err != nil {
 			t.Errorf("fail to clean-up tables.: %v", err)
 		}
 	}
+
 }

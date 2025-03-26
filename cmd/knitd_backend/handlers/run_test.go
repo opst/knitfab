@@ -24,6 +24,7 @@ import (
 	runK8sMock "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
 	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/try"
 )
 
@@ -142,7 +143,7 @@ func TestGetRunLogHandler(t *testing.T) {
 
 			targetData := domain.KnitDataBody{
 				KnitId:    "test-log-knit-id",
-				VolumeRef: "pvc-test-log-knit-id",
+				VolumeRef: pointer.Ref("pvc-test-log-knit-id"),
 			}
 			targetRun := map[string]domain.Run{
 				"test-run-id": {
@@ -159,7 +160,7 @@ func TestGetRunLogHandler(t *testing.T) {
 					Inputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "test-in-knit-id", VolumeRef: "pvc-test-in-knit-id",
+								KnitId: "test-in-knit-id", VolumeRef: pointer.Ref("pvc-test-in-knit-id"),
 							},
 							MountPoint: domain.MountPoint{Id: 1, Path: "/testinpath/test"},
 						},
@@ -167,7 +168,7 @@ func TestGetRunLogHandler(t *testing.T) {
 					Outputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "test-out-knit-id", VolumeRef: "pvc-test-out-knit-id",
+								KnitId: "test-out-knit-id", VolumeRef: pointer.Ref("pvc-test-out-knit-id"),
 							},
 							MountPoint: domain.MountPoint{Id: 3, Path: "/testoutpath/test"},
 						},
@@ -352,7 +353,7 @@ func TestGetRunLogHandler(t *testing.T) {
 						{
 							KnitDataBody: domain.KnitDataBody{
 								KnitId:    "input-data",
-								VolumeRef: "vpc-input-data",
+								VolumeRef: pointer.Ref("vpc-input-data"),
 							},
 							MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"},
 						},
@@ -384,7 +385,7 @@ func TestGetRunLogHandler(t *testing.T) {
 						{
 							KnitDataBody: domain.KnitDataBody{
 								KnitId:    "input-data",
-								VolumeRef: "vpc-input-data",
+								VolumeRef: pointer.Ref("vpc-input-data"),
 							},
 							MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"},
 						},
@@ -398,7 +399,7 @@ func TestGetRunLogHandler(t *testing.T) {
 						Id: 2,
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "log-output-data",
-							VolumeRef: "vpc-log-output-data",
+							VolumeRef: pointer.Ref("vpc-log-output-data"),
 						},
 					},
 				},
@@ -429,7 +430,7 @@ func TestGetRunLogHandler(t *testing.T) {
 						Id: 2,
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "log-output-data",
-							VolumeRef: "vpc-log-output-data",
+							VolumeRef: pointer.Ref("vpc-log-output-data"),
 						},
 					},
 				},
@@ -484,13 +485,44 @@ func TestGetRunLogHandler(t *testing.T) {
 						Id: 2,
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "test-log-knit-id",
-							VolumeRef: "vpc-test-log-knit-id",
+							VolumeRef: pointer.Ref("vpc-test-log-knit-id"),
 						},
 					},
 				},
 			},
 			errorFromNewAgent:  errors.New("fake error"),
 			expectedStatusCode: 500,
+		},
+		"when NewDataAgent returns ErrDataIsPurged, it responses 410": {
+			run: map[string]domain.Run{
+				"test-run-id": {
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Done,
+						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+							"2022-11-10T01:00:01.000+09:00",
+						)).OrFatal(t).Time(),
+						PlanBody: domain.PlanBody{
+							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
+							Image: &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+						},
+					},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
+					},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
+					},
+					Log: &domain.Log{
+						Id: 2,
+						KnitDataBody: domain.KnitDataBody{
+							KnitId:    "test-log-knit-id",
+							VolumeRef: pointer.Ref("vpc-test-log-knit-id"),
+						},
+					},
+				},
+			},
+			errorFromNewAgent:  domain.ErrDataIsPurged,
+			expectedStatusCode: 410,
 		},
 		"Data reader spawn failure by ErrDeadlineExceeded causes 503 error": {
 			run: map[string]domain.Run{
@@ -515,13 +547,44 @@ func TestGetRunLogHandler(t *testing.T) {
 						Id: 2,
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "test-log-knit-id",
-							VolumeRef: "vpc-test-log-knit-id",
+							VolumeRef: pointer.Ref("vpc-test-log-knit-id"),
 						},
 					},
 				},
 			},
 			errorFromSpawner:   k8serrors.ErrDeadlineExceeded,
 			expectedStatusCode: 503,
+		},
+		"Data reader spawn failure by ErrDataIsPurged causes 410 error": {
+			run: map[string]domain.Run{
+				"test-run-id": {
+					RunBody: domain.RunBody{
+						Id: "test-run-id", Status: domain.Done,
+						UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
+							"2022-11-10T01:00:01.000+09:00",
+						)).OrFatal(t).Time(),
+						PlanBody: domain.PlanBody{
+							PlanId: "test-plan-id", Active: true, Hash: "hash-plan",
+							Image: &domain.ImageIdentifier{Image: "plan-image", Version: "plan-version"},
+						},
+					},
+					Inputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 1, Path: "mp1/path"}},
+					},
+					Outputs: []domain.Assignment{
+						{MountPoint: domain.MountPoint{Id: 3, Path: "mp3/path"}},
+					},
+					Log: &domain.Log{
+						Id: 2,
+						KnitDataBody: domain.KnitDataBody{
+							KnitId:    "test-log-knit-id",
+							VolumeRef: pointer.Ref("vpc-test-log-knit-id"),
+						},
+					},
+				},
+			},
+			errorFromSpawner:   domain.ErrDataIsPurged,
+			expectedStatusCode: 410,
 		},
 		"Data reader spawn failure causes 500 error": {
 			run: map[string]domain.Run{
@@ -546,7 +609,7 @@ func TestGetRunLogHandler(t *testing.T) {
 						Id: 2,
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "test-log-knit-id",
-							VolumeRef: "vpc-test-log-knit-id",
+							VolumeRef: pointer.Ref("vpc-test-log-knit-id"),
 						},
 					},
 				},
@@ -577,7 +640,7 @@ func TestGetRunLogHandler(t *testing.T) {
 						Id: 2,
 						KnitDataBody: domain.KnitDataBody{
 							KnitId:    "test-log-knit-id",
-							VolumeRef: "vpc-test-log-knit-id",
+							VolumeRef: pointer.Ref("vpc-test-log-knit-id"),
 						},
 					},
 				},
@@ -602,7 +665,7 @@ func TestGetRunLogHandler(t *testing.T) {
 				da := domain.DataAgent{
 					Name:         "test-log-knit-id",
 					Mode:         domain.DataAgentRead,
-					KnitDataBody: domain.KnitDataBody{KnitId: "test-log-knit-id", VolumeRef: "pvc-test-log-knit-id"},
+					KnitDataBody: domain.KnitDataBody{KnitId: "test-log-knit-id", VolumeRef: pointer.Ref("pvc-test-log-knit-id")},
 				}
 
 				if testcase.errorFromNewAgent != nil {
@@ -678,7 +741,7 @@ func TestGetRunLogHandler(t *testing.T) {
 
 		databody := domain.KnitDataBody{
 			KnitId:    "test-log-knit-id",
-			VolumeRef: "volume-ref",
+			VolumeRef: pointer.Ref("volume-ref"),
 		}
 		run := map[string]domain.Run{
 			"test-run-id": {
@@ -794,7 +857,7 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 
 			targetData := domain.KnitDataBody{
 				KnitId:    "test-log-knit-id",
-				VolumeRef: "pvc-test-log-knit-id",
+				VolumeRef: pointer.Ref("pvc-test-log-knit-id"),
 			}
 			targetRun := map[string]domain.Run{
 				"test-run-id": {
@@ -811,7 +874,7 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 					Inputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "test-in-knit-id", VolumeRef: "pvc-test-in-knit-id",
+								KnitId: "test-in-knit-id", VolumeRef: pointer.Ref("pvc-test-in-knit-id"),
 							},
 							MountPoint: domain.MountPoint{Id: 1, Path: "/testinpath/test"},
 						},
@@ -819,7 +882,7 @@ func TestRunLogHandlerWithFollow(t *testing.T) {
 					Outputs: []domain.Assignment{
 						{
 							KnitDataBody: domain.KnitDataBody{
-								KnitId: "test-out-knit-id", VolumeRef: "pvc-test-out-knit-id",
+								KnitId: "test-out-knit-id", VolumeRef: pointer.Ref("pvc-test-out-knit-id"),
 							},
 							MountPoint: domain.MountPoint{Id: 3, Path: "/testoutpath/test"},
 						},

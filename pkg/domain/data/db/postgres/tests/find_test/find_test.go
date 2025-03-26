@@ -92,13 +92,8 @@ func TestData_Find(t *testing.T) {
 			} {
 				for _, status := range []types.KnitRunStatus{
 					// knit#transient: processing
-					types.Deactivated, types.Waiting, types.Ready, types.Starting, types.Running, types.Aborting, types.Completing,
-
-					// no knit#transient
-					types.Done,
-
-					// knit#transient: failed
-					types.Failed, types.Invalidated,
+					types.Deactivated, types.Waiting, types.Ready, types.Starting,
+					types.Running, types.Aborting, types.Completing,
 				} {
 					runid := Padding36(fmt.Sprintf(
 						"run_%s_%s_%s", tagcode, timecode, status,
@@ -113,15 +108,81 @@ func TestData_Find(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: knitid, VolumeRef: Padding64("#" + knitid),
-								RunId: runid, OutputId: 1010, PlanId: Padding36("plan"),
+								KnitId: knitid,
+								RunId:  runid, OutputId: 1010, PlanId: Padding36("plan"),
 							}: {
-								UserTag: tag, Timestamp: timestamp,
+								VolumeRef: Padding64("#" + knitid),
+								UserTag:   tag, Timestamp: timestamp,
 							},
 						},
 					}
 					if err := step.Apply(ctx, pool); err != nil {
 						t.Fatal(err)
+					}
+				}
+			}
+			for timecode, timestamp := range map[string]*time.Time{
+				"old":     &oldTimestamp,
+				"new":     &newTimestamp,
+				"no-time": nil,
+			} {
+				for _, status := range []types.KnitRunStatus{
+					// no knit#transient
+					types.Done,
+
+					// knit#transient: failed
+					types.Failed, types.Invalidated,
+				} {
+					{
+						runid := Padding36(fmt.Sprintf(
+							"run_%s_%s_%s", tagcode, timecode, status,
+						))
+						knitid := Padding36(fmt.Sprintf(
+							"knit-%s-%s-%s", tagcode, timecode, status,
+						))
+						step := tables.Step{
+							Run: tables.Run{
+								RunId: runid, Status: status, PlanId: Padding36("plan"),
+								UpdatedAt: runTimestamp,
+							},
+							Outcomes: map[tables.Data]tables.DataAttibutes{
+								{
+									KnitId: knitid,
+									RunId:  runid, OutputId: 1010, PlanId: Padding36("plan"),
+								}: {
+									VolumeRef: Padding64("#" + knitid),
+									UserTag:   tag, Timestamp: timestamp,
+								},
+							},
+						}
+						if err := step.Apply(ctx, pool); err != nil {
+							t.Fatal(err)
+						}
+					}
+					{
+						runid := Padding36(fmt.Sprintf(
+							"run_%s_%s_%s_purged", tagcode, timecode, status,
+						))
+						knitid := Padding36(fmt.Sprintf(
+							"knit-%s-%s-%s_purged", tagcode, timecode, status,
+						))
+						step := tables.Step{
+							Run: tables.Run{
+								RunId: runid, Status: status, PlanId: Padding36("plan"),
+								UpdatedAt: runTimestamp,
+							},
+							Outcomes: map[tables.Data]tables.DataAttibutes{
+								{
+									KnitId: knitid,
+									RunId:  runid, OutputId: 1010, PlanId: Padding36("plan"),
+								}: {
+									UserTag: tag, Timestamp: timestamp,
+								},
+							},
+						}
+						if err := step.Apply(ctx, pool); err != nil {
+							t.Fatal(err)
+						}
 					}
 				}
 			}
@@ -141,31 +202,49 @@ func TestData_Find(t *testing.T) {
 				then{
 					knitId: []string{
 						Padding36("knit-a-and-b-old-failed"),
+						Padding36("knit-a-and-b-old-failed_purged"),
 						Padding36("knit-a-and-b-old-invalidated"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
 
 						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-failed_purged"),
 						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
 
 						Padding36("knit-no-tags-old-failed"),
+						Padding36("knit-no-tags-old-failed_purged"),
 						Padding36("knit-no-tags-old-invalidated"),
+						Padding36("knit-no-tags-old-invalidated_purged"),
 
 						Padding36("knit-a-and-b-new-failed"),
+						Padding36("knit-a-and-b-new-failed_purged"),
 						Padding36("knit-a-and-b-new-invalidated"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
 
 						Padding36("knit-b-and-c-new-failed"),
+						Padding36("knit-b-and-c-new-failed_purged"),
 						Padding36("knit-b-and-c-new-invalidated"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
 
 						Padding36("knit-no-tags-new-failed"),
+						Padding36("knit-no-tags-new-failed_purged"),
 						Padding36("knit-no-tags-new-invalidated"),
+						Padding36("knit-no-tags-new-invalidated_purged"),
 
 						Padding36("knit-a-and-b-no-time-failed"),
+						Padding36("knit-a-and-b-no-time-failed_purged"),
 						Padding36("knit-a-and-b-no-time-invalidated"),
+						Padding36("knit-a-and-b-no-time-invalidated_purged"),
 
 						Padding36("knit-b-and-c-no-time-failed"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
 						Padding36("knit-b-and-c-no-time-invalidated"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
 
 						Padding36("knit-no-tags-no-time-failed"),
+						Padding36("knit-no-tags-no-time-failed_purged"),
 						Padding36("knit-no-tags-no-time-invalidated"),
+						Padding36("knit-no-tags-no-time-invalidated_purged"),
 					},
 				},
 			},
@@ -251,6 +330,46 @@ func TestData_Find(t *testing.T) {
 					},
 				},
 			},
+			`when querying by "knit#transient: purged", it returns data come from unterminated run`: {
+				when{
+					tags: []types.Tag{
+						try.To(types.NewTag(types.KeyKnitTransient, types.ValueKnitTransientPurged)).OrFatal(t),
+					},
+				},
+				then{
+					knitId: []string{
+						Padding36("knit-a-and-b-old-done_purged"),
+						Padding36("knit-a-and-b-old-failed_purged"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
+						Padding36("knit-b-and-c-old-done_purged"),
+						Padding36("knit-b-and-c-old-failed_purged"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
+						Padding36("knit-no-tags-old-done_purged"),
+						Padding36("knit-no-tags-old-failed_purged"),
+						Padding36("knit-no-tags-old-invalidated_purged"),
+
+						Padding36("knit-a-and-b-new-done_purged"),
+						Padding36("knit-a-and-b-new-failed_purged"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
+						Padding36("knit-b-and-c-new-done_purged"),
+						Padding36("knit-b-and-c-new-failed_purged"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
+						Padding36("knit-no-tags-new-done_purged"),
+						Padding36("knit-no-tags-new-failed_purged"),
+						Padding36("knit-no-tags-new-invalidated_purged"),
+
+						Padding36("knit-a-and-b-no-time-done_purged"),
+						Padding36("knit-a-and-b-no-time-failed_purged"),
+						Padding36("knit-a-and-b-no-time-invalidated_purged"),
+						Padding36("knit-b-and-c-no-time-done_purged"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
+						Padding36("knit-no-tags-no-time-done_purged"),
+						Padding36("knit-no-tags-no-time-failed_purged"),
+						Padding36("knit-no-tags-no-time-invalidated_purged"),
+					},
+				},
+			},
 			`when querying by "knit#timestamp: ...", it returns data having timestamp at same time`: {
 				when{
 					tags: []types.Tag{
@@ -263,8 +382,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-old-completing"),
 						Padding36("knit-a-and-b-old-deactivated"),
 						Padding36("knit-a-and-b-old-done"),
+						Padding36("knit-a-and-b-old-done_purged"),
 						Padding36("knit-a-and-b-old-failed"),
+						Padding36("knit-a-and-b-old-failed_purged"),
 						Padding36("knit-a-and-b-old-invalidated"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
 						Padding36("knit-a-and-b-old-ready"),
 						Padding36("knit-a-and-b-old-running"),
 						Padding36("knit-a-and-b-old-starting"),
@@ -274,8 +396,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-old-completing"),
 						Padding36("knit-b-and-c-old-deactivated"),
 						Padding36("knit-b-and-c-old-done"),
+						Padding36("knit-b-and-c-old-done_purged"),
 						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-failed_purged"),
 						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
 						Padding36("knit-b-and-c-old-ready"),
 						Padding36("knit-b-and-c-old-running"),
 						Padding36("knit-b-and-c-old-starting"),
@@ -285,8 +410,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-no-tags-old-completing"),
 						Padding36("knit-no-tags-old-deactivated"),
 						Padding36("knit-no-tags-old-done"),
+						Padding36("knit-no-tags-old-done_purged"),
 						Padding36("knit-no-tags-old-failed"),
+						Padding36("knit-no-tags-old-failed_purged"),
 						Padding36("knit-no-tags-old-invalidated"),
+						Padding36("knit-no-tags-old-invalidated_purged"),
 						Padding36("knit-no-tags-old-ready"),
 						Padding36("knit-no-tags-old-running"),
 						Padding36("knit-no-tags-old-starting"),
@@ -352,8 +480,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-old-completing"),
 						Padding36("knit-a-and-b-old-deactivated"),
 						Padding36("knit-a-and-b-old-done"),
+						Padding36("knit-a-and-b-old-done_purged"),
 						Padding36("knit-a-and-b-old-failed"),
+						Padding36("knit-a-and-b-old-failed_purged"),
 						Padding36("knit-a-and-b-old-invalidated"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
 						Padding36("knit-a-and-b-old-ready"),
 						Padding36("knit-a-and-b-old-running"),
 						Padding36("knit-a-and-b-old-starting"),
@@ -363,8 +494,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-old-completing"),
 						Padding36("knit-b-and-c-old-deactivated"),
 						Padding36("knit-b-and-c-old-done"),
+						Padding36("knit-b-and-c-old-done_purged"),
 						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-failed_purged"),
 						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
 						Padding36("knit-b-and-c-old-ready"),
 						Padding36("knit-b-and-c-old-running"),
 						Padding36("knit-b-and-c-old-starting"),
@@ -374,8 +508,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-new-completing"),
 						Padding36("knit-a-and-b-new-deactivated"),
 						Padding36("knit-a-and-b-new-done"),
+						Padding36("knit-a-and-b-new-done_purged"),
 						Padding36("knit-a-and-b-new-failed"),
+						Padding36("knit-a-and-b-new-failed_purged"),
 						Padding36("knit-a-and-b-new-invalidated"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
 						Padding36("knit-a-and-b-new-ready"),
 						Padding36("knit-a-and-b-new-running"),
 						Padding36("knit-a-and-b-new-starting"),
@@ -385,8 +522,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-new-completing"),
 						Padding36("knit-b-and-c-new-deactivated"),
 						Padding36("knit-b-and-c-new-done"),
+						Padding36("knit-b-and-c-new-done_purged"),
 						Padding36("knit-b-and-c-new-failed"),
+						Padding36("knit-b-and-c-new-failed_purged"),
 						Padding36("knit-b-and-c-new-invalidated"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
 						Padding36("knit-b-and-c-new-ready"),
 						Padding36("knit-b-and-c-new-running"),
 						Padding36("knit-b-and-c-new-starting"),
@@ -396,8 +536,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-no-time-completing"),
 						Padding36("knit-a-and-b-no-time-deactivated"),
 						Padding36("knit-a-and-b-no-time-done"),
+						Padding36("knit-a-and-b-no-time-done_purged"),
 						Padding36("knit-a-and-b-no-time-failed"),
+						Padding36("knit-a-and-b-no-time-failed_purged"),
 						Padding36("knit-a-and-b-no-time-invalidated"),
+						Padding36("knit-a-and-b-no-time-invalidated_purged"),
 						Padding36("knit-a-and-b-no-time-ready"),
 						Padding36("knit-a-and-b-no-time-running"),
 						Padding36("knit-a-and-b-no-time-starting"),
@@ -407,8 +550,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-no-time-completing"),
 						Padding36("knit-b-and-c-no-time-deactivated"),
 						Padding36("knit-b-and-c-no-time-done"),
+						Padding36("knit-b-and-c-no-time-done_purged"),
 						Padding36("knit-b-and-c-no-time-failed"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
 						Padding36("knit-b-and-c-no-time-invalidated"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
 						Padding36("knit-b-and-c-no-time-ready"),
 						Padding36("knit-b-and-c-no-time-running"),
 						Padding36("knit-b-and-c-no-time-starting"),
@@ -426,8 +572,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-old-completing"),
 						Padding36("knit-b-and-c-old-deactivated"),
 						Padding36("knit-b-and-c-old-done"),
+						Padding36("knit-b-and-c-old-done_purged"),
 						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-failed_purged"),
 						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
 						Padding36("knit-b-and-c-old-ready"),
 						Padding36("knit-b-and-c-old-running"),
 						Padding36("knit-b-and-c-old-starting"),
@@ -437,8 +586,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-new-completing"),
 						Padding36("knit-b-and-c-new-deactivated"),
 						Padding36("knit-b-and-c-new-done"),
+						Padding36("knit-b-and-c-new-done_purged"),
 						Padding36("knit-b-and-c-new-failed"),
+						Padding36("knit-b-and-c-new-failed_purged"),
 						Padding36("knit-b-and-c-new-invalidated"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
 						Padding36("knit-b-and-c-new-ready"),
 						Padding36("knit-b-and-c-new-running"),
 						Padding36("knit-b-and-c-new-starting"),
@@ -448,8 +600,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-no-time-completing"),
 						Padding36("knit-b-and-c-no-time-deactivated"),
 						Padding36("knit-b-and-c-no-time-done"),
+						Padding36("knit-b-and-c-no-time-done_purged"),
 						Padding36("knit-b-and-c-no-time-failed"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
 						Padding36("knit-b-and-c-no-time-invalidated"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
 						Padding36("knit-b-and-c-no-time-ready"),
 						Padding36("knit-b-and-c-no-time-running"),
 						Padding36("knit-b-and-c-no-time-starting"),
@@ -484,8 +639,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-new-completing"),
 						Padding36("knit-a-and-b-new-deactivated"),
 						Padding36("knit-a-and-b-new-done"),
+						Padding36("knit-a-and-b-new-done_purged"),
 						Padding36("knit-a-and-b-new-failed"),
+						Padding36("knit-a-and-b-new-failed_purged"),
 						Padding36("knit-a-and-b-new-invalidated"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
 						Padding36("knit-a-and-b-new-ready"),
 						Padding36("knit-a-and-b-new-running"),
 						Padding36("knit-a-and-b-new-starting"),
@@ -494,8 +652,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-new-completing"),
 						Padding36("knit-b-and-c-new-deactivated"),
 						Padding36("knit-b-and-c-new-done"),
+						Padding36("knit-b-and-c-new-done_purged"),
 						Padding36("knit-b-and-c-new-failed"),
+						Padding36("knit-b-and-c-new-failed_purged"),
 						Padding36("knit-b-and-c-new-invalidated"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
 						Padding36("knit-b-and-c-new-ready"),
 						Padding36("knit-b-and-c-new-running"),
 						Padding36("knit-b-and-c-new-starting"),
@@ -504,8 +665,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-no-tags-new-completing"),
 						Padding36("knit-no-tags-new-deactivated"),
 						Padding36("knit-no-tags-new-done"),
+						Padding36("knit-no-tags-new-done_purged"),
 						Padding36("knit-no-tags-new-failed"),
+						Padding36("knit-no-tags-new-failed_purged"),
 						Padding36("knit-no-tags-new-invalidated"),
+						Padding36("knit-no-tags-new-invalidated_purged"),
 						Padding36("knit-no-tags-new-ready"),
 						Padding36("knit-no-tags-new-running"),
 						Padding36("knit-no-tags-new-starting"),
@@ -524,8 +688,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-old-completing"),
 						Padding36("knit-a-and-b-old-deactivated"),
 						Padding36("knit-a-and-b-old-done"),
+						Padding36("knit-a-and-b-old-done_purged"),
 						Padding36("knit-a-and-b-old-failed"),
+						Padding36("knit-a-and-b-old-failed_purged"),
 						Padding36("knit-a-and-b-old-invalidated"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
 						Padding36("knit-a-and-b-old-ready"),
 						Padding36("knit-a-and-b-old-running"),
 						Padding36("knit-a-and-b-old-starting"),
@@ -534,8 +701,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-old-completing"),
 						Padding36("knit-b-and-c-old-deactivated"),
 						Padding36("knit-b-and-c-old-done"),
+						Padding36("knit-b-and-c-old-done_purged"),
 						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-failed_purged"),
 						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
 						Padding36("knit-b-and-c-old-ready"),
 						Padding36("knit-b-and-c-old-running"),
 						Padding36("knit-b-and-c-old-starting"),
@@ -544,8 +714,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-no-tags-old-completing"),
 						Padding36("knit-no-tags-old-deactivated"),
 						Padding36("knit-no-tags-old-done"),
+						Padding36("knit-no-tags-old-done_purged"),
 						Padding36("knit-no-tags-old-failed"),
+						Padding36("knit-no-tags-old-failed_purged"),
 						Padding36("knit-no-tags-old-invalidated"),
+						Padding36("knit-no-tags-old-invalidated_purged"),
 						Padding36("knit-no-tags-old-ready"),
 						Padding36("knit-no-tags-old-running"),
 						Padding36("knit-no-tags-old-starting"),
@@ -563,8 +736,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-old-completing"),
 						Padding36("knit-a-and-b-old-deactivated"),
 						Padding36("knit-a-and-b-old-done"),
+						Padding36("knit-a-and-b-old-done_purged"),
 						Padding36("knit-a-and-b-old-failed"),
+						Padding36("knit-a-and-b-old-failed_purged"),
 						Padding36("knit-a-and-b-old-invalidated"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
 						Padding36("knit-a-and-b-old-ready"),
 						Padding36("knit-a-and-b-old-running"),
 						Padding36("knit-a-and-b-old-starting"),
@@ -573,8 +749,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-old-completing"),
 						Padding36("knit-b-and-c-old-deactivated"),
 						Padding36("knit-b-and-c-old-done"),
+						Padding36("knit-b-and-c-old-done_purged"),
 						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-failed_purged"),
 						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
 						Padding36("knit-b-and-c-old-ready"),
 						Padding36("knit-b-and-c-old-running"),
 						Padding36("knit-b-and-c-old-starting"),
@@ -583,8 +762,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-no-tags-old-completing"),
 						Padding36("knit-no-tags-old-deactivated"),
 						Padding36("knit-no-tags-old-done"),
+						Padding36("knit-no-tags-old-done_purged"),
 						Padding36("knit-no-tags-old-failed"),
+						Padding36("knit-no-tags-old-failed_purged"),
 						Padding36("knit-no-tags-old-invalidated"),
+						Padding36("knit-no-tags-old-invalidated_purged"),
 						Padding36("knit-no-tags-old-ready"),
 						Padding36("knit-no-tags-old-running"),
 						Padding36("knit-no-tags-old-starting"),
@@ -594,8 +776,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-new-completing"),
 						Padding36("knit-a-and-b-new-deactivated"),
 						Padding36("knit-a-and-b-new-done"),
+						Padding36("knit-a-and-b-new-done_purged"),
 						Padding36("knit-a-and-b-new-failed"),
+						Padding36("knit-a-and-b-new-failed_purged"),
 						Padding36("knit-a-and-b-new-invalidated"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
 						Padding36("knit-a-and-b-new-ready"),
 						Padding36("knit-a-and-b-new-running"),
 						Padding36("knit-a-and-b-new-starting"),
@@ -604,8 +789,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-new-completing"),
 						Padding36("knit-b-and-c-new-deactivated"),
 						Padding36("knit-b-and-c-new-done"),
+						Padding36("knit-b-and-c-new-done_purged"),
 						Padding36("knit-b-and-c-new-failed"),
+						Padding36("knit-b-and-c-new-failed_purged"),
 						Padding36("knit-b-and-c-new-invalidated"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
 						Padding36("knit-b-and-c-new-ready"),
 						Padding36("knit-b-and-c-new-running"),
 						Padding36("knit-b-and-c-new-starting"),
@@ -614,8 +802,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-no-tags-new-completing"),
 						Padding36("knit-no-tags-new-deactivated"),
 						Padding36("knit-no-tags-new-done"),
+						Padding36("knit-no-tags-new-done_purged"),
 						Padding36("knit-no-tags-new-failed"),
+						Padding36("knit-no-tags-new-failed_purged"),
 						Padding36("knit-no-tags-new-invalidated"),
+						Padding36("knit-no-tags-new-invalidated_purged"),
 						Padding36("knit-no-tags-new-ready"),
 						Padding36("knit-no-tags-new-running"),
 						Padding36("knit-no-tags-new-starting"),
@@ -625,8 +816,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-no-time-completing"),
 						Padding36("knit-a-and-b-no-time-deactivated"),
 						Padding36("knit-a-and-b-no-time-done"),
+						Padding36("knit-a-and-b-no-time-done_purged"),
 						Padding36("knit-a-and-b-no-time-failed"),
+						Padding36("knit-a-and-b-no-time-failed_purged"),
 						Padding36("knit-a-and-b-no-time-invalidated"),
+						Padding36("knit-a-and-b-no-time-invalidated_purged"),
 						Padding36("knit-a-and-b-no-time-ready"),
 						Padding36("knit-a-and-b-no-time-running"),
 						Padding36("knit-a-and-b-no-time-starting"),
@@ -635,8 +829,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-no-time-completing"),
 						Padding36("knit-b-and-c-no-time-deactivated"),
 						Padding36("knit-b-and-c-no-time-done"),
+						Padding36("knit-b-and-c-no-time-done_purged"),
 						Padding36("knit-b-and-c-no-time-failed"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
 						Padding36("knit-b-and-c-no-time-invalidated"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
 						Padding36("knit-b-and-c-no-time-ready"),
 						Padding36("knit-b-and-c-no-time-running"),
 						Padding36("knit-b-and-c-no-time-starting"),
@@ -645,8 +842,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-no-tags-no-time-completing"),
 						Padding36("knit-no-tags-no-time-deactivated"),
 						Padding36("knit-no-tags-no-time-done"),
+						Padding36("knit-no-tags-no-time-done_purged"),
 						Padding36("knit-no-tags-no-time-failed"),
+						Padding36("knit-no-tags-no-time-failed_purged"),
 						Padding36("knit-no-tags-no-time-invalidated"),
+						Padding36("knit-no-tags-no-time-invalidated_purged"),
 						Padding36("knit-no-tags-no-time-ready"),
 						Padding36("knit-no-tags-no-time-running"),
 						Padding36("knit-no-tags-no-time-starting"),
@@ -665,8 +865,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-old-completing"),
 						Padding36("knit-a-and-b-old-deactivated"),
 						Padding36("knit-a-and-b-old-done"),
+						Padding36("knit-a-and-b-old-done_purged"),
 						Padding36("knit-a-and-b-old-failed"),
+						Padding36("knit-a-and-b-old-failed_purged"),
 						Padding36("knit-a-and-b-old-invalidated"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
 						Padding36("knit-a-and-b-old-ready"),
 						Padding36("knit-a-and-b-old-running"),
 						Padding36("knit-a-and-b-old-starting"),
@@ -675,8 +878,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-old-completing"),
 						Padding36("knit-b-and-c-old-deactivated"),
 						Padding36("knit-b-and-c-old-done"),
+						Padding36("knit-b-and-c-old-done_purged"),
 						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-failed_purged"),
 						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
 						Padding36("knit-b-and-c-old-ready"),
 						Padding36("knit-b-and-c-old-running"),
 						Padding36("knit-b-and-c-old-starting"),
@@ -685,8 +891,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-no-tags-old-completing"),
 						Padding36("knit-no-tags-old-deactivated"),
 						Padding36("knit-no-tags-old-done"),
+						Padding36("knit-no-tags-old-done_purged"),
 						Padding36("knit-no-tags-old-failed"),
+						Padding36("knit-no-tags-old-failed_purged"),
 						Padding36("knit-no-tags-old-invalidated"),
+						Padding36("knit-no-tags-old-invalidated_purged"),
 						Padding36("knit-no-tags-old-ready"),
 						Padding36("knit-no-tags-old-running"),
 						Padding36("knit-no-tags-old-starting"),
@@ -696,8 +905,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-no-time-completing"),
 						Padding36("knit-a-and-b-no-time-deactivated"),
 						Padding36("knit-a-and-b-no-time-done"),
+						Padding36("knit-a-and-b-no-time-done_purged"),
 						Padding36("knit-a-and-b-no-time-failed"),
+						Padding36("knit-a-and-b-no-time-failed_purged"),
 						Padding36("knit-a-and-b-no-time-invalidated"),
+						Padding36("knit-a-and-b-no-time-invalidated_purged"),
 						Padding36("knit-a-and-b-no-time-ready"),
 						Padding36("knit-a-and-b-no-time-running"),
 						Padding36("knit-a-and-b-no-time-starting"),
@@ -706,8 +918,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-no-time-completing"),
 						Padding36("knit-b-and-c-no-time-deactivated"),
 						Padding36("knit-b-and-c-no-time-done"),
+						Padding36("knit-b-and-c-no-time-done_purged"),
 						Padding36("knit-b-and-c-no-time-failed"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
 						Padding36("knit-b-and-c-no-time-invalidated"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
 						Padding36("knit-b-and-c-no-time-ready"),
 						Padding36("knit-b-and-c-no-time-running"),
 						Padding36("knit-b-and-c-no-time-starting"),
@@ -716,8 +931,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-no-tags-no-time-completing"),
 						Padding36("knit-no-tags-no-time-deactivated"),
 						Padding36("knit-no-tags-no-time-done"),
+						Padding36("knit-no-tags-no-time-done_purged"),
 						Padding36("knit-no-tags-no-time-failed"),
+						Padding36("knit-no-tags-no-time-failed_purged"),
 						Padding36("knit-no-tags-no-time-invalidated"),
+						Padding36("knit-no-tags-no-time-invalidated_purged"),
 						Padding36("knit-no-tags-no-time-ready"),
 						Padding36("knit-no-tags-no-time-running"),
 						Padding36("knit-no-tags-no-time-starting"),
@@ -737,22 +955,34 @@ func TestData_Find(t *testing.T) {
 				then{
 					knitId: []string{
 						Padding36("knit-a-and-b-old-failed"),
+						Padding36("knit-a-and-b-old-failed_purged"),
 						Padding36("knit-a-and-b-old-invalidated"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
 
 						Padding36("knit-b-and-c-old-failed"),
+						Padding36("knit-b-and-c-old-failed_purged"),
 						Padding36("knit-b-and-c-old-invalidated"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
 
 						Padding36("knit-a-and-b-new-failed"),
+						Padding36("knit-a-and-b-new-failed_purged"),
 						Padding36("knit-a-and-b-new-invalidated"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
 
 						Padding36("knit-b-and-c-new-failed"),
+						Padding36("knit-b-and-c-new-failed_purged"),
 						Padding36("knit-b-and-c-new-invalidated"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
 
 						Padding36("knit-a-and-b-no-time-failed"),
+						Padding36("knit-a-and-b-no-time-failed_purged"),
 						Padding36("knit-a-and-b-no-time-invalidated"),
+						Padding36("knit-a-and-b-no-time-invalidated_purged"),
 
 						Padding36("knit-b-and-c-no-time-failed"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
 						Padding36("knit-b-and-c-no-time-invalidated"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
 					},
 				},
 			},
@@ -815,6 +1045,89 @@ func TestData_Find(t *testing.T) {
 					},
 				},
 			},
+			`when querying by user tag & "knit#transient: purged", it returns data which have all of the tags`: {
+				when{
+					tags: []types.Tag{
+						{Key: types.KeyKnitTransient, Value: types.ValueKnitTransientPurged},
+						tagsetAll[1],
+					},
+				},
+				then{
+					knitId: []string{
+						Padding36("knit-a-and-b-old-done_purged"),
+						Padding36("knit-a-and-b-old-failed_purged"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
+
+						Padding36("knit-b-and-c-old-done_purged"),
+						Padding36("knit-b-and-c-old-failed_purged"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
+
+						Padding36("knit-a-and-b-new-done_purged"),
+						Padding36("knit-a-and-b-new-failed_purged"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
+
+						Padding36("knit-b-and-c-new-done_purged"),
+						Padding36("knit-b-and-c-new-failed_purged"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
+
+						Padding36("knit-a-and-b-no-time-done_purged"),
+						Padding36("knit-a-and-b-no-time-failed_purged"),
+						Padding36("knit-a-and-b-no-time-invalidated_purged"),
+
+						Padding36("knit-b-and-c-no-time-done_purged"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
+					},
+				},
+			},
+			`when querying "knit#transient: processing" & "knit#transient: failed", it returns no data`: {
+				when{
+					tags: []types.Tag{
+						{Key: types.KeyKnitTransient, Value: types.ValueKnitTransientProcessing},
+						{Key: types.KeyKnitTransient, Value: types.ValueKnitTransientFailed},
+					},
+				},
+				then{knitId: []string{}}, // empty!
+			},
+			`when querying "knit#transient: processing" & "knit#transient: purged", it returns no data`: {
+				when{
+					tags: []types.Tag{
+						{Key: types.KeyKnitTransient, Value: types.ValueKnitTransientProcessing},
+						{Key: types.KeyKnitTransient, Value: types.ValueKnitTransientPurged},
+					},
+				},
+				then{knitId: []string{}}, // empty!
+			},
+			`when querying "knit#transient: failed" & "knit#transient: purged", it returns data which have all of the tags`: {
+				when{
+					tags: []types.Tag{
+						{Key: types.KeyKnitTransient, Value: types.ValueKnitTransientFailed},
+						{Key: types.KeyKnitTransient, Value: types.ValueKnitTransientPurged},
+					},
+				},
+				then{
+					knitId: []string{
+						Padding36("knit-a-and-b-old-failed_purged"),
+						Padding36("knit-a-and-b-old-invalidated_purged"),
+						Padding36("knit-b-and-c-old-failed_purged"),
+						Padding36("knit-b-and-c-old-invalidated_purged"),
+						Padding36("knit-no-tags-old-failed_purged"),
+						Padding36("knit-no-tags-old-invalidated_purged"),
+						Padding36("knit-a-and-b-new-failed_purged"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
+						Padding36("knit-b-and-c-new-failed_purged"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
+						Padding36("knit-no-tags-new-failed_purged"),
+						Padding36("knit-no-tags-new-invalidated_purged"),
+						Padding36("knit-a-and-b-no-time-failed_purged"),
+						Padding36("knit-a-and-b-no-time-invalidated_purged"),
+						Padding36("knit-b-and-c-no-time-failed_purged"),
+						Padding36("knit-b-and-c-no-time-invalidated_purged"),
+						Padding36("knit-no-tags-no-time-failed_purged"),
+						Padding36("knit-no-tags-no-time-invalidated_purged"),
+					},
+				},
+			},
 			`when querying by user tag & "knit#timestamp: ...", it returns data which have all of the tags`: {
 				when{
 					tags: []types.Tag{
@@ -828,8 +1141,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-a-and-b-new-completing"),
 						Padding36("knit-a-and-b-new-deactivated"),
 						Padding36("knit-a-and-b-new-done"),
+						Padding36("knit-a-and-b-new-done_purged"),
 						Padding36("knit-a-and-b-new-failed"),
+						Padding36("knit-a-and-b-new-failed_purged"),
 						Padding36("knit-a-and-b-new-invalidated"),
+						Padding36("knit-a-and-b-new-invalidated_purged"),
 						Padding36("knit-a-and-b-new-ready"),
 						Padding36("knit-a-and-b-new-running"),
 						Padding36("knit-a-and-b-new-starting"),
@@ -839,8 +1155,11 @@ func TestData_Find(t *testing.T) {
 						Padding36("knit-b-and-c-new-completing"),
 						Padding36("knit-b-and-c-new-deactivated"),
 						Padding36("knit-b-and-c-new-done"),
+						Padding36("knit-b-and-c-new-done_purged"),
 						Padding36("knit-b-and-c-new-failed"),
+						Padding36("knit-b-and-c-new-failed_purged"),
 						Padding36("knit-b-and-c-new-invalidated"),
+						Padding36("knit-b-and-c-new-invalidated_purged"),
 						Padding36("knit-b-and-c-new-ready"),
 						Padding36("knit-b-and-c-new-running"),
 						Padding36("knit-b-and-c-new-starting"),
@@ -936,10 +1255,11 @@ func TestData_Find(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: knitid, VolumeRef: Padding64("#" + knitid),
-								RunId: runid, OutputId: 1010, PlanId: Padding36("plan"),
+								KnitId: knitid,
+								RunId:  runid, OutputId: 1010, PlanId: Padding36("plan"),
 							}: {
-								UserTag: tag, Timestamp: timestamp,
+								VolumeRef: Padding64("#" + knitid),
+								UserTag:   tag, Timestamp: timestamp,
 							},
 						},
 					}
@@ -1085,10 +1405,11 @@ func TestData_Find(t *testing.T) {
 						},
 						Outcomes: map[tables.Data]tables.DataAttibutes{
 							{
-								KnitId: knitid, VolumeRef: Padding64("#" + knitid),
-								RunId: runid, OutputId: 1010, PlanId: Padding36("plan"),
+								KnitId: knitid,
+								RunId:  runid, OutputId: 1010, PlanId: Padding36("plan"),
 							}: {
-								UserTag: tag, Timestamp: timestamp,
+								VolumeRef: Padding64("#" + knitid),
+								UserTag:   tag, Timestamp: timestamp,
 							},
 						},
 					}

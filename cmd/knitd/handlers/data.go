@@ -153,7 +153,7 @@ func PutTagForDataHandler(dbData kdbdata.DataInterface, paramKey string) echo.Ha
 		}
 
 		if err := dbData.UpdateTag(ctx, knitId, delta); errors.Is(err, kerr.ErrMissing) {
-			return binderr.NewErrorMessage(http.StatusNotFound, "correspontind data is missing")
+			return binderr.NewErrorMessage(http.StatusNotFound, "corresponting Data is missing")
 		} else if err != nil {
 			return binderr.InternalServerError(err)
 		}
@@ -169,5 +169,25 @@ func PutTagForDataHandler(dbData kdbdata.DataInterface, paramKey string) echo.Ha
 		}
 
 		return c.JSON(http.StatusOK, binddata.ComposeDetail(d))
+	}
+}
+
+func PurgeDataHandler(dbData kdbdata.DataInterface, paramKey string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+		knitId := c.Param(paramKey)
+
+		if err := dbData.Purge(ctx, knitId); errors.Is(err, kerr.ErrMissing) {
+			return binderr.NewErrorMessage(http.StatusNotFound, "corresponding Data is missing")
+		} else if errors.Is(err, domain.ErrDataInUse) {
+			return binderr.NewErrorMessage(
+				http.StatusConflict, "Cannot purge the Data",
+				binderr.WithError(err),
+			)
+		} else if err != nil {
+			return binderr.InternalServerError(err)
+		}
+
+		return c.NoContent(http.StatusNoContent)
 	}
 }

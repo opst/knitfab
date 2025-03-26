@@ -122,6 +122,19 @@ type KnitClient interface {
 	// - error
 	FindData(ctx context.Context, tag []tags.Tag, since *time.Time, duration *time.Duration) ([]data.Detail, error)
 
+	// PurgeData purges Data with given knitId.
+	//
+	// Args
+	//
+	// - context.Context
+	//
+	// - string: knitId to be purged
+	//
+	// Returns
+	//
+	// - error
+	PurgeData(ctx context.Context, knitId string) error
+
 	// GetPlan get plan detail with given planId.
 	//
 	// Args

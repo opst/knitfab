@@ -53,10 +53,14 @@ func (n *nominator) NominateData(ctx context.Context, conn kpool.Tx, knitIds []s
 		ctx,
 		`
 		with
+		"volume_ref" as (
+			select "knit_id" from "volume_ref"
+			where "knit_id" = any($1)
+		),
 		"data" as (
 			select "knit_id" from "data"
 			inner join "run" using("run_id")
-			where "knit_id" = any($1) and "status" = $2
+			where "knit_id" = any(select "knit_id" from "volume_ref") and "status" = $2
 		),
 		"d_tags" as (
 			select
@@ -155,10 +159,15 @@ func (n *nominator) NominateMountpoints(ctx context.Context, conn kpool.Tx, inpu
 		ctx,
 		`
 		with
-		"data" as (
+		"_data" as (
 			select "knit_id" from "data"
 			inner join "run" using("run_id")
 			where "status" = $1
+		),
+		"data" as (
+			select "knit_id" from "_data"
+			intersect
+			select "knit_id" from "volume_ref"
 		),
 		"d_tags" as (
 			select

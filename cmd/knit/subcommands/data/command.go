@@ -4,6 +4,7 @@ import (
 	data_find "github.com/opst/knitfab/cmd/knit/subcommands/data/find"
 	data_lineage "github.com/opst/knitfab/cmd/knit/subcommands/data/lineage"
 	data_pull "github.com/opst/knitfab/cmd/knit/subcommands/data/pull"
+	"github.com/opst/knitfab/cmd/knit/subcommands/data/purge"
 	data_push "github.com/opst/knitfab/cmd/knit/subcommands/data/push"
 	data_tag "github.com/opst/knitfab/cmd/knit/subcommands/data/tag"
 	"github.com/youta-t/flarc"
@@ -19,6 +20,10 @@ func New() (flarc.Command, error) {
 		return nil, err
 	}
 	push, err := data_push.New()
+	if err != nil {
+		return nil, err
+	}
+	purge, err := purge.New()
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +43,7 @@ func New() (flarc.Command, error) {
 		flarc.WithSubcommand("find", find),
 		flarc.WithSubcommand("pull", pull),
 		flarc.WithSubcommand("push", push),
+		flarc.WithSubcommand("purge", purge),
 		flarc.WithSubcommand("tag", tag),
 		flarc.WithSubcommand("lineage", lineage),
 	)

@@ -45,9 +45,10 @@ func TestPickAndRemoveAgent(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId: knitId, VolumeRef: "#test-knit-done",
+						KnitId: knitId,
 						PlanId: "test-plan", RunId: "test-run-done", OutputId: 1_010,
 					}: {
+						VolumeRef: "#test-knit-done",
 						UserTag: []domain.Tag{
 							{Key: "tag-a", Value: "a-value"},
 						},
@@ -263,7 +264,7 @@ func TestPickAndRemoveAgent(t *testing.T) {
 			DataAgent: domain.DataAgent{
 				Name: "knitid-test-knit-done-read-14", Mode: domain.DataAgentRead,
 				KnitDataBody: domain.KnitDataBody{
-					KnitId: knitId, VolumeRef: "#test-knit-done",
+					KnitId: knitId, VolumeRef: pointer.Ref("#test-knit-done"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "tag-a", Value: "a-value"},
 						{Key: domain.KeyKnitId, Value: knitId},
@@ -316,7 +317,7 @@ func TestPickAndRemoveAgent(t *testing.T) {
 			DataAgent: domain.DataAgent{
 				Name: "knitid-test-knit-done-read-16", Mode: domain.DataAgentRead,
 				KnitDataBody: domain.KnitDataBody{
-					KnitId: knitId, VolumeRef: "#test-knit-done",
+					KnitId: knitId, VolumeRef: pointer.Ref("#test-knit-done"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "tag-a", Value: "a-value"},
 						{Key: domain.KeyKnitId, Value: knitId},
@@ -402,7 +403,7 @@ func TestPickAndRemoveAgent(t *testing.T) {
 			DataAgent: domain.DataAgent{
 				Name: "knitid-test-knit-done-read-14", Mode: domain.DataAgentRead,
 				KnitDataBody: domain.KnitDataBody{
-					KnitId: knitId, VolumeRef: "#test-knit-done",
+					KnitId: knitId, VolumeRef: pointer.Ref("#test-knit-done"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "tag-a", Value: "a-value"},
 						{Key: domain.KeyKnitId, Value: knitId},
@@ -452,7 +453,7 @@ func TestPickAndRemoveAgent(t *testing.T) {
 			DataAgent: domain.DataAgent{
 				Name: "knitid-test-knit-done-read-14", Mode: domain.DataAgentRead,
 				KnitDataBody: domain.KnitDataBody{
-					KnitId: knitId, VolumeRef: "#test-knit-done",
+					KnitId: knitId, VolumeRef: pointer.Ref("#test-knit-done"),
 					Tags: domain.NewTagSet([]domain.Tag{
 						{Key: "tag-a", Value: "a-value"},
 						{Key: domain.KeyKnitId, Value: knitId},

@@ -3,12 +3,13 @@ import DoneIcon from '@mui/icons-material/Done';
 import ErrorIcon from '@mui/icons-material/Error';
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import FolderIcon from '@mui/icons-material/Folder';
+import FolderOffIcon from '@mui/icons-material/FolderOff';
 import InputIcon from '@mui/icons-material/Input';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import OutputIcon from '@mui/icons-material/Output';
 import PendingIcon from '@mui/icons-material/Pending';
 import PlayIcon from '@mui/icons-material/PlayArrow';
-import StorageIcon from '@mui/icons-material/Storage';
 import SubjectIcon from "@mui/icons-material/Subject";
 import TagIcon from '@mui/icons-material/Tag';
 import Box from "@mui/material/Box";
@@ -29,11 +30,11 @@ import TableContainer from "@mui/material/TableContainer";
 import TableRow from "@mui/material/TableRow";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import { DateTime } from 'luxon';
 import React, { useEffect, useState } from "react";
 import { RunService } from "../api/services/runService";
 import { TagString } from "../api/services/types/types";
 import { DataDetail, DataSummary, LogPoint, Mountpoint, PlanDetail, PlanSummary, RunDetail, RunSummary, Tag } from "../types/types";
-import { DateTime } from 'luxon';
 
 const DATETIME_INSTANT = {
     year: "numeric",
@@ -121,15 +122,24 @@ const DataCard = ({ data, variant = "outlined", elevation = 1, action, children 
         }
     }
 
+    const purged = (
+        0 <
+        data.tags.filter((tag) => tag.key === "knit#transient" && tag.value === "purged").length
+    );
+
     return (
         <Card
             variant={variant}
             elevation={elevation}
-            sx={{ margin: "16px" }}
+            sx={{ margin: "16px", borderStyle: purged ? "dashed" : "solid" }}
         >
             <CardHeader
-                subheader="Data"
-                avatar={<Tooltip title="Data"><StorageIcon /></Tooltip>}
+                subheader={purged ? "Data / purged" : "Data"}
+                avatar={
+                    <Tooltip title="Data">
+                        {purged ? <FolderOffIcon /> : <FolderIcon />}
+                    </Tooltip>
+                }
                 title={`Knit ID: ${data.knitId}`}
                 action={action}
             />
@@ -601,7 +611,7 @@ const RunItem: React.FC<{
                         {run.inputs.map((input) => (
                             <InputPointCard key={input.path} mountpoint={input}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Chip icon={<StorageIcon />} label="Knit ID" />
+                                    <Chip icon={<FolderIcon />} label="Knit ID" />
                                     <Typography>{input.knitId}</Typography>
                                 </Stack>
                             </InputPointCard>
@@ -615,7 +625,7 @@ const RunItem: React.FC<{
                         {run.outputs.map((output) => (
                             <OutputPointCard key={output.path} mountpoint={output}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Chip icon={<StorageIcon />} label="Knit ID" />
+                                    <Chip icon={<FolderIcon />} label="Knit ID" />
                                     <Typography>{output.knitId}</Typography>
                                 </Stack>
                             </OutputPointCard>
@@ -623,7 +633,7 @@ const RunItem: React.FC<{
                         {run.log && (
                             <LogPointCard log={run.log}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Chip icon={<StorageIcon />} label="Knit ID" />
+                                    <Chip icon={<FolderIcon />} label="Knit ID" />
                                     <Typography>{run.log.knitId}</Typography>
                                 </Stack>
                             </LogPointCard>
@@ -709,6 +719,10 @@ const RunLogViewer: React.FC<RunLogViewerProps> = ({ runId, runService }) => {
                         setError(d.message ?? err.response?.statusText);
                         setTimeout(() => { fetchLogs(); }, 5000);
                         return
+                    } else if (err.response?.status === 410) {
+                        setError("The log is not available since it has been purged.");
+                        setLoading(false);
+                        return
                     }
 
                     setError("Failed to fetch logs");
@@ -746,13 +760,6 @@ const RunLogViewer: React.FC<RunLogViewerProps> = ({ runId, runService }) => {
 export default RunLogViewer;
 
 export {
-    DataItem,
-    DataCard,
-    PlanItem,
-    PlanCard,
-    InputPointCard,
-    OutputPointCard,
-    LogPointCard,
-    RunItem,
-    RunCard,
+    DataCard, DataItem, InputPointCard, LogPointCard, OutputPointCard, PlanCard, PlanItem, RunCard, RunItem
 };
+

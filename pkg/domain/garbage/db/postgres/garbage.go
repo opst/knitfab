@@ -28,14 +28,10 @@ func (g *pgGarbage) Pop(ctx context.Context, callback func(types.Garbage) error)
 		ctx,
 		`
 		with "del_id" as (
-			select "knit_id","volume_ref" from "garbage" limit 1 for update skip locked
+			select "knit_id", "volume_ref" from "garbage" limit 1 for update skip locked
 		),
 		"del_garbage" as (
 			delete from "garbage"
-			where "knit_id" in (select "knit_id" from "del_id")
-		),
-		"del_knit" as (
-			delete from "knit_id"
 			where "knit_id" in (select "knit_id" from "del_id")
 		)
 		select * from "del_id";
@@ -46,11 +42,11 @@ func (g *pgGarbage) Pop(ctx context.Context, callback func(types.Garbage) error)
 	}
 	defer rows.Close()
 
-	var KnitId string
-	var VolumeRef string
+	var knitId string
+	var volumeRef string
 	pop := false
 	for rows.Next() {
-		err = rows.Scan(&KnitId, &VolumeRef)
+		err = rows.Scan(&knitId, &volumeRef)
 		if err != nil {
 			return false, err
 		}
@@ -60,8 +56,27 @@ func (g *pgGarbage) Pop(ctx context.Context, callback func(types.Garbage) error)
 		return false, err
 	}
 
-	if pop && callback != nil {
-		if err := callback(types.Garbage{KnitId: KnitId, VolumeRef: VolumeRef}); err != nil {
+	if !pop {
+		return false, nil
+	}
+
+	if _, err := tx.Exec(
+		ctx,
+		`
+		with
+		"dep" as (
+			select 1 from "data" where "knit_id" = $1
+		)
+		delete from "knit_id"
+		where "knit_id" = $1 and not exists (select 1 from "dep")
+		`,
+		knitId,
+	); err != nil {
+		return false, err
+	}
+
+	if callback != nil {
+		if err := callback(types.Garbage{KnitId: knitId, VolumeRef: volumeRef}); err != nil {
 			return false, err
 		}
 	}

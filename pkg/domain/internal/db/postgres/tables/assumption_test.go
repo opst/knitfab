@@ -22,6 +22,10 @@ import (
 func TestOperation(t *testing.T) {
 	poolBroaker := testenv.NewPoolBroaker(context.Background(), t)
 	testee := tables.Operation{
+		KnitId: []string{
+			th.Padding36("orphan-1"),
+			th.Padding36("orphan-2"),
+		},
 		Plan: []tables.Plan{
 			{PlanId: th.Padding36("plan-1"), Active: true, Hash: th.Padding64("#plan-1")},
 			{PlanId: th.Padding36("plan-2"), Active: false, Hash: th.Padding64("#plan-2")},
@@ -166,12 +170,12 @@ func TestOperation(t *testing.T) {
 				Assign: []tables.Assign{},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data-1.run-1.plan-1"),
-						VolumeRef: "pvc-1-1-1",
-						PlanId:    th.Padding36("plan-1"),
-						RunId:     th.Padding36("run-1.plan-1"),
-						OutputId:  1010,
+						KnitId:   th.Padding36("data-1.run-1.plan-1"),
+						PlanId:   th.Padding36("plan-1"),
+						RunId:    th.Padding36("run-1.plan-1"),
+						OutputId: 1010,
 					}: {
+						VolumeRef: "pvc-1-1-1",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "raw-data"},
@@ -202,12 +206,12 @@ func TestOperation(t *testing.T) {
 				Assign: []tables.Assign{},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data-1.run-2.plan-1"),
-						VolumeRef: "pvc-1-2-1",
-						PlanId:    th.Padding36("plan-1"),
-						RunId:     th.Padding36("run-2.plan-1"),
-						OutputId:  1010,
+						KnitId:   th.Padding36("data-1.run-2.plan-1"),
+						PlanId:   th.Padding36("plan-1"),
+						RunId:    th.Padding36("run-2.plan-1"),
+						OutputId: 1010,
 					}: {
+						VolumeRef: "pvc-1-2-1",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "raw-data"},
@@ -234,12 +238,12 @@ func TestOperation(t *testing.T) {
 				Assign: []tables.Assign{},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data-1.run-1.plan-2"),
-						VolumeRef: "pvc-2-1-1",
-						PlanId:    th.Padding36("plan-2"),
-						RunId:     th.Padding36("run-1.plan-2"),
-						OutputId:  2010,
+						KnitId:   th.Padding36("data-1.run-1.plan-2"),
+						PlanId:   th.Padding36("plan-2"),
+						RunId:    th.Padding36("run-1.plan-2"),
+						OutputId: 2010,
 					}: {
+						VolumeRef: "pvc-2-1-1",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -294,12 +298,12 @@ func TestOperation(t *testing.T) {
 				},
 				Outcomes: map[tables.Data]tables.DataAttibutes{
 					{
-						KnitId:    th.Padding36("data-1.run-1.plan-3"),
-						VolumeRef: "pvc-3-1-1",
-						PlanId:    th.Padding36("plan-3"),
-						RunId:     th.Padding36("run-1.plan-3"),
-						OutputId:  3010,
+						KnitId:   th.Padding36("data-1.run-1.plan-3"),
+						PlanId:   th.Padding36("plan-3"),
+						RunId:    th.Padding36("run-1.plan-3"),
+						OutputId: 3010,
 					}: {
+						VolumeRef: "pvc-3-1-1",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -328,12 +332,12 @@ func TestOperation(t *testing.T) {
 						},
 					},
 					{
-						KnitId:    th.Padding36("data-2.run-1.plan-3"),
+						KnitId:   th.Padding36("data-2.run-1.plan-3"),
+						PlanId:   th.Padding36("plan-3"),
+						RunId:    th.Padding36("run-1.plan-3"),
+						OutputId: 3020,
+					}: {
 						VolumeRef: "pvc-3-1-2",
-						PlanId:    th.Padding36("plan-3"),
-						RunId:     th.Padding36("run-1.plan-3"),
-						OutputId:  3020,
-					}: {
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -344,12 +348,12 @@ func TestOperation(t *testing.T) {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId:    th.Padding36("data-3.run-1.plan-3"),
+						KnitId:   th.Padding36("data-3.run-1.plan-3"),
+						PlanId:   th.Padding36("plan-3"),
+						RunId:    th.Padding36("run-1.plan-3"),
+						OutputId: 3030,
+					}: {
 						VolumeRef: "pvc-3-1-3",
-						PlanId:    th.Padding36("plan-3"),
-						RunId:     th.Padding36("run-1.plan-3"),
-						OutputId:  3030,
-					}: {
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -360,12 +364,12 @@ func TestOperation(t *testing.T) {
 						)).OrFatal(t).Time()),
 					},
 					{
-						KnitId:    th.Padding36("log-1.run-1.plan-3"),
-						VolumeRef: "pvc-log1-1-3",
-						PlanId:    th.Padding36("plan-3"),
-						RunId:     th.Padding36("run-1.plan-3"),
-						OutputId:  3001,
+						KnitId:   th.Padding36("log-1.run-1.plan-3"),
+						PlanId:   th.Padding36("plan-3"),
+						RunId:    th.Padding36("run-1.plan-3"),
+						OutputId: 3001,
 					}: {
+						VolumeRef: "pvc-log1-1-3",
 						UserTag: []domain.Tag{
 							{Key: "project", Value: "testing"},
 							{Key: "type", Value: "config"},
@@ -393,10 +397,34 @@ func TestOperation(t *testing.T) {
 	if err := testee.Apply(ctx, pool); err != nil {
 		t.Fatal(err)
 	}
+	conn := try.To(pool.Acquire(ctx)).OrFatal(t)
+	defer conn.Release()
+
+	t.Run("knitId", func(t *testing.T) {
+		actual := try.To(scanner.New[string]().QueryAll(
+			ctx, conn, `table "knit_id"`,
+		)).OrFatal(t)
+
+		expected := []string{
+			th.Padding36("orphan-1"),
+			th.Padding36("orphan-2"),
+			th.Padding36("data-1.run-1.plan-1"),
+			th.Padding36("data-1.run-2.plan-1"),
+			th.Padding36("data-1.run-1.plan-2"),
+			th.Padding36("data-1.run-1.plan-3"),
+			th.Padding36("data-2.run-1.plan-3"),
+			th.Padding36("data-3.run-1.plan-3"),
+			th.Padding36("log-1.run-1.plan-3"),
+			th.Padding36("data-x.run-x.plan-1"),
+			th.Padding36("data-y.run-x.plan-1"),
+		}
+
+		if !cmp.SliceContentEq(actual, expected) {
+			t.Errorf("unmatch:\n===actual===\n%+v\n===expected===\n%+v", actual, expected)
+		}
+	})
 
 	t.Run("plan", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
 		actual := try.To(scanner.New[tables.Plan]().QueryAll(
 			ctx, conn, `table "plan"`,
 		)).OrFatal(t)
@@ -409,9 +437,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("resources", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.PlanResource]().QueryAll(
 			ctx, conn, `table "plan_resource"`,
 		)).OrFatal(t)
@@ -423,8 +448,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("plan_on_node", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
 		actual := try.To(scanner.New[tables.PlanOnNode]().QueryAll(
 			ctx, conn, `table "plan_on_node"`,
 		)).OrFatal(t)
@@ -437,8 +460,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("plan_pseudo", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
 		actual := try.To(scanner.New[tables.PlanPseudo]().QueryAll(
 			ctx, conn, `table "plan_pseudo"`,
 		)).OrFatal(t)
@@ -451,8 +472,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("plan_image", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
 		actual := try.To(scanner.New[tables.PlanImage]().QueryAll(
 			ctx, conn, `table "plan_image"`,
 		)).OrFatal(t)
@@ -465,8 +484,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("plan_entrypoint", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
 		actual := try.To(scanner.New[tables.PlanEntrypoint]().QueryAll(
 			ctx, conn, `table "plan_entrypoint"`,
 		)).OrFatal(t)
@@ -478,8 +495,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("plan_args", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
 		actual := try.To(scanner.New[tables.PlanArgs]().QueryAll(
 			ctx, conn, `table "plan_args"`,
 		)).OrFatal(t)
@@ -491,8 +506,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("output", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
 		actual := try.To(scanner.New[tables.Output]().QueryAll(
 			ctx, conn, `table "output"`,
 		)).OrFatal(t)
@@ -505,9 +518,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("output tags", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		type tagOutput struct {
 			OutputId int
 			Key      string
@@ -543,9 +553,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("log", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		type log struct {
 			OutputId int
 			PlanId   string
@@ -570,9 +577,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("input", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.Input]().QueryAll(
 			ctx, conn, `table "input"`,
 		)).OrFatal(t)
@@ -585,9 +589,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("input tags", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		type tagInput struct {
 			InputId int
 			Key     string
@@ -623,9 +624,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("input knit#id", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		type knitIdInput struct {
 			InputId int
 			KnitId  string
@@ -651,9 +649,6 @@ func TestOperation(t *testing.T) {
 		}
 	})
 	t.Run("input knit#timestamp", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		type knitIdTimestamp struct {
 			InputId   int
 			Timestamp time.Time
@@ -685,9 +680,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("service account", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.ServiceAccount]().QueryAll(
 			ctx, conn, `table "plan_service_account"`,
 		)).OrFatal(t)
@@ -700,9 +692,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("plan_annotations", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.Annotation]().QueryAll(
 			ctx, conn, `table "plan_annotation"`,
 		)).OrFatal(t)
@@ -720,9 +709,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("run", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.Run]().QueryAll(
 			ctx, conn, `table "run"`,
 		)).OrFatal(t)
@@ -740,9 +726,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("assign", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.Assign]().QueryAll(
 			ctx, conn, `table "assign"`,
 		)).OrFatal(t)
@@ -760,9 +743,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("run exit", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.RunExit]().QueryAll(
 			ctx, conn, `table "run_exit"`,
 		)).OrFatal(t)
@@ -781,9 +761,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("data", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.Data]().QueryAll(
 			ctx, conn, `table "data"`,
 		)).OrFatal(t)
@@ -801,9 +778,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("data_tag", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		type tagData struct {
 			KnitId string
 			Key    string
@@ -846,9 +820,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("data_timestamp", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		type tagTimestamp struct {
 			KnitId    string
 			Timestamp time.Time
@@ -886,9 +857,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("data agent", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.DataAgent]().QueryAll(
 			ctx, conn, `table "data_agent"`,
 		)).OrFatal(t)
@@ -919,9 +887,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("nomination", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.Nomination]().QueryAll(
 			ctx, conn, `table "nomination"`,
 		)).OrFatal(t)
@@ -934,9 +899,6 @@ func TestOperation(t *testing.T) {
 	})
 
 	t.Run("garbage", func(t *testing.T) {
-		conn := try.To(pool.Acquire(ctx)).OrFatal(t)
-		defer conn.Release()
-
 		actual := try.To(scanner.New[tables.Garbage]().QueryAll(
 			ctx, conn, `table "garbage"`,
 		)).OrFatal(t)

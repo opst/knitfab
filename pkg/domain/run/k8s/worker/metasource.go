@@ -8,7 +8,6 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/data/k8s/data"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/metasource"
-	"github.com/opst/knitfab/pkg/utils/nils"
 	ptr "github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/tuple"
@@ -89,6 +88,11 @@ type Mount struct {
 	MountPoint domain.MountPoint
 }
 
+type Mountpoint struct {
+	Path string
+	Data data.Data
+}
+
 type Executable struct {
 	RunIdentifier
 
@@ -96,9 +100,9 @@ type Executable struct {
 
 	PlanId         string
 	Image          domain.ImageIdentifier
-	Inputs         []domain.Assignment
-	Outputs        []domain.Assignment
-	Log            *domain.Assignment
+	Inputs         []Mountpoint
+	Outputs        []Mountpoint
+	Log            *Mountpoint
 	ServiceAccount string
 }
 
@@ -140,6 +144,7 @@ func New(ex *domain.Run, envvars map[string]string) (*Executable, error) {
 		)
 	}
 
+	inputs := []Mountpoint{}
 	for _, in := range ex.Inputs {
 		if in.Path == "" {
 			return nil, fmt.Errorf(
@@ -153,15 +158,23 @@ func New(ex *domain.Run, envvars map[string]string) (*Executable, error) {
 				ex.PlanId, ex.Id, in.Id,
 			)
 		}
-		if in.KnitDataBody.VolumeRef == "" {
+		if in.KnitDataBody.VolumeRef == nil || *in.KnitDataBody.VolumeRef == "" {
 			return nil, fmt.Errorf(
 				"malformed [planId:%s runId:%s input:%d]: data %s has no volume ref",
 				ex.PlanId, ex.Id, in.Id, in.KnitDataBody.KnitId,
 			)
 		}
+		inputs = append(inputs, Mountpoint{
+			Path: in.Path,
+			Data: data.Data{
+				KnitId:    in.KnitDataBody.KnitId,
+				VolumeRef: *in.KnitDataBody.VolumeRef,
+			},
+		})
 	}
 
 	counter := map[string]int{}
+	outputs := []Mountpoint{}
 	for _, out := range ex.Outputs {
 		if out.Path == "" {
 			return nil, fmt.Errorf(
@@ -175,16 +188,23 @@ func New(ex *domain.Run, envvars map[string]string) (*Executable, error) {
 				ex.PlanId, ex.Id, out.Id,
 			)
 		}
-		if out.KnitDataBody.VolumeRef == "" {
+		if out.KnitDataBody.VolumeRef == nil || *out.KnitDataBody.VolumeRef == "" {
 			return nil, fmt.Errorf(
 				"malformed [planId:%s runId:%s output:%d] : data %s has no volume ref",
 				ex.PlanId, ex.Id, out.Id, out.KnitDataBody.KnitId,
 			)
 		}
 		counter[out.KnitDataBody.KnitId] += 1
+		outputs = append(outputs, Mountpoint{
+			Path: out.Path,
+			Data: data.Data{
+				KnitId:    out.KnitDataBody.KnitId,
+				VolumeRef: *out.KnitDataBody.VolumeRef,
+			},
+		})
 	}
 
-	var log *domain.Assignment
+	var log *Mountpoint = nil
 	if l := ex.Log; l != nil {
 		if l.KnitDataBody.KnitId == "" {
 			return nil, fmt.Errorf(
@@ -192,7 +212,7 @@ func New(ex *domain.Run, envvars map[string]string) (*Executable, error) {
 				ex.PlanId, ex.Id,
 			)
 		}
-		if l.KnitDataBody.VolumeRef == "" {
+		if l.KnitDataBody.VolumeRef == nil || *l.KnitDataBody.VolumeRef == "" {
 			return nil, fmt.Errorf(
 				"malformed [planId:%s runId:%s log]: data %s has no volume ref",
 				ex.PlanId, ex.Id, l.KnitDataBody.KnitId,
@@ -200,9 +220,12 @@ func New(ex *domain.Run, envvars map[string]string) (*Executable, error) {
 		}
 		counter[l.KnitDataBody.KnitId] += 1
 
-		log = &domain.Assignment{
-			MountPoint:   domain.MountPoint{Id: l.Id, Path: "/log", Tags: l.Tags},
-			KnitDataBody: l.KnitDataBody,
+		log = &Mountpoint{
+			Path: "/log",
+			Data: data.Data{
+				KnitId:    l.KnitDataBody.KnitId,
+				VolumeRef: *l.KnitDataBody.VolumeRef,
+			},
 		}
 	}
 
@@ -220,8 +243,8 @@ func New(ex *domain.Run, envvars map[string]string) (*Executable, error) {
 		EnvVars:        envvars,
 		PlanId:         ex.PlanId,
 		Image:          *ex.Image,
-		Inputs:         ex.Inputs,
-		Outputs:        ex.Outputs,
+		Inputs:         inputs,
+		Outputs:        outputs,
 		Log:            log,
 		ServiceAccount: ex.ServiceAccount,
 	}, nil
@@ -263,15 +286,13 @@ func (r *Executable) Build(conf *bconf.KnitClusterConfig) *kubebatch.Job {
 
 	inputs, inputsMount := tuple.UnzipPair(slices.Map(r.Inputs, toVolumeMount))
 	outputs, outputsMount := tuple.UnzipPair(slices.Map(r.Outputs, toVolumeMount))
-	logs, logsMount := tuple.UnzipPair(slices.Map(
-		nils.Default(
-			nils.IfNotNil(r.Log, func(log *domain.Assignment) *[]domain.Assignment {
-				return &[]domain.Assignment{*log}
-			}),
-			[]domain.Assignment{},
-		),
-		toVolumeMount,
-	))
+	var logs []kubecore.Volume
+	var logsMount []kubecore.VolumeMount
+	if r.Log != nil {
+		_logs, _logsMount := toVolumeMount(*r.Log).Decompose()
+		logs = append(logs, _logs)
+		logsMount = append(logsMount, _logsMount)
+	}
 
 	// setup minimal components
 	volumes := slices.Concat(inputs, outputs, logs)
@@ -587,19 +608,19 @@ func rectify[T any](sli []T) []T {
 	return sli
 }
 
-func toVolumeMount(a domain.Assignment) tuple.Pair[kubecore.Volume, kubecore.VolumeMount] {
+func toVolumeMount(a Mountpoint) tuple.Pair[kubecore.Volume, kubecore.VolumeMount] {
 	v := kubecore.Volume{
-		Name: a.KnitDataBody.KnitId,
+		Name: a.Data.KnitId,
 		VolumeSource: kubecore.VolumeSource{
 			PersistentVolumeClaim: &kubecore.PersistentVolumeClaimVolumeSource{
-				ClaimName: a.KnitDataBody.VolumeRef,
+				ClaimName: a.Data.VolumeRef,
 			},
 		},
 	}
 
 	vm := kubecore.VolumeMount{
-		Name:      a.KnitDataBody.KnitId,
-		MountPath: a.MountPoint.Path,
+		Name:      a.Data.KnitId,
+		MountPath: a.Path,
 	}
 
 	return tuple.PairOf(v, vm)

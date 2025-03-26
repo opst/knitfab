@@ -12,6 +12,7 @@ import (
 	"github.com/opst/knitfab/pkg/domain/data/k8s/data"
 	clustermock "github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster/mock"
 	k8srun "github.com/opst/knitfab/pkg/domain/run/k8s/run"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 	kubecore "k8s.io/api/core/v1"
@@ -67,14 +68,14 @@ func TestRun_Initlialize(t *testing.T) {
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-input-1",
-						VolumeRef: "ref-initialize-input-1",
+						VolumeRef: pointer.Ref("ref-initialize-input-1"),
 					},
 				},
 				{
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-input-2",
-						VolumeRef: "ref-initialize-input-2",
+						VolumeRef: pointer.Ref("ref-initialize-input-2"),
 					},
 				},
 			},
@@ -83,41 +84,44 @@ func TestRun_Initlialize(t *testing.T) {
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-output-1",
-						VolumeRef: "ref-initialize-output-1",
+						VolumeRef: pointer.Ref("ref-initialize-output-1"),
 					},
 				},
 				{
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-output-2",
-						VolumeRef: "ref-initialize-output-2",
+						VolumeRef: pointer.Ref("ref-initialize-output-2"),
 					},
 				},
 			},
 			Log: &domain.Log{
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    "initialize-log",
-					VolumeRef: "ref-initialize-log",
+					VolumeRef: pointer.Ref("ref-initialize-log"),
 				},
 			},
 		}
 		defer func() {
 			volumeref := slices.Map(
 				run.Inputs,
-				func(a domain.Assignment) string { return a.KnitDataBody.VolumeRef },
+				func(a domain.Assignment) *string { return a.KnitDataBody.VolumeRef },
 			)
 			volumeref = append(
 				volumeref,
 				slices.Map(
 					run.Outputs,
-					func(a domain.Assignment) string { return a.KnitDataBody.VolumeRef },
+					func(a domain.Assignment) *string { return a.KnitDataBody.VolumeRef },
 				)...,
 			)
 			volumeref = append(volumeref, run.Log.KnitDataBody.VolumeRef)
 			for _, v := range volumeref {
+				if v == nil {
+					continue
+				}
 				clientset.CoreV1().
 					PersistentVolumeClaims(testenv.Namespace()).
-					Delete(ctx, v, *v1.NewDeleteOptions(0))
+					Delete(ctx, *v, *v1.NewDeleteOptions(0))
 			}
 		}()
 
@@ -126,29 +130,35 @@ func TestRun_Initlialize(t *testing.T) {
 		}
 
 		for _, in := range run.Inputs {
+			if in.KnitDataBody.VolumeRef == nil {
+				continue
+			}
 			_, err := clientset.CoreV1().
 				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, in.KnitDataBody.VolumeRef, v1.GetOptions{})
+				Get(ctx, *in.KnitDataBody.VolumeRef, v1.GetOptions{})
 			if !kubeerr.IsNotFound(err) {
-				t.Errorf("unexpected error (input: %s): %s", in.KnitDataBody.VolumeRef, err)
+				t.Errorf("unexpected error (input: %s): %s", *in.KnitDataBody.VolumeRef, err)
 			}
 		}
 
 		for _, out := range run.Outputs {
+			if out.KnitDataBody.VolumeRef == nil {
+				continue
+			}
 			_, err := clientset.CoreV1().
 				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, out.KnitDataBody.VolumeRef, v1.GetOptions{})
+				Get(ctx, *out.KnitDataBody.VolumeRef, v1.GetOptions{})
 			if err != nil {
-				t.Errorf("unexpected error (output: %s): %s", out.KnitDataBody.VolumeRef, err)
+				t.Errorf("unexpected error (output: %s): %s", *out.KnitDataBody.VolumeRef, err)
 			}
 		}
 
-		{
+		if run.Log.KnitDataBody.VolumeRef != nil {
 			_, err := clientset.CoreV1().
 				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, run.Log.KnitDataBody.VolumeRef, v1.GetOptions{})
+				Get(ctx, *run.Log.KnitDataBody.VolumeRef, v1.GetOptions{})
 			if err != nil {
-				t.Errorf("unexpected error (log: %s): %s", run.Log.KnitDataBody.VolumeRef, err)
+				t.Errorf("unexpected error (log: %s): %s", *run.Log.KnitDataBody.VolumeRef, err)
 			}
 		}
 	})
@@ -201,14 +211,14 @@ func TestRun_Initlialize(t *testing.T) {
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-input-1",
-						VolumeRef: "ref-initialize-input-1",
+						VolumeRef: pointer.Ref("ref-initialize-input-1"),
 					},
 				},
 				{
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-input-2",
-						VolumeRef: "ref-initialize-input-2",
+						VolumeRef: pointer.Ref("ref-initialize-input-2"),
 					},
 				},
 			},
@@ -217,41 +227,44 @@ func TestRun_Initlialize(t *testing.T) {
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-output-1",
-						VolumeRef: "ref-initialize-output-1",
+						VolumeRef: pointer.Ref("ref-initialize-output-1"),
 					},
 				},
 				{
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-output-2",
-						VolumeRef: "ref-initialize-output-2",
+						VolumeRef: pointer.Ref("ref-initialize-output-2"),
 					},
 				},
 			},
 			Log: &domain.Log{
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    "initialize-log",
-					VolumeRef: "ref-initialize-log",
+					VolumeRef: pointer.Ref("ref-initialize-log"),
 				},
 			},
 		}
 		defer func() {
 			volumeRefs := slices.Map(
 				run.Inputs,
-				func(a domain.Assignment) string { return a.KnitDataBody.VolumeRef },
+				func(a domain.Assignment) *string { return a.KnitDataBody.VolumeRef },
 			)
 			volumeRefs = append(
 				volumeRefs,
 				slices.Map(
 					run.Outputs,
-					func(a domain.Assignment) string { return a.KnitDataBody.VolumeRef },
+					func(a domain.Assignment) *string { return a.KnitDataBody.VolumeRef },
 				)...,
 			)
 			volumeRefs = append(volumeRefs, run.Log.KnitDataBody.VolumeRef)
 			for _, v := range volumeRefs {
+				if v == nil {
+					continue
+				}
 				clientset.CoreV1().
 					PersistentVolumeClaims(testenv.Namespace()).
-					Delete(ctx, v, *v1.NewDeleteOptions(0))
+					Delete(ctx, *v, *v1.NewDeleteOptions(0))
 			}
 		}()
 
@@ -270,28 +283,36 @@ func TestRun_Initlialize(t *testing.T) {
 		}
 
 		for _, in := range run.Inputs {
+			if in.KnitDataBody.VolumeRef == nil {
+				continue
+			}
 			_, err := clientset.CoreV1().
 				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, in.KnitDataBody.VolumeRef, v1.GetOptions{})
+				Get(ctx, *in.KnitDataBody.VolumeRef, v1.GetOptions{})
 			if !kubeerr.IsNotFound(err) {
-				t.Errorf("unexpected error (input: %s): %s", in.KnitDataBody.VolumeRef, err)
+				t.Errorf("unexpected error (input: %s): %s", *in.KnitDataBody.VolumeRef, err)
 			}
 		}
 
 		for _, out := range run.Outputs {
+			if out.KnitDataBody.VolumeRef == nil {
+				continue
+			}
 			_, err := clientset.CoreV1().
 				PersistentVolumeClaims(testenv.Namespace()).
-				Get(ctx, out.KnitDataBody.VolumeRef, v1.GetOptions{})
+				Get(ctx, *out.KnitDataBody.VolumeRef, v1.GetOptions{})
 			if err != nil {
-				t.Errorf("unexpected error (output: %s): %s", out.KnitDataBody.VolumeRef, err)
+				t.Errorf("unexpected error (output: %s): %s", *out.KnitDataBody.VolumeRef, err)
 			}
 		}
 
-		_, err := clientset.CoreV1().
-			PersistentVolumeClaims(testenv.Namespace()).
-			Get(ctx, run.Log.KnitDataBody.VolumeRef, v1.GetOptions{})
-		if err != nil {
-			t.Errorf("unexpected error (log: %s): %s", run.Log.KnitDataBody.VolumeRef, err)
+		if run.Log.KnitDataBody.VolumeRef != nil {
+			_, err := clientset.CoreV1().
+				PersistentVolumeClaims(testenv.Namespace()).
+				Get(ctx, *run.Log.KnitDataBody.VolumeRef, v1.GetOptions{})
+			if err != nil {
+				t.Errorf("unexpected error (log: %s): %s", *run.Log.KnitDataBody.VolumeRef, err)
+			}
 		}
 	})
 
@@ -347,14 +368,14 @@ func TestRun_Initlialize(t *testing.T) {
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-input-1",
-						VolumeRef: "ref-initialize-input-1",
+						VolumeRef: pointer.Ref("ref-initialize-input-1"),
 					},
 				},
 				{
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-input-2",
-						VolumeRef: "ref-initialize-input-2",
+						VolumeRef: pointer.Ref("ref-initialize-input-2"),
 					},
 				},
 			},
@@ -363,21 +384,21 @@ func TestRun_Initlialize(t *testing.T) {
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-output-1",
-						VolumeRef: "ref-initialize-output-1",
+						VolumeRef: pointer.Ref("ref-initialize-output-1"),
 					},
 				},
 				{
 					MountPoint: domain.MountPoint{},
 					KnitDataBody: domain.KnitDataBody{
 						KnitId:    "initialize-output-2",
-						VolumeRef: "ref-initialize-output-2",
+						VolumeRef: pointer.Ref("ref-initialize-output-2"),
 					},
 				},
 			},
 			Log: &domain.Log{
 				KnitDataBody: domain.KnitDataBody{
 					KnitId:    "initialize-log",
-					VolumeRef: "ref-initialize-log",
+					VolumeRef: pointer.Ref("ref-initialize-log"),
 				},
 			},
 		}

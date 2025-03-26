@@ -8,6 +8,7 @@ import (
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/domain/data/k8s/data"
 	k8smock "github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster/mock"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	kubecore "k8s.io/api/core/v1"
 )
 
@@ -27,8 +28,10 @@ func TestCheckDataIsBound(t *testing.T) {
 		return func(t *testing.T) {
 			kcluster, clientset := k8smock.NewCluster()
 			clientset.Impl.GetPVC = func(ctx context.Context, namespace, pvcname string) (*kubecore.PersistentVolumeClaim, error) {
-				if pvcname != when.knitDataBody.VolumeRef {
-					t.Errorf("expected pvc name %s, got %s", when.knitDataBody.VolumeRef, pvcname)
+				if when.knitDataBody.VolumeRef == nil {
+					t.Errorf("expected pvc name, got nil")
+				} else if pvcname != *when.knitDataBody.VolumeRef {
+					t.Errorf("expected pvc name %s, got %s", *when.knitDataBody.VolumeRef, pvcname)
 				}
 
 				return when.pvc, when.err
@@ -62,6 +65,9 @@ func TestCheckDataIsBound(t *testing.T) {
 				},
 			},
 			err: nil,
+			knitDataBody: domain.KnitDataBody{
+				VolumeRef: pointer.Ref("pvc-name"),
+			},
 		},
 		Then{
 			want: true,
@@ -77,6 +83,23 @@ func TestCheckDataIsBound(t *testing.T) {
 				},
 			},
 			err: nil,
+			knitDataBody: domain.KnitDataBody{
+				VolumeRef: pointer.Ref("pvc-name"),
+			},
+		},
+		Then{
+			want: false,
+			err:  nil,
+		},
+	))
+
+	t.Run("pvc is not bound when Data is purged", theory(
+		When{
+			pvc: nil,
+			err: nil,
+			knitDataBody: domain.KnitDataBody{
+				VolumeRef: nil,
+			},
 		},
 		Then{
 			want: false,
@@ -89,6 +112,10 @@ func TestCheckDataIsBound(t *testing.T) {
 		When{
 			pvc: nil,
 			err: wantErr,
+
+			knitDataBody: domain.KnitDataBody{
+				VolumeRef: pointer.Ref("pvc-name"),
+			},
 		},
 		Then{
 			want: false,

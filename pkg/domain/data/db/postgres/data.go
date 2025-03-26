@@ -13,6 +13,7 @@ import (
 	"github.com/opst/knitfab-api-types/misc/rfctime"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/pkg/domain"
+	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
 	kpgerr "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
 	kpgintr "github.com/opst/knitfab/pkg/domain/internal/db/postgres"
 	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
@@ -27,6 +28,8 @@ type dataPG struct { // implements kdb.DataInterface
 
 	nominator kpgnom.Nominator
 }
+
+var _ kdbdata.DataInterface = (*dataPG)(nil)
 
 type Option func(*dataPG) *dataPG
 
@@ -169,7 +172,10 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 
 		if u, ok := upstreams[outputId]; ok {
 			if u.ForLog {
-				lp = &domain.LogPoint{Tags: u.MountPoint.Tags}
+				lp = &domain.LogPoint{
+					Id:   u.Id,
+					Tags: u.MountPoint.Tags,
+				}
 			} else {
 				mp = &u.MountPoint
 			}
@@ -177,7 +183,7 @@ func (d *dataPG) get(ctx context.Context, conn kpool.Conn, knitIds []string) (ma
 
 		data := domain.KnitData{
 			KnitDataBody: b,
-			Upsteram: domain.DataSource{
+			Upstream: domain.DataSource{
 				RunBody:    runBodies[runId],
 				MountPoint: mp,
 				LogPoint:   lp,
@@ -236,23 +242,25 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 			from "data"
 			inner join "run" using("run_id")
 			left outer join "knit_timestamp" using("knit_id")
+			left outer join "volume_ref" using("knit_id")
 			where
 				($1::varchar is null or "knit_id" = $1::varchar)
 				and (cardinality($2::runStatus[]) = 0 or "status" = any($2::runStatus[]))
 				and (cardinality($3::runStatus[]) = 0 or "status" = any($3::runStatus[]))
+				and (($4::bool) is null or ("volume_ref" is null) = $4::bool)
 		),
 		"_data" as (
 			select "knit_id", "raw_timestamp", "timestamp" from "__data"
 			where
-				($4::timestamp with time zone is null or "timestamp" = $4::timestamp with time zone)
-				and ($5::timestamp with time zone is null or "timestamp" >= $5::timestamp with time zone)
-				and ($6::timestamp with time zone is null or "timestamp" < $6::timestamp with time zone)
+				($5::timestamp with time zone is null or "timestamp" = $5::timestamp with time zone)
+				and ($6::timestamp with time zone is null or "timestamp" >= $6::timestamp with time zone)
+				and ($7::timestamp with time zone is null or "timestamp" < $7::timestamp with time zone)
 		),
 		"_query" as (
 			select
 				unnest("c"[:][1:1]) as "key",
 				unnest("c"[:][2:2]) as "value"
-			from (select $7::varchar[][]) as "t"("c")
+			from (select $8::varchar[][]) as "t"("c")
 		),
 		"_tag_key" as (
 			select "key", "id" as "key_id"
@@ -281,7 +289,8 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 		inner join "_data" using("knit_id")
 		order by "raw_timestamp" ASC NULLS LAST, "knit_id"
 		`,
-		query.sysKnitId, processingStatus, failedStatus, timestamp, query.updatedSince, query.updatedUntil,
+		query.sysKnitId, processingStatus, failedStatus, query.sysKnitTransientPurged,
+		timestamp, query.updatedSince, query.updatedUntil,
 		slices.Map(query.userTag, func(t domain.Tag) [2]string { return [2]string{t.Key, t.Value} }),
 	)
 	if err != nil {
@@ -350,6 +359,12 @@ func makeDataFindQuery(tag []domain.Tag, since *time.Time, until *time.Time) *da
 				f := false
 				result.sysKnitTransientProcessing = &f
 				result.sysKnitTransientFailed = &t
+			} else if t.Value == domain.ValueKnitTransientPurged {
+				if result.sysKnitTransientPurged != nil {
+					return nil
+				}
+				t := true
+				result.sysKnitTransientPurged = &t
 			} else {
 				return nil
 			}
@@ -391,6 +406,7 @@ type dataFindQuery struct {
 	sysKnitTimeStamp           *string
 	sysKnitTransientProcessing *bool
 	sysKnitTransientFailed     *bool
+	sysKnitTransientPurged     *bool
 	updatedSince               *time.Time
 	updatedUntil               *time.Time
 }
@@ -571,24 +587,17 @@ func (m *dataPG) NewAgent(ctx context.Context, knitId string, mode domain.DataAg
 	}
 	defer tx.Rollback(ctx)
 
-	var daname string
+	var volumeRef string
 	if err := tx.QueryRow(
 		ctx,
 		`
-		with "data" as (
-			select "knit_id" from "data" where "knit_id" = $1 for update
-		)
-		insert into "data_agent" ("name", "knit_id", "mode", "lifecycle_suspend_until")
-		select
-			'knitid-' || "knit_id" || '-' || $2 || '-' || substr(md5(random()::text), 0, 6),
-			"knit_id",
-			$2::dataAgentMode,
-			now() + $3
-		from "data"
-		returning "name"
+		select "knit_id", coalesce("volume_ref", '') from "data"
+		left join "volume_ref" using("knit_id")
+		where "knit_id" = $1
+		for update of "data"
 		`,
-		knitId, string(mode), lifecycleSuspend,
-	).Scan(&daname); err != nil {
+		knitId,
+	).Scan(nil, &volumeRef); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.DataAgent{}, kpgerr.Missing{
 				Table: "data", Identity: fmt.Sprintf("knit_id='%s'", knitId),
@@ -596,6 +605,28 @@ func (m *dataPG) NewAgent(ctx context.Context, knitId string, mode domain.DataAg
 		}
 		return domain.DataAgent{}, err
 	}
+	if volumeRef == "" {
+		return domain.DataAgent{}, kdbdata.NewErrDataIsPurged(knitId)
+	}
+
+	var daname string
+	if err := tx.QueryRow(
+		ctx,
+		`
+		insert into "data_agent" ("name", "knit_id", "mode", "lifecycle_suspend_until")
+		values (
+			'knitid-' || $1 || '-' || $2 || '-' || substr(md5(random()::text), 0, 6),
+			$1,
+			$2::dataAgentMode,
+			now() + $3
+		)
+		returning "name"
+		`,
+		knitId, string(mode), lifecycleSuspend,
+	).Scan(&daname); err != nil {
+		return domain.DataAgent{}, err
+	}
+
 	body, err := kpgintr.GetDataBody(ctx, tx, []string{knitId})
 	if err != nil {
 		return domain.DataAgent{}, err
@@ -774,4 +805,17 @@ func (m *dataPG) GetAgentName(ctx context.Context, knitId string, modes []domain
 	}
 
 	return names, nil
+}
+
+func (m *dataPG) Purge(ctx context.Context, knitId string) error {
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if err := kpgintr.PurgeData(ctx, tx, m.nominator, knitId); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }

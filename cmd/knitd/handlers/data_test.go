@@ -21,6 +21,7 @@ import (
 	dbmock "github.com/opst/knitfab/pkg/domain/data/db/mock"
 	kerr "github.com/opst/knitfab/pkg/domain/errors"
 	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/pkg/utils/pointer"
 	"github.com/opst/knitfab/pkg/utils/slices"
 	"github.com/opst/knitfab/pkg/utils/try"
 
@@ -38,7 +39,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 			d := map[string]domain.KnitData{
 				"knit-1": {
 					KnitDataBody: domain.KnitDataBody{
-						KnitId: "knit-1", VolumeRef: "pvc-knit-1",
+						KnitId: "knit-1", VolumeRef: pointer.Ref("pvc-knit-1"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "project", Value: "test-project"},
 							{Key: "series", Value: "42"},
@@ -48,7 +49,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 							{Key: domain.KeyKnitTimestamp, Value: "2022-07-29T01:10:25.100+09:00"},
 						}),
 					},
-					Upsteram: domain.DataSource{
+					Upstream: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run-1", Status: domain.Done,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -117,7 +118,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 				},
 				"knit-2": {
 					KnitDataBody: domain.KnitDataBody{
-						KnitId: "knit-2", VolumeRef: "pvc-knit-2",
+						KnitId: "knit-2", VolumeRef: pointer.Ref("pvc-knit-2"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "framework", Value: "pytorch"},
@@ -126,7 +127,7 @@ func TestGetDataForDataHandler(t *testing.T) {
 							{Key: domain.KeyKnitTransient, Value: "processing"},
 						}),
 					},
-					Upsteram: domain.DataSource{
+					Upstream: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run-2", Status: domain.Running,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime(
@@ -441,7 +442,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			return map[string]domain.KnitData{
 				knitId: {
 					KnitDataBody: domain.KnitDataBody{
-						KnitId: knitId, VolumeRef: "#volume-ref",
+						KnitId: knitId, VolumeRef: pointer.Ref("#volume-ref"),
 						Tags: domain.NewTagSet([]domain.Tag{
 							{Key: "type", Value: "model-parameter"},
 							{Key: "project", Value: "testing"},
@@ -450,7 +451,7 @@ func TestPutTagsForDataHandler(t *testing.T) {
 							{Key: tags.KeyKnitId, Value: knitId},
 						}),
 					},
-					Upsteram: domain.DataSource{
+					Upstream: domain.DataSource{
 						RunBody: domain.RunBody{
 							Id: "run#1", Status: domain.Done,
 							UpdatedAt: try.To(rfctime.ParseRFC3339DateTime("2022-10-11T12:34:56+09:00")).OrFatal(t).Time(),
@@ -802,4 +803,95 @@ func TestPutTagsForDataHandler(t *testing.T) {
 			t.Errorf("unmatch error code:%d, expeced:%d", echoErr.Code, http.StatusBadRequest)
 		}
 	})
+}
+
+func TestPurgeDataHandler(t *testing.T) {
+	type When struct {
+		knitId   string
+		purgeErr error
+	}
+
+	type Then struct {
+		statusCode int
+	}
+
+	theory := func(when When, then Then) func(*testing.T) {
+		return func(t *testing.T) {
+			dbdata := dbmock.NewDataInterface()
+			dbdata.Impl.Purge = func(ctx context.Context, knitId string) error {
+				return when.purgeErr
+			}
+
+			wantErr := 400 <= then.statusCode
+
+			e := echo.New()
+			c, _ := httptestutil.Delete(e, "/data/"+when.knitId)
+			c.SetPath("/data/:knitid")
+			c.SetParamNames("knitid")
+			c.SetParamValues(when.knitId)
+
+			testee := handlers.PurgeDataHandler(dbdata, "knitid")
+			err := testee(c)
+
+			if wantErr {
+				if err == nil {
+					t.Error("expected error, but got nil")
+				} else {
+					if err.(*echo.HTTPError).Code != then.statusCode {
+						t.Errorf("unexpected status code: %d", err.(*echo.HTTPError).Code)
+					}
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if c.Response().Status != then.statusCode {
+				t.Errorf("unexpected status code: %d", c.Response().Status)
+			}
+		}
+	}
+
+	t.Run("When the knitId is not found, return 404", theory(
+		When{
+			knitId:   "knit-1",
+			purgeErr: kerr.ErrMissing,
+		},
+		Then{
+			statusCode: http.StatusNotFound,
+		},
+	))
+
+	t.Run("When the knitId is found, return 204", theory(
+		When{
+			knitId:   "knit-1",
+			purgeErr: nil,
+		},
+		Then{
+			statusCode: http.StatusNoContent,
+		},
+	))
+
+	fakeError := errors.New("fake error")
+	t.Run("When the knitId is found, but the purge operation failed, return 500", theory(
+		When{
+			knitId:   "knit-1",
+			purgeErr: fakeError,
+		},
+		Then{
+			statusCode: http.StatusInternalServerError,
+		},
+	))
+
+	t.Run("When the found Data is in use, return 409", theory(
+		When{
+			knitId:   "knit-1",
+			purgeErr: domain.ErrDataInUse,
+		},
+		Then{
+			statusCode: http.StatusConflict,
+		},
+	))
+
 }
