@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	api_runs "github.com/opst/knitfab-api-types/runs"
+	api_runs "github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement"
 	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	testenv "github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
 	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
 	"github.com/opst/knitfab/pkg/domain"

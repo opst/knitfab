@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	apitag "github.com/opst/knitfab-api-types/tags"
+	apitag "github.com/opst/knitfab-api-types/v2/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"

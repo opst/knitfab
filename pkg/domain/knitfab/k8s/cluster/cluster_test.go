@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	tenv "github.com/opst/knitfab/pkg/conn/k8s/testenv"
 	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
 	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"

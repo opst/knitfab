@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	apiruns "github.com/opst/knitfab-api-types/runs"
+	apiruns "github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/loop/recurring"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"

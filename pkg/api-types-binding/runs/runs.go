@@ -1,9 +1,9 @@
 package runs
 
 import (
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/runs"
 	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
 	"github.com/opst/knitfab/pkg/domain"

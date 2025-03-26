@@ -10,7 +10,7 @@ require (
 	github.com/prometheus/common v0.59.1
 	github.com/youta-t/flarc v0.0.3
 	k8s.io/api v0.32.2
-	k8s.io/apimachinery v0.32.2
+	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.2
 )
 

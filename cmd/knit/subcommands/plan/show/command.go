@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"

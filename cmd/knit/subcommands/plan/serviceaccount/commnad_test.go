@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/rest/mock"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"

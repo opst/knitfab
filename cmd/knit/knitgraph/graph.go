@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/opst/knitfab-api-types/data"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/v2/data"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab/pkg/utils/maps"
 )
 

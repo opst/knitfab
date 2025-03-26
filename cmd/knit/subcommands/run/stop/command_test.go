@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst_mock "github.com/opst/knitfab/cmd/knit/rest/mock"
 	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"

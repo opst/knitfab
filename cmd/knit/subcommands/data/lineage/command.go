@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/opst/knitfab-api-types/data"
-	"github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab-api-types/tags"
+	"github.com/opst/knitfab-api-types/v2/data"
+	"github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab-api-types/v2/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	"github.com/opst/knitfab/cmd/knit/knitgraph"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"

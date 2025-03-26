@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	apiruns "github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	apiruns "github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab/cmd/loops/hook"
 	"github.com/opst/knitfab/cmd/loops/tasks/initialize"
 	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"

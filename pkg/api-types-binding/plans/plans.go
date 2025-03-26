@@ -3,7 +3,7 @@ package plans
 import (
 	"errors"
 
-	apiplans "github.com/opst/knitfab-api-types/plans"
+	apiplans "github.com/opst/knitfab-api-types/v2/plans"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
 	"github.com/opst/knitfab/pkg/domain"
 	"github.com/opst/knitfab/pkg/utils/slices"

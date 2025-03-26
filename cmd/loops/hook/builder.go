@@ -1,7 +1,7 @@
 package hook
 
 import (
-	apiruns "github.com/opst/knitfab-api-types/runs"
+	apiruns "github.com/opst/knitfab-api-types/v2/runs"
 	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
 )
 

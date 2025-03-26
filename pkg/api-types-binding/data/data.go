@@ -1,8 +1,8 @@
 package data
 
 import (
-	"github.com/opst/knitfab-api-types/data"
-	apitags "github.com/opst/knitfab-api-types/tags"
+	"github.com/opst/knitfab-api-types/v2/data"
+	apitags "github.com/opst/knitfab-api-types/v2/tags"
 	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
 	bindrun "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"

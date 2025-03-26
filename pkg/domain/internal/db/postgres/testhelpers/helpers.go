@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 )
 

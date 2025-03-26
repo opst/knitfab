@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/opst/knitfab-api-types/data"
-	apitag "github.com/opst/knitfab-api-types/tags"
+	"github.com/opst/knitfab-api-types/v2/data"
+	apitag "github.com/opst/knitfab-api-types/v2/tags"
 	kenv "github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"

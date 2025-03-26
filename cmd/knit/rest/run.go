@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/runs"
 )
 
 func (c *client) GetRun(ctx context.Context, runId string) (runs.Detail, error) {

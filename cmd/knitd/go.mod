@@ -7,8 +7,8 @@ replace github.com/opst/knitfab => ../..
 require (
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/opst/knitfab v1.7.0-beta
-	github.com/opst/knitfab-api-types v1.7.0-beta
-	k8s.io/apimachinery v0.32.2
+	github.com/opst/knitfab-api-types/v2 v2.0.0-beta
+	k8s.io/apimachinery v0.32.3
 )
 
 require (
@@ -26,6 +26,7 @@ require (
 	github.com/jackc/pgtype v1.14.4 // indirect
 	github.com/jackc/pgx/v4 v4.18.3 // indirect
 	github.com/jackc/puddle v1.3.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

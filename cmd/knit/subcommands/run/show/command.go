@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab/cmd/knit/env"
 	krst "github.com/opst/knitfab/cmd/knit/rest"
 	"github.com/opst/knitfab/cmd/knit/subcommands/common"

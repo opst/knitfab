@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	plans "github.com/opst/knitfab-api-types/plans"
-	apitag "github.com/opst/knitfab-api-types/tags"
+	plans "github.com/opst/knitfab-api-types/v2/plans"
+	apitag "github.com/opst/knitfab-api-types/v2/tags"
 	handlers "github.com/opst/knitfab/cmd/knitd/handlers"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
 	bindplans "github.com/opst/knitfab/pkg/api-types-binding/plans"

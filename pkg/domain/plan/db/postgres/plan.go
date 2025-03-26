@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
 	types "github.com/opst/knitfab/pkg/domain"
 	kpgerr "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"

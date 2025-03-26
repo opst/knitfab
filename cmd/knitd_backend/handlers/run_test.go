@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	"github.com/opst/knitfab/cmd/knitd_backend/handlers"
 	httptestutil "github.com/opst/knitfab/internal/testutils/http"
 	"github.com/opst/knitfab/pkg/domain"

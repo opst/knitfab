@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	apitags "github.com/opst/knitfab-api-types/tags"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	apitags "github.com/opst/knitfab-api-types/v2/tags"
 	"github.com/opst/knitfab/pkg/utils/slices"
 )
 

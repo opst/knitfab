@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	apiplans "github.com/opst/knitfab-api-types/plans"
-	apitags "github.com/opst/knitfab-api-types/tags"
+	apiplans "github.com/opst/knitfab-api-types/v2/plans"
+	apitags "github.com/opst/knitfab-api-types/v2/tags"
 	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
 	"github.com/opst/knitfab/pkg/domain"

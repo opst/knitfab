@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	apiruns "github.com/opst/knitfab-api-types/runs"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	apiruns "github.com/opst/knitfab-api-types/v2/runs"
 	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	bindrun "github.com/opst/knitfab/pkg/api-types-binding/runs"
 	"github.com/opst/knitfab/pkg/domain"

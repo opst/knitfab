@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab-api-types/data"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	apitags "github.com/opst/knitfab-api-types/tags"
+	"github.com/opst/knitfab-api-types/v2/data"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	apitags "github.com/opst/knitfab-api-types/v2/tags"
 	binddata "github.com/opst/knitfab/pkg/api-types-binding/data"
 	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
 	"github.com/opst/knitfab/pkg/domain"

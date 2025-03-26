@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	apiaerr "github.com/opst/knitfab-api-types/errors"
+	apiaerr "github.com/opst/knitfab-api-types/v2/errors"
 	cerr "github.com/opst/knitfab/cmd/knit/errors"
 )
 
