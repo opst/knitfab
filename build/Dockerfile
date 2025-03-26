@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:1.4.1
 
-ARG GOVERSION=1.24.0-bullseye
+ARG GOVERSION=1.24.1-bullseye
 ARG GCFLAGS=""
 ARG LDFLAGS=""
 ARG REPOSITORY=""
