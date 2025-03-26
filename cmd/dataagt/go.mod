@@ -1,6 +1,6 @@
 module github.com/opst/knitfab/v2/cmd/dataagt
 
-go 1.24.0
+go 1.24.1
 
 replace github.com/opst/knitfab/v2 => ../..
 
@@ -16,8 +16,8 @@ require (
 	github.com/opst/knitfab-api-types/v2 v2.0.0-beta // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 )
