@@ -10,8 +10,8 @@ import (
 	"github.com/youta-t/flarc"
 	"gopkg.in/yaml.v3"
 
-	prof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	"github.com/opst/knitfab/cmd/knit/subcommands/common"
+	prof "github.com/opst/knitfab/v2/cmd/knit/config/profiles"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/common"
 )
 
 const ARG_KNIT_PROFILE_FILE = "KNIT_PROFILE_FILE"

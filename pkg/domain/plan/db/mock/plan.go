@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
-	types "github.com/opst/knitfab/pkg/domain"
-	kdbmock "github.com/opst/knitfab/pkg/domain/internal/db/mock"
-	kdb "github.com/opst/knitfab/pkg/domain/plan/db"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/logic"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	kdbmock "github.com/opst/knitfab/v2/pkg/domain/internal/db/mock"
+	kdb "github.com/opst/knitfab/v2/pkg/domain/plan/db"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/logic"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 

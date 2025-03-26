@@ -3,13 +3,13 @@ package image
 import (
 	"context"
 
-	manager "github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	types "github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/domain/run/db"
-	"github.com/opst/knitfab/pkg/domain/run/k8s"
+	manager "github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/manager"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/runManagementHook"
+	bindruns "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/domain/run/db"
+	"github.com/opst/knitfab/v2/pkg/domain/run/k8s"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 )
 

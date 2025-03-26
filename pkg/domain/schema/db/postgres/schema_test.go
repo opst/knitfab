@@ -14,13 +14,13 @@ import (
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
-	dbtestenv "github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
-	k8stestenv "github.com/opst/knitfab/pkg/conn/k8s/testenv"
-	schema "github.com/opst/knitfab/pkg/domain/schema/db/postgres"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/try"
+	dbtestenv "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/scanner"
+	k8stestenv "github.com/opst/knitfab/v2/pkg/conn/k8s/testenv"
+	schema "github.com/opst/knitfab/v2/pkg/domain/schema/db/postgres"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestPgSchema_Upgrade(t *testing.T) {

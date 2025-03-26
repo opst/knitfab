@@ -3,7 +3,7 @@ package metasource
 import (
 	"fmt"
 
-	"github.com/opst/knitfab/pkg/buildtime"
+	"github.com/opst/knitfab/v2/pkg/buildtime"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

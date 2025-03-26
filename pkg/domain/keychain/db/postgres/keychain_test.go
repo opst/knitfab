@@ -5,13 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/proxy"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/proxy"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/scanner"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 
-	kpgkc "github.com/opst/knitfab/pkg/domain/keychain/db/postgres"
+	kpgkc "github.com/opst/knitfab/v2/pkg/domain/keychain/db/postgres"
 )
 
 func TestKeychain_Lock(t *testing.T) {

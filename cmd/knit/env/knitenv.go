@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	apitags "github.com/opst/knitfab-api-types/tags"
+	apitags "github.com/opst/knitfab-api-types/v2/tags"
 	"gopkg.in/yaml.v3"
 )
 

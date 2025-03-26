@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	apierr "github.com/opst/knitfab-api-types/errors"
+	apierr "github.com/opst/knitfab-api-types/v2/errors"
 )
 
 type ErrorMessageOption func(in *apierr.ErrorMessage) *apierr.ErrorMessage

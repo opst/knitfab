@@ -9,11 +9,11 @@ import (
 	"github.com/jackc/pgproto3/v2"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/proxy"
-	intr "github.com/opst/knitfab/pkg/conn/db/postgres/pool/proxy/internal"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/proxy"
+	intr "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/proxy/internal"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 // capture value to channel.

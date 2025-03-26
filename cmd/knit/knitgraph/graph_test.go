@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/data"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/cmd/knit/knitgraph"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab-api-types/v2/data"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	"github.com/opst/knitfab/v2/cmd/knit/knitgraph"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestGenerateDot(t *testing.T) {

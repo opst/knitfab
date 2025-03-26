@@ -3,10 +3,10 @@ package plans
 import (
 	"errors"
 
-	apiplans "github.com/opst/knitfab-api-types/plans"
-	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	apiplans "github.com/opst/knitfab-api-types/v2/plans"
+	bindtags "github.com/opst/knitfab/v2/pkg/api-types-binding/tags"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 func ComposeMountpoint(mp domain.MountPoint) apiplans.Mountpoint {

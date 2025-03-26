@@ -1,6 +1,6 @@
 package cmp
 
-import "github.com/opst/knitfab/pkg/utils/slices"
+import "github.com/opst/knitfab/v2/pkg/utils/slices"
 
 func SliceEq[T comparable](a []T, b []T) bool {
 	if len(a) != len(b) {

@@ -5,12 +5,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/opst/knitfab/cmd/loops/loop/recurring"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	"github.com/opst/knitfab/pkg/domain"
-	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
+	"github.com/opst/knitfab/v2/cmd/loops/loop/recurring"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/manager"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/runManagementHook"
+	bindruns "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kdbrun "github.com/opst/knitfab/v2/pkg/domain/run/db"
 )
 
 // Return initial RunCursor value for task

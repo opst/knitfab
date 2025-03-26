@@ -6,17 +6,17 @@ import (
 	"io"
 	"testing"
 
-	apiruns "github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/cmd/loops/tasks/finishing"
-	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	"github.com/opst/knitfab/pkg/domain"
-	workloads "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	kdbmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
-	mockK8sRun "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
-	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
-	"github.com/opst/knitfab/pkg/utils/pointer"
+	apiruns "github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab/v2/cmd/loops/hook"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/finishing"
+	bindruns "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	workloads "github.com/opst/knitfab/v2/pkg/domain/errors/k8serrors"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	kdbmock "github.com/opst/knitfab/v2/pkg/domain/run/db/mock"
+	mockK8sRun "github.com/opst/knitfab/v2/pkg/domain/run/k8s/mock"
+	"github.com/opst/knitfab/v2/pkg/domain/run/k8s/worker"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
 )
 
 func TestTaskFinishing_Outside_PickAndSetStatus(t *testing.T) {

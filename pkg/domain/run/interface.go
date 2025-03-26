@@ -1,8 +1,8 @@
 package run
 
 import (
-	"github.com/opst/knitfab/pkg/domain/run/db"
-	"github.com/opst/knitfab/pkg/domain/run/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/run/db"
+	"github.com/opst/knitfab/v2/pkg/domain/run/k8s"
 )
 
 type Interface interface {

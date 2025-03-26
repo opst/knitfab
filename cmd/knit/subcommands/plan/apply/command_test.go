@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/tags"
-	restmock "github.com/opst/knitfab/cmd/knit/rest/mock"
-	plan_apply "github.com/opst/knitfab/cmd/knit/subcommands/plan/apply"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	restmock "github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	plan_apply "github.com/opst/knitfab/v2/cmd/knit/subcommands/plan/apply"
 )
 
 func TestApplyPlan(t *testing.T) {

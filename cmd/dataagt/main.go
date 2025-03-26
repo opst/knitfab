@@ -13,8 +13,8 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/opst/knitfab/cmd/dataagt/server"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/cmd/dataagt/server"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 //go:embed CREDITS

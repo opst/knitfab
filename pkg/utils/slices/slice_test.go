@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 func TestSliceUtils(t *testing.T) {

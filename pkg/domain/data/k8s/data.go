@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	bconf "github.com/opst/knitfab/pkg/configs/backend"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/data/k8s/data"
-	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	bconf "github.com/opst/knitfab/v2/pkg/configs/backend"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/data/k8s/data"
+	"github.com/opst/knitfab/v2/pkg/domain/data/k8s/dataagt"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
 )
 
 type Interface interface {

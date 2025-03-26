@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/configs/extras"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/configs/extras"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestConfig_Load(t *testing.T) {

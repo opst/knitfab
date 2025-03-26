@@ -14,15 +14,15 @@ import (
 	"testing"
 	"time"
 
-	apierr "github.com/opst/knitfab-api-types/errors"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab-api-types/tags"
-	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	apierr "github.com/opst/knitfab-api-types/v2/errors"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	kprof "github.com/opst/knitfab/v2/cmd/knit/config/profiles"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestGetRun(t *testing.T) {

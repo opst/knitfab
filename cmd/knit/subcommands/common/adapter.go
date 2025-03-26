@@ -7,9 +7,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/opst/knitfab/cmd/knit/config/profiles"
-	"github.com/opst/knitfab/cmd/knit/env"
-	krest "github.com/opst/knitfab/cmd/knit/rest"
+	"github.com/opst/knitfab/v2/cmd/knit/config/profiles"
+	"github.com/opst/knitfab/v2/cmd/knit/env"
+	krest "github.com/opst/knitfab/v2/cmd/knit/rest"
 	"github.com/youta-t/flarc"
 )
 

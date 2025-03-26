@@ -5,15 +5,15 @@ import (
 	"errors"
 	"testing"
 
-	api_runs "github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	types "github.com/opst/knitfab/pkg/domain"
-	kdbrunmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
-	"github.com/opst/knitfab/pkg/utils/cmp"
+	api_runs "github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab/v2/cmd/loops/hook"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/manager"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/runManagementHook"
+	bindruns "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	kdbrunmock "github.com/opst/knitfab/v2/pkg/domain/run/db/mock"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
 )
 
 func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab/cmd/dataagt/server"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/cmd/dataagt/server"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestServer(t *testing.T) {

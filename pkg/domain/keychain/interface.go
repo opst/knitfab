@@ -1,8 +1,8 @@
 package keychain
 
 import (
-	"github.com/opst/knitfab/pkg/domain/keychain/db"
-	"github.com/opst/knitfab/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain/db"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain/k8s"
 )
 
 type Interface interface {

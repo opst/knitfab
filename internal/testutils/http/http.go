@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 type RequestOption func(req *http.Request) *http.Request

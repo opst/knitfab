@@ -13,11 +13,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/opst/knitfab-api-types/data"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/utils/archive"
-	kio "github.com/opst/knitfab/pkg/utils/io"
+	"github.com/opst/knitfab-api-types/v2/data"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	"github.com/opst/knitfab/v2/pkg/utils/archive"
+	kio "github.com/opst/knitfab/v2/pkg/utils/io"
 )
 
 var (

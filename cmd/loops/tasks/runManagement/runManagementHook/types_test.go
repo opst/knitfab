@@ -3,8 +3,8 @@ package runManagementHook_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/runManagementHook"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
 )
 
 func TestMerge(t *testing.T) {

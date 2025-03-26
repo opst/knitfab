@@ -5,16 +5,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/pkg/conn/k8s/testenv"
-	"github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/conn/k8s/testenv"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	pvcs "github.com/opst/knitfab/cmd/volume_expander/pvcs"
+	pvcs "github.com/opst/knitfab/v2/cmd/volume_expander/pvcs"
 )
 
 func TestObserveOnNode(t *testing.T) {

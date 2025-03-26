@@ -1,8 +1,8 @@
 package tags
 
 import (
-	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	"github.com/opst/knitfab/v2/pkg/domain"
 )
 
 func Compose(dbtag domain.Tag) tags.Tag {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
-	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
+	keychain "github.com/opst/knitfab/v2/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain/k8s/key"
 )
 
 type MockKeychain struct {

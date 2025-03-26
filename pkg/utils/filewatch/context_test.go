@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/pkg/utils/filewatch"
+	"github.com/opst/knitfab/v2/pkg/utils/filewatch"
 )
 
 func TestUntilModifyContext_FileCreated(t *testing.T) {

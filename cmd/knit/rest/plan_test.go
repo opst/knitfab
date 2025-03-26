@@ -10,17 +10,17 @@ import (
 	"strings"
 	"testing"
 
-	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
+	kprof "github.com/opst/knitfab/v2/cmd/knit/config/profiles"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	apierr "github.com/opst/knitfab-api-types/errors"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/logic"
-	"github.com/opst/knitfab/pkg/utils/try"
+	apierr "github.com/opst/knitfab-api-types/v2/errors"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/logic"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestGetPlans(t *testing.T) {

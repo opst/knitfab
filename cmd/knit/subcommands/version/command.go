@@ -4,7 +4,7 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/opst/knitfab/pkg/buildtime"
+	"github.com/opst/knitfab/v2/pkg/buildtime"
 	"github.com/youta-t/flarc"
 )
 

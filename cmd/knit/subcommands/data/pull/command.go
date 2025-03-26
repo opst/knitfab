@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 
 	"github.com/cheggaaa/pb/v3"
-	kenv "github.com/opst/knitfab/cmd/knit/env"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kpath "github.com/opst/knitfab/pkg/utils/path"
+	kenv "github.com/opst/knitfab/v2/cmd/knit/env"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/common"
+	kpath "github.com/opst/knitfab/v2/pkg/utils/path"
 	"github.com/youta-t/flarc"
 )
 

@@ -11,14 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opst/knitfab-api-types/data"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab-api-types/tags"
-	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/logic"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	"github.com/opst/knitfab-api-types/v2/data"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	kprof "github.com/opst/knitfab/v2/cmd/knit/config/profiles"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/logic"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 // meaningless value

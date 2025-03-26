@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v4"
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/domain"
-	kpgerrors "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
-	nominator "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kpgerrors "github.com/opst/knitfab/v2/pkg/domain/errors/dberrors/postgres"
+	nominator "github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 func GetDataBody(ctx context.Context, conn kpool.Queryer, knitIds []string) (map[string]domain.KnitDataBody, error) {

@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab/cmd/loops/tasks/housekeeping"
-	"github.com/opst/knitfab/pkg/domain"
-	dbdatamocks "github.com/opst/knitfab/pkg/domain/data/db/mock"
-	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
-	k8sdatamocks "github.com/opst/knitfab/pkg/domain/data/k8s/mock"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/housekeeping"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	dbdatamocks "github.com/opst/knitfab/v2/pkg/domain/data/db/mock"
+	"github.com/opst/knitfab/v2/pkg/domain/data/k8s/dataagt"
+	k8sdatamocks "github.com/opst/knitfab/v2/pkg/domain/data/k8s/mock"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
 )
 
 type MockDataAgent struct {

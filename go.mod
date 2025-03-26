@@ -1,4 +1,4 @@
-module github.com/opst/knitfab
+module github.com/opst/knitfab/v2
 
 go 1.24.0
 
@@ -13,10 +13,10 @@ require (
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/labstack/gommon v0.4.2
-	github.com/opst/knitfab-api-types v1.7.0-beta
+	github.com/opst/knitfab-api-types/v2 v2.0.0-beta
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.32.2
-	k8s.io/apimachinery v0.32.2
+	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.2
 )
 

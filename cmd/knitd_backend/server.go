@@ -9,11 +9,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-	handlers "github.com/opst/knitfab/cmd/knitd_backend/handlers"
-	keyprovider "github.com/opst/knitfab/cmd/knitd_backend/provider/keyProvider"
-	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
-	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
-	knit "github.com/opst/knitfab/pkg/domain/knitfab"
+	handlers "github.com/opst/knitfab/v2/cmd/knitd_backend/handlers"
+	keyprovider "github.com/opst/knitfab/v2/cmd/knitd_backend/provider/keyProvider"
+	keychain "github.com/opst/knitfab/v2/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain/k8s/key"
+	knit "github.com/opst/knitfab/v2/pkg/domain/knitfab"
 )
 
 var API_ROOT = "/api/backend"

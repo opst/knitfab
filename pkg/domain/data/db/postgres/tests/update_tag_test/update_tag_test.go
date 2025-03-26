@@ -5,17 +5,17 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	testenv "github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
-	"github.com/opst/knitfab/pkg/domain"
-	kpgdata "github.com/opst/knitfab/pkg/domain/data/db/postgres"
-	kerr "github.com/opst/knitfab/pkg/domain/errors"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
-	. "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	testenv "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/scanner"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kpgdata "github.com/opst/knitfab/v2/pkg/domain/data/db/postgres"
+	kerr "github.com/opst/knitfab/v2/pkg/domain/errors"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables"
+	. "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestUpdateTag(t *testing.T) {

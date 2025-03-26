@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab/cmd/knit/env"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/common"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab/v2/cmd/knit/env"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/common"
 	"github.com/youta-t/flarc"
 )
 

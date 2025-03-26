@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/opst/knitfab/cmd/loops/loop/recurring"
-	"github.com/opst/knitfab/pkg/domain"
-	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
-	k8sdata "github.com/opst/knitfab/pkg/domain/data/k8s"
-	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/utils/retry"
+	"github.com/opst/knitfab/v2/cmd/loops/loop/recurring"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kdbdata "github.com/opst/knitfab/v2/pkg/domain/data/db"
+	k8sdata "github.com/opst/knitfab/v2/pkg/domain/data/k8s"
+	k8serrors "github.com/opst/knitfab/v2/pkg/domain/errors/k8serrors"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/utils/retry"
 	kubecore "k8s.io/api/core/v1"
 )
 

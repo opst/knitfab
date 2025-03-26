@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	kos "github.com/opst/knitfab/pkg/utils/os"
+	kos "github.com/opst/knitfab/v2/pkg/utils/os"
 )
 
 func TestGetEnvOr(t *testing.T) {

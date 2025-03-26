@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 )
 
 //

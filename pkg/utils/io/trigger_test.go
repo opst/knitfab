@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	kio "github.com/opst/knitfab/pkg/utils/io"
+	kio "github.com/opst/knitfab/v2/pkg/utils/io"
 )
 
 func TestTriggerReader(t *testing.T) {

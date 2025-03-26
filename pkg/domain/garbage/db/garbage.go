@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 
-	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain"
 )
 
 type Interface interface {

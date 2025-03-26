@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/data/k8s/data"
-	k8smock "github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster/mock"
-	"github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/data/k8s/data"
+	k8smock "github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster/mock"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
 	kubecore "k8s.io/api/core/v1"
 )
 

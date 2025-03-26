@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/opst/knitfab/pkg/domain"
-	dbmock "github.com/opst/knitfab/pkg/domain/internal/db/mock"
-	kdb "github.com/opst/knitfab/pkg/domain/run/db"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	dbmock "github.com/opst/knitfab/v2/pkg/domain/internal/db/mock"
+	kdb "github.com/opst/knitfab/v2/pkg/domain/run/db"
 )
 
 type RunInterface struct {

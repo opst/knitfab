@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab/cmd/knit/env"
-	"github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/cmd/knit/subcommands/plan/serviceaccount"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab/v2/cmd/knit/env"
+	"github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/internal/commandline"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/plan/serviceaccount"
 	"github.com/youta-t/flarc"
 )
 

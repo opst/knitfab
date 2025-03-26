@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	xe "github.com/opst/knitfab/pkg/errors"
+	xe "github.com/opst/knitfab/v2/pkg/errors"
 )
 
 type MyErr struct{}

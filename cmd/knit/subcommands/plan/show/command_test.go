@@ -6,16 +6,16 @@ import (
 	"io"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/tags"
-	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	"github.com/opst/knitfab/cmd/knit/env"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	plan_show "github.com/opst/knitfab/cmd/knit/subcommands/plan/show"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	kprof "github.com/opst/knitfab/v2/cmd/knit/config/profiles"
+	"github.com/opst/knitfab/v2/cmd/knit/env"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
+	"github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/internal/commandline"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	plan_show "github.com/opst/knitfab/v2/cmd/knit/subcommands/plan/show"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestShowCommand(t *testing.T) {

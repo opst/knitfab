@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
-	"github.com/opst/knitfab/pkg/domain"
-	kpggbg "github.com/opst/knitfab/pkg/domain/garbage/db/postgres"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/scanner"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kpggbg "github.com/opst/knitfab/v2/pkg/domain/garbage/db/postgres"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestGarbage_Pop(t *testing.T) {

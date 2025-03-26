@@ -3,8 +3,8 @@ package domain_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
 )
 
 func TestTagSet_New(t *testing.T) {

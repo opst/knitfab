@@ -3,8 +3,8 @@ package combination_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	combo "github.com/opst/knitfab/pkg/utils/combination"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	combo "github.com/opst/knitfab/v2/pkg/utils/combination"
 )
 
 func TestMapCartesian(t *testing.T) {

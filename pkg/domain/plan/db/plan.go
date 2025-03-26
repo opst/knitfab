@@ -3,8 +3,8 @@ package db
 import (
 	"context"
 
-	types "github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/logic"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/logic"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 

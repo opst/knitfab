@@ -3,8 +3,8 @@ package nominator
 import (
 	"context"
 
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/domain"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	"github.com/opst/knitfab/v2/pkg/domain"
 )
 
 type Nominator interface {

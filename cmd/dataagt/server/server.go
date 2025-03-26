@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab/pkg/utils/retry"
+	"github.com/opst/knitfab/v2/pkg/utils/retry"
 )
 
 type Mode string

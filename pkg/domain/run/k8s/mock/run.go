@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/run/k8s"
-	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/run/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/run/k8s/worker"
 )
 
 type MockRunInterface struct {

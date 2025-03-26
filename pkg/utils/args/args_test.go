@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/v2/pkg/utils/args"
 )
 
 type Even int

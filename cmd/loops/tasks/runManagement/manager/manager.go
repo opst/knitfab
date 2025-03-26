@@ -3,8 +3,8 @@ package manager
 import (
 	"context"
 
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/runManagementHook"
+	"github.com/opst/knitfab/v2/pkg/domain"
 )
 
 type Manager func(

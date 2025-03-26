@@ -3,10 +3,10 @@ package gc
 import (
 	"context"
 
-	"github.com/opst/knitfab/cmd/loops/loop/recurring"
-	"github.com/opst/knitfab/pkg/domain"
-	kdbgarbage "github.com/opst/knitfab/pkg/domain/garbage/db"
-	k8sgarbage "github.com/opst/knitfab/pkg/domain/garbage/k8s"
+	"github.com/opst/knitfab/v2/cmd/loops/loop/recurring"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kdbgarbage "github.com/opst/knitfab/v2/pkg/domain/garbage/db"
+	k8sgarbage "github.com/opst/knitfab/v2/pkg/domain/garbage/k8s"
 )
 
 // initial value for task

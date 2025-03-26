@@ -5,17 +5,17 @@ import (
 	"errors"
 	"testing"
 
-	dara "github.com/opst/knitfab-api-types/data"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab-api-types/tags"
-	apitag "github.com/opst/knitfab-api-types/tags"
-	rmock "github.com/opst/knitfab/cmd/knit/rest/mock"
-	data_tag "github.com/opst/knitfab/cmd/knit/subcommands/data/tag"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	dara "github.com/opst/knitfab-api-types/v2/data"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	apitag "github.com/opst/knitfab-api-types/v2/tags"
+	rmock "github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	data_tag "github.com/opst/knitfab/v2/cmd/knit/subcommands/data/tag"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestDataTag(t *testing.T) {

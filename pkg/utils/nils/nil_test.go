@@ -3,7 +3,7 @@ package nils_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/nils"
+	"github.com/opst/knitfab/v2/pkg/utils/nils"
 )
 
 func TestIfNotNil(t *testing.T) {

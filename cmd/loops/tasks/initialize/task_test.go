@@ -5,16 +5,16 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	apiruns "github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/cmd/loops/tasks/initialize"
-	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	types "github.com/opst/knitfab/pkg/domain"
-	kdbrunmock "github.com/opst/knitfab/pkg/domain/run/db/mock"
-	k8srunmock "github.com/opst/knitfab/pkg/domain/run/k8s/mock"
-	"github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	apiruns "github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab/v2/cmd/loops/hook"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/initialize"
+	bindruns "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	kdbrunmock "github.com/opst/knitfab/v2/pkg/domain/run/db/mock"
+	k8srunmock "github.com/opst/knitfab/v2/pkg/domain/run/k8s/mock"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestTask_Outside_of_PickAndSetStatus(t *testing.T) {

@@ -6,14 +6,14 @@ import (
 	"io"
 	"strings"
 
-	"github.com/opst/knitfab-api-types/data"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab-api-types/tags"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/maps"
+	"github.com/opst/knitfab-api-types/v2/data"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab-api-types/v2/tags"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/maps"
 )
 
 type RootNode struct {

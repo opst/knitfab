@@ -5,7 +5,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/opst/knitfab/cmd/empty/empty"
+	"github.com/opst/knitfab/v2/cmd/empty/empty"
 )
 
 func TestAssertEmpty(t *testing.T) {

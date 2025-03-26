@@ -1,6 +1,6 @@
 package plan
 
-import "github.com/opst/knitfab/pkg/domain/plan/db"
+import "github.com/opst/knitfab/v2/pkg/domain/plan/db"
 
 type Interface interface {
 	Database() db.PlanInterface

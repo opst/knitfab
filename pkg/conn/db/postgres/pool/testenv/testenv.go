@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v4/pgxpool"
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 
-	k8stestenv "github.com/opst/knitfab/pkg/conn/k8s/testenv"
+	k8stestenv "github.com/opst/knitfab/v2/pkg/conn/k8s/testenv"
 )
 
 type pg struct {

@@ -15,14 +15,14 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	kcx "github.com/opst/knitfab/pkg/configs/extras"
-	kcf "github.com/opst/knitfab/pkg/configs/frontend"
-	kpg "github.com/opst/knitfab/pkg/domain/knitfab/db/postgres"
-	"github.com/opst/knitfab/pkg/utils/echoutil"
-	"github.com/opst/knitfab/pkg/utils/filewatch"
-	kstrings "github.com/opst/knitfab/pkg/utils/strings"
+	kcx "github.com/opst/knitfab/v2/pkg/configs/extras"
+	kcf "github.com/opst/knitfab/v2/pkg/configs/frontend"
+	kpg "github.com/opst/knitfab/v2/pkg/domain/knitfab/db/postgres"
+	"github.com/opst/knitfab/v2/pkg/utils/echoutil"
+	"github.com/opst/knitfab/v2/pkg/utils/filewatch"
+	kstrings "github.com/opst/knitfab/v2/pkg/utils/strings"
 
-	"github.com/opst/knitfab/cmd/knitd/handlers"
+	"github.com/opst/knitfab/v2/cmd/knitd/handlers"
 )
 
 //go:embed CREDITS

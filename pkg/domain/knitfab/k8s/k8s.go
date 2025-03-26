@@ -1,12 +1,12 @@
 package k8s
 
 import (
-	bconf "github.com/opst/knitfab/pkg/configs/backend"
-	data "github.com/opst/knitfab/pkg/domain/data/k8s"
-	garbage "github.com/opst/knitfab/pkg/domain/garbage/k8s"
-	keychain "github.com/opst/knitfab/pkg/domain/keychain/k8s"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	run "github.com/opst/knitfab/pkg/domain/run/k8s"
+	bconf "github.com/opst/knitfab/v2/pkg/configs/backend"
+	data "github.com/opst/knitfab/v2/pkg/domain/data/k8s"
+	garbage "github.com/opst/knitfab/v2/pkg/domain/garbage/k8s"
+	keychain "github.com/opst/knitfab/v2/pkg/domain/keychain/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	run "github.com/opst/knitfab/v2/pkg/domain/run/k8s"
 )
 
 type KubernetesInterfaces interface {

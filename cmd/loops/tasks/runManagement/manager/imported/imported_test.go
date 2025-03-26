@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	apiruns "github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager/imported"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/try"
+	apiruns "github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab/v2/cmd/loops/hook"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/manager/imported"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/runManagementHook"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestImportedManager(t *testing.T) {

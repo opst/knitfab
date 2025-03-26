@@ -3,7 +3,7 @@ package args_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/args"
+	"github.com/opst/knitfab/v2/pkg/utils/args"
 )
 
 func TestDepth(t *testing.T) {

@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log"
 
-	apitag "github.com/opst/knitfab-api-types/tags"
-	kenv "github.com/opst/knitfab/cmd/knit/env"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/subcommands/common"
-	kargs "github.com/opst/knitfab/pkg/utils/args"
+	apitag "github.com/opst/knitfab-api-types/v2/tags"
+	kenv "github.com/opst/knitfab/v2/cmd/knit/env"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/common"
+	kargs "github.com/opst/knitfab/v2/pkg/utils/args"
 	"github.com/youta-t/flarc"
 )
 

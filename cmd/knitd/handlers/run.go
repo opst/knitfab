@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	apiruns "github.com/opst/knitfab-api-types/runs"
-	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	bindrun "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	"github.com/opst/knitfab/pkg/domain"
-	kerr "github.com/opst/knitfab/pkg/domain/errors"
-	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
-	kstrings "github.com/opst/knitfab/pkg/utils/strings"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	apiruns "github.com/opst/knitfab-api-types/v2/runs"
+	binderr "github.com/opst/knitfab/v2/pkg/api-types-binding/errors"
+	bindrun "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kerr "github.com/opst/knitfab/v2/pkg/domain/errors"
+	kdbrun "github.com/opst/knitfab/v2/pkg/domain/run/db"
+	kstrings "github.com/opst/knitfab/v2/pkg/utils/strings"
 )
 
 func FindRunHandler(dbRun kdbrun.Interface) echo.HandlerFunc {

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/cmd/loops/loop"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/cmd/loops/loop"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 // get latency per waiting channel

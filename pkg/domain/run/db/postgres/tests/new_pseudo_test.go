@@ -8,17 +8,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
-	"github.com/opst/knitfab/pkg/domain"
-	kerr "github.com/opst/knitfab/pkg/domain/errors"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables/matcher"
-	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	kpgnommock "github.com/opst/knitfab/pkg/domain/nomination/db/mock"
-	kpgrun "github.com/opst/knitfab/pkg/domain/run/db/postgres"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/scanner"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kerr "github.com/opst/knitfab/v2/pkg/domain/errors"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables/matcher"
+	th "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
+	kpgnommock "github.com/opst/knitfab/v2/pkg/domain/nomination/db/mock"
+	kpgrun "github.com/opst/knitfab/v2/pkg/domain/run/db/postgres"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 type mockRunNamingConvention struct {

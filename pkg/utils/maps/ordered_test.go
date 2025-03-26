@@ -3,8 +3,8 @@ package maps
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/tuple"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/tuple"
 )
 
 func TestOrderedMap(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
-	"github.com/opst/knitfab/pkg/utils/base64marshall"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
+	"github.com/opst/knitfab/v2/pkg/utils/base64marshall"
 )
 
 type MarshalKey struct {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 

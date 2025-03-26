@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	common "github.com/opst/knitfab/cmd/knit/subcommands/common"
-	"github.com/opst/knitfab/pkg/utils/try"
+	common "github.com/opst/knitfab/v2/cmd/knit/subcommands/common"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestDefaultCommonFlags(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/opst/knitfab/cmd/knitd/handlers"
-	"github.com/opst/knitfab/pkg/configs/extras"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/cmd/knitd/handlers"
+	"github.com/opst/knitfab/v2/pkg/configs/extras"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestRewriter(t *testing.T) {

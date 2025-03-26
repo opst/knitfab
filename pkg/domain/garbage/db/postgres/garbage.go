@@ -3,9 +3,9 @@ package postgres
 import (
 	"context"
 
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	types "github.com/opst/knitfab/pkg/domain"
-	kgarbage "github.com/opst/knitfab/pkg/domain/garbage/db"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	kgarbage "github.com/opst/knitfab/v2/pkg/domain/garbage/db"
 )
 
 type pgGarbage struct {

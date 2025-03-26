@@ -11,16 +11,16 @@ import (
 	"strings"
 	"testing"
 
-	kenv "github.com/opst/knitfab/cmd/knit/env"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
-	mock "github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/pkg/utils/try"
+	kenv "github.com/opst/knitfab/v2/cmd/knit/env"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
+	mock "github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 	"github.com/youta-t/flarc"
 
-	data_pull "github.com/opst/knitfab/cmd/knit/subcommands/data/pull"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/utils/cmp"
+	data_pull "github.com/opst/knitfab/v2/cmd/knit/subcommands/data/pull"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/internal/commandline"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
 )
 
 type MockFileEntry struct {

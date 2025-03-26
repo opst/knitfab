@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain"
-	dbmock "github.com/opst/knitfab/pkg/domain/garbage/db/mock"
-	k8smock "github.com/opst/knitfab/pkg/domain/garbage/k8s/mock"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	dbmock "github.com/opst/knitfab/v2/pkg/domain/garbage/db/mock"
+	k8smock "github.com/opst/knitfab/v2/pkg/domain/garbage/k8s/mock"
 )
 
 func TestGarbageCollectionTask(t *testing.T) {
