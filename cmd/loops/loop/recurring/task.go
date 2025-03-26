@@ -3,7 +3,7 @@ package recurring
 import (
 	"context"
 
-	"github.com/opst/knitfab/cmd/loops/loop"
+	"github.com/opst/knitfab/v2/cmd/loops/loop"
 )
 
 // Return:

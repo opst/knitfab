@@ -1,6 +1,6 @@
 package schema
 
-import "github.com/opst/knitfab/pkg/domain/schema/db"
+import "github.com/opst/knitfab/v2/pkg/domain/schema/db"
 
 type Interface interface {
 	Database() db.SchemaInterface

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/opst/knitfab/pkg/configs/extras"
+	"github.com/opst/knitfab/v2/pkg/configs/extras"
 )
 
 type Rewriter func(req *url.URL) (*url.URL, error)

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
 	kubeapps "k8s.io/api/apps/v1"
 	kubebatch "k8s.io/api/batch/v1"
 	kubecore "k8s.io/api/core/v1"

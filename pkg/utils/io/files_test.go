@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"testing"
 
-	kio "github.com/opst/knitfab/pkg/utils/io"
-	"github.com/opst/knitfab/pkg/utils/try"
+	kio "github.com/opst/knitfab/v2/pkg/utils/io"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestCreateAll(t *testing.T) {

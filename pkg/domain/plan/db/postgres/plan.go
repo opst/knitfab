@@ -10,14 +10,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	types "github.com/opst/knitfab/pkg/domain"
-	kpgerr "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
-	kpgintr "github.com/opst/knitfab/pkg/domain/internal/db/postgres"
-	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
-	xe "github.com/opst/knitfab/pkg/errors"
-	"github.com/opst/knitfab/pkg/utils/logic"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	kpgerr "github.com/opst/knitfab/v2/pkg/domain/errors/dberrors/postgres"
+	kpgintr "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres"
+	kpgnom "github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres"
+	xe "github.com/opst/knitfab/v2/pkg/errors"
+	"github.com/opst/knitfab/v2/pkg/utils/logic"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 type planPG struct { // implements kdb.PlanInterface

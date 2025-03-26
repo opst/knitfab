@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/nomination/db/postgres/tests/nominate_data/from_non_done_run/internal/testcases"
-	"github.com/opst/knitfab/pkg/domain/nomination/db/postgres/tests/nominate_data/internal/dataset"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres/tests/nominate_data/from_non_done_run/internal/testcases"
+	"github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres/tests/nominate_data/internal/dataset"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestNominator_NominateData_Nominate_Ready(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/opst/knitfab/cmd/loops/loop/recurring"
-	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
+	"github.com/opst/knitfab/v2/cmd/loops/loop/recurring"
+	kdbrun "github.com/opst/knitfab/v2/pkg/domain/run/db"
 )
 
 // initial value for task

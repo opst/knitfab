@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opst/knitfab/cmd/loops/loop"
+	"github.com/opst/knitfab/v2/cmd/loops/loop"
 )
 
 func ParsePolicy(s string) (Policy, error) {

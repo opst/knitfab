@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
 )
 
 func TestPaddingX(t *testing.T) {

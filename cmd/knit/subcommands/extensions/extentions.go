@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/opst/knitfab/cmd/knit/subcommands/common"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/common"
 	"github.com/youta-t/flarc"
 )
 

@@ -6,11 +6,11 @@ import (
 	"io"
 	"testing"
 
-	kenv "github.com/opst/knitfab/cmd/knit/env"
-	"github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/cmd/knit/subcommands/data/purge"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
+	kenv "github.com/opst/knitfab/v2/cmd/knit/env"
+	"github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/data/purge"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/internal/commandline"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
 )
 
 func TestTask(t *testing.T) {

@@ -7,15 +7,15 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v4"
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/domain"
-	kpgerr "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
-	kpgintr "github.com/opst/knitfab/pkg/domain/internal/db/postgres"
-	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
-	krun "github.com/opst/knitfab/pkg/domain/run/db"
-	xe "github.com/opst/knitfab/pkg/errors"
-	"github.com/opst/knitfab/pkg/utils/combination"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kpgerr "github.com/opst/knitfab/v2/pkg/domain/errors/dberrors/postgres"
+	kpgintr "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres"
+	kpgnom "github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres"
+	krun "github.com/opst/knitfab/v2/pkg/domain/run/db"
+	xe "github.com/opst/knitfab/v2/pkg/errors"
+	"github.com/opst/knitfab/v2/pkg/utils/combination"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 type NamingConvention interface {

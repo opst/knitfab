@@ -14,7 +14,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 )
 
 type pgSchema struct {

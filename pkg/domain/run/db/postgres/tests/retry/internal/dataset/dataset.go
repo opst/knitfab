@@ -3,10 +3,10 @@ package dataset
 import (
 	"time"
 
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
-	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	"github.com/opst/knitfab/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables"
+	th "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
 )
 
 var GivenDatabase = tables.Operation{

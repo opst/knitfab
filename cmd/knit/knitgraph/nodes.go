@@ -11,9 +11,9 @@ import (
 	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab-api-types/v2/tags"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/maps"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/maps"
 )
 
 type RootNode struct {

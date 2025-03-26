@@ -3,12 +3,12 @@ package data
 import (
 	"github.com/opst/knitfab-api-types/v2/data"
 	apitags "github.com/opst/knitfab-api-types/v2/tags"
-	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
-	bindrun "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	bindplan "github.com/opst/knitfab/v2/pkg/api-types-binding/plans"
+	bindrun "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	bindtags "github.com/opst/knitfab/v2/pkg/api-types-binding/tags"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 func ComposeSummary(body domain.KnitDataBody) data.Summary {

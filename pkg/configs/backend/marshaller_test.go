@@ -3,7 +3,7 @@ package backend_test
 import (
 	"testing"
 
-	kback "github.com/opst/knitfab/pkg/configs/backend"
+	kback "github.com/opst/knitfab/v2/pkg/configs/backend"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 

@@ -3,11 +3,11 @@ package k8s
 import (
 	"context"
 
-	bconf "github.com/opst/knitfab/pkg/configs/backend"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/domain/run/k8s/run"
-	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
+	bconf "github.com/opst/knitfab/v2/pkg/configs/backend"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/domain/run/k8s/run"
+	"github.com/opst/knitfab/v2/pkg/domain/run/k8s/worker"
 )
 
 type Interface interface {

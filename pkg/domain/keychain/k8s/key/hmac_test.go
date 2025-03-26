@@ -7,9 +7,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
-	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain/k8s/key"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestHS256(t *testing.T) {

@@ -1,6 +1,6 @@
 package maps
 
-import "github.com/opst/knitfab/pkg/utils/tuple"
+import "github.com/opst/knitfab/v2/pkg/utils/tuple"
 
 type orderedMap[K comparable, V any] struct {
 	keys []K

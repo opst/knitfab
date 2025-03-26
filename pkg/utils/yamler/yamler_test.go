@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/yamler"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/yamler"
 	"gopkg.in/yaml.v3"
 )
 

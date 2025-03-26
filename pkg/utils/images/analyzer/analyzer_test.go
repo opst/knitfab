@@ -11,9 +11,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	gcrrand "github.com/google/go-containerregistry/pkg/v1/random"
 	gcrtarball "github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/images/analyzer"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/images/analyzer"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestAnalyze(t *testing.T) {

@@ -12,11 +12,11 @@ import (
 	"github.com/opst/knitfab-api-types/v2/data"
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	apitags "github.com/opst/knitfab-api-types/v2/tags"
-	binddata "github.com/opst/knitfab/pkg/api-types-binding/data"
-	binderr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	"github.com/opst/knitfab/pkg/domain"
-	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
-	kerr "github.com/opst/knitfab/pkg/domain/errors"
+	binddata "github.com/opst/knitfab/v2/pkg/api-types-binding/data"
+	binderr "github.com/opst/knitfab/v2/pkg/api-types-binding/errors"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kdbdata "github.com/opst/knitfab/v2/pkg/domain/data/db"
+	kerr "github.com/opst/knitfab/v2/pkg/domain/errors"
 )
 
 func GetDataForDataHandler(dbData kdbdata.DataInterface) echo.HandlerFunc {

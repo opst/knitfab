@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	configs "github.com/opst/knitfab/pkg/configs/backend"
+	configs "github.com/opst/knitfab/v2/pkg/configs/backend"
 
-	knitfab "github.com/opst/knitfab/pkg/domain/knitfab"
+	knitfab "github.com/opst/knitfab/v2/pkg/domain/knitfab"
 )
 
 //go:embed CREDITS

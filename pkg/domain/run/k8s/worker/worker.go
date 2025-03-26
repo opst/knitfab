@@ -5,11 +5,11 @@ import (
 	"io"
 	"time"
 
-	bconf "github.com/opst/knitfab/pkg/configs/backend"
-	types "github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/metasource"
-	"github.com/opst/knitfab/pkg/utils/retry"
+	bconf "github.com/opst/knitfab/v2/pkg/configs/backend"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/metasource"
+	"github.com/opst/knitfab/v2/pkg/utils/retry"
 	kubebatch "k8s.io/api/batch/v1"
 )
 

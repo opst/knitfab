@@ -5,15 +5,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/proxy"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
-	types "github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
-	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	kpgrun "github.com/opst/knitfab/pkg/domain/run/db/postgres"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/proxy"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/scanner"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables"
+	th "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
+	kpgrun "github.com/opst/knitfab/v2/pkg/domain/run/db/postgres"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestDelete_Worker(t *testing.T) {

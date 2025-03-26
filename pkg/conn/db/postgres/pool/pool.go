@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 // something begins SQL Transaction

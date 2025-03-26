@@ -10,12 +10,12 @@ import (
 
 	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab-api-types/v2/tags"
-	"github.com/opst/knitfab/cmd/knit/env"
-	"github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	plan_resource "github.com/opst/knitfab/cmd/knit/subcommands/plan/resource"
-	"github.com/opst/knitfab/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/cmd/knit/env"
+	"github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/internal/commandline"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	plan_resource "github.com/opst/knitfab/v2/cmd/knit/subcommands/plan/resource"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 

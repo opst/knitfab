@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/data/k8s/dataagt"
 )
 
 type MockK8sDataInterface struct {

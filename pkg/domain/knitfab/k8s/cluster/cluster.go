@@ -18,8 +18,8 @@ import (
 	applyconfigurations "k8s.io/client-go/applyconfigurations/core/v1"
 	k8s "k8s.io/client-go/kubernetes"
 
-	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
-	"github.com/opst/knitfab/pkg/utils/retry"
+	k8serrors "github.com/opst/knitfab/v2/pkg/domain/errors/k8serrors"
+	"github.com/opst/knitfab/v2/pkg/utils/retry"
 )
 
 // subset of k8s.Clientset

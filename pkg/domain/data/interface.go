@@ -1,8 +1,8 @@
 package data
 
 import (
-	"github.com/opst/knitfab/pkg/domain/data/db"
-	"github.com/opst/knitfab/pkg/domain/data/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/data/db"
+	"github.com/opst/knitfab/v2/pkg/domain/data/k8s"
 )
 
 type Interface interface {

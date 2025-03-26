@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	prof "github.com/opst/knitfab/cmd/knit/config/profiles"
+	prof "github.com/opst/knitfab/v2/cmd/knit/config/profiles"
 	"gopkg.in/yaml.v3"
 )
 

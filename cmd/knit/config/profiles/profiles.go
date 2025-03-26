@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/hectane/go-acl"
-	"github.com/opst/knitfab/cmd/knit/config/open"
+	"github.com/opst/knitfab/v2/cmd/knit/config/open"
 	yaml "gopkg.in/yaml.v3"
 )
 

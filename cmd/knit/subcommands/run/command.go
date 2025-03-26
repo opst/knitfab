@@ -1,11 +1,11 @@
 package run
 
 import (
-	run_find "github.com/opst/knitfab/cmd/knit/subcommands/run/find"
-	run_retry "github.com/opst/knitfab/cmd/knit/subcommands/run/retry"
-	run_rm "github.com/opst/knitfab/cmd/knit/subcommands/run/rm"
-	run_show "github.com/opst/knitfab/cmd/knit/subcommands/run/show"
-	run_stop "github.com/opst/knitfab/cmd/knit/subcommands/run/stop"
+	run_find "github.com/opst/knitfab/v2/cmd/knit/subcommands/run/find"
+	run_retry "github.com/opst/knitfab/v2/cmd/knit/subcommands/run/retry"
+	run_rm "github.com/opst/knitfab/v2/cmd/knit/subcommands/run/rm"
+	run_show "github.com/opst/knitfab/v2/cmd/knit/subcommands/run/show"
+	run_stop "github.com/opst/knitfab/v2/cmd/knit/subcommands/run/stop"
 	"github.com/youta-t/flarc"
 )
 

@@ -10,9 +10,9 @@ import (
 	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab-api-types/v2/tags"
-	"github.com/opst/knitfab/cmd/knit/knitgraph"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/cmd/knit/knitgraph"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestGenerateDot(t *testing.T) {

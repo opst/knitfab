@@ -5,8 +5,8 @@ import (
 
 	apiplans "github.com/opst/knitfab-api-types/v2/plans"
 	apitags "github.com/opst/knitfab-api-types/v2/tags"
-	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
-	"github.com/opst/knitfab/pkg/domain"
+	bindplan "github.com/opst/knitfab/v2/pkg/api-types-binding/plans"
+	"github.com/opst/knitfab/v2/pkg/domain"
 )
 
 func TestComposeDetail(t *testing.T) {

@@ -11,10 +11,10 @@ import (
 
 	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab-api-types/v2/tags"
-	"github.com/opst/knitfab/cmd/knit/env"
-	plan_template "github.com/opst/knitfab/cmd/knit/subcommands/plan/template"
-	"github.com/opst/knitfab/pkg/utils/images/analyzer"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/cmd/knit/env"
+	plan_template "github.com/opst/knitfab/v2/cmd/knit/subcommands/plan/template"
+	"github.com/opst/knitfab/v2/pkg/utils/images/analyzer"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestNewPlanFromScratch(t *testing.T) {

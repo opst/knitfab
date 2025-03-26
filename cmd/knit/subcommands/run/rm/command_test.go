@@ -6,14 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	kenv "github.com/opst/knitfab/cmd/knit/env"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	run_rm "github.com/opst/knitfab/cmd/knit/subcommands/run/rm"
-	"github.com/opst/knitfab/pkg/utils/try"
+	kprof "github.com/opst/knitfab/v2/cmd/knit/config/profiles"
+	kenv "github.com/opst/knitfab/v2/cmd/knit/env"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
+	"github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/internal/commandline"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	run_rm "github.com/opst/knitfab/v2/cmd/knit/subcommands/run/rm"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestDeleteCommand(t *testing.T) {

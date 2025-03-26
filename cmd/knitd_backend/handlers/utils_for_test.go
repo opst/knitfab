@@ -15,13 +15,13 @@ import (
 	"strings"
 	"time"
 
-	types "github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/data/k8s/dataagt"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/domain/run/k8s/worker"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	kio "github.com/opst/knitfab/pkg/utils/io"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/data/k8s/dataagt"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/domain/run/k8s/worker"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	kio "github.com/opst/knitfab/v2/pkg/utils/io"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 type responseDescriptor struct {

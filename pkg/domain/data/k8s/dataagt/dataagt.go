@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	bconf "github.com/opst/knitfab/pkg/configs/backend"
-	"github.com/opst/knitfab/pkg/domain"
-	data "github.com/opst/knitfab/pkg/domain/data/k8s/data"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	xe "github.com/opst/knitfab/pkg/errors"
-	"github.com/opst/knitfab/pkg/utils/retry"
+	bconf "github.com/opst/knitfab/v2/pkg/configs/backend"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	data "github.com/opst/knitfab/v2/pkg/domain/data/k8s/data"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	xe "github.com/opst/knitfab/v2/pkg/errors"
+	"github.com/opst/knitfab/v2/pkg/utils/retry"
 	kubecore "k8s.io/api/core/v1"
 )
 

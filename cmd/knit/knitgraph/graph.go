@@ -7,7 +7,7 @@ import (
 	"github.com/opst/knitfab-api-types/v2/data"
 	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab-api-types/v2/runs"
-	"github.com/opst/knitfab/pkg/utils/maps"
+	"github.com/opst/knitfab/v2/pkg/utils/maps"
 )
 
 type NodeId string

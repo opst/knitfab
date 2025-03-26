@@ -10,16 +10,16 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	apierr "github.com/opst/knitfab/pkg/api-types-binding/errors"
-	"github.com/opst/knitfab/pkg/domain"
-	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
-	k8sdata "github.com/opst/knitfab/pkg/domain/data/k8s"
-	kerr "github.com/opst/knitfab/pkg/domain/errors"
-	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
-	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
-	k8srun "github.com/opst/knitfab/pkg/domain/run/k8s"
-	"github.com/opst/knitfab/pkg/utils/archive"
-	"github.com/opst/knitfab/pkg/utils/echoutil"
+	apierr "github.com/opst/knitfab/v2/pkg/api-types-binding/errors"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kdbdata "github.com/opst/knitfab/v2/pkg/domain/data/db"
+	k8sdata "github.com/opst/knitfab/v2/pkg/domain/data/k8s"
+	kerr "github.com/opst/knitfab/v2/pkg/domain/errors"
+	k8serrors "github.com/opst/knitfab/v2/pkg/domain/errors/k8serrors"
+	kdbrun "github.com/opst/knitfab/v2/pkg/domain/run/db"
+	k8srun "github.com/opst/knitfab/v2/pkg/domain/run/k8s"
+	"github.com/opst/knitfab/v2/pkg/utils/archive"
+	"github.com/opst/knitfab/v2/pkg/utils/echoutil"
 )
 
 func GetRunLogHandler(

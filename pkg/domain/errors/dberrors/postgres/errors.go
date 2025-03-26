@@ -3,7 +3,7 @@ package postgres
 import (
 	"fmt"
 
-	domerr "github.com/opst/knitfab/pkg/domain/errors"
+	domerr "github.com/opst/knitfab/v2/pkg/domain/errors"
 )
 
 // requested data is missing.

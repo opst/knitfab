@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	bconf "github.com/opst/knitfab/pkg/configs/backend"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/data/k8s/data"
-	k8serrors "github.com/opst/knitfab/pkg/domain/errors/k8serrors"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/utils/retry"
+	bconf "github.com/opst/knitfab/v2/pkg/configs/backend"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/data/k8s/data"
+	k8serrors "github.com/opst/knitfab/v2/pkg/domain/errors/k8serrors"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/utils/retry"
 )
 
 type Interface interface {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables"
 )
 
 type Run struct {

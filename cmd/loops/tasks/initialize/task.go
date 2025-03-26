@@ -5,12 +5,12 @@ import (
 	"errors"
 
 	apiruns "github.com/opst/knitfab-api-types/v2/runs"
-	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/cmd/loops/loop/recurring"
-	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	"github.com/opst/knitfab/pkg/domain"
-	kdbrun "github.com/opst/knitfab/pkg/domain/run/db"
-	k8srun "github.com/opst/knitfab/pkg/domain/run/k8s"
+	"github.com/opst/knitfab/v2/cmd/loops/hook"
+	"github.com/opst/knitfab/v2/cmd/loops/loop/recurring"
+	bindruns "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kdbrun "github.com/opst/knitfab/v2/pkg/domain/run/db"
+	k8srun "github.com/opst/knitfab/v2/pkg/domain/run/k8s"
 )
 
 // initial value for task

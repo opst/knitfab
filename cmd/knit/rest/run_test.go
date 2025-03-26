@@ -19,10 +19,10 @@ import (
 	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab-api-types/v2/tags"
-	kprof "github.com/opst/knitfab/cmd/knit/config/profiles"
-	krst "github.com/opst/knitfab/cmd/knit/rest"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	kprof "github.com/opst/knitfab/v2/cmd/knit/config/profiles"
+	krst "github.com/opst/knitfab/v2/cmd/knit/rest"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestGetRun(t *testing.T) {

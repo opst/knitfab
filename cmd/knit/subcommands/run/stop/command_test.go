@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/opst/knitfab-api-types/v2/runs"
-	"github.com/opst/knitfab/cmd/knit/env"
-	krst_mock "github.com/opst/knitfab/cmd/knit/rest/mock"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	run_stop "github.com/opst/knitfab/cmd/knit/subcommands/run/stop"
+	"github.com/opst/knitfab/v2/cmd/knit/env"
+	krst_mock "github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/internal/commandline"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	run_stop "github.com/opst/knitfab/v2/cmd/knit/subcommands/run/stop"
 )
 
 func TestCommand_WithFail(t *testing.T) {

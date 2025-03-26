@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/slices"
-	kstr "github.com/opst/knitfab/pkg/utils/strings"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
+	kstr "github.com/opst/knitfab/v2/pkg/utils/strings"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 

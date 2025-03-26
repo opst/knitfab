@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	kio "github.com/opst/knitfab/pkg/utils/io"
+	kio "github.com/opst/knitfab/v2/pkg/utils/io"
 )
 
 func Proxy(cp *echo.Context, url string) error {

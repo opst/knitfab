@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/archive"
-	"github.com/opst/knitfab/pkg/utils/archive/internal"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/utils/archive"
+	"github.com/opst/knitfab/v2/pkg/utils/archive/internal"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func aspath(path string) string {

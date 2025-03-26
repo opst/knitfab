@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/opst/knitfab/cmd/empty/empty"
+	"github.com/opst/knitfab/v2/cmd/empty/empty"
 )
 
 //go:embed CREDITS

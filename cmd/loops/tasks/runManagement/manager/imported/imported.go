@@ -3,10 +3,10 @@ package imported
 import (
 	"context"
 
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/manager"
-	"github.com/opst/knitfab/cmd/loops/tasks/runManagement/runManagementHook"
-	bindruns "github.com/opst/knitfab/pkg/api-types-binding/runs"
-	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/manager"
+	"github.com/opst/knitfab/v2/cmd/loops/tasks/runManagement/runManagementHook"
+	bindruns "github.com/opst/knitfab/v2/pkg/api-types-binding/runs"
+	"github.com/opst/knitfab/v2/pkg/domain"
 )
 
 const PLAN_NAME = domain.Imported

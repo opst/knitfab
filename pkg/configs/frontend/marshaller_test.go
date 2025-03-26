@@ -3,7 +3,7 @@ package frontend_test
 import (
 	"testing"
 
-	kcf "github.com/opst/knitfab/pkg/configs/frontend"
+	kcf "github.com/opst/knitfab/v2/pkg/configs/frontend"
 )
 
 func TestLoadFrontendConfig(t *testing.T) {

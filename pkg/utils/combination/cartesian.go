@@ -1,6 +1,6 @@
 package combination
 
-import "github.com/opst/knitfab/pkg/utils/slices"
+import "github.com/opst/knitfab/v2/pkg/utils/slices"
 
 // from map[K][]T, choices one item for each keys and generate cartesian product.
 //

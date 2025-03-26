@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/utils/retry"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/utils/retry"
 )
 
 func CheckDataIsBound(

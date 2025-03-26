@@ -1,12 +1,12 @@
 package data
 
 import (
-	data_find "github.com/opst/knitfab/cmd/knit/subcommands/data/find"
-	data_lineage "github.com/opst/knitfab/cmd/knit/subcommands/data/lineage"
-	data_pull "github.com/opst/knitfab/cmd/knit/subcommands/data/pull"
-	"github.com/opst/knitfab/cmd/knit/subcommands/data/purge"
-	data_push "github.com/opst/knitfab/cmd/knit/subcommands/data/push"
-	data_tag "github.com/opst/knitfab/cmd/knit/subcommands/data/tag"
+	data_find "github.com/opst/knitfab/v2/cmd/knit/subcommands/data/find"
+	data_lineage "github.com/opst/knitfab/v2/cmd/knit/subcommands/data/lineage"
+	data_pull "github.com/opst/knitfab/v2/cmd/knit/subcommands/data/pull"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/data/purge"
+	data_push "github.com/opst/knitfab/v2/cmd/knit/subcommands/data/push"
+	data_tag "github.com/opst/knitfab/v2/cmd/knit/subcommands/data/tag"
 	"github.com/youta-t/flarc"
 )
 

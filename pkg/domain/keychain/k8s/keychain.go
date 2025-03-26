@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/opst/knitfab/pkg/domain/keychain/k8s/internal"
-	"github.com/opst/knitfab/pkg/domain/keychain/k8s/key"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain/k8s/internal"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain/k8s/key"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
 	kubeapierr "k8s.io/apimachinery/pkg/api/errors"
 	applyconfigurationsCorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 

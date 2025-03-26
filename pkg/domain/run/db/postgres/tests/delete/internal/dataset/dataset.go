@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
-	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables"
+	th "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
 )
 
 var UPLOADED_AT time.Time

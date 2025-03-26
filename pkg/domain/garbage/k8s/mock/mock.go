@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain"
 )
 
 type MockInterface struct {

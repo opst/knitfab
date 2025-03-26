@@ -3,7 +3,7 @@ package function_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/function"
+	"github.com/opst/knitfab/v2/pkg/utils/function"
 )
 
 func TestVoid(t *testing.T) {

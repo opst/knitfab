@@ -8,17 +8,17 @@ import (
 
 	"github.com/jackc/pgconn"
 	pgerrcode "github.com/jackc/pgerrcode"
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/proxy"
-	"github.com/opst/knitfab/pkg/conn/db/postgres/scanner"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/internal/db/postgres/tables"
-	. "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
-	ds "github.com/opst/knitfab/pkg/domain/nomination/db/postgres/tests/nominate_data/internal/dataset"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	fn "github.com/opst/knitfab/pkg/utils/function"
-	"github.com/opst/knitfab/pkg/utils/try"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/proxy"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/scanner"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/tables"
+	. "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
+	kpgnom "github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres"
+	ds "github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres/tests/nominate_data/internal/dataset"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	fn "github.com/opst/knitfab/v2/pkg/utils/function"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 type Testcase struct {

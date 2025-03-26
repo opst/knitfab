@@ -12,14 +12,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/opst/knitfab/cmd/loops/loop/recurring"
-	configs "github.com/opst/knitfab/pkg/configs/backend"
-	cfg_hook "github.com/opst/knitfab/pkg/configs/hook"
-	"github.com/opst/knitfab/pkg/domain"
-	knitfab "github.com/opst/knitfab/pkg/domain/knitfab"
-	"github.com/opst/knitfab/pkg/utils/args"
-	"github.com/opst/knitfab/pkg/utils/filewatch"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/cmd/loops/loop/recurring"
+	configs "github.com/opst/knitfab/v2/pkg/configs/backend"
+	cfg_hook "github.com/opst/knitfab/v2/pkg/configs/hook"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	knitfab "github.com/opst/knitfab/v2/pkg/domain/knitfab"
+	"github.com/opst/knitfab/v2/pkg/utils/args"
+	"github.com/opst/knitfab/v2/pkg/utils/filewatch"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 //go:embed CREDITS

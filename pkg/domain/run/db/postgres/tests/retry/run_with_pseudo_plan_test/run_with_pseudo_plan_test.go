@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/conn/db/postgres/pool/testenv"
-	"github.com/opst/knitfab/pkg/domain"
-	th "github.com/opst/knitfab/pkg/domain/internal/db/postgres/testhelpers"
-	"github.com/opst/knitfab/pkg/domain/run/db/postgres/tests/retry/internal/dataset"
-	"github.com/opst/knitfab/pkg/domain/run/db/postgres/tests/retry/internal/theory"
+	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	th "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres/testhelpers"
+	"github.com/opst/knitfab/v2/pkg/domain/run/db/postgres/tests/retry/internal/dataset"
+	"github.com/opst/knitfab/v2/pkg/domain/run/db/postgres/tests/retry/internal/theory"
 )
 
 func TestRetry_ForRunWithoutImage(t *testing.T) {

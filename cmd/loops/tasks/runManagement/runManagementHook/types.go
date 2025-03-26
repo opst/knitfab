@@ -2,7 +2,7 @@ package runManagementHook
 
 import (
 	apiruns "github.com/opst/knitfab-api-types/v2/runs"
-	"github.com/opst/knitfab/cmd/loops/hook"
+	"github.com/opst/knitfab/v2/cmd/loops/hook"
 )
 
 type KnitfabExtension struct {

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	httptestutil "github.com/opst/knitfab/v2/internal/testutils/http"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 func is[T comparable](a T) func(b T) bool {

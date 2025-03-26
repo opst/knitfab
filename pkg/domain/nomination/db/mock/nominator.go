@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	kpgnom "github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres"
 )
 
 type Call[T any] []T

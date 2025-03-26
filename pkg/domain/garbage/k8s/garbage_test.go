@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/domain/garbage/k8s"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster/mock"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/domain/garbage/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster/mock"
 	kubecore "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"

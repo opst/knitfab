@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/opst/knitfab/cmd/loops/hook"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/cmd/loops/hook"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestWebHook_Before(t *testing.T) {

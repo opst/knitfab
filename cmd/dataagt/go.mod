@@ -1,12 +1,12 @@
-module github.com/opst/knitfab/cmd/dataagt
+module github.com/opst/knitfab/v2/cmd/dataagt
 
 go 1.24.0
 
-replace github.com/opst/knitfab => ../..
+replace github.com/opst/knitfab/v2 => ../..
 
 require (
 	github.com/labstack/echo/v4 v4.13.3
-	github.com/opst/knitfab v1.7.0-beta
+	github.com/opst/knitfab/v2 v2.0.0-beta
 )
 
 require (

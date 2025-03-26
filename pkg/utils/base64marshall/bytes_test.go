@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/base64marshall"
-	"github.com/opst/knitfab/pkg/utils/try"
+	"github.com/opst/knitfab/v2/pkg/utils/base64marshall"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestBytes(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/opst/knitfab/cmd/volume_expander/flagtype"
+	"github.com/opst/knitfab/v2/cmd/volume_expander/flagtype"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 

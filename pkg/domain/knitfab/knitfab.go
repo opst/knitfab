@@ -3,17 +3,17 @@ package knitfab
 import (
 	"context"
 
-	bconf "github.com/opst/knitfab/pkg/configs/backend"
-	connk8s "github.com/opst/knitfab/pkg/conn/k8s"
-	"github.com/opst/knitfab/pkg/domain/data"
-	"github.com/opst/knitfab/pkg/domain/garbage"
-	"github.com/opst/knitfab/pkg/domain/keychain"
-	"github.com/opst/knitfab/pkg/domain/knitfab/db/postgres"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/cluster"
-	"github.com/opst/knitfab/pkg/domain/plan"
-	"github.com/opst/knitfab/pkg/domain/run"
-	"github.com/opst/knitfab/pkg/domain/schema"
+	bconf "github.com/opst/knitfab/v2/pkg/configs/backend"
+	connk8s "github.com/opst/knitfab/v2/pkg/conn/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/data"
+	"github.com/opst/knitfab/v2/pkg/domain/garbage"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/db/postgres"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/cluster"
+	"github.com/opst/knitfab/v2/pkg/domain/plan"
+	"github.com/opst/knitfab/v2/pkg/domain/run"
+	"github.com/opst/knitfab/v2/pkg/domain/schema"
 	"k8s.io/client-go/kubernetes"
 )
 

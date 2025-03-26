@@ -11,14 +11,14 @@ import (
 	pgerrcode "github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/domain"
-	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
-	kpgerr "github.com/opst/knitfab/pkg/domain/errors/dberrors/postgres"
-	kpgintr "github.com/opst/knitfab/pkg/domain/internal/db/postgres"
-	kpgnom "github.com/opst/knitfab/pkg/domain/nomination/db/postgres"
-	"github.com/opst/knitfab/pkg/utils/slices"
-	"github.com/opst/knitfab/pkg/utils/tuple"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kdbdata "github.com/opst/knitfab/v2/pkg/domain/data/db"
+	kpgerr "github.com/opst/knitfab/v2/pkg/domain/errors/dberrors/postgres"
+	kpgintr "github.com/opst/knitfab/v2/pkg/domain/internal/db/postgres"
+	kpgnom "github.com/opst/knitfab/v2/pkg/domain/nomination/db/postgres"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
+	"github.com/opst/knitfab/v2/pkg/utils/tuple"
 )
 
 type dataPG struct { // implements kdb.DataInterface

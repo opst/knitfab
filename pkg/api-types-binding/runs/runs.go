@@ -4,10 +4,10 @@ import (
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab-api-types/v2/runs"
-	bindplan "github.com/opst/knitfab/pkg/api-types-binding/plans"
-	bindtags "github.com/opst/knitfab/pkg/api-types-binding/tags"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	bindplan "github.com/opst/knitfab/v2/pkg/api-types-binding/plans"
+	bindtags "github.com/opst/knitfab/v2/pkg/api-types-binding/tags"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 func ComposeSummary(r domain.RunBody) runs.Summary {

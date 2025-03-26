@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	kpath "github.com/opst/knitfab/pkg/utils/path"
+	kpath "github.com/opst/knitfab/v2/pkg/utils/path"
 )
 
 func TestResolve(t *testing.T) {

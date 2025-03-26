@@ -1,4 +1,4 @@
-module github.com/opst/knitfab
+module github.com/opst/knitfab/v2
 
 go 1.24.0
 

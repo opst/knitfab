@@ -3,10 +3,10 @@ package postgres
 import (
 	"context"
 
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	"github.com/opst/knitfab/pkg/domain"
-	"github.com/opst/knitfab/pkg/utils/slices"
-	"github.com/opst/knitfab/pkg/utils/tuple"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
+	"github.com/opst/knitfab/v2/pkg/utils/tuple"
 )
 
 // Args

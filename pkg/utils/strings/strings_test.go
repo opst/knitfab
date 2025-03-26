@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	kstr "github.com/opst/knitfab/pkg/utils/strings"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	kstr "github.com/opst/knitfab/v2/pkg/utils/strings"
 )
 
 func TestTrimPefixAll(t *testing.T) {

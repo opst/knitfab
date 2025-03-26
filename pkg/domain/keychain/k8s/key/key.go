@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/opst/knitfab/pkg/domain/keychain/k8s/internal"
+	"github.com/opst/knitfab/v2/pkg/domain/keychain/k8s/internal"
 )
 
 // Key for Sign/Verify messages.

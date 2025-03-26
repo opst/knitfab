@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	common "github.com/opst/knitfab/cmd/knit/subcommands/common"
-	"github.com/opst/knitfab/cmd/knit/subcommands/extensions"
-	"github.com/opst/knitfab/cmd/knit/subcommands/internal/commandline"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	common "github.com/opst/knitfab/v2/cmd/knit/subcommands/common"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/extensions"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/internal/commandline"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestFindSubcommand(t *testing.T) {

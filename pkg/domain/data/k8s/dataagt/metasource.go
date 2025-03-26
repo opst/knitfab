@@ -3,10 +3,10 @@ package dataagt
 import (
 	"fmt"
 
-	bconf "github.com/opst/knitfab/pkg/configs/backend"
-	types "github.com/opst/knitfab/pkg/domain"
-	data "github.com/opst/knitfab/pkg/domain/data/k8s/data"
-	"github.com/opst/knitfab/pkg/domain/knitfab/k8s/metasource"
+	bconf "github.com/opst/knitfab/v2/pkg/configs/backend"
+	types "github.com/opst/knitfab/v2/pkg/domain"
+	data "github.com/opst/knitfab/v2/pkg/domain/data/k8s/data"
+	"github.com/opst/knitfab/v2/pkg/domain/knitfab/k8s/metasource"
 	kubecore "k8s.io/api/core/v1"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

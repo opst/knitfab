@@ -9,8 +9,8 @@ import (
 
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	"github.com/opst/knitfab-api-types/v2/tags"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/slices"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )
 
 const (

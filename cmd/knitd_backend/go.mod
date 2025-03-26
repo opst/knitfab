@@ -1,16 +1,16 @@
-module github.com/opst/knitfab/cmd/knitd_backend
+module github.com/opst/knitfab/v2/cmd/knitd_backend
 
 go 1.24.0
 
-replace github.com/opst/knitfab => ../..
+replace github.com/opst/knitfab/v2 => ../..
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/labstack/gommon v0.4.2
-	github.com/opst/knitfab v1.7.0-beta
 	github.com/opst/knitfab-api-types/v2 v2.0.0-beta
+	github.com/opst/knitfab/v2 v2.0.0-beta
 )
 
 require (

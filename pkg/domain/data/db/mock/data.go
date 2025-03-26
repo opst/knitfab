@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/opst/knitfab/pkg/domain"
-	kdbdata "github.com/opst/knitfab/pkg/domain/data/db"
-	dbmock "github.com/opst/knitfab/pkg/domain/internal/db/mock"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	kdbdata "github.com/opst/knitfab/v2/pkg/domain/data/db"
+	dbmock "github.com/opst/knitfab/v2/pkg/domain/internal/db/mock"
 )
 
 type DataInterface struct {

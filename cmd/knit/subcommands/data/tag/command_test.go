@@ -11,11 +11,11 @@ import (
 	"github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab-api-types/v2/tags"
 	apitag "github.com/opst/knitfab-api-types/v2/tags"
-	rmock "github.com/opst/knitfab/cmd/knit/rest/mock"
-	data_tag "github.com/opst/knitfab/cmd/knit/subcommands/data/tag"
-	"github.com/opst/knitfab/cmd/knit/subcommands/logger"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/try"
+	rmock "github.com/opst/knitfab/v2/cmd/knit/rest/mock"
+	data_tag "github.com/opst/knitfab/v2/cmd/knit/subcommands/data/tag"
+	"github.com/opst/knitfab/v2/cmd/knit/subcommands/logger"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 )
 
 func TestDataTag(t *testing.T) {

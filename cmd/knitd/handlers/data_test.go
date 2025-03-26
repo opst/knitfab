@@ -16,16 +16,16 @@ import (
 	"github.com/opst/knitfab-api-types/v2/plans"
 	"github.com/opst/knitfab-api-types/v2/runs"
 	"github.com/opst/knitfab-api-types/v2/tags"
-	httptestutil "github.com/opst/knitfab/internal/testutils/http"
-	"github.com/opst/knitfab/pkg/domain"
-	dbmock "github.com/opst/knitfab/pkg/domain/data/db/mock"
-	kerr "github.com/opst/knitfab/pkg/domain/errors"
-	"github.com/opst/knitfab/pkg/utils/cmp"
-	"github.com/opst/knitfab/pkg/utils/pointer"
-	"github.com/opst/knitfab/pkg/utils/slices"
-	"github.com/opst/knitfab/pkg/utils/try"
+	httptestutil "github.com/opst/knitfab/v2/internal/testutils/http"
+	"github.com/opst/knitfab/v2/pkg/domain"
+	dbmock "github.com/opst/knitfab/v2/pkg/domain/data/db/mock"
+	kerr "github.com/opst/knitfab/v2/pkg/domain/errors"
+	"github.com/opst/knitfab/v2/pkg/utils/cmp"
+	"github.com/opst/knitfab/v2/pkg/utils/pointer"
+	"github.com/opst/knitfab/v2/pkg/utils/slices"
+	"github.com/opst/knitfab/v2/pkg/utils/try"
 
-	"github.com/opst/knitfab/cmd/knitd/handlers"
+	"github.com/opst/knitfab/v2/cmd/knitd/handlers"
 )
 
 func TestGetDataForDataHandler(t *testing.T) {

@@ -3,8 +3,8 @@ package keychain
 import (
 	"context"
 
-	kpool "github.com/opst/knitfab/pkg/conn/db/postgres/pool"
-	kdbkeychain "github.com/opst/knitfab/pkg/domain/keychain/db"
+	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
+	kdbkeychain "github.com/opst/knitfab/v2/pkg/domain/keychain/db"
 )
 
 type pgKeychain struct {
