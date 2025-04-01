@@ -8,21 +8,22 @@ OPENSSL=${OPENSSL:-openssl}
 
 KUBECTL=${KUBECTL:-kubectl}
 export KUBECONFIG=${KUBECONFIG:-}
+export KUBECONTEXT=${KUBECONTEXT:-$(${KUBECTL} config current-context)}
 
 function message() {
 	echo "$@" >&2
 }
 
 function get_node_ip() {
-	${KUBECTL} get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'
+	${KUBECTL} --context ${KUBECONTEXT} get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'
 }
 
 function alt_names() {
     COUNT=0
     if [ -n "${USE_NODE_IPS}" ] ; then
-        for NAME in $(get_node_ip) ; do
+        for IP in $(get_node_ip) ; do
             COUNT=$((COUNT + 1))
-            echo "IP.${COUNT}=${NAME}"
+            echo "IP.${COUNT}=${IP}"
         done
     fi
     for N in ${NAME} ; do

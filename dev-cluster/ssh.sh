@@ -1,4 +1,6 @@
 #! /bin/bash
-cd ${0%/*}
+set -e
 
-vagrant ssh $@
+HERE=$(cd ${0%/*}; pwd)
+MINIKUBE_PROFILE=${MINIKUBE_PROFILE:-$(cat "${HERE}/.dev-cluster-kube-context")}
+minikube -p ${MINIKUBE_PROFILE} ssh $@
