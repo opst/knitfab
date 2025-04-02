@@ -1,4 +1,5 @@
 #! /bin/bash
-cd ${0%/*}
+HERE=$(cd ${0%/*}; pwd)
 
-vagrant suspend $@
+MINIKUBE_PROFILE=${MINIKUBE_PROFILE:-$(cat "${HERE}/.dev-cluster-kube-context)"}
+minikube -p ${MINIKUBE_PROFILE} stop

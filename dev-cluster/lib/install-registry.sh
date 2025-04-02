@@ -4,7 +4,8 @@ set -e
 HERE=${0%/*}
 KUBECTL=${KUBECTL:-kubectl}
 JQ=${JQ:-jq}
-export KUBECONFIG=${KUBECONFIG:-${HERE}/.sync/kubeconfig/kubeconfig}
+export KUBECONFIG=${KUBECONFIG}
+export KUBECONTEXT=${KUBECONTEXT:-$(${KUBECTL} config current-context)}
 NAMESPACE=${NAMESPACE:-registry}
 
 while [ -n "${1}" ] ; do
@@ -21,23 +22,23 @@ while [ -n "${1}" ] ; do
 done
 
 if [ -n "${RESET_CERT}" ] ; then
-  ${KUBECTL} delete secret registry-tls -n ${NAMESPACE} || :
+  ${KUBECTL} --context ${KUBECONTEXT} delete secret registry-tls -n ${NAMESPACE} || :
   rm -rf ${HERE}/docker-certs/meta
 fi
 
 if [ -n "${UNINSTALL}" ] ; then
-  ${KUBECTL} delete -n ${NAMESPACE} deployment image-registry || :
-  ${KUBECTL} delete -n ${NAMESPACE} service image || :
-  ${KUBECTL} delete -n ${NAMESPACE} pvc registry-backend || :
-  ${KUBECTL} delete pv image-registry-backend || :
-  ${KUBECTL} delete namespace ${NAMESPACE} || :
+  ${KUBECTL} --context ${KUBECONTEXT} delete -n ${NAMESPACE} deployment image-registry || :
+  ${KUBECTL} --context ${KUBECONTEXT} delete -n ${NAMESPACE} service image || :
+  ${KUBECTL} --context ${KUBECONTEXT} delete -n ${NAMESPACE} pvc registry-backend || :
+  ${KUBECTL} --context ${KUBECONTEXT} delete pv image-registry-backend || :
+  ${KUBECTL} --context ${KUBECONTEXT} delete namespace ${NAMESPACE} || :
   exit
 fi
 
-if ${KUBECTL} get namespace ${NAMESPACE} > /dev/null 2>&1 ; then
+if ${KUBECTL} --context ${KUBECONTEXT} get namespace ${NAMESPACE} > /dev/null 2>&1 ; then
 	echo "Namespace ${NAMESPACE} already exists"
 else
-	${KUBECTL} apply -f - <<EOF
+	${KUBECTL} --context ${KUBECONTEXT} apply -f - <<EOF
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -45,36 +46,16 @@ metadata:
 EOF
 fi
 
-mkdir -p ${HERE}/docker-certs/meta
-
-TLSCERT=${HERE}/docker-certs/meta/server.crt
-TLSKEY=${HERE}/docker-certs/meta/server.key
-TLSCACERT=${HERE}/docker-certs/meta/ca.crt
-TLSCAKEY=${HERE}/docker-certs/meta/ca.key
-
-if [ -f ${TLSCERT} ] && [ -f ${TLSKEY} ] ; then
-	echo "TLS certificate and key already exist"
-else
-	${HERE}/new-tlscerts.sh --dest ${HERE}/docker-certs/meta --name meta.registry --node-ips
-fi
-
-if ${KUBECTL} get secret registry-tls -n ${NAMESPACE} > /dev/null 2>&1 ; then
+if ${KUBECTL} --context ${KUBECONTEXT} get secret registry-tls -n ${NAMESPACE} > /dev/null 2>&1 ; then
 	echo "Secret registry-tls already exists"
 else
-	${KUBECTL} create secret tls registry-tls -n ${NAMESPACE} --cert=${TLSCERT} --key=${TLSKEY}
-
-  NODE_IP=$(${KUBECTL} get node -o json knit-gateway | ${JQ} -r '.status.addresses[] | select(.type == "InternalIP") | .address')
-  CERTS_DIR="${HOME}/.docker/certs.d/${NODE_IP}:30005"
-  echo "Importing TLS CA certificate into ${CERTS_DIR} (this may effect when you restart colima)" >&2
-
-  mkdir -p "${CERTS_DIR}"
-  cp ${TLSCACERT} ${CERTS_DIR}/ca.crt
+	${KUBECTL} --context ${KUBECONTEXT} create secret tls registry-tls -n ${NAMESPACE} --cert=${TLSCERT} --key=${TLSKEY}
 fi
 
-if ${KUBECTL} get sc local-storage > /dev/null 2>&1 ; then
+if ${KUBECTL} --context ${KUBECONTEXT} get sc local-storage > /dev/null 2>&1 ; then
   echo "StorageClass \"local-storage\" already exists"
 else
-  ${KUBECTL} apply -f - <<EOF
+  ${KUBECTL} --context ${KUBECONTEXT} apply -f - <<EOF
 # https://kubernetes.io/docs/concepts/storage/storage-classes/#local
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -85,10 +66,10 @@ volumeBindingMode: WaitForFirstConsumer
 EOF
 fi
 
-if ${KUBECTL} get service -n ${NAMESPACE} image > /dev/null 2>&1 ; then
+if ${KUBECTL} --context ${KUBECONTEXT} get service -n ${NAMESPACE} image > /dev/null 2>&1 ; then
 	echo "Image Registry Service \"image\" already exists"
 else
-	${KUBECTL} apply -n ${NAMESPACE} -f - <<EOF
+	${KUBECTL} --context ${KUBECONTEXT} apply -n ${NAMESPACE} -f - <<EOF
 apiVersion: v1
 kind: Service
 metadata:
@@ -125,7 +106,7 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-            - knit-gateway
+            - knitfab-dev-cluster
   claimRef:
     namespace: ${NAMESPACE}
     name: registry-backend

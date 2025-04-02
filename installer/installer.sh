@@ -41,7 +41,7 @@ function abspath() {
 }
 
 function get_node_ip() {
-	${KUBECTL} get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'
+	${KUBECTL} --context ${KUBECONTEXT} get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'
 }
 
 function prepare_install() {
@@ -288,7 +288,7 @@ extraApi:
 EOF
 
 	if [ -n "${PULL_SECRET}" ] ; then
-		${KUBECTL} create secret generic knitfab-regcred \
+		${KUBECTL} --context ${KUBECONTEXT} create secret generic knitfab-regcred \
 			--type=kubernetes.io/dockerconfigjson --from-file "${PULL_SECRET}" \
 			--dry-run=client -o yaml > ./knit-image-registry-secret.yaml
 	fi
@@ -456,7 +456,7 @@ EOF
 			cat <<EOF > "${SETTINGS}/handouts/knitprofile"
 # knit profile file
 # pass this file to your knit client in your project directory: \`knit init knitprofile\`
-apiRoot: https://${IP}:$(${KUBECTL} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
+apiRoot: https://${IP}:$(${KUBECTL} --context ${KUBECONTEXT} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
 cert:
   ca: $(cat "${SETTINGS}/certs/ca.crt" | base64 | tr -d '\r\n')
 EOF
@@ -464,12 +464,12 @@ EOF
 			cat <<EOF > "${SETTINGS}/handouts/knitprofile"
 # knit profile file
 # pass this file to your knit client in your project directory: \`knit init knitprofile\`
-apiRoot: http://${IP}:$(${KUBECTL} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
+apiRoot: http://${IP}:$(${KUBECTL} --context ${KUBECONTEXT} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
 cert: {}
 EOF
 		fi
 
-		DOCKER_CERT_D="${SETTINGS}/handouts/docker/certs.d/${IP}:"$(${KUBECTL} -n ${NAMESPACE} get service/image-registry -o jsonpath="{.spec.ports[?(@.name==\"image-registry\")].nodePort}")
+		DOCKER_CERT_D="${SETTINGS}/handouts/docker/certs.d/${IP}:"$(${KUBECTL} --context ${KUBECONTEXT} -n ${NAMESPACE} get service/image-registry -o jsonpath="{.spec.ports[?(@.name==\"image-registry\")].nodePort}")
 		mkdir -p "${DOCKER_CERT_D}"
 		if [ -f "${SETTINGS}/certs/ca.crt" ] ; then
 			cp "${SETTINGS}/certs/ca.crt" "${DOCKER_CERT_D}/ca.crt"
@@ -490,7 +490,7 @@ function install() {
 	echo kubeconfig = ${KUBECONFIG}
 
 	if [ -r "${SETTINGS}/knit-image-registry-secret.yaml" ] ; then
-		${KUBECTL} apply -n ${NAMESPACE} -f "${SETTINGS}/knit-image-registry-secret.yaml"
+		${KUBECTL} --context ${KUBECONTEXT} apply -n ${NAMESPACE} -f "${SETTINGS}/knit-image-registry-secret.yaml"
 		SET_PULL_SECRET='--set imagePullSecret=knitfab-regcred'
 	fi
 
@@ -565,6 +565,7 @@ set -e
 # Knitfab Uninstaller
 
 export KUBECONFIG="\${KUBECONFIG:-${KUBECONFIG}}"
+export HELM_KUBECONTEXT="\${HELM_KUBECONTEXT:-${KUBECONTEXT}}"
 JQ=\${JQ:-jq}
 
 if [ "\$1" == "--hard" ] ; then
@@ -600,14 +601,14 @@ if ${HELM} status -n ${NAMESPACE} knit-db-postgres > /dev/null 2> /dev/null ; th
 	if [ -z "\${EXTERNAL}" ] ; then
 		DATABASE_COMPONENT=\$(${HELM} get values -n ${NAMESPACE} knit-db-postgres -o json --all | \${JQ} -r '.component')
 		PVC="\${DATABASE_COMPONENT}-pgdata"
-		PV=\$(${KUBECTL} -n ${NAMESPACE} get pvc \${PVC} -o json | \${JQ} -r '.spec.volumeName')
+		PV=\$(${KUBECTL} --context \${HELM_KUBECONTEXT} -n ${NAMESPACE} get pvc \${PVC} -o json | \${JQ} -r '.spec.volumeName')
 	fi
 
 	${HELM} uninstall -n ${NAMESPACE} knit-db-postgres || :
 
 	if [ -z "\${EXTERNAL}" ] ; then
-		${KUBECTL} wait -n ${NAMESPACE} --for=delete pvc \${PVC} --timeout=-1s
-		${KUBECTL} wait -n ${NAMESPACE} --for=delete pv \${PV} --timeout=-1s
+		${KUBECTL} --context \${HELM_KUBECONTEXT} wait -n ${NAMESPACE} --for=delete pvc \${PVC} --timeout=-1s
+		${KUBECTL} --context \${HELM_KUBECONTEXT} wait -n ${NAMESPACE} --for=delete pv \${PV} --timeout=-1s
 	fi
 fi
 
@@ -615,19 +616,19 @@ if ${HELM} status -n ${NAMESPACE} knit-image-registry > /dev/null 2> /dev/null ;
 	IMREG_COMPONENT=\$(${HELM} get values -n ${NAMESPACE} knit-image-registry -o json --all | \${JQ} -r '.component')
 
 	PVC="\${IMREG_COMPONENT}-registry-root"
-	PV=\$(${KUBECTL} -n ${NAMESPACE} get pvc \${PVC} -o json | \${JQ} -r '.spec.volumeName')
+	PV=\$(${KUBECTL} --context \${HELM_KUBECONTEXT} -n ${NAMESPACE} get pvc \${PVC} -o json | \${JQ} -r '.spec.volumeName')
 
 	${HELM} uninstall -n ${NAMESPACE} knit-image-registry || :
 
-	${KUBECTL} wait -n ${NAMESPACE} --for=delete pvc \${PVC} --timeout=-1s
-	${KUBECTL} wait -n ${NAMESPACE} --for=delete pv \${PV} --timeout=-1s
+	${KUBECTL} --context \${HELM_KUBECONTEXT} wait -n ${NAMESPACE} --for=delete pvc \${PVC} --timeout=-1s
+	${KUBECTL} --context \${HELM_KUBECONTEXT} wait -n ${NAMESPACE} --for=delete pv \${PV} --timeout=-1s
 fi
 
 ${HELM} uninstall -n ${NAMESPACE} knit-certs || :
 
 STORAGE_CLASS_DATA=\$(${HELM} get values -n ${NAMESPACE} knit-storage-nfs -o json --all | \${JQ} -r '.class.data')
-for PVC in \$(${KUBECTL} -n ${NAMESPACE} get pvc -o json | \${JQ} -r ".items[] | select(.spec.storageClassName == \\"\${STORAGE_CLASS_DATA}\\") | .metadata.name") ; do
-	${KUBECTL} delete -n ${NAMESPACE} pvc --wait \${PVC}
+for PVC in \$(${KUBECTL} --context \${HELM_KUBECONTEXT} -n ${NAMESPACE} get pvc -o json | \${JQ} -r ".items[] | select(.spec.storageClassName == \\"\${STORAGE_CLASS_DATA}\\") | .metadata.name") ; do
+	${KUBECTL} --context \${HELM_KUBECONTEXT} delete -n ${NAMESPACE} pvc --wait \${PVC}
 done
 ${HELM} uninstall -n ${NAMESPACE} knit-storage-nfs || :
 EOF
@@ -707,6 +708,9 @@ while [ 0 -lt ${#} ] ; do
 		# kubernetes related options
 		--kubeconfig)
 			KUBECONFIG=${1}; shift || :
+			;;
+		--kubecontext)
+			KUBECONTEXT=${1}; shift || :
 			;;
 		--namespace|-n)
 			NAMESPACE=${1}; shift || :
@@ -855,6 +859,21 @@ else
 	exit 1
 fi
 export KUBECONFIG="${SETTINGS}/kubeconfig"
+
+if [ -z "${KUBECONTEXT}" ] ; then
+	if [ -r "${SETTINGS}/kubecontext" ] ; then
+		KUBECONTEXT=$(cat "${SETTINGS}/kubecontext")
+	else
+		KUBECONTEXT=$(${KUBECTL} config current-context)
+	fi
+fi
+if [ -z "${KUBECONTEXT}" ] ; then
+	message "ERROR: KUBECONTEXT not found."
+	exit 1
+fi
+echo ${KUBECONTEXT} > "${SETTINGS}/kubecontext"
+export KUBECONTEXT
+export HELM_KUBECONTEXT=${KUBECONTEXT}
 
 # # # Parameter Validation & Normalization # # #
 

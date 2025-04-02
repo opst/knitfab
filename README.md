@@ -194,20 +194,18 @@ For more detail, read `./build/build.sh` and `./installer/installer.sh`
 The dev-cluster: A k8s cluster for developers
 ==================================
 
-This repository contains provisioning scripts to deploy local Kubernetes cluster, based on **virtualbox**+**vagrant**+**ansible**.
+This repository contains provisioning scripts to deploy local Kubernetes cluster, based on **minikube**.
 
 You can use the cluster to try out or debug Knitfab.
 
 ### Prerequisites
 
-- [vagrant](https://www.vagrantup.com/docs/installation)
-- [virtualbox](https://www.virtualbox.org/) : A dependency of vagrant, to create virtual machiness.
-- [poetry](https://python-poetry.org/) : Used to install ansible.
-- [python](https://www.python.org/) (3.10+) : A dependency of Poetry.
+- [minikube](https://minikube.sigs.k8s.io/docs/): Platform of dev-cluster
+- [qemu](https://www.qemu.org/): For the driver of minikube
 - [docker, docker compose](https://docs.docker.com/) : Build and push image.
-- (optional) [pyenv](https://github.com/pyenv/pyenv) : Used to manage your python installation.
-
-Additionaly, `dev-cluster` uses [ansible](https://docs.ansible.com/ansible/latest/index.html), but it will be installed by Poetry.
+- [helm](https://helm.sh/) and [kubectl](https://kubernetes.io/docs/reference/kubectl/): To install Knitfab to dev-cluster
+- [openssl](https://openssl.org/): To generate TLS certifications.
+- [jq](https://jqlang.org/)
 
 ### To start dev-cluster
 
@@ -219,49 +217,18 @@ $ ./dev-cluster/up.sh
 
 This command does...
 
-- Provision Kubernetes Cluster (with Vagrant+Ansible) of 3 VMs (VirtualBox)
-- Deploy CNI (calico)
+- Provision Kubernetes Cluster (with minikube) of 3 VMs (with qemu driver) as profile named "knitfab-dev-cluster"
 - Deploy Image Registry (at `:30005` on each nodes).
     - This Image Registry is *not a part of Knitfab*. Knitfab emploies anothor Registry for itself.
-- Put CA certification at `~/.docker/certs.d/${VM-IP}:30005/ca.crt` .
-    - Colima may load the certification on starting.
-    - You may need to copy the certification to `/etc/docker/certs.d/${VM-IP}:30005/ca.crt`.
+- Put self-signed CA certification at `./dev-cluster/docker-certs/meta` and `~/.docker/certs.d/${node ip}:30005/ca.crt`.
+    - You may need to copy the certification to `/etc/docker/certs.d/${node ip}:30005/ca.crt` on your dockerd.
 
-It takes 10+ minutes at least, and can be over 30 minutes. Please be patient.
-If you want to throw away them all, just do `vagrant destroy -f` and the VMs and k8s clusters will be destroyed.
-
-> [!NOTE]
->
-> It can be experienced that provisioning hangs with message below:
->
-> ```
-> VirtualBox Guest Additions: To build modules for other installed kernels, run
-> VirtualBox Guest Additions:   /sbin/rcvboxadd quicksetup <version>
-> VirtualBox Guest Additions: or
-> VirtualBox Guest Additions:   /sbin/rcvboxadd quicksetup all
-> VirtualBox Guest Additions: Building the modules for kernel 6.5.0-15-generic.
-> update-initramfs: Generating /boot/initrd.img-6.5.0-15-generic
-> VirtualBox Guest Additions: Running kernel modules will not be replaced until
-> the system is restarted or 'rcvboxadd reload' triggered
-> VirtualBox Guest Additions: reloading kernel modules and services
-> VirtualBox Guest Additions: kernel modules and services 7.0.18 r162988 reloaded
-> VirtualBox Guest Additions: NOTE: you may still consider to re-login if some
-> user session specific services (Shared Clipboard, Drag and Drop, Seamless or
-> Guest Screen Resize) were not restarted automatically
-> ```
->
-> In such case, for workaround, attach VM with ssh and run
->
-> ```
-> sudo rcvboxadd reload
-> ```
->
-> You can attach VM with `./dev-cluster/ssh.sh <VM Name>`.
->
+It takes 5+ minutes at least. Please be patient.
+If you want to throw away them all, just do `./dev-cluster/destroy.sh` and the VMs and k8s clusters will be destroyed.
 
 ### To suspend/destroy your dev-cluster
 
-To suspend,
+To suspend (stop minikube nodes),
 
 ```
 ./dev-clsuter/suspend.sh
@@ -270,37 +237,30 @@ To suspend,
 To destroy,
 
 ```
-./dev-cluster/destroy.sh [-f]
+./dev-cluster/destroy.sh
 ```
 
 In either case, you can restart your cluster with `./dev-cluster/up.sh`.
 
 ### How is the dev-cluster provisioned?
 
-The dev-cluster is a k8s cluster with the following nodes (VirtualBox VM):
+The dev-cluster is a k8s cluster on minikube profile named "knitfab-dev-cluster"
 
-- `knit-master` (default IP: `10.10.0.2`)
-    - k8s master node.
-- `knit-gateway` (default IP: `10.10.0.3`)
-    - One of the k8s worker nodes.
-    - It is also an NFS Server.
-- `knit-nodes-${n}` (default IP: `10.10.0.4` or more)
-    - k8s worker nodes.
+To access the cluster, use
 
-During provisioning, it generates records of the cluster's configurations in the `.sync` directory:
-
-- `.sync/kubeconfig/kubeconfig`: kubeconfig
-- `.sync/kubeadm`: output of `kubeadm token`
+```
+kubectl --context knitfab-dev-cluster ...
+```
 
 ### Install Knitfab into the dev-cluster
 
-1. Copy `./dev-cluster/docker-certs/meta/ca.crt` to your `/etc/docker/certs.d/${VM-KNIT-GATEWAY-IP}:${IMAGE-REGISTRY-PORT}`
-    - By default, `${VM-KNIT-GATEWAY-IP}:${IMAGE-REGITRY-PORT}` is `10.10.0.3:30005`.
-    - You needs this operation only when on delete `./dev-cluster/docker-certs/*`.
+1. Copy `./dev-cluster/docker-certs/meta/ca.crt` to your `/etc/docker/certs.d/${node-ip}:30005`
+    - To know minikube node IP, `minikube -p knitfab-dev-cluster ip`.
+    - You needs this operation only when on newly creating your dev-cluster.
 2. Then run `./dev-cluster/install-knit.sh --prepare` (once)
 3. Edit install setting directory (once)
 4. Import CA certification to your docker (once)
-    - Copy `./dev-cluster/knitfab-install-settings/docker/certs.d/${VM-IP}:${PORT}/ca.crt` to `/etc/docker/certs.d/${VM-IP}:${PORT}/ca.crt`
+    - Copy `./dev-cluster/knitfab-install-settings/docker/certs.d/${node ip}:${PORT}/ca.crt` to `/etc/docker/certs.d/${node ip}:${PORT}/ca.crt`
 5. Then run `./dev-cluster/install-knit.sh`
 
 In step 2, it generates an install setting directory as `./dev-cluster/knitfab-install-settings`.
@@ -314,7 +274,7 @@ nfs:
   # ...
   external: true      # set true here
   # ...
-  server: "10.10.0.3" # set IP address of your "knit-gateway" VM.
+  server: "nfs-service.knitfab-dev-cluster-infra"
   # ...
   node: ""            # leave empty
   # ...
@@ -333,7 +293,7 @@ For more anothor config, consult `docs/03.admin-guide`.
 
 #### `./dev-cluster/knitctl.sh`
 
-`./dev-cluster/knitctl.sh` is a wrapper for `KUBECONFIG=... kubectl`.
+`./dev-cluster/knitctl.sh` is a wrapper for `kubectl --context knitfab-dev-cluster`.
 
 So, you can just do:
 
@@ -344,7 +304,7 @@ So, you can just do:
 instead of:
 
 ```
-$ kubectl --kubeconfig ./dev-cluster/kubeconfig/kubeconfig ...
+$ kubectl --context knitfab-dev-cluster ...
 ```
 
 TEST ENVIRONMENT

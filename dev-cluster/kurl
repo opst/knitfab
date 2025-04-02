@@ -3,7 +3,7 @@
 HERE=${0%/*}
 KNIT_HOST=${KNIT_HOST:-10.10.0.3:30803}
 
-DEFAULT_CACERT=${HERE}/.sync/certs/server.crt
+DEFAULT_CACERT=${HERE}/knitfab-install-settings/certs/ca.crt
 CACERT=${CACERT:-${DEFAULT_CACERT}}
 
 declare -a ARG

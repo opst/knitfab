@@ -1,5 +1,8 @@
-.vagrant
-.sync
 knitfab-install-settings
 docker-certs
+.dev-cluster-kube-context
+
+# historical items.
+.vagrant
+.sync
 .venv

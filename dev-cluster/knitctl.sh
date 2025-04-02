@@ -4,7 +4,6 @@ set -e
 HERE=${0%/*}
 KUBECTL=${KUBECTL:-kubectl}
 
-KUBECONFIG=${KUBECONFIG:-${HERE}/.sync/kubeconfig/kubeconfig}
-export KUBECONFIG
+KUBECONTEXT=${KUBECONTEXT:-$(cat "${HERE}/.dev-cluster-kube-context")}
 
-exec ${KUBECTL} $@
+exec ${KUBECTL} --context "${KUBECONTEXT}" $@
