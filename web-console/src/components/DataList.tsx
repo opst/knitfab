@@ -16,7 +16,7 @@ import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
-import Grid2 from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -264,20 +264,20 @@ const DataFilter: React.FC<{
 
     return (
         <Stack spacing={2}>
-            <Grid2 container direction="row" spacing={1} alignItems={"center"}>
-                <Grid2>
+            <Grid container direction="row" spacing={1} alignItems={"center"}>
+                <Grid>
                     <Chip label="Tags" icon={<TagIcon />} />
-                </Grid2>
+                </Grid>
                 {value.tags.map((tag) => (
-                    <Grid2>
+                    <Grid>
                         <TagChip
                             key={toTagString(tag)}
                             tag={tag}
                             onDelete={() => removeTag(tag)}
                         />
-                    </Grid2>
+                    </Grid>
                 ))}
-                <Grid2 flexGrow={1} minWidth="50%">
+                <Grid flexGrow={1} minWidth="50%">
                     <Stack direction="row" spacing={1} alignItems="center">
                         <TextField
                             label="Add Tag"
@@ -288,8 +288,8 @@ const DataFilter: React.FC<{
                         />
                         <Button variant="contained" onClick={addTag} disabled={!isTagString(tagInput)}>Add</Button>
                     </Stack>
-                </Grid2>
-            </Grid2>
+                </Grid>
+            </Grid>
             <Stack direction="row" spacing={1} alignItems="center">
                 <Chip label="Timestamp" icon={<TodayIcon />} />
                 <Typography alignContent="center">from</Typography>

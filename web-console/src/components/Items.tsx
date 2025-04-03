@@ -20,7 +20,7 @@ import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
 import Chip from '@mui/material/Chip';
 import Collapse from "@mui/material/Collapse";
-import Grid2 from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
@@ -349,8 +349,8 @@ const PlanItem: React.FC<{
                         <LogPointCard log={plan.log} />
                     )}
                 </Stack>
-                <Grid2 container direction="row" spacing={2}>
-                    <Grid2 size="grow">
+                <Grid container direction="row" spacing={2}>
+                    <Grid size="grow">
                         <Card variant="outlined">
                             <CardHeader title={<Typography variant="body2">Resources:</Typography>} />
                             <CardContent>
@@ -361,9 +361,9 @@ const PlanItem: React.FC<{
                                 </Stack>
                             </CardContent>
                         </Card>
-                    </Grid2>
+                    </Grid>
                     {plan.onNode && (
-                        <Grid2 size="grow">
+                        <Grid size="grow">
                             <Card variant="outlined">
                                 <CardHeader title={<Typography variant="body2">On Node:</Typography>} />
                                 <CardContent>
@@ -387,19 +387,19 @@ const PlanItem: React.FC<{
                                     </TableContainer>
                                 </CardContent>
                             </Card>
-                        </Grid2>
+                        </Grid>
                     )}
                     {plan.serviceAccount && (
-                        <Grid2 size="grow">
+                        <Grid size="grow">
                             <Card variant="outlined" sx={{ minWidth: "30%", maxWidth: "100%" }}>
                                 <CardHeader title={<Typography variant="body2">Service Account:</Typography>} />
                                 <CardContent>
                                     <Typography>{plan.serviceAccount}</Typography>
                                 </CardContent>
                             </Card>
-                        </Grid2>
+                        </Grid>
                     )}
-                </Grid2>
+                </Grid>
             </Collapse >
             <CardActions>
                 <Button
