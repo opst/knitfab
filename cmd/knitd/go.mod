@@ -6,14 +6,14 @@ replace github.com/opst/knitfab/v2 => ../..
 
 require (
 	github.com/labstack/echo/v4 v4.13.3
-	github.com/opst/knitfab-api-types/v2 v2.0.0-beta
+	github.com/opst/knitfab-api-types/v2 v2.0.0-beta.2
 	github.com/opst/knitfab/v2 v2.0.0-beta
 	k8s.io/apimachinery v0.32.3
 )
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-containerregistry v0.20.3 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
@@ -35,7 +35,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.11.0 // indirect

@@ -7,7 +7,7 @@ replace github.com/opst/knitfab/v2 => ../..
 require (
 	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
-	github.com/opst/knitfab-api-types/v2 v2.0.0-beta
+	github.com/opst/knitfab-api-types/v2 v2.0.0-beta.2
 	github.com/opst/knitfab/v2 v2.0.0-beta
 	github.com/youta-t/flarc v0.0.3
 	gopkg.in/yaml.v3 v3.0.1
@@ -17,7 +17,7 @@ require (
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/fatih/color v1.17.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-containerregistry v0.20.3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
