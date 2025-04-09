@@ -1,6 +1,6 @@
 module github.com/opst/knitfab/v2/cmd/knit
 
-go 1.24.1
+go 1.24.2
 
 replace github.com/opst/knitfab/v2 => ../..
 

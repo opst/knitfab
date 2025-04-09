@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/v2/pkg/domain"
 	kpgerrors "github.com/opst/knitfab/v2/pkg/domain/errors/dberrors/postgres"

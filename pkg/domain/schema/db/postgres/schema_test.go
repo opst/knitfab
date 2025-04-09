@@ -12,8 +12,8 @@ import (
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	dbtestenv "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"
 	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/scanner"
 	k8stestenv "github.com/opst/knitfab/v2/pkg/conn/k8s/testenv"

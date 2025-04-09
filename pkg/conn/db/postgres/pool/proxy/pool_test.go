@@ -5,10 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgproto3/v2"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/proxy"
 	intr "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/proxy/internal"
@@ -112,11 +111,12 @@ type FakeRows struct{}
 
 var _ pgx.Rows = &FakeRows{}
 
+func (fr *FakeRows) Conn() *pgx.Conn               { return nil }
 func (fr *FakeRows) Close()                        {}
 func (fr *FakeRows) Err() error                    { return nil }
 func (fr *FakeRows) CommandTag() pgconn.CommandTag { return pgconn.CommandTag{} }
-func (fr *FakeRows) FieldDescriptions() []pgproto3.FieldDescription {
-	return []pgproto3.FieldDescription{}
+func (fr *FakeRows) FieldDescriptions() []pgconn.FieldDescription {
+	return []pgconn.FieldDescription{}
 }
 func (fr *FakeRows) Next() bool                     { return false }
 func (fr *FakeRows) Scan(dest ...interface{}) error { return errors.New("empty") }
@@ -447,7 +447,7 @@ func TestTxProxy_Exec(t *testing.T) {
 	t.Run("it proxies method call when exec is done successfully", func(t *testing.T) {
 
 		ctx := context.Background()
-		commandTagInExec := pgconn.CommandTag([]byte("fake command tag"))
+		commandTagInExec := pgconn.NewCommandTag("fake command tag")
 
 		innerTx := &intr.FakeTx{}
 		innerTx.NextExec.CommandTag = commandTagInExec
@@ -461,7 +461,7 @@ func TestTxProxy_Exec(t *testing.T) {
 			t.Error("unexpected error is returned")
 		}
 
-		if !cmp.SliceEq(commandTag, commandTagInExec) {
+		if commandTag != commandTagInExec {
 			t.Error("it does not proxy method: wrong command tag is returned")
 		}
 
@@ -487,7 +487,7 @@ func TestTxProxy_Exec(t *testing.T) {
 			t.Error("unexpected error is returned")
 		}
 
-		if !cmp.SliceEq(commandTag, pgconn.CommandTag([]byte{})) {
+		if commandTag != pgconn.NewCommandTag("") {
 			t.Error("it does not proxy method: non-empty command tag is returned")
 		}
 
@@ -701,7 +701,7 @@ func TestConnProxy_Exec(t *testing.T) {
 	t.Run("it proxies method call when exec is done successfully", func(t *testing.T) {
 
 		ctx := context.Background()
-		commandTagInExec := pgconn.CommandTag([]byte("fake command tag"))
+		commandTagInExec := pgconn.NewCommandTag("fake command tag")
 
 		innerConn := &intr.FakeConn{}
 		innerConn.NextExec.CommandTag = commandTagInExec
@@ -715,7 +715,7 @@ func TestConnProxy_Exec(t *testing.T) {
 			t.Error("unexpected error is returned")
 		}
 
-		if !cmp.SliceEq(commandTag, commandTagInExec) {
+		if commandTag != commandTagInExec {
 			t.Error("it does not proxy method: wrong command tag is returned")
 		}
 
@@ -741,7 +741,7 @@ func TestConnProxy_Exec(t *testing.T) {
 			t.Error("unexpected error is returned")
 		}
 
-		if !cmp.SliceEq(commandTag, pgconn.CommandTag([]byte{})) {
+		if commandTag != pgconn.NewCommandTag("") {
 			t.Error("it does not proxy method: non-empty command tag is returned")
 		}
 
