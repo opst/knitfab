@@ -3,9 +3,9 @@ package proxy
 import (
 	"context"
 
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/v2/pkg/utils/slices"
 )

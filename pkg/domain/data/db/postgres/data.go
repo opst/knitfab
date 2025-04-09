@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgconn"
 	pgerrcode "github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/v2/pkg/domain"
@@ -291,7 +291,7 @@ func (d *dataPG) find(ctx context.Context, conn kpool.Queryer, query dataFindQue
 		`,
 		query.sysKnitId, processingStatus, failedStatus, query.sysKnitTransientPurged,
 		timestamp, query.updatedSince, query.updatedUntil,
-		slices.Map(query.userTag, func(t domain.Tag) [2]string { return [2]string{t.Key, t.Value} }),
+		slices.Map(query.userTag, func(t domain.Tag) []string { return []string{t.Key, t.Value} }),
 	)
 	if err != nil {
 		return nil, err

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jackc/pgconn"
 	pgerrcode "github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/proxy"
 	"github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool/testenv"

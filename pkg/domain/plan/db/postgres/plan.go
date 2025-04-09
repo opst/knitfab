@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
@@ -1033,8 +1033,8 @@ func (m *planPG) find(
 		select "plan_id" from "input_match_system_tag"
 		order by "plan_id"
 		`,
-		slices.Map(tagQuery.outUserTag, func(v types.Tag) [2]string { return [2]string{v.Key, v.Value} }),
-		slices.Map(tagQuery.inUserTag, func(v types.Tag) [2]string { return [2]string{v.Key, v.Value} }),
+		slices.Map(tagQuery.outUserTag, func(v types.Tag) []string { return []string{v.Key, v.Value} }),
+		slices.Map(tagQuery.inUserTag, func(v types.Tag) []string { return []string{v.Key, v.Value} }),
 		imageVer.Image, imageVer.Version,
 		(active == logic.Indeterminate), (active == logic.True),
 		tagQuery.inSysKnitId, tagQuery.inSysTimestamp,

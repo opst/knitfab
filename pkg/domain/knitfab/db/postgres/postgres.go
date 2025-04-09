@@ -3,7 +3,7 @@ package postgres
 import (
 	"context"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 	kdata "github.com/opst/knitfab/v2/pkg/domain/data/db"
 	kpgdata "github.com/opst/knitfab/v2/pkg/domain/data/db/postgres"
@@ -64,7 +64,7 @@ func New(
 	url string,
 	options ...Option,
 ) (dbInterface.KnitDatabase, error) {
-	pool, err := pgxpool.Connect(ctx, url)
+	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		return nil, xe.Wrap(err)
 	}

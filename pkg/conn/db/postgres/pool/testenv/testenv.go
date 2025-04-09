@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 
 	k8stestenv "github.com/opst/knitfab/v2/pkg/conn/k8s/testenv"
@@ -138,7 +138,7 @@ func NewPoolBroakerWithForwarder(
 		opts = o(opts)
 	}
 
-	pool, err := pgxpool.Connect(
+	pool, err := pgxpool.New(
 		ctx,
 		fmt.Sprintf(
 			"postgres://%s:%s@%s/%s",

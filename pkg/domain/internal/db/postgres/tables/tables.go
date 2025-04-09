@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	kpool "github.com/opst/knitfab/v2/pkg/conn/db/postgres/pool"
 	"github.com/opst/knitfab/v2/pkg/domain"

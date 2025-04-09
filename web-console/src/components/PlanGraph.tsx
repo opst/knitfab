@@ -1,5 +1,6 @@
-import { Collapse, Stack } from "@mui/material";
 import Box from "@mui/material/Box";
+import Collapse from "@mui/material/Collapse";
+import Stack from "@mui/material/Stack";
 import {
     Background,
     Controls,
