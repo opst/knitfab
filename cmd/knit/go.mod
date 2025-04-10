@@ -11,7 +11,7 @@ require (
 	github.com/opst/knitfab/v2 v2.0.0-beta
 	github.com/youta-t/flarc v0.0.3
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.32.3
+	k8s.io/apimachinery v0.33.0-beta.0
 )
 
 require (

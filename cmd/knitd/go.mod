@@ -8,7 +8,7 @@ require (
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/opst/knitfab-api-types/v2 v2.0.0-beta.2
 	github.com/opst/knitfab/v2 v2.0.0-beta
-	k8s.io/apimachinery v0.32.3
+	k8s.io/apimachinery v0.33.0-beta.0
 )
 
 require (
