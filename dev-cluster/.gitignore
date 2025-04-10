@@ -1,6 +1,7 @@
 knitfab-install-settings
 docker-certs
 .dev-cluster-kube-context
+.knitprofile
 
 # historical items.
 .vagrant

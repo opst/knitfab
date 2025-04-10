@@ -1,0 +1,46 @@
+# deployment for hook-server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hook-server
+  labels:
+    app: endurance-test-hook-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: endurance-test-hook-server
+  template:
+    metadata:
+      labels:
+        app: endurance-test-hook-server
+    spec:
+      containers:
+        - name: hook-server
+          image: localhost:30503/knitfab-endurance-hook:v1.0
+          ports:
+            - containerPort: 8080
+          args:
+            [
+              "-outputPath",
+              "/out",
+              "-planId",
+              "8bf31f33-182f-483d-a6ca-93adb3011083",
+            ]
+
+---
+# expose as service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: hook-server
+  labels:
+    app: endurance-test-hook-server
+spec:
+  type:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: endurance-test-hook-server

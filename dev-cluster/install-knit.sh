@@ -8,7 +8,7 @@ set -e
 
 HERE=$(cd ${0%/*}; pwd)
 ROOT=$(cd ${HERE}/../; pwd)
-export KUBECONTEXT=$(cat ${HERE}/.dev-cluster-kube-context)
+export KUBECONTEXT=${KUBECONTEXT:-$(cat ${HERE}/.dev-cluster-kube-context)}
 export HELM_PLUGINS=${HERE}/helm-plugins
 export NAMESPACE=${NAMESPACE:-knit-dev}
 

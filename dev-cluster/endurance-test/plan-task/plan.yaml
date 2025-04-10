@@ -1,0 +1,27 @@
+annotations:
+  - "purpose=endurance-test"
+
+image: "localhost:30503/knitfab-endurance-task:v1.0"
+
+inputs:
+  - path: "/in"
+    tags:
+      - "project:knitfab-dev-cluster-endurance-test"
+      - "type:input"
+
+outputs:
+  - path: "/out"
+    tags:
+      - "project:knitfab-dev-cluster-endurance-test"
+      - "type:output"
+
+log:
+  tags:
+    - "type:log"
+    - "project:knitfab-dev-cluster-endurance-test"
+
+active: true
+
+resources:
+  cpu: 1
+  memory: 1Gi
