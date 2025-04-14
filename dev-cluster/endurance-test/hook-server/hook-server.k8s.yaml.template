@@ -32,7 +32,7 @@ metadata:
   labels:
     app: endurance-test-hook-server
 spec:
-  type:
+  type: ClusterIP
   ports:
     - port: 8080
       targetPort: 8080
