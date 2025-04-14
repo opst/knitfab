@@ -1,0 +1,125 @@
+Knitfab endurance test in dev-cluster
+======================================
+
+Components
+-----------
+
+- hook-server: Knitfab Lifecycle Hook Server
+- plan-task: Task to Run Knitfab Plan
+
+How to Start
+-------------
+
+### 1. Start the dev-cluster
+
+Make sure you have started the latest version of the `dev-cluster` and Knitfab is installed.
+
+### 2. Build Components
+
+Put `knitprofile` file in `./hook-server` directory. Note that the file should be named `knitprofile`.
+
+```bash
+
+Build hook-server and plan-task components.
+
+```bash
+./hook-server/build.sh
+./plan-task/build.sh
+```
+
+Both script build Docker image, `knitfab-endurance-hook:v1.0` and `knitfab-endurance-task:v1.0` respectively,
+and push them to the Docker registry in your Knitfab.
+
+### 3. apply Plan
+
+```bash
+knit plan apply ./plan-task/plan.yaml
+```
+
+Write down the Plan ID.
+
+### 4. Start Hook Server
+
+Copy `./hook-server/hook-server.k8s.yaml.template` to `./hook-server/hook-server.k8s.yaml`.
+Edit `args` (in line 24) to set the Plan ID you got in the previous step.
+
+And apply the hook-server to the dev-cluster.
+
+```bash
+kubectl --context ${CONTEXT} -n ${NAMESPACE} apply -f ./hook-server/hook-server.k8s.yaml
+```
+
+- `${CONTEXT}` should be set to the context of your dev-cluster.
+    - the value is recorded in `../.dev-cluster-kube-context`
+- `${NAMESPACE}` should be set to the namespace of your dev-cluster.
+    - It is `knit-dev` normally.
+
+### 5. Update your Knitfab
+
+Set the Hook to your Knitfab.
+
+Edit `../knitfab-install-settings/values/hooks.yaml` as following:
+
+```yaml
+     after:
+        - http://hook-server:8080
+```
+
+And upgrade your Knitfab.
+
+```bash
+../knitfab-install.sh
+```
+
+### 6. Ignite it.
+
+Push the dataset to the dev-cluster.
+
+```bash
+knit data push -t "project:knitfab-dev-cluster-endurance-test" -t "type:input" ./dataset
+```
+
+How it works
+----------------
+
+Hook server waits the Run of the Plan for this endurance test gets be "done".
+Once the Run gets be "done", the hook server will...
+
+- `knit data pull` the output
+- `knit data purge` the output
+- `knit data push -t "project:knitfab-dev-cluster-endurance-test" -t "type:input"` the downloaded output
+
+So, this hook server re-enter the task to the dev-cluster, with infinite loop.
+
+For the Task of the Plan, it will
+
+- Sleep 10 minutes
+- Write the first line of the input file to the output file
+- Append current timestamp to the output file
+
+The Plan waits input Data with `project:knitfab-dev-cluster-endurance-test` and `type:input` tags.
+
+Overall, the Hook and the Plan makes the infinite loop to create new Runs and Data periodically.
+
+To Stop
+--------
+
+- Remove the Hook from `values/hooks.yaml` and upgrade your Knitfab, or
+- `knit plan active no ${PLAN_ID}`
+
+Metrics
+---------
+
+Hook Server exposes prometheus metrics.
+The metrics can be subscribed in Kubernetes cluster with the URL `http://hook-server:8080/metrics`.
+
+Published metrics are as following:
+
+- knitfab_endurance_test_run_received (Counter):
+    - The number of received Run with the target Plan ID in state of "done" from Knitfab
+- knitfab_endurance_test_knit_pull_duration (Gauge):
+    - The duration of `knit data pull` command in milliseconds
+- knitfab_endurance_test_knit_purge_duration (Gauge):
+    - The duration of `knit data purge` command in milliseconds
+- knitfab_endurance_test_knit_push_duration (Gauge):
+    - The duration of `knit data push` command in milliseconds
