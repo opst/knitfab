@@ -30,7 +30,7 @@ func main() {
 	}
 	defer fout.Close()
 
-	// Read the input file and write the last 10 lines to the output file
+	// Read the first line of the input file and append the current timestamp to the output file
 	line := ""
 	for {
 		buf := make([]byte, 1)
