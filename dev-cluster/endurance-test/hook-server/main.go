@@ -65,6 +65,13 @@ func handler(l *log.Logger, planId string, outputPath string, inst Instrument) f
 			break
 		}
 
+		if targetKnitId == "" {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK -- no target output found"))
+			l.Println("# No target output found")
+			return
+		}
+
 		// download outputs from the detail with `knit` command
 		{
 			before := time.Now()
