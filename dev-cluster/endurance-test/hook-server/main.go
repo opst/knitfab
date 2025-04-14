@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/opst/knitfab-api-types/v2/runs"
@@ -114,7 +114,7 @@ func handler(l *log.Logger, planId string, outputPath string, inst Instrument) f
 			before := time.Now()
 			args := []string{
 				"data", "push", "-t", "type:input", "-t", "project:knitfab-dev-cluster-endurance-test"}
-			args = append(args, path.Join(tempdir, targetKnitId))
+			args = append(args, filepath.Join(tempdir, targetKnitId))
 			cmd := exec.Command("knit", args...)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
