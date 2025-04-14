@@ -50,7 +50,7 @@ func handler(l *log.Logger, planId string, outputPath string, inst Instrument) f
 		}
 
 		l.Printf("Received Run: %s\n", detail.RunId)
-		inst.RunReceinved.Inc()
+		inst.RunReceived.Inc()
 
 		var targetKnitId string
 
@@ -135,7 +135,7 @@ func handler(l *log.Logger, planId string, outputPath string, inst Instrument) f
 }
 
 type Instrument struct {
-	RunReceinved      prometheus.Counter
+	RunReceived       prometheus.Counter
 	KnitPullDuration  prometheus.Gauge
 	KnitPurgeDuration prometheus.Gauge
 	KnitPushDuration  prometheus.Gauge
@@ -164,7 +164,7 @@ func main() {
 		handler(
 			l, *planId, *outputPath,
 			Instrument{
-				RunReceinved: promauto.NewCounter(prometheus.CounterOpts{
+				RunReceived: promauto.NewCounter(prometheus.CounterOpts{
 					Namespace: "knitfab_endurance_test",
 					Name:      "run_received",
 					Help:      "Count of runs to be monitored",
