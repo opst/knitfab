@@ -41,7 +41,7 @@ Write down the Plan ID.
 ### 4. Start Hook Server
 
 Copy `./hook-server/hook-server.k8s.yaml.template` to `./hook-server/hook-server.k8s.yaml`.
-Edit `args` (in line 24) to set the Plan ID you got in the previous step.
+Edit `args` (in line 23) to set the Plan ID you got in the previous step.
 
 And apply the hook-server to the dev-cluster.
 
