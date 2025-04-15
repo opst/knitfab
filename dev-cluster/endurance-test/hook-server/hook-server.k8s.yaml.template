@@ -20,7 +20,7 @@ spec:
           image: localhost:30503/knitfab-endurance-hook:v1.0
           ports:
             - containerPort: 8080
-          args: ["--output-path", "/out", "--plan-id", "SET YOUR PLAN ID HERE"]
+          args: ["--outputPath", "/out", "--planId", "SET YOUR PLAN ID HERE"]
 
 ---
 # expose as service
