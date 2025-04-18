@@ -2,7 +2,7 @@ module github.com/opst/knitfab/endurance-test/hook-server
 
 go 1.24.1
 
-require github.com/opst/knitfab-api-types/v2 v2.0.0-beta.2
+require github.com/opst/knitfab-api-types/v2 v2.0.0-rc.1
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
