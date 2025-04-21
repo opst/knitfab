@@ -18,20 +18,27 @@ KNIT_TEST_COLIMA_PROFILE=${KNIT_TEST_COLIMA_PROFILE:-knit-test}
 KNIT_TEST_KUBECTX=${KNIT_TEST_KUBECTX:-colima-${KNIT_TEST_COLIMA_PROFILE}}
 KNIT_TEST_NAMESPACE=${NAMESPACE:-knit-test}
 
-BASE_KUBECONTEXT=${BASE_KUBECONTEXT:-$(kubectl --kubeconfig ${KNIT_TEST_KUBECONFIG} config current-context)}
-trap "kubectl config use-context ${BASE_KUBECONTEXT}" EXIT
+if [ -n "${BASE_KUBECONTEXT}" ]; then
+	trap "kubectl config use-context ${BASE_KUBECONTEXT}" EXIT
+else
+	if kubectl --kubeconfig ${KNIT_TEST_KUBECONFIG} config current-context &> /dev/null; then
+		BASE_KUBECONTEXT=${BASE_KUBECONTEXT:-$(kubectl --kubeconfig ${KNIT_TEST_KUBECONFIG} config current-context)}
+		trap "kubectl config use-context ${BASE_KUBECONTEXT}" EXIT
+	else
+		trap "kubectl config unset current-context" EXIT
+	fi
+fi
 
 # start up k8s and write envvars for docker
 function up() {
 	case ${1} in
 		colima|*)  # default
 			if ! colima status -p ${KNIT_TEST_COLIMA_PROFILE} 2> /dev/null ; then
-				${COLIMA} start -p ${KNIT_TEST_COLIMA_PROFILE} --kubernetes
+				${COLIMA} start -p ${KNIT_TEST_COLIMA_PROFILE} --kubernetes --memory 4
 			fi
 		;;
 	esac
 }
-# echo "no kubeconfig supplied. use minikube (with command '${MINIKUBE}') ." >&2
 
 HELMOPTS="--kubeconfig ${KNIT_TEST_KUBECONFIG} --kube-context ${KNIT_TEST_KUBECTX}"
 KUBEOPTS="--kubeconfig ${KNIT_TEST_KUBECONFIG} --context ${KNIT_TEST_KUBECTX}"
