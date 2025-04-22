@@ -20,6 +20,7 @@ import (
 	"github.com/opst/knitfab/v2/pkg/utils/slices"
 	"github.com/opst/knitfab/v2/pkg/utils/try"
 	kubecore "k8s.io/api/core/v1"
+	kubeevents "k8s.io/api/events/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	kubeapiresource "k8s.io/apimachinery/pkg/api/resource"
 	kubeapimeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -143,6 +144,265 @@ func TestSpawn(t *testing.T) {
 					_, err := dataagt.Spawn(ctx, configs, cluster, dbDataAgent, time.Now().Add(1*time.Hour))
 					if err == nil {
 						t.Error("expected error is not retuerned")
+					}
+				})
+
+				t.Run("When PVC is created but not bound, it should cause error", func(t *testing.T) {
+					ctx, cancel := testutilctx.WithTest(context.Background(), t)
+					defer cancel()
+
+					targetData := domain.KnitDataBody{
+						KnitId:    k8smock.LabelValue(t, lenUUID),
+						VolumeRef: pointer.Ref("pvc-name"),
+					}
+
+					dbDataAgent := domain.DataAgent{
+						Name:         fmt.Sprintf("test-dataagt-%s-%s", mode, targetData.KnitId),
+						Mode:         mode,
+						KnitDataBody: targetData,
+					}
+
+					cluster, mock := k8smock.NewCluster()
+					mock.Impl.CreatePVC = func(ctx context.Context, namespace string, pvc *kubecore.PersistentVolumeClaim) (*kubecore.PersistentVolumeClaim, error) {
+						ret := &kubecore.PersistentVolumeClaim{
+							ObjectMeta: kubeapimeta.ObjectMeta{
+								Name:      pvc.Name,
+								Namespace: pvc.Namespace,
+								Labels:    pvc.Labels,
+							},
+							Spec: pvc.Spec,
+							Status: kubecore.PersistentVolumeClaimStatus{
+								Phase: kubecore.ClaimPending,
+							},
+						}
+						return ret, nil
+					}
+					mock.Impl.GetPVC = func(ctx context.Context, namespace, pvcname string) (*kubecore.PersistentVolumeClaim, error) {
+						return &kubecore.PersistentVolumeClaim{
+							ObjectMeta: kubeapimeta.ObjectMeta{
+								Name:      pvcname,
+								Namespace: namespace,
+								Labels:    map[string]string{},
+							},
+							Spec: kubecore.PersistentVolumeClaimSpec{
+								AccessModes: []kubecore.PersistentVolumeAccessMode{kubecore.ReadWriteMany},
+							},
+							Status: kubecore.PersistentVolumeClaimStatus{
+								Phase: kubecore.ClaimPending,
+							},
+						}, nil
+					}
+					deletePVCHasBeenCalled := false
+					mock.Impl.DeletePVC = func(ctx context.Context, namespace, pvcname string) error {
+						deletePVCHasBeenCalled = true
+						if namespace != cluster.Namespace() {
+							t.Errorf("namespace unmatch. (actual, expected) = (%s, %s)", namespace, cluster.Namespace())
+						}
+						if pvcname != *targetData.VolumeRef {
+							t.Errorf("pvc name unmatch. (actual, expected) = (%s, %s)", pvcname, *targetData.VolumeRef)
+						}
+						return nil
+					}
+
+					configs := (&bconf.KnitClusterConfigMarshall{
+						Namespace: cluster.Namespace(),
+						Database:  "postgres://do-not-care",
+						DataAgent: &bconf.DataAgentConfigMarshall{
+							Image: testenv.Images().Dataagt,
+							Port:  8080,
+							Volume: &bconf.VolumeConfigMarshall{
+								StorageClassName: testenv.STORAGE_CLASS_NAME,
+								InitialCapacity:  "1Ki",
+							},
+						},
+						Worker: &bconf.WorkerConfigMarshall{
+							Priority: "fake-priority",
+							Init: &bconf.InitContainerConfigMarshall{
+								Image: "repo.invalid/init-image:latest",
+							},
+							Nurse: &bconf.NurseContainerConfigMarshall{
+								Image:                "repo.invalid/nurse-image:latest",
+								ServiceAccountSecret: "fake-sa",
+							},
+						},
+						Keychains: &bconf.KeychainsConfigMarshall{
+							SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+								Name: "signe-for-import-token",
+							},
+						},
+					}).TrySeal()
+
+					_, err := dataagt.Spawn(ctx, configs, cluster, dbDataAgent, time.Now().Add(3*time.Second))
+					if !errors.Is(err, k8serrors.ErrDeadlineExceeded) {
+						t.Error("expected error is not retuerned: actual = ", err)
+					}
+					if !deletePVCHasBeenCalled == (mode == domain.DataAgentWrite) {
+						t.Error("delete pvc is not called.")
+					}
+				})
+
+				t.Run("When Pod is created with warning event, it should cause error", func(t *testing.T) {
+					ctx, cancel := testutilctx.WithTest(context.Background(), t)
+					defer cancel()
+
+					targetData := domain.KnitDataBody{
+						KnitId:    k8smock.LabelValue(t, lenUUID),
+						VolumeRef: pointer.Ref("pvc-name"),
+					}
+
+					dbDataAgent := domain.DataAgent{
+						Name:         fmt.Sprintf("test-dataagt-%s-%s", mode, targetData.KnitId),
+						Mode:         mode,
+						KnitDataBody: targetData,
+					}
+
+					cluster, mock := k8smock.NewCluster()
+					mock.Impl.CreatePVC = func(ctx context.Context, namespace string, pvc *kubecore.PersistentVolumeClaim) (*kubecore.PersistentVolumeClaim, error) {
+						ret := &kubecore.PersistentVolumeClaim{
+							ObjectMeta: kubeapimeta.ObjectMeta{
+								Name:      pvc.Name,
+								Namespace: pvc.Namespace,
+								Labels:    pvc.Labels,
+							},
+							Spec: pvc.Spec,
+							Status: kubecore.PersistentVolumeClaimStatus{
+								Phase: kubecore.ClaimBound,
+							},
+						}
+						return ret, nil
+					}
+					mock.Impl.GetPVC = func(ctx context.Context, namespace, pvcname string) (*kubecore.PersistentVolumeClaim, error) {
+						return &kubecore.PersistentVolumeClaim{
+							ObjectMeta: kubeapimeta.ObjectMeta{
+								Name:      pvcname,
+								Namespace: namespace,
+								Labels:    map[string]string{},
+							},
+							Spec: kubecore.PersistentVolumeClaimSpec{
+								AccessModes: []kubecore.PersistentVolumeAccessMode{kubecore.ReadWriteMany},
+							},
+							Status: kubecore.PersistentVolumeClaimStatus{
+								Phase: kubecore.ClaimBound,
+							},
+						}, nil
+					}
+					deletePVCHasBeenCalled := false
+					mock.Impl.DeletePVC = func(ctx context.Context, namespace, pvcname string) error {
+						deletePVCHasBeenCalled = true
+						if namespace != cluster.Namespace() {
+							t.Errorf("namespace unmatch. (actual, expected) = (%s, %s)", namespace, cluster.Namespace())
+						}
+						if pvcname != *targetData.VolumeRef {
+							t.Errorf("pvc name unmatch. (actual, expected) = (%s, %s)", pvcname, *targetData.VolumeRef)
+						}
+						return nil
+					}
+
+					mock.Impl.CreatePod = func(ctx context.Context, namespace string, pod *kubecore.Pod) (*kubecore.Pod, error) {
+						ret := &kubecore.Pod{
+							ObjectMeta: kubeapimeta.ObjectMeta{
+								Name:      pod.Name,
+								Namespace: pod.Namespace,
+								Labels:    pod.Labels,
+							},
+							Spec: pod.Spec,
+							Status: kubecore.PodStatus{
+								Phase: kubecore.PodFailed,
+								Conditions: []kubecore.PodCondition{
+									{
+										Type:   kubecore.PodScheduled,
+										Status: kubecore.ConditionTrue,
+										Reason: "Scheduled",
+									},
+								},
+							},
+						}
+						return ret, nil
+					}
+					mock.Impl.GetPod = func(ctx context.Context, namespace, name string) (*kubecore.Pod, error) {
+						return &kubecore.Pod{
+							ObjectMeta: kubeapimeta.ObjectMeta{
+								Name:      name,
+								Namespace: namespace,
+								Labels:    map[string]string{},
+							},
+							Spec: kubecore.PodSpec{
+								Containers: []kubecore.Container{
+									{
+										Name:  "dataagt",
+										Image: testenv.Images().Dataagt,
+									},
+								},
+							},
+							Status: kubecore.PodStatus{
+								Phase: kubecore.PodFailed,
+								Conditions: []kubecore.PodCondition{
+									{
+										Type:   kubecore.PodScheduled,
+										Status: kubecore.ConditionTrue,
+										Reason: "Scheduled",
+									},
+								},
+							},
+						}, nil
+					}
+					mock.Impl.GetEvents = func(ctx context.Context, kind string, target kubeapimeta.ObjectMeta) ([]kubeevents.Event, error) {
+						return []kubeevents.Event{
+							{
+								Type:   "Warning",
+								Reason: "FailedScheduling",
+							},
+						}, nil
+					}
+					deletePodHasBeenCalled := false
+					mock.Impl.DeletePod = func(ctx context.Context, namespace, name string) error {
+						deletePodHasBeenCalled = true
+						if namespace != cluster.Namespace() {
+							t.Errorf("namespace unmatch. (actual, expected) = (%s, %s)", namespace, cluster.Namespace())
+						}
+						if name != dbDataAgent.Name {
+							t.Errorf("pod name unmatch. (actual, expected) = (%s, %s)", name, dbDataAgent.Name)
+						}
+						return nil
+					}
+
+					configs := (&bconf.KnitClusterConfigMarshall{
+						Namespace: cluster.Namespace(),
+						Database:  "postgres://do-not-care",
+						DataAgent: &bconf.DataAgentConfigMarshall{
+							Image: testenv.Images().Dataagt,
+							Port:  8080,
+							Volume: &bconf.VolumeConfigMarshall{
+								StorageClassName: testenv.STORAGE_CLASS_NAME,
+								InitialCapacity:  "1Ki",
+							},
+						},
+						Worker: &bconf.WorkerConfigMarshall{
+							Priority: "fake-priority",
+							Init: &bconf.InitContainerConfigMarshall{
+								Image: "repo.invalid/init-image:latest",
+							},
+							Nurse: &bconf.NurseContainerConfigMarshall{
+								Image:                "repo.invalid/nurse-image:latest",
+								ServiceAccountSecret: "fake-sa",
+							},
+						},
+						Keychains: &bconf.KeychainsConfigMarshall{
+							SignKeyForImportToken: &bconf.HS256KeyChainMarshall{
+								Name: "signe-for-import-token",
+							},
+						},
+					}).TrySeal()
+
+					_, err := dataagt.Spawn(ctx, configs, cluster, dbDataAgent, time.Now().Add(3*time.Second))
+					if err == nil {
+						t.Error("expected error is not retuerned")
+					}
+					if !deletePVCHasBeenCalled == (mode == domain.DataAgentWrite) {
+						t.Error("delete pvc is not called.")
+					}
+					if !deletePodHasBeenCalled {
+						t.Error("delete pod is not called.")
 					}
 				})
 			}

@@ -162,6 +162,23 @@ func Spawn(
 	pvcspec := pvcbuilder.Build(kconf)
 
 	// apply
+
+	drop := true
+	var pod cluster.Pod
+	var pvc cluster.PVC
+
+	defer func() {
+		if !drop {
+			return
+		}
+		if pod != nil {
+			pod.Close()
+		}
+		if pvc != nil && da.Mode == domain.DataAgentWrite {
+			pvc.Close()
+		}
+	}()
+
 	var promPVC retry.Promise[cluster.PVC]
 	switch da.Mode {
 	case domain.DataAgentWrite:
@@ -169,15 +186,28 @@ func Spawn(
 			ctx,
 			retry.StaticBackoff(200*time.Millisecond),
 			pvcspec,
+			cluster.WithCheckpoint(cluster.PVCIsBound, pendingDeadline),
 		)
 	case domain.DataAgentRead:
 		promPVC = kcluster.GetPVC(
 			ctx,
 			retry.StaticBackoff(200*time.Millisecond),
 			pvcspec.ObjectMeta.Name,
+			cluster.WithCheckpoint(cluster.PVCIsBound, pendingDeadline),
 		)
 	default:
 		return nil, fmt.Errorf("unknwon data agent mode: %s", da.Mode)
+	}
+
+	// wait for them to be created
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case p := <-promPVC:
+		pvc = p.Value
+		if p.Err != nil {
+			return nil, xe.Wrap(p.Err)
+		}
 	}
 
 	promPod := kcluster.NewPod(
@@ -210,41 +240,14 @@ func Spawn(
 		cluster.PodHasBeenRunning,
 	)
 
-	drop := true
-	var pod cluster.Pod
-	var pvc cluster.PVC
-
-	defer func() {
-		if !drop {
-			return
-		}
-		if pod != nil {
-			pod.Close()
-		}
-		if pvc != nil && da.Mode == domain.DataAgentWrite {
-			pvc.Close()
-		}
-	}()
-
-	// wait for them to be created
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case p := <-promPVC: // sanity check: if deployment is ready, PVC & PV should be ready.
-		if p.Err != nil {
-			return nil, xe.Wrap(p.Err)
-		}
-		pvc = p.Value
-	}
-
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case p := <-promPod:
+		pod = p.Value
 		if p.Err != nil {
 			return nil, xe.Wrap(p.Err)
 		}
-		pod = p.Value
 	}
 
 	drop = false
