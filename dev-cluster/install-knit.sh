@@ -31,16 +31,36 @@ while [ -n "${1}" ] ; do
 	esac
 done
 
+# detect IP addr of this machine
+if [ -z "${IP}" ] ; then
+  if which ip > /dev/null 2>&1 ; then
+    IP=$(ip -4 addr show | grep -E 'inet (10|192|172)' | awk '{print $2}' | cut -d/ -f1 | head -n 1)
+  elif which ifconfig > /dev/null 2>&1 ; then
+    IP=$(ifconfig | grep -E 'inet (10|192|172)' | awk '{print $2}' | head -n 1)
+  else 
+    echo "Cannot find IP address of this machine. Please set IP manually."
+    exit 1
+  fi
+fi
+
 if [ -n "${PREPARE}" ] ; then
-	${ROOT}/installer/installer.sh --prepare -s ${HERE}/knitfab-install-settings ${ARGS}
+	${ROOT}/installer/installer.sh --prepare -s ${HERE}/knitfab-install-settings --tls-cert-ip ${IP} ${ARGS}
 	exit
 fi
 
+
 if [ -n "${BUILD}" ] ; then
 	${ROOT}/build/build.sh
-	NODE_IP=$(minikube -p ${KUBECONTEXT} ip)
-	IMAGE_REGISTRY="${NODE_IP}:30005" bash ${ROOT}/bin/images/local/publish.sh
-	# portnumber comes from ./lib/install-registry.sh.
+	
+	(
+		echo "start port-forwarding"
+		kubectl --context ${KUBECONTEXT} -n registry port-forward --address ${IP} service/image 30005:5000 > /dev/null &
+		PID_PORTFWD=$!
+		trap "kill ${PID_PORTFWD}; echo stop port-forwarding" EXIT
+		sleep 5
+		IMAGE_REGISTRY="${IP}:30005" bash ${ROOT}/bin/images/local/publish.sh
+		# portnumber comes from ./lib/install-registry.sh.
+	)
 fi
 
 export CHART_VERSION=$(cat ${ROOT}/charts/local/CHART_VERSION)

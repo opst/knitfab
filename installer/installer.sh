@@ -354,9 +354,25 @@ function renew_certs() {
 			message "(Server certificate copied from ${TLS_CERT})"
 		else
 
-			function alt_names() {
-				local DNS=()
+			if [ -z "${TLS_CERT_IP}" ] ; then
 				for NAME in $(get_node_ip) ; do
+					TLS_CERT_IP="${TLS_CERT_IP} ${NAME}"
+				done
+			fi
+
+			if [ -n "${TLS_CERT_DOMAIN}" ] ; then
+				echo "TLS_CERT_DOMAIN=\"${TLS_CERT_DOMAIN}\"" >> ${SETTINGS}/domains
+			fi
+			if [ -n "${TLS_CERT_IP}" ] ; then
+				echo "TLS_CERT_IP=\"${TLS_CERT_IP}\"" >> ${SETTINGS}/domains
+			fi
+
+			function alt_names() {
+				for NAME in ${TLS_CERT_DOMAIN} ; do
+					COUNT=$((COUNT + 1))
+					echo "DNS.${COUNT} = ${NAME}"
+				done
+				for NAME in ${TLS_CERT_IP} ; do
 					COUNT=$((COUNT + 1))
 					echo "IP.${COUNT} = ${NAME}"
 				done
@@ -451,32 +467,49 @@ This directory contains resources to connect your knitfab.
     - for more detail, see https://docs.docker.com/engine/security/certificates/
 EOF
 
-	for IP in $(get_node_ip) ; do
-		if [ -f "${SETTINGS}/certs/ca.crt" ] ; then
-			cat <<EOF > "${SETTINGS}/handouts/knitprofile"
+	KNITFAB_ORIGIN=
+	if [ -f "${SETTINGS}/certs/ca.crt" ] ; then
+		SCHEMA="https://"
+	else
+		SCHEMA="http://"
+	fi
+
+	KNITFAB_HOST=
+	if [ -r ${SETTINGS}/domains ] ; then
+		. ${SETTINGS}/domains
+		
+		for NAME in ${TLS_CERT_DOMAIN} ${TLS_CERT_IP} ; do
+			KNITFAB_HOST="${NAME}"
+			break
+			# pick first one
+		done
+		if [ -z "${KNITFAB_HOST}" ] ; then
+			echo "ERROR: no domain name found in ${SETTINGS}/domains" >&2
+			exit 1
+		fi
+	else
+		for NAME in $(get_node_ip) ; do
+			KNITFAB_HOST="${NAME}"
+			break
+			# pick first one
+		done
+	fi
+
+	KNITFAB_ORIGIN="${SCHEMA}${KNITFAB_HOST}:$(${KUBECTL} --context ${KUBECONTEXT} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")"
+
+	cat <<EOF > "${SETTINGS}/handouts/knitprofile"
 # knit profile file
 # pass this file to your knit client in your project directory: \`knit init knitprofile\`
-apiRoot: https://${IP}:$(${KUBECTL} --context ${KUBECONTEXT} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
+apiRoot: ${KNITFAB_ORIGIN}/api
 cert:
   ca: $(cat "${SETTINGS}/certs/ca.crt" | base64 | tr -d '\r\n')
 EOF
-		else
-			cat <<EOF > "${SETTINGS}/handouts/knitprofile"
-# knit profile file
-# pass this file to your knit client in your project directory: \`knit init knitprofile\`
-apiRoot: http://${IP}:$(${KUBECTL} --context ${KUBECONTEXT} -n ${NAMESPACE} get service/knitd -o jsonpath="{.spec.ports[?(@.name==\"knitd\")].nodePort}")/api
-cert: {}
-EOF
-		fi
 
-		DOCKER_CERT_D="${SETTINGS}/handouts/docker/certs.d/${IP}:"$(${KUBECTL} --context ${KUBECONTEXT} -n ${NAMESPACE} get service/image-registry -o jsonpath="{.spec.ports[?(@.name==\"image-registry\")].nodePort}")
-		mkdir -p "${DOCKER_CERT_D}"
-		if [ -f "${SETTINGS}/certs/ca.crt" ] ; then
-			cp "${SETTINGS}/certs/ca.crt" "${DOCKER_CERT_D}/ca.crt"
-		fi
-
-		break  # pick one IP
-	done
+	DOCKER_CERT_D="${SETTINGS}/handouts/docker/certs.d/${KNITFAB_HOST}:"$(${KUBECTL} --context ${KUBECONTEXT} -n ${NAMESPACE} get service/image-registry -o jsonpath="{.spec.ports[?(@.name==\"image-registry\")].nodePort}")
+	mkdir -p "${DOCKER_CERT_D}"
+	if [ -f "${SETTINGS}/certs/ca.crt" ] ; then
+		cp "${SETTINGS}/certs/ca.crt" "${DOCKER_CERT_D}/ca.crt"
+	fi
 }
 
 function install() {
@@ -694,6 +727,12 @@ while [ 0 -lt ${#} ] ; do
 		--tls-key)
 			TLS_KEY=${1}; shift || :
 			;;
+		--tls-cert-domain)
+			TLS_CERT_DOMAIN="${TLS_CERT_DOMAIN} ${1}"; shift || :
+			;;
+		--tls-cert-ip)
+			TLS_CERT_IP="${TLS_CERT_IP} ${1}"; shift || :
+			;;
 		# Renew Self-signed CA Certificates
 		# This works only with --renew-certs.
 		--renew-ca)
@@ -745,7 +784,15 @@ ${THIS} --prepare \\
 * --tls-ca-cert and --tls-ca-key are the CA certificate and key for the Knitfab.
   Optional. If missing, it generates self-signed CA certificate & key.
 * --tls-cert and --tls-key are the server certificate and key for the Knitfab.
-  Optional. If missing, it generates certificate & key by CA.
+  Optional. If missing, it generates certificate & key by CA and certify --tls-cert-ip values.
+* --tls-cert-ip is the IP address of the server certificate.
+  Optional. This value is used in the additional SAN field of the server certificate.
+  You can set multiple IP addresses by repeating this option.
+  By default, it uses the IP address of the nodes.
+* --tls-cert-domain is the domain name of the server certificate.
+  Optional. This value is used in the additional SAN field of the server certificate.
+  You can set multiple domains by repeating this option.
+  This value is effective only when \`--tls-cert\` is not set.
 * --no-tls is a flag to skip (and remove) generating TLS certificates.
   Optional. If set, other TLS related flags are ignored.
 * --settings is the directory where install settings are saved.
@@ -797,7 +844,9 @@ ${THIS} --renew-certs \\
     [--renew-ca] \\
 	[--no-tls] \\
     [--tls-ca-cert <CA_CERT>] [--tls-ca-key <CA_KEY>] \\
-    [--tls-cert <TLS_CERT>] [--tls-key <TLS_KEY>]
+    [--tls-cert <TLS_CERT>] [--tls-key <TLS_KEY>] \\
+	[--tls-cert-domain <DOMAIN> [--tls-cert-domain ...]] \\
+	[--tls-cert-ip <IP> [--tls-cert-ip ...]]
 \`\`\`
 
 This mode renews TLS (server) certificates.
@@ -807,7 +856,15 @@ This mode renews TLS (server) certificates.
 * --tls-ca-cert and --tls-ca-key are the CA certificate and key for the Knitfab.
   Optional. If missing, it generates self-signed CA certificate & key.
 * --tls-cert and --tls-key are the server certificate and key for the Knitfab.
-  Optional. If missing, it generates certificate & key by CA.
+  Optional. If missing, it generates certificate & key by CA and certify --tls-cert-ip values.
+* --tls-cert-ip is the IP address of the server certificate.
+  Optional. This value is used in the additional SAN field of the server certificate.
+  You can set multiple IP addresses by repeating this option.
+  By default, it uses the IP address of the nodes.
+* --tls-cert-domain is the domain name of the server certificate.
+  Optional. This value is used in the additional SAN field of the server certificate.
+  You can set multiple domains by repeating this option.
+  This value is effective only when \`--tls-cert\` is not set.
 * --renew-ca is a flag to force renewing CA certificate & key.
   Optional. If set, CA certificate & key are also renewed (newly generated).
 * --no-tls is a flag to skip generating TLS certificates and remove existing certificates.

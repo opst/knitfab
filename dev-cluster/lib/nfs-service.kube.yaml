@@ -30,13 +30,39 @@ spec:
       labels:
         app: nfs-server
     spec:
+      initContainers:
+        - name: init-recovery-dir
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args: ["mkdir -p /var/lib/nfs/ganesha/v4_recovery/node0"]
+          volumeMounts:
+            - name: nfs-recovery
+              mountPath: /var/lib/nfs/ganesha/v4_recovery
+        # - name: init-shared-dir
+        #   image: busybox
+        #   command: ["/bin/sh", "-c"]
+        #   args: ["touch /export/ganesha"]
+        #   volumeMounts:
+        #     - name: nfs-data-ganesha
+        #       mountPath: /export
       containers:
         - name: nfs-server
-          image: itsthenetwork/nfs-server-alpine:latest
+          image: hectorm/nfs-ganesha:v9
+          # command:
+          #   - sleep
+          # args:
+          #   - "30000000"
           securityContext:
-            privileged: true
             capabilities:
-              add: ["SYS_ADMIN", "SETPCAP"]
+              add: 
+                - "SYS_RESOURCE"
+                - "CHOWN"
+                - "DAC_OVERRIDE"
+                - "DAC_READ_SEARCH"
+                - "FOWNER"
+                - "FSETID"
+                - "SETGID"
+                - "SETUID"
           ports:
             - containerPort: 2049
               protocol: TCP
@@ -45,32 +71,32 @@ spec:
             - containerPort: 111
               protocol: UDP
           volumeMounts:
+            - name: nfs-data-ganesha
+              mountPath: /var/lib/nfs/ganesha/export
             - name: nfs-data
-              mountPath: /nfsshare
-          env:
-            - name: SHARED_DIRECTORY
-              value: /nfsshare
-            - name: NFS_VERSION
-              value: "4"
-            - name: RPCMOUNTD_PORT
-              value: "111"
-            - name: RPCNFSDCOUNT
-              value: "8"
-            - name: RPCNFSDPRIORITY
-              value: "0"
-            - name: MOUNTD_PORT
-              value: "111"
-            - name: NFS_PORT
-              value: "2049"
-            - name: LOCKD_TCPPORT
-              value: "32803"
-            - name: LOCKD_UDPPORT
-              value: "32803"
+              mountPath: /export
+            - name: nfs-recovery
+              mountPath: /var/lib/nfs/ganesha/v4_recovery
+            - name: config
+              mountPath: /etc/ganesha/
+            - name: mtab
+              mountPath: /etc/mtab
       volumes:
+        - name: nfs-data-ganesha
+          emptyDir: {}
         - name: nfs-data
           hostPath:
-            path: /exports
+            path: /data/export
             type: DirectoryOrCreate
+        - name: nfs-recovery
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: nfs-server-config
+        - name: mtab
+          hostPath:
+            path: /proc/self/mounts
+            type: File
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -80,6 +106,53 @@ spec:
                     operator: In
                     values:
                       - knitfab-dev-cluster
+
+---
+# configmap overridding entrypoint
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nfs-server-config
+  namespace: knitfab-dev-cluster-infra
+  labels:
+    app: nfs-server
+data:
+  ganesha.conf: |
+    NFS_Core_Param {
+      NFS_Port = 2049;
+      Protocols = 4;
+      Fsid_Device = true;
+      mount_path_pseudo = true;
+    }
+
+    NFSv4 {
+      RecoveryBackend = fs_ng;
+      RecoveryDir = v4_recovery;
+      Lease_Lifetime = 40;
+      Grace_Period = 50;
+      Only_Numeric_Owners = true;
+    }
+
+    VFS {}
+
+    EXPORT {
+      Export_id = 1;
+      Path = /export;
+      Pseudo = /;
+
+      Access_Type = RW;
+      Squash = noidsquash;
+      SecType = sys;
+      Protocols = 4;
+
+      FSAL {
+        Name = "vfs";
+      }
+    }
+
+    LOG {
+      Default_Log_Level = INFO;
+    }
 
 ---
 ## Service

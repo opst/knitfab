@@ -1,0 +1,26 @@
+#! /bin/bash
+set -e
+
+HERE=$(cd ${0%/*}; pwd)
+
+NAMESPACE=$(cat "${HERE}/knitfab-install-settings/namespace")
+KUBECONTEXT=$(cat "${HERE}/knitfab-install-settings/kubecontext")
+export KUBECONFIG="${HERE}/knitfab-install-settings/kubeconfig"
+
+. ${HERE}/knitfab-install-settings/domains
+
+for NAME in ${TLS_CERT_DOMAIN} ${TLS_CERT_IP} ; do
+    KNITFAB_HOST=${NAME}
+    break
+done
+
+echo "start port-forwarding"
+kubectl --context ${KUBECONTEXT} -n ${NAMESPACE} port-forward --address ${KNITFAB_HOST} service/knitd 30803:8080 &
+PID_PORTFWD_API=$!
+trap "kill ${PID_PORTFWD_API}; echo stop port-forwarding" EXIT
+
+kubectl --context ${KUBECONTEXT} -n ${NAMESPACE} port-forward --address ${KNITFAB_HOST} service/image-registry 30503:80 &
+PID_PORTFWD_REGISTRY=$!
+trap "kill ${PID_PORTFWD_REGISTRY} ${PID_PORTFWD_API}; echo stop port-forwarding" EXIT
+
+wait

@@ -1,7 +1,24 @@
 #! /bin/bash
 
 HERE=${0%/*}
-KNIT_HOST=${KNIT_HOST:-10.10.0.3:30803}
+
+if [ -z ${KNIT_HOST} ] ; then
+	if [ -r ${HERE}/knitfab-install-settings/domains ] ; then
+		. ${HERE}/knitfab-install-settings/domains
+		for D in ${TLS_CERT_IP} ; do
+			KNIT_HOST=${D}
+			break
+		done
+		for D in ${TLS_CERT_DOMAIN} ; do
+			KNIT_HOST=${D}
+			break
+		done
+	fi
+fi
+
+if [ -z ${KNIT_HOST} ] ; then
+	echo "KNIT_HOST is not set!" >&2
+fi
 
 DEFAULT_CACERT=${HERE}/knitfab-install-settings/certs/ca.crt
 CACERT=${CACERT:-${DEFAULT_CACERT}}
@@ -10,7 +27,7 @@ declare -a ARG
 for V in "$@" ; do
 	case "$V" in
 		knit://*)
-			ARG[${#ARG[@]}]="https://${KNIT_HOST}/${V:7}"
+			ARG[${#ARG[@]}]="https://${KNIT_HOST}:30803/${V:7}"
 			;;
 		-h|--help)
 cat <<EOF
