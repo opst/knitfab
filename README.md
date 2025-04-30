@@ -220,8 +220,8 @@ This command does...
 - Provision Kubernetes Cluster (with minikube) of 3 VMs (with qemu driver) as profile named "knitfab-dev-cluster"
 - Deploy Image Registry (at `:30005` on each nodes).
     - This Image Registry is *not a part of Knitfab*. Knitfab emploies anothor Registry for itself.
-- Put self-signed CA certification at `./dev-cluster/docker-certs/meta` and `~/.docker/certs.d/${node ip}:30005/ca.crt`.
-    - You may need to copy the certification to `/etc/docker/certs.d/${node ip}:30005/ca.crt` on your dockerd.
+- Put self-signed CA certification at `./dev-cluster/docker-certs/meta` and `~/.docker/certs.d/${YOUR-IP}:30005/ca.crt`.
+    - You may need to copy the certification to `/etc/docker/certs.d/${YOUR-IP}:30005/ca.crt` on your dockerd.
 
 It takes 5+ minutes at least. Please be patient.
 If you want to throw away them all, just do `./dev-cluster/destroy.sh` and the VMs and k8s clusters will be destroyed.
@@ -254,13 +254,12 @@ kubectl --context knitfab-dev-cluster ...
 
 ### Install Knitfab into the dev-cluster
 
-1. Copy `./dev-cluster/docker-certs/meta/ca.crt` to your `/etc/docker/certs.d/${node-ip}:30005`
-    - To know minikube node IP, `minikube -p knitfab-dev-cluster ip`.
-    - You needs this operation only when on newly creating your dev-cluster.
+1. Copy `./dev-cluster/docker-certs/meta/ca.crt` to your `/etc/docker/certs.d/${YOUR-IP}:30005`
+    - Hereby, `${YOUR-IP}` should NOT be loopback address nor `localhost`.
 2. Then run `./dev-cluster/install-knit.sh --prepare` (once)
 3. Edit install setting directory (once)
 4. Import CA certification to your docker (once)
-    - Copy `./dev-cluster/knitfab-install-settings/docker/certs.d/${node ip}:${PORT}/ca.crt` to `/etc/docker/certs.d/${node ip}:${PORT}/ca.crt`
+    - Copy `./dev-cluster/knitfab-install-settings/docker/certs.d/${YOUR-IP}:${PORT}/ca.crt` to `/etc/docker/certs.d/${YOUR-IP}:${PORT}/ca.crt`
 5. Then run `./dev-cluster/install-knit.sh`
 
 In step 2, it generates an install setting directory as `./dev-cluster/knitfab-install-settings`.
@@ -280,6 +279,8 @@ nfs:
   # ...
 ```
 
+In step 2, `./dev-cluster/install-knit.sh` perform port-forward to 
+
 For more anothor config, consult `docs/03.admin-guide`.
 
 > **Note**
@@ -290,6 +291,16 @@ For more anothor config, consult `docs/03.admin-guide`.
 > For example, in the case of colima, `ca.crt` should place `/etc/docker/certs.d/...` *IN COLIMA*.
 > You may need to `colima ssh` and copy the file.
 >
+
+#### Port Forwarding
+
+`minikube` cluster of dev-cluster cannot be reached from host machine directly.
+To use `knit` command or push images to in-cluster repository, port-forwarding is needed.
+
+`./dev-cluster/connect` does port-forwarding.
+
+Knitfab API is exposed at `${YOUR-IPADDR}:30803` and image registry is exposed at `${YOUR-IPADDR}:30503`.
+For detail, read log of `./dev-cluster/connect`.
 
 #### `./dev-cluster/knitctl.sh`
 
