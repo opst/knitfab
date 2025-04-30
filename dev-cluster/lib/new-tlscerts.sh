@@ -21,9 +21,15 @@ function get_node_ip() {
 function alt_names() {
     COUNT=0
     if [ -n "${USE_NODE_IPS}" ] ; then
-        for IP in $(get_node_ip) ; do
+        for I in $(get_node_ip) ; do
             COUNT=$((COUNT + 1))
-            echo "IP.${COUNT}=${IP}"
+            echo "IP.${COUNT}=${I}"
+        done
+    fi
+    if [ -n "${IP}" ] ; then
+        for I in ${IP} ; do
+            COUNT=$((COUNT + 1))
+            echo "IP.${COUNT}=${I}"
         done
     fi
     for N in ${NAME} ; do
@@ -43,6 +49,9 @@ while [ ${#} -gt 0 ] ; do
             ;;
         --no-node-ips)
             USE_NODE_IPS=
+            ;;
+        --ip)
+            IP="${IP} ${1}"; shift
             ;;
         --name)
             NAME="${NAME} ${1}"; shift

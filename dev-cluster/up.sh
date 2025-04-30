@@ -17,7 +17,7 @@ if ! minikube status -p knitfab-dev-cluster | grep -q "Running" ; then
   if [ -n "${BASE_KUBECONTEXT}" ] ; then
     trap "echo reset k8s context...; kubectl config use-context ${BASE_KUBECONTEXT}" EXIT
   fi
-  minikube start -p knitfab-dev-cluster --nodes 3 --driver=qemu --container-runtime=containerd --memory=6g --cpus=2
+  minikube start -p knitfab-dev-cluster --nodes 1 --driver=qemu --container-runtime=containerd --memory=6g --cpus=2
   echo $(kubectl config current-context) > "${HERE}/.dev-cluster-kube-context"
 fi
 
@@ -36,18 +36,45 @@ export TLSKEY="${HERE}/docker-certs/meta/server.key"
 export TLSCACERT="${HERE}/docker-certs/meta/ca.crt"
 export TLSCAKEY="${HERE}/docker-certs/meta/ca.key"
 
+# detect IP addr of this machine
+if [ -z "${IP}" ] ; then
+  if which ip > /dev/null 2>&1 ; then
+    IP=$(ip -4 addr show | grep -E 'inet (10|192|172)' | awk '{print $2}' | cut -d/ -f1)
+  elif which ifconfig > /dev/null 2>&1 ; then
+    IP=$(ifconfig | grep -E 'inet (10|192|172)' | awk '{print $2}')
+  else 
+    echo "Cannot find IP address of this machine. Please set IP manually."
+    exit 1
+  fi
+fi
+
 if [ -f ${TLSCERT} ] && [ -f ${TLSKEY} ] ; then
 	echo "TLS certificate and key already exist"
 else
-	"${HERE}/lib/new-tlscerts.sh" --dest "${HERE}/docker-certs/meta" --node-ips
+  IPS=
+  for I in ${IP} ; do
+    IPS="${IPS} --ip ${I}"
+  done
+	"${HERE}/lib/new-tlscerts.sh" --dest "${HERE}/docker-certs/meta" --node-ips ${IPS} --name localhost
 fi
 
-
 NODE_IP=$(minikube -p knitfab-dev-cluster ip)
-CERTS_DIR="${HOME}/.docker/certs.d/${NODE_IP}:30005"
-echo "Importing TLS CA certificate into ${CERTS_DIR}" >&2
-mkdir -p "${CERTS_DIR}"
-cp ${TLSCACERT} ${CERTS_DIR}/ca.crt
+CERTS_DIR_MINIKUBE="${HOME}/.docker/certs.d/${NODE_IP}:30005"
+echo "Importing TLS CA certificate into ${CERTS_DIR_MINIKUBE}" >&2
+mkdir -p "${CERTS_DIR_MINIKUBE}"
+cp ${TLSCACERT} ${CERTS_DIR_MINIKUBE}/ca.crt
+echo  "This directory is created by knitfab-dev-cluser at $(date)" > "${CERTS_DIR_MINIKUBE}/knitfab-dev-cluster"
+
+for I in ${IP} ; do
+  if [ "${I}" != "${NODE_IP}" ] ; then
+    D="${HOME}/.docker/certs.d/${I}:30005"
+    CERTS_DIR_LOCAL="${CERTS_DIR_LOCAL:+,}${D}"
+    echo "Importing TLS CA certificate into ${D}" >&2
+    mkdir -p "${D}"
+    cp ${TLSCACERT} ${D}/ca.crt
+    echo  "This directory is created by knitfab-dev-cluser at $(date)" > "${D}/knitfab-dev-cluster"
+  fi
+done
 
 "${HERE}/lib/install-registry.sh"
 
@@ -70,7 +97,8 @@ You can access the cluster using the following command:
 
 # TLS certificate and key for the image registry are located in:
 
-    ${CERTS_DIR}/ca.crt
+    \{${CERTS_DIR_LOCAL}\}/ca.crt and
+    ${CERTS_DIR_MINIKUBE}/ca.crt
 
 (You may need to restart your dockerd to pick up the new certificate.)
 
