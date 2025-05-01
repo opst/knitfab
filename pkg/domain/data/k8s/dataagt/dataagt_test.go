@@ -396,7 +396,7 @@ func TestSpawn(t *testing.T) {
 
 					_, err := dataagt.Spawn(ctx, configs, cluster, dbDataAgent, time.Now().Add(3*time.Second))
 					if err == nil {
-						t.Error("expected error is not retuerned")
+						t.Error("expected error is not returned")
 					}
 					if !deletePVCHasBeenCalled == (mode == domain.DataAgentWrite) {
 						t.Error("delete pvc is not called.")
