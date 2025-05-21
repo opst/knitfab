@@ -35,6 +35,7 @@ func TestTask(t *testing.T) {
 		PlanId        string
 		Dir           graph.Direction
 		MaxDepth      args.Depth
+		ActiveOnly    bool
 		taskIsInvoked bool
 		Err           error
 	}
@@ -64,6 +65,7 @@ func TestTask(t *testing.T) {
 				planId string,
 				dir graph.Direction,
 				maxDepth args.Depth,
+				activeOnly bool,
 			) (*knitgraph.DirectedGraph, error) {
 				taskIsInvoked = true
 
@@ -81,6 +83,10 @@ func TestTask(t *testing.T) {
 
 				if !maxDepth.Equal(then.MaxDepth) {
 					t.Errorf("wrong maxDepth: %v", maxDepth)
+				}
+
+				if activeOnly != then.ActiveOnly {
+					t.Errorf("wrong activeOnly: %v", activeOnly)
 				}
 
 				return graph, when.Err
@@ -124,6 +130,7 @@ func TestTask(t *testing.T) {
 				Downstream: true,
 			},
 			MaxDepth:      args.NewDepth(42),
+			ActiveOnly:    false,
 			taskIsInvoked: true,
 			Err:           nil,
 		},
@@ -148,6 +155,7 @@ func TestTask(t *testing.T) {
 				Downstream: false,
 			},
 			MaxDepth:      args.NewDepth(42),
+			ActiveOnly:    false,
 			taskIsInvoked: true,
 			Err:           nil,
 		},
@@ -172,6 +180,7 @@ func TestTask(t *testing.T) {
 				Downstream: true,
 			},
 			MaxDepth:      args.NewDepth(42),
+			ActiveOnly:    false,
 			taskIsInvoked: true,
 			Err:           nil,
 		},
@@ -196,6 +205,33 @@ func TestTask(t *testing.T) {
 				Downstream: true,
 			},
 			MaxDepth:      args.NewDepth(42),
+			ActiveOnly:    false,
+			taskIsInvoked: true,
+			Err:           nil,
+		},
+	))
+
+	t.Run("when --active-only, it passes activeOnly as true", theory(
+		When{
+			Flag: graph.Flag{
+				Numbers:    pointer.Ref(args.NewDepth(42)),
+				Upstream:   nil,
+				Downstream: nil,
+				ActiveOnly: true,
+			},
+			Args: map[string][]string{
+				graph.ARG_PLANID: {"test-Id"},
+			},
+			Err: nil,
+		},
+		Then{
+			PlanId: "test-Id",
+			Dir: graph.Direction{
+				Upstream:   true,
+				Downstream: true,
+			},
+			MaxDepth:      args.NewDepth(42),
+			ActiveOnly:    true,
 			taskIsInvoked: true,
 			Err:           nil,
 		},
@@ -252,6 +288,7 @@ func TestMakeGraph(t *testing.T) {
 		StartingPlanId string
 		Dir            graph.Direction
 		MaxDepth       args.Depth
+		ActiveOnly     bool
 
 		Plans    map[string]plans.Detail
 		ErrPlans map[string]error
@@ -283,7 +320,7 @@ func TestMakeGraph(t *testing.T) {
 
 			g := knitgraph.NewDirectedGraph()
 			got, err := graph.MakeGraph(
-				ctx, client, g, when.StartingPlanId, when.Dir, when.MaxDepth,
+				ctx, client, g, when.StartingPlanId, when.Dir, when.MaxDepth, when.ActiveOnly,
 			)
 
 			if !errors.Is(err, then.Err) {
@@ -310,7 +347,7 @@ func TestMakeGraph(t *testing.T) {
 	//                                                                                   \
 	// p_a --[/out/1]-.-[/in/1]--> p_b --[/out/1]-.-[/in/1]--> p_c --[/out/1]-.-[/in/2] --> p_d --[(log)]-.-[/in/1]--> p_start
 	//                \                                                                                   /         |
-	//                 -----------------------------------------------------.-[/in/1]--> p_e --[/out/1]-.-          |
+	//                 -----------------------------------------------------.-[/in/1]-->†p_e --[/out/1]-.-          |
 	//                                                                      |                                       /
 	//                                                                     /           (no upstream here) .-[/in/2]-
 	//                     (no upstream here) .--[/in/1]--> p_f --[/out/1]-
@@ -318,7 +355,7 @@ func TestMakeGraph(t *testing.T) {
 	//
 	// (downstream side)
 	//
-	// p_start --[/out/1]-.-[/in/1]--> p_1 --[/out/1]-.-[/in/1]--> p_2 --[/out/1]-.-[/in/1]--> p_3 --[/out/1]-.-[/in/1]--> p_4
+	// p_start --[/out/1]-.-[/in/1]--> p_1 --[/out/1]-.-[/in/1]-->†p_2 --[/out/1]-.-[/in/1]--> p_3 --[/out/1]-.-[/in/1]--> p_4
 	//         |           \                                                                                 /
 	//         |            -[/in/1]--> p_5 --[(log)]--------------------------------------------------------
 	//         |                            |        \
@@ -332,10 +369,10 @@ func TestMakeGraph(t *testing.T) {
 	//
 	// (explanatory notes)
 	//
-	// p_1 --[output path of p_1]-.-[input path of p_2]--> p_2
-	// ^^^
-	//  |
-	// planId
+	// p_1 --[output path of p_1]-.-[input path of p_2]-->†p_2 --> [ output path of p_2 ]-.-[input path of p_3]--> p_3
+	// ^^^                                                ^
+	//  |                                                 |
+	// planId                                            dagger notates the planId is not active.
 	//
 	fakePlans := map[string]plans.Detail{
 		"p_start": {
@@ -345,6 +382,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -399,6 +437,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -428,6 +467,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -458,6 +498,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -488,6 +529,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -520,6 +562,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: false,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -554,6 +597,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -579,6 +623,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -609,6 +654,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: false,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -639,6 +685,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -669,6 +716,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -693,6 +741,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -735,6 +784,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -755,6 +805,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -775,6 +826,7 @@ func TestMakeGraph(t *testing.T) {
 					Repository: "test-Image", Tag: "test-Version",
 				},
 			},
+			Active: true,
 			Inputs: []plans.Input{
 				{
 					Mountpoint: plans.Mountpoint{Path: "/in/1"},
@@ -817,7 +869,55 @@ func TestMakeGraph(t *testing.T) {
 		},
 	))
 
+	t.Run("traverse graph to upstream only upto depth 2 with activeOnly flag", theory(
+		When{
+			StartingPlanId: "p_start",
+			Dir: graph.Direction{
+				Upstream:   true,
+				Downstream: false,
+			},
+			MaxDepth:   args.NewDepth(2),
+			ActiveOnly: true,
+
+			Plans: fakePlans,
+		},
+		Then{
+			FoundPlanIds: []string{
+				"p_start",
+				"p_d",
+				"p_c",
+			},
+			Err: nil,
+		},
+	))
+
 	t.Run("traverse graph to downstream only upto depth 2", theory(
+		When{
+			StartingPlanId: "p_start",
+			Dir: graph.Direction{
+				Upstream:   false,
+				Downstream: true,
+			},
+			MaxDepth: args.NewDepth(2),
+
+			Plans: fakePlans,
+		},
+		Then{
+			FoundPlanIds: []string{
+				"p_start",
+				"p_1",
+				"p_5",
+				"p_8",
+				"p_2",
+				"p_7",
+				"p_4",
+				"p_6",
+			},
+			Err: nil,
+		},
+	))
+
+	t.Run("traverse graph to downstream only upto depth 2 with activeOnly flag", theory(
 		When{
 			StartingPlanId: "p_start",
 			Dir: graph.Direction{
@@ -876,6 +976,35 @@ func TestMakeGraph(t *testing.T) {
 		},
 	))
 
+	t.Run("traverse graph to up- and downstream upto depth 2 with activeOnly flag", theory(
+		When{
+			StartingPlanId: "p_start",
+			Dir: graph.Direction{
+				Upstream:   true,
+				Downstream: true,
+			},
+			MaxDepth:   args.NewDepth(2),
+			ActiveOnly: true,
+			Plans:      fakePlans,
+		},
+		Then{
+			FoundPlanIds: []string{
+				"p_start",
+				// upstream
+				"p_d",
+				"p_c",
+				// downstream
+				"p_1",
+				"p_5",
+				"p_8",
+				"p_7",
+				"p_4",
+				"p_6",
+			},
+			Err: nil,
+		},
+	))
+
 	t.Run("traverse graph to up- and downstream unlimitedly", theory(
 		When{
 			StartingPlanId: "p_start",
@@ -906,6 +1035,38 @@ func TestMakeGraph(t *testing.T) {
 				"p_4",
 				"p_6",
 				"p_3",
+			},
+			Err: nil,
+		},
+	))
+
+	t.Run("traverse graph to up- and downstream unlimitedly with activeOnly flag", theory(
+		When{
+			StartingPlanId: "p_start",
+			Dir: graph.Direction{
+				Upstream:   true,
+				Downstream: true,
+			},
+			MaxDepth:   args.NewInfinityDepth(),
+			ActiveOnly: true,
+
+			Plans: fakePlans,
+		},
+		Then{
+			FoundPlanIds: []string{
+				"p_start",
+				// upstream
+				"p_d",
+				"p_c",
+				"p_b",
+				"p_a",
+				// downstream
+				"p_1",
+				"p_5",
+				"p_8",
+				"p_7",
+				"p_4",
+				"p_6",
 			},
 			Err: nil,
 		},

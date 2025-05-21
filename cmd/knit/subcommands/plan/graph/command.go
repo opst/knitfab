@@ -20,6 +20,7 @@ type Flag struct {
 	Upstream   *bool       `flag:"upstream" alias:"u" help:"Trace the upstream of the specified Plan."`
 	Downstream *bool       `flag:"downstream" alias:"d" help:"Trace the downstream of the specified Plan."`
 	Numbers    *args.Depth `flag:"numbers" alias:"n" help:"Trace up to the specified depth. Trace to the upstream-most/downstream-most if 'all' is specified.,metavar=number of depth"`
+	ActiveOnly bool        `flag:"active-only" help:"Trace only the active Plans."`
 }
 
 const ARG_PLANID = "PLAN_ID"
@@ -31,6 +32,7 @@ func New() (flarc.Command, error) {
 			Upstream:   nil,
 			Downstream: nil,
 			Numbers:    pointer.Ref(args.NewDepth(3)),
+			ActiveOnly: false,
 		},
 		flarc.Args{
 			{
@@ -98,7 +100,7 @@ func Task(makeGraph MakeGraphFunc) common.Task[Flag] {
 		}
 
 		graph, err := makeGraph(
-			ctx, client, knitgraph.NewDirectedGraph(), planId, dir, numbers,
+			ctx, client, knitgraph.NewDirectedGraph(), planId, dir, numbers, cl.Flags().ActiveOnly,
 		)
 
 		if err != nil {
@@ -121,6 +123,7 @@ type MakeGraphFunc func(
 	planId string,
 	dir Direction,
 	maxDepth args.Depth,
+	activeOnly bool,
 ) (*knitgraph.DirectedGraph, error)
 
 func MakeGraph(
@@ -130,6 +133,7 @@ func MakeGraph(
 	planId string,
 	dir Direction,
 	maxDepth args.Depth,
+	activeOnly bool,
 ) (*knitgraph.DirectedGraph, error) {
 
 	p, err := client.GetPlans(ctx, planId)
@@ -140,7 +144,7 @@ func MakeGraph(
 
 	if dir.Upstream {
 		if err := traverse(
-			ctx, client, graph, p, maxDepth,
+			ctx, client, graph, p, maxDepth, activeOnly,
 			func(p plans.Detail) []string {
 				ret := []string{}
 				for _, in := range p.Inputs {
@@ -157,7 +161,7 @@ func MakeGraph(
 
 	if dir.Downstream {
 		if err := traverse(
-			ctx, client, graph, p, maxDepth,
+			ctx, client, graph, p, maxDepth, activeOnly,
 			func(p plans.Detail) []string {
 				ret := []string{}
 				for _, out := range p.Outputs {
@@ -186,6 +190,7 @@ func traverse(
 	graph *knitgraph.DirectedGraph,
 	start plans.Detail,
 	depth args.Depth,
+	activeOnly bool,
 	next func(plans.Detail) []string,
 ) error {
 
@@ -206,6 +211,9 @@ func traverse(
 				p, err := client.GetPlans(ctx, planId)
 				if err != nil {
 					return err
+				}
+				if activeOnly && !p.Active {
+					continue
 				}
 				graph.AddPlanNode(p)
 				newLeaves = append(newLeaves, p)
