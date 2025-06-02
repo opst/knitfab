@@ -24,8 +24,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { PlanService } from "../api/services/planService";
 import { toTagString } from "../api/services/types/types";
 import { PlanDetail, Tag, tagsEqual } from "../types/types";
-import { PlanItem, TagChip } from "./Items";
 import { TagInput } from "./Inputs";
+import { PlanItem, TagChip } from "./Items";
 
 export type PlanListProps = {
     planService: PlanService;
@@ -257,8 +257,8 @@ const PlanFilter: React.FC<PlanFilterProps> = ({ value, onChange }) => {
             <Box>
                 <Button
                     onClick={() => {
-                        onChange({ inTags: [], outTags: [] })
-                        setImageInput("")
+                        onChange({ inTags: [], outTags: [] });
+                        setImageInput("");
                         setKey((k) => -k); // force re-render
                     }}
                     variant="contained"

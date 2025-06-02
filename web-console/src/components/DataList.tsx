@@ -319,7 +319,7 @@ const DataFilter: React.FC<{
             <Box>
                 <Button
                     onClick={() => {
-                        onChange({ tags: [], duration: {} })
+                        onChange({ tags: [], duration: {} });
                         setKey((k) => -k);  // force re-render
                     }}
                     variant="contained"
