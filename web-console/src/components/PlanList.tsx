@@ -22,9 +22,10 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import React, { useCallback, useEffect, useState } from "react";
 import { PlanService } from "../api/services/planService";
-import { isTagString, parseTag, toTagString } from "../api/services/types/types";
+import { toTagString } from "../api/services/types/types";
 import { PlanDetail, Tag, tagsEqual } from "../types/types";
 import { PlanItem, TagChip } from "./Items";
+import { TagInput } from "./Inputs";
 
 export type PlanListProps = {
     planService: PlanService;
@@ -175,8 +176,6 @@ type PlanFilterProps = {
 };
 
 const PlanFilter: React.FC<PlanFilterProps> = ({ value, onChange }) => {
-    const [inTagValue, setInTagValue] = useState<string>("");
-    const [outTagValue, setOutTagValue] = useState<string>("");
     const [imageInput, setImageInput] = useState<string>(value.image || "");
     const [imageTimeout, setImageTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -202,32 +201,10 @@ const PlanFilter: React.FC<PlanFilterProps> = ({ value, onChange }) => {
         onChange({ ...value, [key]: value[key].filter(t => !tagsEqual(t, tag)) });
     };
 
-    const addInTag = useCallback(() => {
-        if (!isTagString(inTagValue)) {
-            return;
-        }
-        const newTag = parseTag(inTagValue);
-
-        setInTagValue("");
-        if (!value.inTags.find(t => tagsEqual(t, newTag))) {
-            onChange({ ...value, inTags: [...value.inTags, newTag] });
-        }
-    }, [inTagValue, onChange]);
-
-    const addOutTag = useCallback(() => {
-        if (!isTagString(outTagValue)) {
-            return;
-        }
-        const newTag = parseTag(outTagValue);
-        setOutTagValue("");
-
-        if (!value.outTags.find(t => tagsEqual(t, newTag))) {
-            onChange({ ...value, outTags: [...value.outTags, newTag] });
-        }
-    }, [outTagValue, onChange]);
+    const [key, setKey] = useState(1);
 
     return (
-        <Stack spacing={2}>
+        <Stack key={key} spacing={2}>
             <Stack direction="row" spacing={1} alignItems="center">
                 <Chip icon={<CheckboxIcon />} label="Active Status" />
                 <Select
@@ -254,42 +231,35 @@ const PlanFilter: React.FC<PlanFilterProps> = ({ value, onChange }) => {
             <Stack direction="row" spacing={1} alignItems="center">
                 <Chip icon={<TagIcon />} label="Tags for Inputs" />
                 {value.inTags.map(tag => <TagChip key={toTagString(tag)} tag={tag} onDelete={() => removeTag("inTags", tag)} />)}
-                <TextField
+                <TagInput
                     label="Add Input Tag"
-                    variant="filled"
-                    value={inTagValue || ""}
-                    onChange={(ev) => { setInTagValue(ev.target.value) }}
+                    onSave={(tag) => {
+                        if (!value.inTags.find(t => tagsEqual(t, tag))) {
+                            onChange({ ...value, inTags: [...value.inTags, tag] });
+                        }
+                    }}
+                    allowSystemTags
                 />
-                <Button
-                    variant="contained"
-                    onClick={() => addInTag()}
-                    disabled={!isTagString(inTagValue)}
-                >Add</Button>
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
                 <Chip icon={<TagIcon />} label="Tags for Outputs" />
                 {value.outTags.map(tag => <TagChip key={toTagString(tag)} tag={tag} onDelete={() => removeTag("outTags", tag)} />)}
-                <TextField
+                <TagInput
                     label="Add Output Tag"
-                    variant="filled"
-                    value={outTagValue}
-                    onChange={(ev) => { setOutTagValue(ev.target.value) }}
+                    onSave={(tag) => {
+                        if (!value.outTags.find(t => tagsEqual(t, tag))) {
+                            onChange({ ...value, outTags: [...value.outTags, tag] });
+                        }
+                    }}
+                    allowSystemTags
                 />
-                <Button
-                    variant="contained"
-                    onClick={() => addOutTag()}
-                    disabled={!isTagString(outTagValue)}
-                >
-                    Add
-                </Button>
             </Stack>
             <Box>
                 <Button
                     onClick={() => {
                         onChange({ inTags: [], outTags: [] })
                         setImageInput("")
-                        setInTagValue("")
-                        setOutTagValue("")
+                        setKey((k) => -k); // force re-render
                     }}
                     variant="contained"
                     startIcon={<ClearIcon />}

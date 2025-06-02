@@ -1,5 +1,7 @@
+import ClearIcon from "@mui/icons-material/Clear";
 import ConstructionIcon from '@mui/icons-material/Construction';
 import DoneIcon from '@mui/icons-material/Done';
+import EditIcon from '@mui/icons-material/Edit';
 import ErrorIcon from '@mui/icons-material/Error';
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -20,6 +22,7 @@ import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
 import Chip from '@mui/material/Chip';
 import Collapse from "@mui/material/Collapse";
+import Divider from "@mui/material/Divider";
 import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -31,10 +34,11 @@ import TableRow from "@mui/material/TableRow";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { DateTime } from 'luxon';
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { RunService } from "../api/services/runService";
 import { TagString } from "../api/services/types/types";
 import { DataDetail, DataSummary, LogPoint, Mountpoint, PlanDetail, PlanSummary, RunDetail, RunSummary, Tag } from "../types/types";
+import { TagInput } from './Inputs';
 
 const DATETIME_INSTANT = {
     year: "numeric",
@@ -88,26 +92,158 @@ export const TagChip: React.FC<{ tag: Tag | TagString, onDelete?: (event: any) =
     );
 };
 
-const TagSet = ({ tags }: { tags: Tag[] }) => {
+const TagSet = ({ tags, editable=false, onUpdate }: {
+    tags: Tag[],
+    editable?: boolean,
+    onUpdate?: (change: {add: Tag[], remove: Tag[]}) => void,
+}) => {
+    const [editing, setEditing] = useState<boolean>(false);
+    const [editLog, setEditLog] = useState<{type: "add" | "remove", tag: Tag}[]>([]);
+    const handleDelete = useCallback((tag: Tag) => {
+        setEditLog((prev) => {
+            const ret = [] as {type: "add" | "remove", tag: Tag}[];
+
+            let canceled = false;
+            for (const entry of prev) {
+                if (entry.tag.key !== tag.key || entry.tag.value !== tag.value) {
+                    ret.push(entry);
+                    continue
+                }
+                if (entry.type === "add") {
+                    // If this tag is being added, we cancel the addition.
+                    canceled = true;
+                }
+            }
+
+            if (!canceled) {
+                // If this tag is not being added, we add a removal entry.
+                ret.push({type: "remove", tag});
+            }
+
+            return ret;
+        });
+    }, [setEditLog]);
+
+    const handleAdd = useCallback((tag: Tag) => {
+        setEditLog((prev) => {
+            const ret = [] as {type: "add" | "remove", tag: Tag}[];
+
+            let canceled = false;
+            for (const entry of prev) {
+                if (entry.tag.key !== tag.key || entry.tag.value !== tag.value) {
+                    ret.push(entry);
+                    continue
+                }
+                if (entry.type === "remove") {
+                    // If this tag is being removed, we cancel the removal.
+                    canceled = true;
+                }
+            }
+
+            if (!canceled) {
+                // If this tag is not being removed, we add an addition entry.
+                ret.push({type: "add", tag});
+            }
+
+            return ret;
+        });
+    }, [setEditLog]);
+
+    const handleSave = useCallback(() => {
+        if (onUpdate) {
+            const change = {
+                add: [] as Tag[],
+                remove: [] as Tag[],
+            }
+
+            for (const entry of editLog) {
+                if (entry.type === "add") {
+                    change.add.push(entry.tag);
+                } else if (entry.type === "remove") {
+                    change.remove.push(entry.tag);
+                }
+            }
+
+            if (change.add.length !== 0 || change.remove.length !== 0) {
+                onUpdate(change);
+            }
+        }
+
+        setEditing(false);
+        setEditLog([]);
+    }, [onUpdate, editLog, setEditLog]);
+
+    const handleCancel = useCallback(() => {
+        setEditing(false);
+        setEditLog([]);
+    }, [setEditing, setEditLog]);
+
+    if (!editing) {
+        return (
+            <Stack direction="row" flexWrap="wrap" sx={{ alignItems: 'center' }} spacing={1}>
+                <Chip icon={<TagIcon />} label="tags" />
+                {tags.length === 0
+                    ? <Typography fontStyle="italic">(No tags)</Typography>
+                    : tags.map((tag, index) => (
+                        <TagChip key={index} tag={tag} />
+                    ))
+                }
+                {editable && (
+                    <>
+                        <Divider orientation="vertical" flexItem />
+                        <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setEditing(true)}>Edit</Button>
+                    </>
+                )}
+            </Stack>
+        );
+    }
+
+    const editingTags = [...tags];
+    for (const entry of editLog) {
+        if (entry.type === "add") {
+            editingTags.push(entry.tag);
+        } else if (entry.type === "remove") {
+            const index = editingTags.findIndex((tag) => tag.key === entry.tag.key && tag.value === entry.tag.value);
+            if (index !== -1) {
+                editingTags.splice(index, 1);
+            }
+        }
+    }
     return (
         <Stack direction="row" flexWrap="wrap" sx={{ alignItems: 'center' }} spacing={1}>
             <Chip icon={<TagIcon />} label="tags" />
-            {tags.length === 0
+            {editingTags.length === 0
                 ? <Typography fontStyle="italic">(No tags)</Typography>
-                : tags.map((tag, index) => (
-                    <TagChip key={index} tag={tag} />
-                ))
+                : editingTags.map((tag, index) => {
+                    if (tag.key.startsWith("knit#")) {
+                        return <TagChip key={index} tag={tag} />
+                    }
+                    return <TagChip key={index} tag={tag} onDelete={() => handleDelete(tag)} />
+                })
             }
+            <TagInput label="Add Tag" onSave={handleAdd} variant="outlined" />
+            <Divider orientation="vertical" flexItem />
+            <Button
+                startIcon={<DoneIcon />}
+                variant="contained"
+                color="success"
+                onClick={handleSave}
+                >
+                Save
+            </Button>
+            <Button startIcon={<ClearIcon />} variant="outlined" onClick={handleCancel}>Cancel</Button>
         </Stack>
     );
 }
 
-const DataCard = ({ data, variant = "outlined", elevation = 1, action, children }: {
+const DataCard = ({ data, variant = "outlined", elevation = 1, action, children, editable=false, onTagsUpdate }: {
     data: DataSummary,
     variant?: "outlined" | "elevation",
     elevation?: number
     action?: React.ReactNode,
     children?: React.ReactNode,
+    editable?: boolean,
+    onTagsUpdate?: (change: { add: Tag[], remove: Tag[]}) => void,
 }) => {
     const allch = React.Children.toArray(children);
 
@@ -144,7 +280,7 @@ const DataCard = ({ data, variant = "outlined", elevation = 1, action, children 
                 action={action}
             />
             <CardContent>
-                <TagSet tags={data.tags} />
+                <TagSet tags={data.tags} editable={editable} onUpdate={onTagsUpdate}/>
                 {content}
             </CardContent>
             {actions}
@@ -159,10 +295,11 @@ const DataItem: React.FC<{
     elevation?: number,
     action?: React.ReactNode,
     expanded: boolean,
-    setExpanded: (knitId: string, mode: boolean) => void
-}> = ({ data, variant, elevation, action, expanded, setExpanded }) => {
+    setExpanded: (knitId: string, mode: boolean) => void,
+    onTagsUpdate?: (change: { add: Tag[], remove: Tag[] }) => void,
+}> = ({ data, variant, elevation, action, expanded, setExpanded, onTagsUpdate }) => {
     return (
-        <DataCard variant={variant} elevation={elevation} data={data} action={action}>
+        <DataCard variant={variant} elevation={elevation} data={data} action={action} editable onTagsUpdate={onTagsUpdate}>
             <Collapse in={expanded} timeout="auto" unmountOnExit>
                 <Typography variant="subtitle1" sx={{ marginTop: "16px" }}>
                     Upstream:

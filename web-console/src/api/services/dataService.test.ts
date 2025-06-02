@@ -6,6 +6,7 @@ import { RawDataDetail } from "./types/types";
 
 const mockApiClient: Partial<ApiClient> = {
     get: jest.fn(),
+    put: jest.fn(),
 };
 
 describe("DataService", () => {
@@ -84,6 +85,40 @@ describe("DataService", () => {
             expect(calledUrl).not.toBeNull();
             expect(calledUrl?.pathname).toBe(`/data/`);
             expect(calledUrl?.searchParams.get("tag")).toContain("knit#id:data-123");
+        });
+    });
+
+    describe("updateTags", () => {
+        it("should call put with correct URL and data", async () => {
+            const id = "data-123";
+            const tags = {
+                add: [{ key: "new", value: "tag" }],
+                remove: [{ key: "old", value: "tag" }],
+            };
+
+            (mockApiClient.put as jest.Mock).mockResolvedValue({
+                knitId: id,
+                tags: [],
+                upstream: {
+                    run: {
+                        runId: "run-123",
+                        status: "completed",
+                        updatedAt: "2025-02-10T10:00:00Z",
+                        plan: {
+                            planId: "plan-123",
+                            entrypoint: [],
+                            args: [],
+                            annotations: [],
+                        },
+                    },
+                },
+                downstreams: [],
+                nomination: [],
+            } satisfies RawDataDetail);
+
+            await testee.updateTags(id, tags);
+
+            expect(mockApiClient.put).toHaveBeenCalledWith(`/data/${id}/`, tags);
         });
     });
 });

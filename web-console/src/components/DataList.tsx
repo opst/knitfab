@@ -27,6 +27,7 @@ import { Duration } from "../api/services/types/time";
 import { isTagString, parseTag, toTagString } from "../api/services/types/types";
 import { DataDetail, Tag, tagsEqual } from "../types/types";
 import { DurationFilter } from "./Filter";
+import { TagInput } from "./Inputs";
 import { DataItem, TagChip } from "./Items";
 
 export type DataListProps = {
@@ -210,6 +211,20 @@ const DataList: React.FC<DataListProps> = ({ dataService, setLineageGraphRoot })
                                 data={data}
                                 expanded={expanded.has(data.knitId)}
                                 setExpanded={updateExpanded}
+                                onTagsUpdate={change => {
+                                    dataService.
+                                        updateTags(data.knitId, change).
+                                        then((data) => {
+                                            setDataList((prev) => {
+                                                return prev.map((d) => {
+                                                    if (d.knitId === data.knitId) {
+                                                        return data;
+                                                    }
+                                                    return d;
+                                                });
+                                            });
+                                        });
+                                }}
                             />
                         ))}
                     </Stack>
@@ -229,7 +244,6 @@ const DataFilter: React.FC<{
     value: DataFilterParams,
     onChange: (value: DataFilterParams) => void
 }> = ({ value, onChange }) => {
-    const [tagInput, setTagInput] = useState<string>("");
 
     const removeTag = (tag: Tag) => {
         onChange({
@@ -237,20 +251,6 @@ const DataFilter: React.FC<{
             tags: value.tags.filter(t => !tagsEqual(t, tag)),
         });
     }
-
-    const addTag = () => {
-        if (!isTagString(tagInput)) {
-            return;
-        }
-        const newTag = parseTag(tagInput);
-
-        setTagInput("");
-        if (value.tags.find(t => tagsEqual(t, newTag))) {
-            return;
-        }
-        onChange({ ...value, tags: [...value.tags, newTag] });
-    }
-
     const setSince = (since?: luxon.DateTime | null) => {
         onChange({ ...value, since: since ?? undefined });
     }
@@ -262,8 +262,10 @@ const DataFilter: React.FC<{
         onChange({ ...value, duration: duration });
     }
 
+    const [key, setKey] = useState(1);
+
     return (
-        <Stack spacing={2}>
+        <Stack key={key} spacing={2}>
             <Grid container direction="row" spacing={1} alignItems={"center"}>
                 <Grid>
                     <Chip label="Tags" icon={<TagIcon />} />
@@ -278,16 +280,16 @@ const DataFilter: React.FC<{
                     </Grid>
                 ))}
                 <Grid flexGrow={1} minWidth="50%">
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <TextField
-                            label="Add Tag"
-                            value={tagInput}
-                            onChange={(e) => setTagInput(e.target.value)}
-                            variant="filled"
-                            fullWidth
-                        />
-                        <Button variant="contained" onClick={addTag} disabled={!isTagString(tagInput)}>Add</Button>
-                    </Stack>
+                    <TagInput
+                        label="Add Tag"
+                        onSave={(tag) => {
+                            if (value.tags.find(t => tagsEqual(t, tag))) {
+                                return;
+                            }
+                            onChange({ ...value, tags: [...value.tags, tag] });
+                        }}
+                        allowSystemTags
+                    />
                 </Grid>
             </Grid>
             <Stack direction="row" spacing={1} alignItems="center">
@@ -318,7 +320,7 @@ const DataFilter: React.FC<{
                 <Button
                     onClick={() => {
                         onChange({ tags: [], duration: {} })
-                        setTagInput("");
+                        setKey((k) => -k);  // force re-render
                     }}
                     variant="contained"
                     startIcon={<ClearIcon />}

@@ -75,4 +75,10 @@ export class DataService {
                 return toDataDetail(ds[0]);
             });
     }
+
+    public async updateTags(id: string, tags: {add: Tag[], remove: Tag[]}): Promise<DataDetail> {
+        return this.apiClient
+            .put<RawDataDetail, typeof tags>(`/data/${id}/`, tags)
+            .then(toDataDetail);
+    }
 }
