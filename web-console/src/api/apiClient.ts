@@ -30,6 +30,14 @@ export class ApiClient {
     }
 
     /**
+     * send PUT request
+     */
+    public async put<T, U>(url: string, data: U, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.put<T>(url, data, config);
+        return response.data;
+    }
+
+    /**
      *
      * receive a text stream
      *
