@@ -5,7 +5,7 @@ go 1.24.2
 replace github.com/opst/knitfab/v2 => ../..
 
 require (
-	github.com/opst/knitfab-api-types/v2 v2.0.0-rc.1
+	github.com/opst/knitfab-api-types/v2 v2.0.0
 	github.com/opst/knitfab/v2 v2.0.0-beta
 	k8s.io/api v0.33.0-rc.1
 	k8s.io/apimachinery v0.33.0-rc.1
