@@ -59,4 +59,24 @@ export class RunService {
         const url = `/runs/${runId}/log?follow`;
         return this.apiClient.getStream(url, onData, { signal });
     }
+
+    public async stopRun(runId: string, asFailed?: boolean): Promise<RunDetail> {
+        asFailed = asFailed ?? false;
+        if (asFailed) {
+            return this.apiClient
+                .put<RawRunDetail, null>(`/runs/${runId}/abort`, null)
+                .then(toRunDetail);
+        }
+        return this.apiClient
+            .put<RawRunDetail, null>(`/runs/${runId}/tearoff`, null)
+            .then(toRunDetail);
+    }
+
+    public async retryRun(runId: string): Promise<null> {
+        return this.apiClient
+            .put<RawRunDetail, null>(`/runs/${runId}/retry`, null)
+            .then((x) => {
+                return null;
+            });
+    }
 }

@@ -3,6 +3,7 @@ import CheckboxIcon from "@mui/icons-material/CheckBox";
 import CheckboxBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ClearIcon from "@mui/icons-material/Clear";
 import ConstructionIcon from '@mui/icons-material/Construction';
+import DangerousIcon from '@mui/icons-material/Dangerous';
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import InputIcon from '@mui/icons-material/Input';
@@ -10,17 +11,21 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import OutputIcon from '@mui/icons-material/Output';
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import ReplayIcon from "@mui/icons-material/Replay";
 import TodayIcon from "@mui/icons-material/Today";
 import Alert from "@mui/material/Alert";
 import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
 import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
+import Modal from "@mui/material/Modal";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -33,7 +38,7 @@ import { Duration } from "../api/services/types/time";
 import { RunStatus, RunStatuses } from "../api/services/types/types";
 import { RunDetail } from "../types/types";
 import { DurationFilter } from "./Filter";
-import { RunItem } from "./Items";
+import { RunCard, RunItem } from "./Items";
 
 export type RunListProps = {
     runService: RunService;
@@ -54,6 +59,11 @@ const RunList: React.FC<RunListProps> = ({ runService, setLineageGraphRoot }) =>
         status: [],
     });
     const [filterIsVisible, setFilterIsVisible] = useState<boolean>(false);
+
+    const [openRetryModalFor, setOpenRetryModalFor] = useState<RunDetail | null>(null);
+    const [retryOngoingFor, setRetryOngoingFor] = useState<Set<string>>(new Set());
+    const [openStopModalFor, setOpenStopModalFor] = useState<RunDetail | null>(null);
+    const [stopOngoingFor, setStopOngoingFor] = useState<Set<string>>(new Set());
 
     const updateExpanded = useCallback((planId: string, mode: boolean) => {
         if (mode) {
@@ -114,6 +124,7 @@ const RunList: React.FC<RunListProps> = ({ runService, setLineageGraphRoot }) =>
     }, [autoRefresh, filter]);
 
     return (
+        <>
         <Stack spacing={2}>
             <Stack spacing={2} direction="row">
                 <Badge
@@ -174,13 +185,46 @@ const RunList: React.FC<RunListProps> = ({ runService, setLineageGraphRoot }) =>
                                 key={run.runId}
                                 run={run}
                                 action={
-                                    <Button
-                                        onClick={() => setLineageGraphRoot(run.runId)}
-                                        variant="contained"
-                                        endIcon={<OpenInNewIcon />}
-                                    >
-                                        Lineage
-                                    </Button>
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        {
+                                            (run.plan.image && (run.status === "failed" || run.status === "done")) &&
+                                            <Button
+                                                onClick={() => setOpenRetryModalFor(run)}
+                                                variant="contained"
+                                                color="primary"
+                                                disabled={retryOngoingFor.has(run.runId)}
+                                                startIcon={<ReplayIcon />}
+                                                >
+                                                    Retry
+                                                </Button>
+                                        }
+                                        {
+                                            (run.plan.image &&
+                                                (
+                                                    run.status === "waiting" ||
+                                                    run.status === "ready" ||
+                                                    run.status === "starting" ||
+                                                    run.status === "running"
+                                                )
+                                            ) &&
+                                                <Button
+                                                    onClick={() => setOpenStopModalFor(run)}
+                                                    variant="contained"
+                                                    color="error"
+                                                    disabled={stopOngoingFor.has(run.runId)}
+                                                    startIcon={<DangerousIcon />}
+                                                    >
+                                                    Stop
+                                                </Button>
+                                        }
+                                        <Button
+                                            onClick={() => setLineageGraphRoot(run.runId)}
+                                            variant="contained"
+                                            endIcon={<OpenInNewIcon />}
+                                            >
+                                            Lineage
+                                        </Button>
+                                    </Stack>
                                 }
                                 expanded={expanded.has(run.runId)}
                                 setExpanded={updateExpanded}
@@ -193,6 +237,119 @@ const RunList: React.FC<RunListProps> = ({ runService, setLineageGraphRoot }) =>
                 )
             }
         </Stack >
+        <Modal open={!!openRetryModalFor} onClose={() => setOpenRetryModalFor(null)}>
+            <Card sx={{ padding: 2, maxWidth: "30vw", margin: "auto", marginTop: "20vh" }}>
+                <Typography variant="h6">Retry Run</Typography>
+                <Typography>Are you sure you want to retry this Run?</Typography>
+                {
+                    openRetryModalFor && (
+                        <RunCard run={openRetryModalFor} action={null}/>
+                    )
+                }
+                <CardActions>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => {
+                            if (!openRetryModalFor) {
+                                return;
+                            }
+                            const retryingRunId = openRetryModalFor.runId;
+                            setRetryOngoingFor((prev) => {
+                                const next = new Set(prev);
+                                next.add(retryingRunId);
+                                return next;
+                            });
+                            runService.retryRun(retryingRunId).finally(() => {
+                                setRetryOngoingFor((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(retryingRunId);
+                                    return next;
+                                });
+                                fetchData();
+                            });
+                            setOpenRetryModalFor(null);
+                        }}
+                    >
+                        Retry
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        onClick={() => setOpenRetryModalFor(null)}
+                    >
+                        Cancel
+                    </Button>
+                </CardActions>
+            </Card>
+        </Modal>
+        <Modal open={!!openStopModalFor} onClose={() => setOpenStopModalFor(null)}>
+            <Card sx={{ padding: 2, maxWidth: "30vw", margin: "auto", marginTop: "20vh" }}>
+                <Typography variant="h6">Stop Run</Typography>
+                <Typography>Are you sure you want to stop this Run?</Typography>
+                {
+                    openStopModalFor && (
+                        <RunCard run={openStopModalFor} action={null}/>
+                    )
+                }
+                <CardActions>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => {
+                            if (!openStopModalFor) {
+                                return;
+                            }
+                            const stoppingRunId = openStopModalFor.runId;
+                            setStopOngoingFor((prev) => {
+                                const next = new Set(prev);
+                                next.add(stoppingRunId);
+                                return next;
+                            }); 
+                            runService.stopRun(stoppingRunId, true).finally(() => {
+                                setStopOngoingFor((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(stoppingRunId);
+                                    return next;
+                                });
+                                fetchData();
+                            });
+                            setOpenStopModalFor(null);
+                        }}
+                    >
+                        Stop as Failed
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => {
+                            if (!openStopModalFor) {
+                                return;
+                            }
+                            const stoppingRunId = openStopModalFor.runId;
+                            setStopOngoingFor((prev) => new Set(prev.add(stoppingRunId)));
+                            runService.stopRun(stoppingRunId, false).finally(() => {
+                                setStopOngoingFor((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(stoppingRunId);
+                                    return next;
+                                });
+                                fetchData();
+                            });
+                            setOpenStopModalFor(null);
+                        }}
+                    >
+                        Stop as Succeeded
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        onClick={() => setOpenStopModalFor(null)}
+                    >
+                        Cancel
+                    </Button>
+                </CardActions>
+            </Card>
+        </Modal>
+        </>
     );
 };
 
