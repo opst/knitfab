@@ -201,10 +201,10 @@ const RunList: React.FC<RunListProps> = ({ runService, setLineageGraphRoot }) =>
                                         {
                                             (run.plan.image &&
                                                 (
-                                                    run.status == "waiting" ||
-                                                    run.status == "ready" ||
-                                                    run.status == "starting" ||
-                                                    run.status == "running"
+                                                    run.status === "waiting" ||
+                                                    run.status === "ready" ||
+                                                    run.status === "starting" ||
+                                                    run.status === "running"
                                                 )
                                             ) &&
                                                 <Button
