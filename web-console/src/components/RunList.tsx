@@ -255,7 +255,11 @@ const RunList: React.FC<RunListProps> = ({ runService, setLineageGraphRoot }) =>
                                 return;
                             }
                             const retryingRunId = openRetryModalFor.runId;
-                            setRetryOngoingFor((prev) => new Set(prev.add(retryingRunId)));
+                            setRetryOngoingFor((prev) => {
+                                const next = new Set(prev);
+                                next.add(retryingRunId);
+                                return next;
+                            });
                             runService.retryRun(retryingRunId).finally(() => {
                                 setRetryOngoingFor((prev) => {
                                     const next = new Set(prev);
@@ -296,7 +300,11 @@ const RunList: React.FC<RunListProps> = ({ runService, setLineageGraphRoot }) =>
                                 return;
                             }
                             const stoppingRunId = openStopModalFor.runId;
-                            setStopOngoingFor((prev) => new Set(prev.add(stoppingRunId))); 
+                            setStopOngoingFor((prev) => {
+                                const next = new Set(prev);
+                                next.add(stoppingRunId);
+                                return next;
+                            }); 
                             runService.stopRun(stoppingRunId, true).finally(() => {
                                 setStopOngoingFor((prev) => {
                                     const next = new Set(prev);
