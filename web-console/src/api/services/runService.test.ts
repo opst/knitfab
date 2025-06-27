@@ -7,6 +7,7 @@ import { RunStatus } from "./types/types";
 // モック用の ApiClient を作成
 const mockApiClient: Partial<ApiClient> = {
     get: jest.fn(),
+    put: jest.fn(),
     getStream: jest.fn(),
 };
 
@@ -86,6 +87,52 @@ describe("RunService", () => {
             expect(calledUrl).toBe(`/runs/${runId}/log?follow`);
             expect(calledOnData).toBe(onData);
             expect(options).toEqual({ signal: fakeSignal });
+        });
+    });
+
+    describe("stopRun", () => {
+        it("should call stop endpoint with correct parameters", async () => {
+            const runId = "run123";
+            const asFailed = true;
+            (mockApiClient.put as jest.Mock).mockResolvedValue({
+                runId,
+                status: "stopped",
+                updatedAt: "2024-02-10T10:00:00Z",
+                plan: { planId: "plan123" },
+                inputs: [],
+                outputs: [],
+            });
+
+            const result = await runService.stopRun(runId, asFailed);
+            expect(mockApiClient.put).toHaveBeenCalledWith(`/runs/${runId}/abort`, null);
+            expect(result.runId).toBe(runId);
+        });
+
+        it("should default asFailed to false if not provided", async () => {
+            const runId = "run123";
+            const asFailed = false;
+            (mockApiClient.put as jest.Mock).mockResolvedValue({
+                runId,
+                status: "stopped",
+                updatedAt: "2024-02-10T10:00:00Z",
+                plan: { planId: "plan123" },
+                inputs: [],
+                outputs: [],
+            });
+
+            const result = await runService.stopRun(runId, asFailed);
+            expect(mockApiClient.put).toHaveBeenCalledWith(`/runs/${runId}/tearoff`, null);
+            expect(result.runId).toBe(runId);
+        });
+    });
+
+    describe("retryRun", () => {
+        it("should call retry endpoint and return null", async () => {
+            const runId = "run123";
+            (mockApiClient.put as jest.Mock).mockResolvedValue(null);
+            const result = await runService.retryRun(runId);
+            expect(mockApiClient.put).toHaveBeenCalledWith(`/runs/${runId}/retry`, null);
+            expect(result).toBeNull();
         });
     });
 });
